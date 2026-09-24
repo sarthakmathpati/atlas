@@ -8,7 +8,10 @@ under way: session 5 finished DSA (all 249 concepts, every must-know with a deep
 pattern with signals and a template, every code block compiled and run) and wrote the pattern drill
 bank (276 original prompts, at least 3 per pattern). Concept text now loads per subject on demand,
 so the startup bundle stays small as content grows.
-**Next up:** Phase 5 continues with OOP, then OS (section 5.3 order: DSA, OOP, OS, CN, DBMS, SQL,
+Session 6 (in progress): OOP is complete (53 / 53 concepts, 24 / 24 must-know deep articles plus
+every important one); OS is next in this session. The content code check now also compiles Java
+blocks (`javac`).
+**Next up:** Phase 5 continues with OS (session 6), then CN (section 5.3 order: DSA, OOP, OS, CN, DBMS, SQL,
 System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles, Markets, Architecture,
 Aptitude, Engineering essentials, Career), one or two subjects per session, never two content
 sessions at once. Follow `content/README.md` → "Writing conventions", run
@@ -77,7 +80,7 @@ deep for every must-know concept; signals and template for every pattern.
 |---|---|---|---|
 | lang | 0 / 46 | 0 / 22 | – |
 | dsa | 249 / 249 | 115 / 115 | 90 / 90 |
-| oop | 0 / 53 | 0 / 24 | – |
+| oop | 53 / 53 | 24 / 24 | – |
 | lld | 0 / 32 | 0 / 11 | – |
 | os | 0 / 65 | 0 / 29 | – |
 | conc | 0 / 20 | 0 / 9 | – |
