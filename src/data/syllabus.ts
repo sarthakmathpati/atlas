@@ -49,10 +49,7 @@ export const dependentsOf: ReadonlyMap<ConceptId, ConceptId[]> = (() => {
 
 export const patternConcepts: readonly Concept[] = concepts.filter((c) => c.isPattern);
 
+/** Whether the simple level, interview points and questions are written (data/content.ts has the text). */
 export function hasCoreContent(concept: Concept): boolean {
-  return (
-    concept.content.simple.length > 0 &&
-    concept.content.interview.length > 0 &&
-    concept.content.questions.length > 0
-  );
+  return concept.written.core;
 }

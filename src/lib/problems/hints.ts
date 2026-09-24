@@ -1,10 +1,11 @@
 // The offline hint ladder (F11 without AI), built from seed data:
-//   1. Nudge: the broad area and a guiding question (from the pattern's signals when written).
+//   1. Nudge: the broad area, a clue (the pattern's first signal) and a guiding question.
 //   2. Approach: the pattern's name, what it covers, and how to spot it.
 //   3. Pseudocode: the pattern's template, or a step outline until the template is written.
 // With Claude (phase 6) each level is generated for the problem and cached in ProblemState.hints.
 import { hintsForTopic } from "@/data/hintLadder";
 import { conceptById } from "@/data/syllabus";
+import type { ConceptContent } from "@/lib/types";
 import type { ProblemInfo } from "./catalog";
 
 export type HintLevelNumber = 1 | 2 | 3;
@@ -22,19 +23,28 @@ export const HINT_TITLES: Record<HintLevelNumber, string> = {
   3: "Pseudocode",
 };
 
-const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+// Lowercase a leading capital, but not an acronym such as "BFS" or "XOR".
+const lowerFirst = (s: string) =>
+  /^[A-Z][^A-Z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s;
 const trimDot = (s: string) => s.replace(/[.\s]+$/, "");
 
-export function buildOfflineHints(info: Pick<ProblemInfo, "conceptIds" | "topicId">): HintLevel[] {
+/**
+ * The three offline levels. `primaryContent` is the text of the first linked pattern (loaded with
+ * data/content.ts); without it the ladder falls back to the topic's outline.
+ */
+export function buildOfflineHints(
+  info: Pick<ProblemInfo, "conceptIds" | "topicId">,
+  primaryContent?: ConceptContent,
+): HintLevel[] {
   const concepts = info.conceptIds
     .map((id) => conceptById.get(id))
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
   const primary = concepts[0];
   const hints = hintsForTopic(primary?.topicId ?? info.topicId);
-  const signals = primary?.content.signals ?? [];
+  const signals = primaryContent?.signals ?? [];
 
   const question = signals[0]
-    ? `Look at the problem again: does it involve ${lowerFirst(trimDot(signals[0]))}? ${hints.nudge}`
+    ? `A clue to look for: ${lowerFirst(trimDot(signals[0]))}. ${hints.nudge}`
     : hints.nudge;
   const nudge = `**Area:** ${hints.area}\n\n${question}`;
 
@@ -64,18 +74,19 @@ export function buildOfflineHints(info: Pick<ProblemInfo, "conceptIds" | "topicI
     approach = lines.join("\n");
   }
 
-  const template = primary?.content.template;
-  const pseudocode = template
-    ? `Adapt the template for **${primary.name}** to this problem:\n\n${template}`
-    : [
-        ...hints.outline.map((step, i) => `${i + 1}. ${step}`),
-        ...(primary
-          ? [
-              "",
-              `The full template for ${primary.name} is still being written; these steps cover the usual shape.`,
-            ]
-          : []),
-      ].join("\n");
+  const template = primaryContent?.template;
+  const pseudocode =
+    primary && template
+      ? `Adapt the template for **${primary.name}** to this problem:\n\n${template}`
+      : [
+          ...hints.outline.map((step, i) => `${i + 1}. ${step}`),
+          ...(primary
+            ? [
+                "",
+                `The full template for ${primary.name} is still being written; these steps cover the usual shape.`,
+              ]
+            : []),
+        ].join("\n");
 
   return [
     { level: 1, title: HINT_TITLES[1], markdown: nudge },

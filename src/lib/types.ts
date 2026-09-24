@@ -53,7 +53,17 @@ export interface Concept {
   related: CrossLink[]; // cross-subject and same-subject "see also" links
   estMinutes: number; // time to learn to interview level (default 25)
   isPattern: boolean; // true for DSA technique concepts that problems attach to
-  content: ConceptContent;
+  // What text is written. The text itself (ConceptContent) is generated per subject and loaded
+  // on demand (data/content.ts), so the startup bundle carries only the structure.
+  written: WrittenContent;
+}
+
+export interface WrittenContent {
+  core: boolean; // simple, interview and questions are all written
+  deep: boolean;
+  questions: number; // how many interview questions (flashcards) the concept has
+  any: boolean; // some text exists, so the subject's content file has an entry
+  needsReview?: boolean;
 }
 
 export interface CrossLink {

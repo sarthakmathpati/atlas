@@ -29,7 +29,7 @@ export function customToConcept(custom: CustomConcept, indexInTopic = 0): Concep
     related: [],
     estMinutes: CUSTOM_CONCEPT_MINUTES,
     isPattern: false,
-    content: { simple: "", interview: [], questions: [] },
+    written: { core: false, deep: false, questions: 0, any: false },
   };
 }
 

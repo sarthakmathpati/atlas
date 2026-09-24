@@ -2,7 +2,7 @@
 // least 40 words), then ticks the points they covered. The points are the concept's interview
 // bullets, or, until those are written, the parts of its scope. Score = ticked / total.
 
-import type { Concept } from "@/lib/types";
+import type { Concept, ConceptContent } from "@/lib/types";
 
 export const MIN_EXPLAIN_WORDS = 40;
 
@@ -46,8 +46,8 @@ export interface SelfCheckItem {
   text: string;
 }
 
-export function selfCheckItems(concept: Concept): SelfCheckItem[] {
-  const bullets = concept.content.interview;
+export function selfCheckItems(concept: Concept, content: ConceptContent): SelfCheckItem[] {
+  const bullets = content.interview;
   const texts = bullets.length > 0 ? bullets.map(plainText) : scopeParts(concept.scope);
   const list = texts.length > 0 ? texts : [concept.name];
   return list.slice(0, 10).map((text, i) => ({ id: String(i), text }));

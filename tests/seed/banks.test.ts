@@ -1,10 +1,9 @@
-// Design prompts (8.4), behavioral questions (8.5), mistake tags (8.6), drills (8.3) and the
-// combined seed index.
+// Design prompts (8.4), behavioral questions (8.5), mistake tags (8.6) and the combined seed
+// index. Drills (8.3) are checked in drills.test.ts.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { BEHAVIORAL_QUESTIONS, STORY_TAGS } from "@/data/behavioral.seed";
 import { DESIGN_PROBLEMS } from "@/data/designs.seed";
-import { DRILL_PROMPTS } from "@/data/drills.seed";
 import { MISTAKE_TAG_SEED } from "@/data/mistakeTags.seed";
 import { SEED_PROBLEMS, seedProblemById, seedProblemsByConcept } from "@/data/seed";
 import { conceptById, concepts } from "@/data/syllabus";
@@ -81,16 +80,6 @@ describe("mistake tags", () => {
     );
     expect(new Set(MISTAKE_TAG_SEED.map((t) => t.id)).size).toBe(33);
     for (const t of MISTAKE_TAG_SEED) expect(t.howToAvoid!.length).toBeGreaterThan(10);
-  });
-});
-
-describe("drill prompts", () => {
-  it("point at pattern concepts that exist", () => {
-    for (const d of DRILL_PROMPTS) {
-      expect(d.answerConceptIds.length).toBeGreaterThanOrEqual(1);
-      for (const c of d.answerConceptIds)
-        expect(conceptById.get(c)?.isPattern, `${d.id} → ${c}`).toBe(true);
-    }
   });
 });
 

@@ -1,5 +1,6 @@
 // Search documents for the command palette, built from the bundled syllabus and seed banks.
 import { problemHref, routeHref } from "@/app/router";
+import { conceptContentNow } from "@/data/content";
 import { SEED_PROBLEMS } from "@/data/seed";
 import { conceptById, concepts, subjectById, subjects, topicById, topics } from "@/data/syllabus";
 import { SearchIndex, type SearchDoc } from "@/lib/search/searchIndex";
@@ -7,6 +8,36 @@ import type { Concept, MistakeTag, ProblemState } from "@/lib/types";
 
 const DIFFICULTY = { easy: "Easy", medium: "Medium", hard: "Hard" } as const;
 const IMPORTANCE_BOOST = { must: 1.3, important: 1.1, advanced: 1 } as const;
+
+/**
+ * The document for a seed concept. Its simple level is added once the subject's text has loaded
+ * (see conceptContentDocs); until then the concept is found by name and scope.
+ */
+function conceptDoc(c: Concept, simple = ""): SearchDoc {
+  const topic = topicById.get(c.topicId);
+  return {
+    id: `concept:${c.id}`,
+    kind: "concept",
+    title: c.name,
+    subtitle: `${topic?.name ?? ""}${c.isPattern ? ", pattern" : ""}`,
+    text: [c.scope, simple].filter(Boolean).join(" "),
+    keywords: `${subjectById.get(c.subjectId)?.shortName ?? ""} ${c.isPattern ? "pattern" : ""}`,
+    // A search jump flies the map to the concept and opens it (F2).
+    href: routeHref("/map", undefined, { focus: c.id }),
+    boost: IMPORTANCE_BOOST[c.importance],
+  };
+}
+
+/** Seed concepts with written text, with their simple level (call once the text is loaded). */
+export function conceptContentDocs(): SearchDoc[] {
+  const docs: SearchDoc[] = [];
+  for (const c of concepts) {
+    if (!c.written.any) continue;
+    const simple = conceptContentNow(c)?.simple;
+    if (simple) docs.push(conceptDoc(c, simple));
+  }
+  return docs;
+}
 
 export function buildSeedDocs(): SearchDoc[] {
   const docs: SearchDoc[] = [];
@@ -33,20 +64,7 @@ export function buildSeedDocs(): SearchDoc[] {
       boost: 1.15,
     });
   }
-  for (const c of concepts) {
-    const topic = topicById.get(c.topicId);
-    docs.push({
-      id: `concept:${c.id}`,
-      kind: "concept",
-      title: c.name,
-      subtitle: `${topic?.name ?? ""}${c.isPattern ? ", pattern" : ""}`,
-      text: [c.scope, c.content.simple].filter(Boolean).join(" "),
-      keywords: `${subjectById.get(c.subjectId)?.shortName ?? ""} ${c.isPattern ? "pattern" : ""}`,
-      // A search jump flies the map to the concept and opens it (F2).
-      href: routeHref("/map", undefined, { focus: c.id }),
-      boost: IMPORTANCE_BOOST[c.importance],
-    });
-  }
+  for (const c of concepts) docs.push(conceptDoc(c));
   for (const p of SEED_PROBLEMS) {
     const patterns = p.conceptIds
       .map((id) => conceptById.get(id)?.name)

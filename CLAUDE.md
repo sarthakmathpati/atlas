@@ -43,9 +43,11 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   `src/lib/runtime/claude.ts` mirrors the parts we use. `src/lib/runtime/fakeClaude.ts` is an
   in-memory fake of `db`/`user`/`downloads` for tests.
 - **Content pipeline**: `content/<subject>/<topic>.md` (format in `content/README.md`) →
-  `scripts/build-syllabus.mjs` → `src/data/syllabus.generated.json` → `scripts/build-layout.mjs`
-  → `src/data/layout.json`. Both generated files are committed. `build`, `build:artifact` and `dev`
-  regenerate them first. Tests fail if they are stale.
+  `scripts/build-syllabus.mjs` → `src/data/syllabus.generated.json` (structure, with `written`
+  flags) plus `src/data/content/<subject>.generated.json` (the text) → `scripts/build-layout.mjs`
+  → `src/data/layout.json`. All generated files are committed. `build`, `build:artifact` and `dev`
+  regenerate them first. Tests fail if they are stale. Concept text loads per subject on demand:
+  `src/data/content.ts` (loaders) and `useConceptContent(s)` in `stores/contentStore.ts`.
 - **Seed banks**: `src/data/*.seed.ts` (problems, quant puzzles, designs, behavioral questions,
   mistake tags, drills), validated against the syllabus by `tests/seed/*`.
 - **Types**: `src/lib/types.ts` (section 4). zod schemas for every stored entity in
@@ -91,6 +93,7 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 | `npm run dev` | Regenerate data, start the dev server |
 | `npm run build:syllabus [-- --strict]` | Parse and validate `content/` |
 | `npm run build:layout [-- --force]` | Recompute map positions (skipped if structure unchanged) |
+| `npm run check:content-code [-- <subject>]` | Compile every C++ block and parse every Python block in `content/` |
 | `npm run typecheck` / `lint` / `test` | Checks |
 | `npm run build` / `build:artifact` | GitHub Pages build / single-file artifact + `check-artifact.mjs` |
 | `npm run release:artifact` | Build and zip the artifact into `release/` |
@@ -293,3 +296,23 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     level), never inferred from scrolling, so a status never changes without a visible reason.
 52. **`<main>` is `position: relative`**, so screen-reader-only text in long lists can't stretch
     the page beyond the scroll area.
+53. **Concept text is split from the structure** (Phase 5): the spec's `Concept.content` became
+    `Concept.written` flags (`core`, `deep`, `questions`, `any`, `needsReview`); the text is one
+    generated JSON per subject, loaded when first needed, with skeletons meanwhile and "Try again"
+    if it fails. Deck sizes come from the flags (`deckSize`); search indexes names and scopes at
+    start and adds simple levels when the palette opens; the hint ladder takes the pattern's text
+    as an argument. The startup syllabus chunk went from 1.5 MB to 370 KB. The artifact still
+    inlines everything (5.2 MB with DSA written).
+54. **Content conventions**: questions, answers and signals are plain text (they render without
+    Markdown); a question ends with `?` or `.`; a pattern's first signal is a clue that doesn't name
+    it (the hint nudge shows "A clue to look for: …"); must-know deep articles are 300 to 900 words
+    including code; code is C++ (plus Python where it helps), and every ```` ```cpp ```` and
+    ```` ```python ```` block must pass `npm run check:content-code` (a block starting with
+    `// sketch` or `# sketch` is skipped). A `###` heading that isn't one of the six sections fails
+    the build. When a subject is finished, add it to `FINISHED` in `tests/syllabus/content.test.ts`
+    so the strict rules stay enforced for it.
+55. **Drill bank** (`src/data/drills.seed.ts`, 276 prompts): each prompt's first answer id is its
+    main pattern, and every one of the 90 patterns is the main answer of at least three prompts;
+    further ids are also fully correct. Tested in `tests/seed/drills.test.ts`.
+56. **Hint nudge wording**: "A clue to look for: <first signal>." (works for noun and verb
+    phrases); level 1 never contains the pattern's name (tested for every seed problem).

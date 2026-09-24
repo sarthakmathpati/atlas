@@ -151,6 +151,14 @@ describe("build-syllabus validation", () => {
     expect(() => build({ topicB: bad })).toThrow(/must be "demo.beta.<slug>"/);
   });
 
+  it("fails on a level-3 heading that is not one of the six sections", () => {
+    const bad = TOPIC_A.replace(
+      'scope: "the first thing"',
+      'scope: "the first thing"\n\n### questions\nQ: A question?\nA: An answer.\n\n### questions-extra\nQ: Another?\nA: Yes.',
+    );
+    expect(() => build({ topicA: bad })).toThrow(/"### questions-extra" is not a section heading/);
+  });
+
   it("warns (without failing) about missing content, and fails with --strict", () => {
     const { report } = build();
     expect(report.perSubject.get("demo")).toMatchObject({

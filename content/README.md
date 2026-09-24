@@ -68,7 +68,26 @@ A: A short model answer (2 to 5 sentences). Three to five pairs.
 Rules the build enforces: ids are unique, every prerequisite and connection resolves, the
 prerequisite graphs have no cycles, and a concept never requires a concept from a topic that
 comes later in the topic order. Only the six reserved `### simple|interview|deep|questions|signals|template`
-headings start sections, and headings inside code fences are ignored.
+headings start sections (any other `###` heading fails the build; use `####` inside a deep
+article), and headings inside code fences are ignored.
+
+## Writing conventions
+
+- **simple**: 2 to 4 sentences with an everyday analogy. Avoid abbreviations with dots (e.g., i.e.,
+  vs.) because the sentence counter reads them as sentence ends.
+- **interview**: 3 to 7 bullets, Markdown allowed.
+- **deep** (must-know): 300 to 900 words including code, with `####` sections such as Intuition,
+  Worked example, Code, Complexity, Edge cases and bugs, Variants, and a closing "Connects to:" line.
+- **questions**: 3 to 5 `Q:`/`A:` pairs in plain text (no backticks, `$` or bold: the app shows
+  them without Markdown). A question ends with `?` or `.`.
+- **signals** (patterns): 3 to 6 plain-text bullets. The first one is the hint ladder's clue, so it
+  must not contain the pattern's name.
+- **template** (patterns): one fenced code block, C++ first.
+- **Code**: C++ (C++20) and Python. Every `cpp` and `python` block must compile or parse:
+  run `npm run check:content-code -- <subject>`. The checker provides `bits/stdc++.h`,
+  `using namespace std`, `ListNode` and `TreeNode`; start a block with `// sketch` (or `# sketch`)
+  when it is deliberately partial. Run the snippets against their worked examples before committing.
+- When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. If you must, add the old id to
 `idAliases` in `src/lib/storage/migrations.ts` so saved progress follows the concept.

@@ -76,7 +76,7 @@ export function ConceptChips({ concept }: { concept: Concept }) {
       {state?.neverFade && (
         <Chip title="It stays strong even when a review is overdue">Never fades</Chip>
       )}
-      {concept.content.needsReview && (
+      {concept.written.needsReview && (
         <Chip
           className="border-dashed text-warning"
           title="Some facts here haven't been double-checked yet"

@@ -3,7 +3,7 @@
 // what it covers as the answer, so reviews work before the content is complete.
 // Ratings score Again 0, Hard 0.4, Good 0.8, Easy 1; a session records one check per concept with
 // the average of its cards.
-import type { Concept } from "@/lib/types";
+import type { Concept, ConceptContent } from "@/lib/types";
 
 export type Rating = "again" | "hard" | "good" | "easy";
 
@@ -29,8 +29,14 @@ export interface Flashcard {
   kind: "question" | "recall";
 }
 
-export function cardsForConcept(concept: Concept): Flashcard[] {
-  const { questions, interview } = concept.content;
+/** A concept with its loaded text (data/content.ts). */
+export interface DeckItem {
+  concept: Concept;
+  content: ConceptContent;
+}
+
+export function cardsForConcept({ concept, content }: DeckItem): Flashcard[] {
+  const { questions, interview } = content;
   if (questions.length > 0) {
     return questions.map((qa, i) => ({
       id: `${concept.id}#${i}`,
@@ -56,8 +62,9 @@ export function cardsForConcept(concept: Concept): Flashcard[] {
  * A session deck: every concept gets at least one card (concepts in the given order), then the
  * rest of their questions, up to `max` cards in total.
  */
-export function buildDeck(concepts: readonly Concept[], max = MAX_SESSION_CARDS): Flashcard[] {
-  const perConcept = concepts.map(cardsForConcept);
+export function buildDeck(items: readonly DeckItem[], max = MAX_SESSION_CARDS): Flashcard[] {
+  const concepts = items.map((i) => i.concept);
+  const perConcept = items.map(cardsForConcept);
   const deck: Flashcard[] = [];
   for (const cards of perConcept) {
     if (deck.length >= max) break;
@@ -82,6 +89,18 @@ export function buildDeck(concepts: readonly Concept[], max = MAX_SESSION_CARDS)
       (order.get(a.conceptId) ?? 0) - (order.get(b.conceptId) ?? 0) ||
       within.get(a.id)! - within.get(b.id)!,
   );
+}
+
+/**
+ * The size of the deck buildDeck would make, from the concepts' `written` flags alone (no text
+ * needs to load): each concept has one card per written question, or one recall card.
+ */
+export function deckSize(
+  concepts: readonly Concept[],
+  max = MAX_SESSION_CARDS,
+): { cards: number; covered: number } {
+  const total = concepts.reduce((n, c) => n + Math.max(1, c.written.questions), 0);
+  return { cards: Math.min(max, total), covered: Math.min(max, concepts.length) };
 }
 
 export interface CardResult {

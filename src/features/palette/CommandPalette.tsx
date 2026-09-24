@@ -35,7 +35,8 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Kbd } from "@/components/ui/Misc";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { SubjectIcon } from "@/components/ui/SubjectIcon";
-import { subjectById } from "@/data/syllabus";
+import { loadAllContent } from "@/data/content";
+import { concepts, subjectById } from "@/data/syllabus";
 import type { SearchHit, SearchKind } from "@/lib/search/searchIndex";
 import { openAddConcept, openFlashcards } from "@/stores/conceptDialogStore";
 import { useConceptStateStore, useConceptStatus } from "@/stores/conceptStateStore";
@@ -47,8 +48,18 @@ import { useUiStore } from "@/stores/uiStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { exportBackup } from "../settings/backup";
 import { markSetupStep } from "../today/setupSteps";
-import { customConceptDocs, customProblemDocs, getSearchIndex, mistakeTagDocs } from "./docs";
+import {
+  conceptContentDocs,
+  customConceptDocs,
+  customProblemDocs,
+  getSearchIndex,
+  mistakeTagDocs,
+} from "./docs";
 import { pushRecent, readRecents, type RecentItem } from "./recents";
+
+const SUBJECTS_WITH_TEXT = [
+  ...new Set(concepts.filter((c) => c.written.any).map((c) => c.subjectId)),
+];
 
 const GROUP_LABEL: Record<SearchKind, string> = {
   concept: "Concepts",
@@ -154,7 +165,7 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const deferred = useDeferredValue(query);
   const [recents, setRecents] = useState<RecentItem[]>([]);
-  const [tagsVersion, setTagsVersion] = useState(0);
+  const [docsVersion, setDocsVersion] = useState(0);
 
   // Start fresh each time it opens.
   const [wasOpen, setWasOpen] = useState(open);
@@ -178,14 +189,26 @@ export function CommandPalette() {
       "custom-concepts",
       customConceptDocs(Object.values(useCustomConceptStore.getState().concepts)),
     );
-    if (services.status !== "ready") return;
     let cancelled = false;
+    // Concept text loads per subject; once it's here, search also matches each simple level.
+    loadAllContent(SUBJECTS_WITH_TEXT)
+      .then(() => {
+        if (cancelled) return;
+        getSearchIndex().replaceGroup("concept-text", conceptContentDocs());
+        setDocsVersion((v) => v + 1);
+      })
+      .catch(() => undefined);
+    if (services.status !== "ready") {
+      return () => {
+        cancelled = true;
+      };
+    }
     services.services.repository.mistakeTags
       .list()
       .then((tags) => {
         if (cancelled) return;
         getSearchIndex().replaceKind("mistake", mistakeTagDocs(tags));
-        setTagsVersion((v) => v + 1);
+        setDocsVersion((v) => v + 1);
       })
       .catch(() => undefined);
     return () => {
@@ -368,12 +391,12 @@ export function CommandPalette() {
   }, [actions, q, pick]);
 
   const groups = useMemo(() => {
-    void tagsVersion;
+    void docsVersion;
     const all = q ? getSearchIndex().search(q) : [];
     if (pick === "problem") return all.filter((g) => g.kind === "problem" || g.kind === "puzzle");
     if (pick === "path") return all.filter((g) => g.kind === "concept");
     return all;
-  }, [q, tagsVersion, pick]);
+  }, [q, docsVersion, pick]);
 
   const runAction = (action: PaletteAction) => {
     if (action.keepOpen) {

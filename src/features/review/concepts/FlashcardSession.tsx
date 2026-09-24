@@ -16,11 +16,15 @@ import {
   RATING_SCORE,
   sessionResults,
   type CardResult,
+  type Flashcard,
   type Rating,
 } from "@/lib/review/flashcards";
 import type { Concept, Status } from "@/lib/types";
 import { recordChecks, useConceptStateStore } from "@/stores/conceptStateStore";
+import { useConceptContents } from "@/stores/contentStore";
 import { findConcept } from "@/stores/customConceptStore";
+
+import { ContentUnavailable } from "../../concept/ContentUnavailable";
 
 const MarkdownView = lazy(() => import("@/components/ui/MarkdownView"));
 
@@ -44,14 +48,46 @@ interface FlashcardSessionProps {
   onDone: () => void;
 }
 
-export function FlashcardSession({ conceptIds, session, onSaved, onDone }: FlashcardSessionProps) {
+/** Loads the cards' text (data/content.ts), then runs the session with a fixed deck. */
+export function FlashcardSession(props: FlashcardSessionProps) {
   const concepts = useMemo(
-    () => conceptIds.map((id) => findConcept(id)).filter((c): c is Concept => Boolean(c)),
+    () => props.conceptIds.map((id) => findConcept(id)).filter((c): c is Concept => Boolean(c)),
     // The deck is fixed for the session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  const deck = useMemo(() => buildDeck(concepts), [concepts]);
+  const { value: contents, failed, retry } = useConceptContents(concepts);
+  const deck = useMemo(
+    () =>
+      contents
+        ? buildDeck(concepts.map((concept, i) => ({ concept, content: contents[i]! })))
+        : null,
+    [concepts, contents],
+  );
+  if (!deck) {
+    return (
+      <div className="px-4 py-4 sm:px-5">
+        {failed ? (
+          <ContentUnavailable onRetry={retry} />
+        ) : (
+          <div role="status" aria-label="Loading the cards" className="space-y-3">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        )}
+      </div>
+    );
+  }
+  return <Session {...props} concepts={concepts} deck={deck} />;
+}
+
+function Session({
+  concepts,
+  deck,
+  session,
+  onSaved,
+  onDone,
+}: FlashcardSessionProps & { concepts: readonly Concept[]; deck: readonly Flashcard[] }) {
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [results, setResults] = useState<CardResult[]>([]);

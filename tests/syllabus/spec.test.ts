@@ -1,9 +1,9 @@
 // Phase 1 "done when": the syllabus contains all 18 subjects with every topic and concept from
 // BUILD_SPEC.md section 6, every connection from 7.1 on both concepts, every prerequisite chain
 // from 7.2, and validation passes (no duplicates, no missing references, no cycles).
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildSyllabus, findCycle } from "../../scripts/build-syllabus.mjs";
+import { buildSyllabus, findCycle, splitSyllabus } from "../../scripts/build-syllabus.mjs";
 import { parseSpecConnections, parseSpecSyllabus, slugify } from "../../scripts/lib/spec.mjs";
 import { SPEC_PREREQ_EDGES, SPEC_PREREQ_RULES } from "../../scripts/lib/spec-prereqs.mjs";
 import generated from "../../src/data/syllabus.generated.json";
@@ -149,8 +149,35 @@ describe("prerequisites (section 7.2)", () => {
   });
 });
 
-describe("generated file", () => {
-  it("is up to date with content/ (run `npm run build:syllabus` after editing content)", () => {
-    expect(generated).toEqual(JSON.parse(JSON.stringify(syllabus)));
+describe("generated files", () => {
+  const { core, contentBySubject } = splitSyllabus(syllabus);
+  it("are up to date with content/ (run `npm run build:syllabus` after editing content)", () => {
+    expect(generated).toEqual(JSON.parse(JSON.stringify(core)));
+    const dir = new URL("../../src/data/content/", import.meta.url);
+    const files = readdirSync(dir).filter((f) => f.endsWith(".generated.json"));
+    expect(files.sort()).toEqual(
+      Object.keys(contentBySubject)
+        .map((id) => `${id}.generated.json`)
+        .sort(),
+    );
+    for (const [id, file] of Object.entries(contentBySubject)) {
+      const onDisk: unknown = JSON.parse(
+        readFileSync(new URL(`${id}.generated.json`, dir), "utf8"),
+      );
+      expect(onDisk, `src/data/content/${id}.generated.json`).toEqual(
+        JSON.parse(JSON.stringify(file)),
+      );
+    }
+  });
+
+  it("flag exactly the concepts whose text is in the content files", () => {
+    for (const c of core.concepts) {
+      const text = contentBySubject[c.subjectId]![c.id];
+      expect(c.written.any, c.id).toBe(text !== undefined);
+      if (text) {
+        expect(c.written.questions, c.id).toBe(text.questions.length);
+        expect(c.written.deep, c.id).toBe(Boolean(text.deep));
+      }
+    }
   });
 });

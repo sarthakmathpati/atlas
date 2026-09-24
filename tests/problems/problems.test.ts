@@ -1,6 +1,7 @@
 // F6, F8, F11, F22 helpers: quick add, CSV import, filters, the offline hint ladder, mistake
 // statistics and the Markdown export of notes.
 import { describe, expect, it } from "vitest";
+import { loadConceptContent } from "@/data/content";
 import { conceptById } from "@/data/syllabus";
 import { SEED_PROBLEMS } from "@/data/seed";
 import { buildNotesMarkdown } from "@/lib/export/notesMarkdown";
@@ -364,18 +365,29 @@ describe("filters and sorting", () => {
 });
 
 describe("offline hint ladder", () => {
-  it("gives three non-empty levels for every seed problem with patterns", () => {
+  it("gives three non-empty levels for every seed problem with patterns", async () => {
     for (const p of SEED_PROBLEMS) {
       if (p.source === "design-lld" || p.source === "design-hld") continue;
-      const levels = buildOfflineHints(p);
+      const primary = conceptById.get(p.conceptIds[0]!)!;
+      const levels = buildOfflineHints(p, await loadConceptContent(primary));
       expect(levels.map((l) => l.level)).toEqual([1, 2, 3]);
       for (const l of levels)
         expect(l.markdown.trim().length, `${p.id} level ${l.level}`).toBeGreaterThan(40);
-      const primary = conceptById.get(p.conceptIds[0]!)!;
       // Level 1 never names the pattern; level 2 does.
-      expect(levels[0]!.markdown.includes(`**${primary.name}**`)).toBe(false);
+      expect(levels[0]!.markdown.toLowerCase(), p.id).not.toContain(primary.name.toLowerCase());
       expect(levels[1]!.markdown).toContain(primary.name);
     }
+  });
+  it("uses a written pattern's first signal as the clue and its template as the pseudocode", async () => {
+    const concept = conceptById.get("dsa.sliding-window.variable-size-window")!;
+    const content = await loadConceptContent(concept);
+    const levels = buildOfflineHints({ conceptIds: [concept.id] }, content);
+    expect(content.signals?.length).toBeGreaterThan(0);
+    expect(levels[0]!.markdown).toContain("A clue to look for: longest or shortest contiguous");
+    expect(levels[1]!.markdown).toContain(content.signals![1]!);
+    expect(levels[2]!.markdown).toContain(content.template!.trim());
+    // Without the text (still loading), the ladder falls back to the topic's outline.
+    expect(buildOfflineHints({ conceptIds: [concept.id] })[2]!.markdown).toMatch(/^1\. /);
   });
   it("falls back to a general ladder for problems without patterns", () => {
     const levels = buildOfflineHints({ conceptIds: [] });

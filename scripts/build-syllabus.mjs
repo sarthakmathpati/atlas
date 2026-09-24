@@ -1,6 +1,9 @@
 #!/usr/bin/env node
-// Builds src/data/syllabus.generated.json from the human-readable content/ folder
-// (BUILD_SPEC.md sections 5.1 to 5.3).
+// Builds the syllabus from the human-readable content/ folder (BUILD_SPEC.md sections 5.1 to 5.3)
+// and writes it in two parts:
+//   src/data/syllabus.generated.json        structure: subjects, topics, concepts (with `written`
+//                                           flags saying what text exists), loaded at startup
+//   src/data/content/<subject>.generated.json   each concept's text, loaded when first needed
 //
 //   npm run build:syllabus              validate structure, warn about missing content
 //   npm run build:syllabus -- --strict  also fail on missing or malformed required content
@@ -9,7 +12,15 @@
 // a missing id, a connection name does not resolve, the topic or concept prerequisite graph has a
 // cycle, or a concept prerequisite points "backwards" against the topic order.
 // Missing content is only a warning (with a per-subject count) unless --strict is given.
-import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, mkdirSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  existsSync,
+  statSync,
+  mkdirSync,
+  rmSync,
+} from "node:fs";
 import { join, relative, basename, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { slugify, parseConnectionTable } from "./lib/spec.mjs";
@@ -17,8 +28,9 @@ import { slugify, parseConnectionTable } from "./lib/spec.mjs";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const CONTENT_DIR = join(ROOT, "content");
 const OUT_PATH = join(ROOT, "src", "data", "syllabus.generated.json");
+const CONTENT_OUT_DIR = join(ROOT, "src", "data", "content");
 
-export const SYLLABUS_FORMAT_VERSION = 1;
+export const SYLLABUS_FORMAT_VERSION = 2;
 const IMPORTANCE = new Set(["must", "important", "advanced"]);
 const TRACKS = new Set(["sde", "quant"]);
 const SECTION_NAMES = new Set(["simple", "interview", "deep", "questions", "signals", "template"]);
@@ -159,13 +171,20 @@ function parseConceptBlock(block, file) {
   const metaLines = [];
   const sections = {};
   let section = null;
-  for (const { text, inFence } of block.lines) {
+  for (const { text, inFence, lineNo } of block.lines) {
     const h = !inFence && text.match(SECTION_HEADING);
     if (h && SECTION_NAMES.has(h[1])) {
       section = h[1];
       if (sections[section]) throw new BuildError(`${where}: duplicate "### ${section}" section`);
       sections[section] = [];
       continue;
+    }
+    // Only the six reserved level-3 headings are allowed; anything else would silently become
+    // part of the previous section (for example, text appended to an answer).
+    if (!inFence && /^### /.test(text)) {
+      throw new BuildError(
+        `${file}:${lineNo} (${block.id}): "${text.trim()}" is not a section heading; use one of ${[...SECTION_NAMES].map((s) => `"### ${s}"`).join(", ")}, or "####" inside an article`,
+      );
     }
     if (section) sections[section].push(text);
     else metaLines.push(text);
@@ -567,6 +586,39 @@ export function buildSyllabus({ strict = false, contentDir = CONTENT_DIR } = {})
   return { syllabus, warnings, report };
 }
 
+/** What text a concept has, so the app knows without loading the subject's content file. */
+export function writtenFlags(content) {
+  const flags = {
+    core: Boolean(content.simple) && content.interview.length > 0 && content.questions.length > 0,
+    deep: Boolean(content.deep),
+    questions: content.questions.length,
+    any: Boolean(
+      content.simple ||
+      content.interview.length ||
+      content.deep ||
+      content.questions.length ||
+      content.signals?.length ||
+      content.template,
+    ),
+  };
+  if (content.needsReview) flags.needsReview = true;
+  return flags;
+}
+
+/**
+ * Splits the built syllabus into the startup structure (each concept's `content` replaced by its
+ * `written` flags) and one content file per subject ({ conceptId: content }, written concepts only).
+ */
+export function splitSyllabus(syllabus) {
+  const contentBySubject = Object.fromEntries(syllabus.subjects.map((s) => [s.id, {}]));
+  const concepts = syllabus.concepts.map(({ content, ...rest }) => {
+    const written = writtenFlags(content);
+    if (written.any) contentBySubject[rest.subjectId][rest.id] = content;
+    return { ...rest, written };
+  });
+  return { core: { ...syllabus, concepts }, contentBySubject };
+}
+
 function printReport({ syllabus, warnings, report }) {
   const { counts } = syllabus;
   console.log(
@@ -598,10 +650,22 @@ function main() {
   const strict = process.argv.includes("--strict");
   try {
     const result = buildSyllabus({ strict });
+    const { core, contentBySubject } = splitSyllabus(result.syllabus);
     mkdirSync(dirname(OUT_PATH), { recursive: true });
-    writeFileSync(OUT_PATH, `${JSON.stringify(result.syllabus, null, 1)}\n`);
+    writeFileSync(OUT_PATH, `${JSON.stringify(core, null, 1)}\n`);
+    // One file per subject; files of subjects that no longer exist are removed.
+    mkdirSync(CONTENT_OUT_DIR, { recursive: true });
+    const keep = new Set(Object.keys(contentBySubject).map((id) => `${id}.generated.json`));
+    for (const f of readdirSync(CONTENT_OUT_DIR)) {
+      if (f.endsWith(".generated.json") && !keep.has(f)) rmSync(join(CONTENT_OUT_DIR, f));
+    }
+    for (const [id, file] of Object.entries(contentBySubject)) {
+      writeFileSync(join(CONTENT_OUT_DIR, `${id}.generated.json`), `${JSON.stringify(file)}\n`);
+    }
     printReport(result);
-    console.log(`  Wrote ${relative(ROOT, OUT_PATH)}`);
+    console.log(
+      `  Wrote ${relative(ROOT, OUT_PATH)} and ${keep.size} content files in ${relative(ROOT, CONTENT_OUT_DIR)}`,
+    );
   } catch (err) {
     if (err instanceof BuildError) {
       console.error(`✗ build-syllabus failed: ${err.message}`);

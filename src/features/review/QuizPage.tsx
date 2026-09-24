@@ -20,7 +20,7 @@ import {
 } from "@/data/syllabus";
 import { inScope } from "@/lib/concepts/scope";
 import { relativeDate } from "@/lib/problems/progress";
-import { buildDeck } from "@/lib/review/flashcards";
+import { deckSize } from "@/lib/review/flashcards";
 import { localDate } from "@/lib/time";
 import type { Check, Concept } from "@/lib/types";
 import { openFlashcards } from "@/stores/conceptDialogStore";
@@ -126,8 +126,8 @@ export default function QuizPage() {
                   <p className="text-base text-text">
                     {dueIds.length} {dueIds.length === 1 ? "concept is" : "concepts are"} due, about{" "}
                     {
-                      buildDeck(dueIds.map((id) => findConcept(id)).filter((c) => c !== undefined))
-                        .length
+                      deckSize(dueIds.map((id) => findConcept(id)).filter((c) => c !== undefined))
+                        .cards
                     }{" "}
                     cards.
                   </p>
@@ -189,7 +189,7 @@ export default function QuizPage() {
               <p className="text-sm text-muted">
                 {chosen.length === 0
                   ? "No concepts in this set yet."
-                  : `${chosen.length} ${chosen.length === 1 ? "concept" : "concepts"}, up to ${buildDeck(chosen).length} cards.`}
+                  : `${chosen.length} ${chosen.length === 1 ? "concept" : "concepts"}, up to ${deckSize(chosen).cards} cards.`}
               </p>
               <Button
                 icon={Layers}

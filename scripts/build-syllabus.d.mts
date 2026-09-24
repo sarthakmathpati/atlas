@@ -1,5 +1,5 @@
 // Types for scripts/build-syllabus.mjs (used by tests).
-import type { Syllabus } from "../src/lib/types";
+import type { Concept, ConceptContent, Syllabus, WrittenContent } from "../src/lib/types";
 
 export class BuildError extends Error {}
 export const SYLLABUS_FORMAT_VERSION: number;
@@ -11,10 +11,18 @@ export interface SubjectContentReport {
   patterns: number;
   patternExtras: number;
 }
+/** A concept as the build produces it: with its text, before the text is split off. */
+export type BuiltConcept = Omit<Concept, "written"> & { content: ConceptContent };
+export type BuiltSyllabus = Omit<Syllabus, "concepts"> & { concepts: BuiltConcept[] };
 export interface BuildResult {
-  syllabus: Syllabus;
+  syllabus: BuiltSyllabus;
   warnings: string[];
   report: { perSubject: Map<string, SubjectContentReport>; problems: string[] };
 }
 export function buildSyllabus(options?: { strict?: boolean; contentDir?: string }): BuildResult;
+export function writtenFlags(content: ConceptContent): WrittenContent;
+export function splitSyllabus(syllabus: BuiltSyllabus): {
+  core: Syllabus;
+  contentBySubject: Record<string, Record<string, ConceptContent>>;
+};
 export function findCycle(ids: string[], prereqsOf: (id: string) => string[]): string[] | null;

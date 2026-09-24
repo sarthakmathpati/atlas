@@ -7,6 +7,7 @@ package-lock.json
 content
 BUILD_SPEC.md
 src/data/*.generated.json
+src/data/content/*.generated.json
 src/data/layout.json
 docs/claude-runtime-0.2.54
 /*.md

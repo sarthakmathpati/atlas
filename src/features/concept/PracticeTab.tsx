@@ -11,11 +11,13 @@ import { reviewInfo } from "@/lib/problems/progress";
 import { difficultyRamp, suggestNextProblem } from "@/lib/problems/suggest";
 import type { Concept } from "@/lib/types";
 import { useToday } from "@/stores/clockStore";
+import { useConceptContent } from "@/stores/contentStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
 import { ProblemStatusGlyph, ReviewText } from "../problems/parts";
 import { problemPageHref } from "../problems/problemUi";
+import { ContentUnavailable } from "./ContentUnavailable";
 
 const MarkdownView = lazy(() => import("@/components/ui/MarkdownView"));
 
@@ -34,7 +36,14 @@ export function PracticeTab({ concept }: { concept: Concept }) {
   const problems = problemsForConcept(concept.id, states);
   const suggested = suggestNextProblem(problems, states, { hidePremium });
   const ramp = difficultyRamp(problems, states);
-  const { signals, template } = concept.content;
+  const {
+    value: content,
+    failed,
+    retry,
+  } = useConceptContent(concept.isPattern ? concept : undefined);
+  const signals = content?.signals;
+  const template = content?.template;
+  const loading = concept.isPattern && content === undefined && !failed;
 
   return (
     <div className="space-y-5">
@@ -94,7 +103,8 @@ export function PracticeTab({ concept }: { concept: Concept }) {
                   <ProblemStatusGlyph state={state} />
                   <a
                     href={problemPageHref(p)}
-                    className="min-w-0 flex-1 text-base text-text hover:underline"
+                    // A 12rem basis lets the chips wrap below a long title on phones.
+                    className="min-w-0 grow basis-48 text-base text-text hover:underline"
                   >
                     {problemLabel(p)}
                   </a>
@@ -129,7 +139,11 @@ export function PracticeTab({ concept }: { concept: Concept }) {
             <h3 id={`${concept.id}-signals`} className="mb-2 text-base font-semibold text-text">
               How to spot it
             </h3>
-            {signals && signals.length > 0 ? (
+            {failed ? (
+              <ContentUnavailable onRetry={retry} />
+            ) : loading ? (
+              <Skeleton className="h-20 w-full" />
+            ) : signals && signals.length > 0 ? (
               <ul className="list-disc space-y-1 pl-5 text-base text-text">
                 {signals.map((s) => (
                   <li key={s}>{s}</li>
@@ -145,7 +159,9 @@ export function PracticeTab({ concept }: { concept: Concept }) {
             <h3 id={`${concept.id}-template`} className="mb-2 text-base font-semibold text-text">
               Template
             </h3>
-            {template ? (
+            {loading ? (
+              <Skeleton className="h-32 w-full" />
+            ) : template ? (
               <Suspense fallback={<Skeleton className="h-32 w-full" />}>
                 <MarkdownView>{template}</MarkdownView>
               </Suspense>
