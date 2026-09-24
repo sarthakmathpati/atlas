@@ -86,6 +86,38 @@ export interface SelectOption {
   value: string;
   label: string;
   disabled?: boolean;
+  /** Options with the same group are shown under one heading (an optgroup). */
+  group?: string;
+}
+
+function renderOptions(options: SelectOption[]) {
+  const out: React.ReactNode[] = [];
+  let i = 0;
+  while (i < options.length) {
+    const group = options[i]!.group;
+    if (!group) {
+      const o = options[i]!;
+      out.push(
+        <option key={o.value} value={o.value} disabled={o.disabled}>
+          {o.label}
+        </option>,
+      );
+      i++;
+      continue;
+    }
+    const members: SelectOption[] = [];
+    while (i < options.length && options[i]!.group === group) members.push(options[i++]!);
+    out.push(
+      <optgroup key={`g-${group}-${i}`} label={group}>
+        {members.map((o) => (
+          <option key={o.value} value={o.value} disabled={o.disabled}>
+            {o.label}
+          </option>
+        ))}
+      </optgroup>,
+    );
+  }
+  return out;
 }
 
 interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "children"> {
@@ -104,11 +136,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         className={cx(CONTROL, "h-10 appearance-none pr-9 pl-3 max-md:h-11")}
         {...rest}
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value} disabled={o.disabled}>
-            {o.label}
-          </option>
-        ))}
+        {renderOptions(options)}
       </select>
       <ChevronDown
         size={16}

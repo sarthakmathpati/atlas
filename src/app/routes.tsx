@@ -13,7 +13,7 @@ export const PAGES: Record<RouteName, Page> = {
   today: lazy(() => import("@/features/today/TodayPage")),
   map: lazy(() => import("@/features/map/MapPage")),
   concept: lazy(() => import("@/features/concept/ConceptPage")),
-  problems: placeholder("ProblemsPage"),
+  problems: lazy(() => import("@/features/problems/ProblemsPage")),
   problem: lazy(() => import("@/features/problems/ProblemPage")),
   review: placeholder("ReviewPage"),
   practice: placeholder("PracticePage"),

@@ -166,7 +166,19 @@ export const problemStateSchema: z.ZodType<ProblemState> = z.object({
   srs: srsSchema,
   inReview: z.boolean(),
   attempts: z.array(attemptSchema),
-  draft: z.object({ language: z.string(), code: z.string(), updatedAt: isoTime }).optional(),
+  draft: z
+    .object({
+      language: z.string(),
+      code: z.string(),
+      updatedAt: isoTime,
+      mode: z.enum(["normal", "resolve"]).optional(),
+      startedAt: isoTime.optional(),
+      elapsedMs: z.number().min(0).optional(),
+      hintsUsed: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional(),
+      sawSolution: z.boolean().optional(),
+      revealed: z.boolean().optional(),
+    })
+    .optional(),
   hints: z
     .array(
       z.object({

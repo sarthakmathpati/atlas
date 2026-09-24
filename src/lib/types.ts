@@ -267,6 +267,28 @@ export interface CustomProblem {
   prompt?: string;
 }
 
+/**
+ * Autosaved, unsaved work in the workspace (F7). Besides the spec's language, code and updatedAt,
+ * it keeps the attempt in progress (timer, hints, re-solve mode, reveals), so a reload never
+ * loses work or quietly forgets that a hint was used.
+ */
+export interface ProblemDraft {
+  language: string;
+  code: string;
+  updatedAt: string;
+  mode?: "normal" | "resolve";
+  /** When the attempt in progress started (ISO). */
+  startedAt?: string;
+  /** Time on the attempt timer. */
+  elapsedMs?: number;
+  /** Highest hint level shown during this attempt. */
+  hintsUsed?: 0 | 1 | 2 | 3;
+  /** The full solution was opened, or hidden notes were revealed in re-solve mode. */
+  sawSolution?: boolean;
+  /** Re-solve mode: the owner revealed the hidden attempts, insight and notes. */
+  revealed?: boolean;
+}
+
 export interface ProblemState {
   problemId: string;
   custom?: CustomProblem; // present when the owner added a problem not in the seed
@@ -281,7 +303,7 @@ export interface ProblemState {
   srs: SrsState;
   inReview: boolean; // default true once solved
   attempts: Attempt[]; // newest last; cap at 30, warn the owner past 20
-  draft?: { language: string; code: string; updatedAt: string }; // autosaved unsaved work
+  draft?: ProblemDraft; // autosaved unsaved work
   hints?: { level: 1 | 2 | 3; text: string; createdAt: string }[]; // cached hint ladder output
   updatedAt: string;
 }

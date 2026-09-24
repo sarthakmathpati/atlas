@@ -5,6 +5,8 @@ import { useMediaQuery } from "@/components/ui/hooks";
 import { PageSkeleton } from "@/components/ui/Misc";
 import { CommandPalette } from "@/features/palette/CommandPalette";
 import { getSearchIndex } from "@/features/palette/docs";
+import { CsvImportDialog } from "@/features/problems/CsvImportDialog";
+import { QuickAddDialog } from "@/features/problems/QuickAddDialog";
 import { useUiStore } from "@/stores/uiStore";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { PAGES } from "../routes";
@@ -90,6 +92,8 @@ export function AppShell() {
       <AskClaudePanel route={route} />
       <ShortcutsDialog />
       <CommandPalette />
+      <QuickAddDialog />
+      <CsvImportDialog />
       <FocusTimerController />
     </div>
   );

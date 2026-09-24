@@ -1,7 +1,7 @@
 // MultiCombobox (section 12.7): search plus multi-select, used for concepts, mistake tags and
 // focus subjects. ARIA 1.2 combobox pattern: the input keeps focus, arrow keys move through the
 // list, Enter toggles, Backspace in an empty input removes the last choice.
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Plus } from "lucide-react";
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { TagChip } from "./Chip";
 import { cx } from "./cx";
@@ -29,6 +29,12 @@ interface MultiComboboxProps {
   emptyText?: string;
   className?: string;
   hideLabel?: boolean;
+  /** Offers "Add “…”" for text that matches no option (for example a new mistake tag). */
+  onCreate?: (text: string) => void;
+  /** Words for the create option, default: Add “text”. */
+  createLabel?: (text: string) => string;
+  /** Options listed first when the search is empty (for example suggested tags). */
+  suggested?: string[];
 }
 
 function rank(option: ComboOption, q: string): number {
@@ -53,6 +59,9 @@ export function MultiCombobox({
   emptyText = "No matches. Try another word.",
   className,
   hideLabel,
+  onCreate,
+  createLabel = (text) => `Add “${text}”`,
+  suggested,
 }: MultiComboboxProps) {
   const id = useId();
   const listId = `${id}-list`;
@@ -67,14 +76,38 @@ export function MultiCombobox({
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return options.slice(0, limit);
+    if (!q) {
+      if (!suggested?.length) return options.slice(0, limit);
+      const first = new Set(suggested);
+      const top = suggested.map((v) => options.find((o) => o.value === v)).filter(Boolean);
+      return [...(top as ComboOption[]), ...options.filter((o) => !first.has(o.value))].slice(
+        0,
+        limit,
+      );
+    }
     return options
       .map((o) => ({ o, r: rank(o, q) }))
       .filter((x) => x.r >= 0)
       .sort((a, b) => a.r - b.r)
       .slice(0, limit)
       .map((x) => x.o);
-  }, [options, query, limit]);
+  }, [options, query, limit, suggested]);
+
+  const trimmed = query.trim();
+  const canCreate =
+    Boolean(onCreate) &&
+    trimmed.length > 0 &&
+    !options.some((o) => o.label.toLowerCase() === trimmed.toLowerCase()) &&
+    !full;
+  const count = matches.length + (canCreate ? 1 : 0);
+
+  const create = () => {
+    if (!canCreate || !onCreate) return;
+    onCreate(trimmed);
+    setQuery("");
+    setActive(0);
+    inputRef.current?.focus();
+  };
 
   const toggle = (v: string) => {
     if (selected.has(v)) onChange(value.filter((x) => x !== v));
@@ -87,7 +120,7 @@ export function MultiCombobox({
     if (e.key === "ArrowDown") {
       e.preventDefault();
       if (!open) setOpen(true);
-      else setActive((a) => Math.min(matches.length - 1, a + 1));
+      else setActive((a) => Math.min(count - 1, a + 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((a) => Math.max(0, a - 1));
@@ -96,12 +129,13 @@ export function MultiCombobox({
       e.preventDefault();
       const option = matches[active];
       if (option) toggle(option.value);
+      else if (active === matches.length) create();
     } else if (e.key === "Backspace" && query === "" && value.length > 0) {
       onChange(value.slice(0, -1));
     }
   };
 
-  const activeId = open && matches[active] ? `${id}-opt-${active}` : undefined;
+  const activeId = open && active < count ? `${id}-opt-${active}` : undefined;
 
   return (
     <div className={cx("flex flex-col gap-1.5", className)}>
@@ -155,7 +189,7 @@ export function MultiCombobox({
           aria-multiselectable="true"
           onMouseDown={(e) => e.preventDefault()}
         >
-          {matches.length === 0 ? (
+          {count === 0 ? (
             <p className="px-3 py-2 text-sm text-muted">{emptyText}</p>
           ) : (
             matches.map((o, i) => {
@@ -197,6 +231,22 @@ export function MultiCombobox({
                 </div>
               );
             })
+          )}
+          {canCreate && (
+            <div
+              id={`${id}-opt-${matches.length}`}
+              role="option"
+              aria-selected={false}
+              onClick={create}
+              onMouseMove={() => setActive(matches.length)}
+              className={cx(
+                "flex cursor-pointer items-center gap-2 rounded-control px-2.5 py-1.5 text-base text-accent max-md:py-2.5",
+                active === matches.length && "bg-accent-soft",
+              )}
+            >
+              <Plus size={14} aria-hidden="true" className="shrink-0" />
+              {createLabel(trimmed)}
+            </div>
           )}
         </div>
       </FloatingPanel>

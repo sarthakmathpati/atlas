@@ -20,11 +20,16 @@ interface UiState {
   askOpen: boolean;
   moreOpen: boolean;
   shortcutsOpen: boolean;
+  /** Problems: the quick add and CSV import dialogs (opened from the page or the palette). */
+  quickAddOpen: boolean;
+  csvImportOpen: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setPaletteOpen: (open: boolean) => void;
   setAskOpen: (open: boolean) => void;
   setMoreOpen: (open: boolean) => void;
   setShortcutsOpen: (open: boolean) => void;
+  setQuickAddOpen: (open: boolean) => void;
+  setCsvImportOpen: (open: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -33,6 +38,8 @@ export const useUiStore = create<UiState>((set) => ({
   askOpen: false,
   moreOpen: false,
   shortcutsOpen: false,
+  quickAddOpen: false,
+  csvImportOpen: false,
   setSidebarCollapsed: (collapsed) => {
     set({ sidebarCollapsed: collapsed });
     try {
@@ -45,4 +52,6 @@ export const useUiStore = create<UiState>((set) => ({
   setAskOpen: (askOpen) => set({ askOpen }),
   setMoreOpen: (moreOpen) => set({ moreOpen }),
   setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
+  setQuickAddOpen: (quickAddOpen) => set({ quickAddOpen }),
+  setCsvImportOpen: (csvImportOpen) => set({ csvImportOpen }),
 }));
