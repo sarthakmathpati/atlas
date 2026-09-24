@@ -1,0 +1,162 @@
+/*
+ * Design tokens (BUILD_SPEC.md section 12). Every color is a custom property.
+ * Light is the base; dark is applied by the system preference unless the owner forced light,
+ * and again when the owner forces dark. The theme toggle sets data-theme on <html>.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Light theme: "drafting table" */
+  --canvas: #f3f6f9;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e9eef3;
+  --rule: #d3dee8;
+  --rule-strong: #b7c7d6;
+  --grid-line: rgb(211 222 232 / 0.75);
+  --text: #0e2233;
+  --text-muted: #4e6477;
+  --text-faint: #5f7487;
+  --accent: #1f6fb2;
+  --accent-hover: #185c95;
+  --accent-soft: rgb(31 111 178 / 0.1);
+  --on-accent: #ffffff;
+  --focus-ring: #1f6fb2;
+  --shadow-float: 0 1px 2px rgb(14 34 51 / 0.08), 0 8px 24px rgb(14 34 51 / 0.12);
+
+  /* Status glyphs (section 12.3): fill and stroke per status */
+  --status-not-started-fill: transparent;
+  --status-not-started-stroke: #7c90a2;
+  --status-learning-fill: #f4c75a;
+  --status-learning-stroke: #a97408;
+  --status-strong-fill: #57c28f;
+  --status-strong-stroke: #1f7a4d;
+  --status-fading-fill: #f08a7e;
+  --status-fading-stroke: #b23a2c;
+
+  /* Importance tags */
+  --importance-must: #0e2233;
+  --importance-important: #4e6477;
+  --importance-advanced: #6b8093;
+
+  /* Region tint strength (applied to regionHue with hsl()) */
+  --region-saturation: 45%;
+  --region-lightness: 55%;
+  --region-alpha: 0.07;
+  --region-stroke-alpha: 0.22;
+
+  /* Spacing, radius, type scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-control: 6px;
+  --radius-panel: 10px;
+  --radius-round: 9999px;
+
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-condensed: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --duration-panel: 180ms;
+  --duration-dialog: 150ms;
+  --duration-fly: 400ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    /* Dark theme: "night drafting" */
+    --canvas: #0e2233;
+    --surface: #142c40;
+    --surface-raised: #1a3550;
+    --surface-sunken: #0b1c2a;
+    --rule: #25445e;
+    --rule-strong: #34587a;
+    --grid-line: rgb(37 68 94 / 0.35);
+    --text: #e6eef5;
+    --text-muted: #93a9bd;
+    --text-faint: #7d94a8;
+    --accent: #6cc3f0;
+    --accent-hover: #8fd2f4;
+    --accent-soft: rgb(108 195 240 / 0.14);
+    --on-accent: #0e2233;
+    --focus-ring: #6cc3f0;
+    --shadow-float: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px rgb(0 0 0 / 0.4);
+
+    --status-not-started-fill: transparent;
+    --status-not-started-stroke: #93a9bd;
+    --status-learning-fill: #f0b442;
+    --status-learning-stroke: #f0b442;
+    --status-strong-fill: #4cc38a;
+    --status-strong-stroke: #4cc38a;
+    --status-fading-fill: #ef6b5b;
+    --status-fading-stroke: #ef6b5b;
+
+    --importance-must: #e6eef5;
+    --importance-important: #93a9bd;
+    --importance-advanced: #7d94a8;
+
+    --region-saturation: 50%;
+    --region-lightness: 60%;
+    --region-alpha: 0.08;
+    --region-stroke-alpha: 0.26;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: #0e2233;
+  --surface: #142c40;
+  --surface-raised: #1a3550;
+  --surface-sunken: #0b1c2a;
+  --rule: #25445e;
+  --rule-strong: #34587a;
+  --grid-line: rgb(37 68 94 / 0.35);
+  --text: #e6eef5;
+  --text-muted: #93a9bd;
+  --text-faint: #7d94a8;
+  --accent: #6cc3f0;
+  --accent-hover: #8fd2f4;
+  --accent-soft: rgb(108 195 240 / 0.14);
+  --on-accent: #0e2233;
+  --focus-ring: #6cc3f0;
+  --shadow-float: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px rgb(0 0 0 / 0.4);
+
+  --status-not-started-fill: transparent;
+  --status-not-started-stroke: #93a9bd;
+  --status-learning-fill: #f0b442;
+  --status-learning-stroke: #f0b442;
+  --status-strong-fill: #4cc38a;
+  --status-strong-stroke: #4cc38a;
+  --status-fading-fill: #ef6b5b;
+  --status-fading-stroke: #ef6b5b;
+
+  --importance-must: #e6eef5;
+  --importance-important: #93a9bd;
+  --importance-advanced: #7d94a8;
+
+  --region-saturation: 50%;
+  --region-lightness: 60%;
+  --region-alpha: 0.08;
+  --region-stroke-alpha: 0.26;
+}
+
+/* Safe areas and one-screen sizing, required inside the claude.ai artifact frame (section 2.5). */
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
