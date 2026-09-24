@@ -4,11 +4,14 @@ Read `CLAUDE.md` first, then this file, then `BUILD_SPEC.md`. Update this file a
 work session and at least every hour.
 
 **Current state:** Phases 0 to 4 are done (sessions 1 to 4, 24 Sep 2026). Phase 5 (content) is
-under way: session 5 finished DSA (all 249 concepts, every must-know with a deep article, every
-pattern with signals and a template, every code block compiled and run) and wrote the pattern drill
-bank (276 original prompts, at least 3 per pattern). Concept text now loads per subject on demand,
-so the startup bundle stays small as content grows.
-**Next up:** Phase 5 continues with OOP, then OS (section 5.3 order: DSA, OOP, OS, CN, DBMS, SQL,
+under way. Session 5 finished DSA (all 249 concepts, every must-know with a deep article, every
+pattern with signals and a template) and wrote the pattern drill bank (276 original prompts).
+Session 6 finished **OOP** (53 / 53 concepts, a deep article for every one, 24 of them must-know;
+246 flashcard questions) and **OS** (65 / 65 concepts, a deep article for every one, 29 of them
+must-know; 287 questions). Every C++, Python and Java block compiles and was run against its worked example;
+scheduling, Banker's algorithm, page replacement, disk scheduling and inode numbers were computed
+by small simulators. Concept text loads per subject on demand, so the startup bundle stays small.
+**Next up:** Phase 5 continues with CN, then DBMS (section 5.3 order: DSA, OOP, OS, CN, DBMS, SQL,
 System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles, Markets, Architecture,
 Aptitude, Engineering essentials, Career), one or two subjects per session, never two content
 sessions at once. Follow `content/README.md` → "Writing conventions", run
@@ -25,7 +28,7 @@ sessions at once. Follow `content/README.md` → "Writing conventions", run
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. |
+| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -77,9 +80,9 @@ deep for every must-know concept; signals and template for every pattern.
 |---|---|---|---|
 | lang | 0 / 46 | 0 / 22 | – |
 | dsa | 249 / 249 | 115 / 115 | 90 / 90 |
-| oop | 0 / 53 | 0 / 24 | – |
+| oop | 53 / 53 | 24 / 24 | – |
 | lld | 0 / 32 | 0 / 11 | – |
-| os | 0 / 65 | 0 / 29 | – |
+| os | 65 / 65 | 29 / 29 | – |
 | conc | 0 / 20 | 0 / 9 | – |
 | arch | 0 / 19 | 0 / 4 | – |
 | cn | 0 / 55 | 0 / 32 | – |
@@ -117,9 +120,9 @@ deep for every must-know concept; signals and template for every pattern.
   and each subject's text is its own chunk (DSA: 1.16 MB, 377 KB gzipped), loaded when a concept,
   flashcards, hints or the palette first need it. Other heavy chunks: CodeMirror (about 650 KB),
   Markdown with KaTeX (about 430 KB), Recharts (about 370 KB, design kit only). The artifact file
-  inlines everything: 5.2 MB now (limit 15 MB); at the DSA rate, all 18 subjects would add about
-  4 to 5 MB more, so it should stay under the limit, but watch `check-artifact` after each
-  content session. If it gets close, compress the content chunks in the artifact build.
+  inlines everything: 5.7 MB after OOP and OS (limit 15 MB; OOP and OS added about 0.5 MB); at
+  this rate the remaining 15 subjects add about 4 to 5 MB, so it should stay under the limit, but
+  watch `check-artifact` after each content session. If it gets close, compress the content chunks in the artifact build.
 - **Quant bank:** the spec table has 41 puzzles, not 40. Four prompts carry a short answer-format
   hint (for example "(Answer in minutes.)"); `q-twenty-one` has a two-part spoken answer, so it is
   self-graded against its note.
@@ -136,6 +139,25 @@ deep for every must-know concept; signals and template for every pattern.
   the shell now, because the top bar and Settings need them.
 - **Ask Claude drawer, "Explain with Claude", API key, Review my code, Dry run, Suggest with
   Claude:** each shows an honest "arrives in phase 6" message; nothing pretends to work.
+- **Phase 5 notes (session 6, OOP and OS):** every code block was checked three ways:
+  `check:content-code` (C++ with g++ -std=c++20, Python with `ast`, and now Java with `javac`),
+  then each runnable block was executed (C++ with AddressSanitizer and UBSan) and its output
+  compared with the text, and concept metadata was diffed against the previous build (no id,
+  name, scope, prerequisite or importance changed, so the map did not move). Numbers in worked
+  examples come from small simulators (scheduling Gantt charts and averages, Banker's safe
+  sequence and requests, FIFO, LRU, OPT and Clock fault counts, Belady's anomaly, first, best and
+  worst fit, disk scheduling totals, inode block lookup, TLB and page-fault access times). Measured
+  numbers quoted in articles (system call cost, context switch cost, minor page faults, lock
+  fairness) are from test runs on the session's cloud machine and say so. Fixed on the way: a
+  test URL in a builder example (the artifact check rejects unknown URLs), a Rule-of-zero snippet
+  that referenced another block, a broken UML text diagram, and claims that did not match
+  measurements (a race counter, lock fairness). Once, in a batch run of all snippets, the
+  readers-writers example (C++20 semaphores) hit the runner's 30-second timeout; about 170 reruns,
+  including 120 under parallel load, and a 12-million-handoff semaphore stress test did not
+  reproduce it, so it was left as is. Screens reviewed: concept pages with deep articles (tables,
+  C++, Java and text diagrams) at 1280 px (light and dark) and 390 px (light and dark), and
+  flashcards with the new questions; no console errors, no horizontal page overflow (wide tables
+  scroll inside their own region).
 - **Phase 5 notes (session 5, DSA):** content was checked three ways: `check:content-code`
   compiles every C++ block (g++ -std=c++20, in parallel, about 35 s) and parses every Python block;
   snippets were run against their worked examples and random tests against brute force (C++ with

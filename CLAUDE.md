@@ -316,3 +316,10 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     further ids are also fully correct. Tested in `tests/seed/drills.test.ts`.
 56. **Hint nudge wording**: "A clue to look for: <first signal>." (works for noun and verb
     phrases); level 1 never contains the pattern's name (tested for every seed problem).
+57. **Content code checks beyond C++ and Python** (Phase 5, OOP and OS): `java` blocks are
+    allowed where the idea is Java's own and are compiled with `javac` (each block in its own
+    package with the common `java.util` imports; a block holds types, or members that get wrapped
+    in a class). The C++ prelude also includes POSIX and Linux headers (`unistd.h`, `sys/wait.h`,
+    `sys/mman.h`, `semaphore.h`, `sys/epoll.h`, `sys/resource.h`, …), so C++ checks need Linux;
+    a block's `int main` is renamed to a function with a deduced return type. Code lines stay
+    within 100 characters, and examples never print URLs (the artifact URL check would fail).

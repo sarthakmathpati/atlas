@@ -5,11 +5,23 @@
 //   npm run check:content-code -- dsa oop   only these subjects
 //
 // C++ blocks (```cpp) are compiled with `g++ -std=c++20 -fsyntax-only`, each inside its own
-// namespace with the usual headers, so snippets may reuse names. Python blocks (```python) are
-// parsed with `ast.parse`. A block whose first line is `// sketch` or `# sketch` is skipped (for
-// deliberately partial code). Needs g++ and python3; missing tools are reported and skipped.
+// namespace with the usual headers (plus POSIX and Linux ones such as unistd.h and sys/epoll.h,
+// so C++ checks need Linux), so snippets may reuse names. Python blocks (```python) are
+// parsed with `ast.parse`. Java blocks (```java) are compiled with one `javac` run, each block in
+// its own package with the common java.util imports; top-level `public` is dropped so a block may
+// hold several classes, and a block without a top-level type is wrapped in a class. A block whose
+// first line is `// sketch` or `# sketch` is skipped (for deliberately partial code). Needs g++,
+// python3 and javac; missing tools are reported and skipped.
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+  rmSync,
+} from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +35,21 @@ const PRELUDE = [
   "#include <thread>",
   "#include <mutex>",
   "#include <condition_variable>",
+  // POSIX headers for the OS subject (fork, pipes, mmap, semaphores, sockets, epoll).
+  "#include <fcntl.h>",
+  "#include <poll.h>",
+  "#include <pthread.h>",
+  "#include <semaphore.h>",
+  "#include <signal.h>",
+  "#include <sys/epoll.h>",
+  "#include <sys/mman.h>",
+  "#include <sys/resource.h>",
+  "#include <sys/socket.h>",
+  "#include <sys/stat.h>",
+  "#include <sys/syscall.h>",
+  "#include <sys/types.h>",
+  "#include <sys/wait.h>",
+  "#include <unistd.h>",
   "using namespace std;",
   "struct ListNode { int val; ListNode* next; ListNode(int v = 0, ListNode* n = nullptr) : val(v), next(n) {} };",
   "struct TreeNode { int val; TreeNode* left; TreeNode* right; TreeNode(int v = 0, TreeNode* l = nullptr, TreeNode* r = nullptr) : val(v), left(l), right(r) {} };",
@@ -84,9 +111,11 @@ async function checkCpp(blocks, tmp) {
       .split("\n")
       .filter((l) => !/^\s*#include\b/.test(l) && !/^\s*using namespace std;\s*$/.test(l))
       .join("\n");
+    // A block with main stays at global scope; main becomes block_main with a deduced return
+    // type, so a main without `return 0;` (legal for main only) compiles without a warning.
     const hasMain = /\bint\s+main\s*\(/.test(body);
     const src = hasMain
-      ? `#include "prelude.hpp"\n${body.replace(/\bint\s+main\s*\(/, "int block_main(")}\n`
+      ? `#include "prelude.hpp"\n${body.replace(/\bint\s+main\s*\(/, "auto block_main(")}\n`
       : `#include "prelude.hpp"\nnamespace block_${i} {\n${body}\n}\n`;
     const file = join(tmp, `b${i}.cpp`);
     writeFileSync(file, src);
@@ -128,6 +157,67 @@ function checkPython(blocks) {
   return JSON.parse(r.stdout).map(([i, message]) => ({ block: blocks[i], message }));
 }
 
+const JAVA_IMPORTS = [
+  "java.util.*",
+  "java.util.function.*",
+  "java.util.stream.*",
+  "java.util.concurrent.*",
+  "java.util.concurrent.atomic.*",
+  "java.util.concurrent.locks.*",
+  "java.io.*",
+];
+
+function checkJava(blocks, tmp) {
+  // One javac run for every block (the JVM starts once); each block lives in package b<i>, so
+  // blocks may reuse class names, and errors are attributed through the file path.
+  const topLevelType =
+    /^(public\s+)?((abstract|final|sealed|non-sealed|static)\s+)*(class|interface|enum|record|@interface)\s/;
+  const files = blocks.map((b, i) => {
+    const lines = b.code.split("\n");
+    const imports = lines.filter((l) => /^import\s/.test(l));
+    const body = lines
+      .filter((l) => !/^import\s/.test(l))
+      .map((l) =>
+        l.replace(
+          /^public\s+(?=((abstract|final|sealed|non-sealed)\s+)*(class|interface|enum|record)\s)/,
+          "",
+        ),
+      );
+    const wrapped = body.some((l) => topLevelType.test(l))
+      ? body
+      : [`class Snippet${i} {`, ...body, "}"];
+    const head = [`package b${i};`, ...JAVA_IMPORTS.map((p) => `import ${p};`), ...imports];
+    const dir = join(tmp, "java", `b${i}`);
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, "Snippet.java");
+    writeFileSync(file, [...head, ...wrapped].join("\n") + "\n");
+    return { file, offset: head.length + (wrapped === body ? 0 : 1) };
+  });
+  if (!files.length) return [];
+  const r = spawnSync(
+    "javac",
+    [
+      "-proc:none",
+      "-nowarn",
+      "-Xmaxerrs",
+      "10000",
+      "-d",
+      join(tmp, "java-out"),
+      ...files.map((f) => f.file),
+    ],
+    { encoding: "utf8", env: { ...process.env, JAVA_TOOL_OPTIONS: "" } },
+  );
+  if (r.status === 0) return [];
+  const byBlock = new Map();
+  for (const m of r.stderr.matchAll(/b(\d+)[\\/]Snippet\.java:(\d+): error: (.*)/g)) {
+    const i = Number(m[1]);
+    const line = Number(m[2]) - files[i].offset;
+    byBlock.set(i, [...(byBlock.get(i) ?? []), `error: line ${line}: ${m[3]}`]);
+  }
+  if (!byBlock.size) throw new Error(r.stderr);
+  return [...byBlock].map(([i, messages]) => ({ block: blocks[i], message: messages.join("\n") }));
+}
+
 async function main() {
   const wanted = process.argv.slice(2).filter((a) => !a.startsWith("-"));
   const subjects = readdirSync(CONTENT).filter(
@@ -135,6 +225,7 @@ async function main() {
   );
   const cpp = [];
   const py = [];
+  const java = [];
   for (const s of subjects) {
     for (const f of readdirSync(join(CONTENT, s)).filter((f) => f.endsWith(".md"))) {
       const path = join(CONTENT, s, f);
@@ -143,6 +234,7 @@ async function main() {
         if (skipped(b.code)) continue;
         if (b.lang === "cpp") cpp.push(block);
         else if (b.lang === "python") py.push(block);
+        else if (b.lang === "java") java.push(block);
       }
     }
   }
@@ -153,6 +245,8 @@ async function main() {
     else console.warn("! g++ not found; C++ blocks not checked");
     if (has("python3", ["--version"])) failures.push(...checkPython(py));
     else console.warn("! python3 not found; Python blocks not checked");
+    if (has("javac", ["-version"])) failures.push(...checkJava(java, tmp));
+    else console.warn("! javac not found; Java blocks not checked");
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
@@ -170,7 +264,7 @@ async function main() {
   }
   const errors = failures.filter((f) => !f.warning).length;
   console.log(
-    `\n${errors ? "✗" : "✓"} ${cpp.length} C++ and ${py.length} Python blocks checked: ${errors} error(s), ${failures.length - errors} warning(s).`,
+    `\n${errors ? "✗" : "✓"} ${cpp.length} C++, ${py.length} Python and ${java.length} Java blocks checked: ${errors} error(s), ${failures.length - errors} warning(s).`,
   );
   process.exit(errors ? 1 : 0);
 }
