@@ -6785,9 +6785,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A recursive function solves a problem by calling itself on a smaller version of the same problem. It is like a set of Russian dolls: to count them, open the outer doll and count the dolls inside it, until you reach the smallest doll, which you just count as one. That smallest case, the base case, is what stops the calls from going on forever.",
+    "interview": [
+     "Two parts: a **base case** that answers directly, and a **recursive case** that reduces the problem and combines the smaller answer.",
+     "Every call must make progress toward a base case, or the recursion never ends (stack overflow).",
+     "**Trust the recursion** (the \"leap of faith\"): assume the call on the smaller input returns the right answer, and only check how you use it.",
+     "Each active call takes a **stack frame**; depth d costs O(d) space. Default limits: Python about 1,000 frames; C++ and Java depend on stack size (roughly 10⁴ to 10⁵ frames).",
+     "Decide what the function **returns** and what it takes as **parameters** before writing it: say it in one sentence.",
+     "Pass results up through return values or accumulate into a parameter (a result list passed by reference)."
+    ],
+    "questions": [
+     {
+      "q": "What two parts does every recursive function need?",
+      "a": "A base case that returns an answer directly without recursing, and a recursive case that calls the function on a smaller or simpler input and uses its result. Each recursive call must move closer to a base case."
+     },
+     {
+      "q": "What does \"trust the recursion\" mean?",
+      "a": "When writing the recursive case, assume the call on the smaller input already returns the correct answer, as its contract says, and focus only on combining it correctly. You verify the base case and the combining step, and induction does the rest."
+     },
+     {
+      "q": "Why can recursion cause a stack overflow?",
+      "a": "Each call that hasn't returned keeps a frame on the call stack. If recursion goes too deep, such as 10^5 levels on a long linked list, or never reaches a base case, the stack runs out of memory."
+     },
+     {
+      "q": "What is the space complexity of a recursive function with no extra data structures?",
+      "a": "O(maximum recursion depth), because that many frames are on the stack at once. For recursion over a balanced tree it is O(log n); for recursion that decreases n by one each time it is O(n)."
+     },
+     {
+      "q": "When should you prefer iteration over recursion?",
+      "a": "When the recursion would be very deep (long lists, large n with n − 1 steps), when the language has a low recursion limit such as Python's 1,000, or when the iterative version is just as clear. Tree and divide-and-conquer problems are usually clearer recursively."
+     }
+    ],
+    "deep": "#### Intuition\n\nRecursion replaces \"how do I do the whole thing?\" with two easier questions: \"what is the smallest case I can answer directly?\" and \"if someone handed me the answer for a slightly smaller input, how would I finish?\" The call stack does the bookkeeping of remembering where each call was.\n\n#### Anatomy\n\n```cpp\n// Sum of the digits of a non-negative n.\nint digitSum(int n) {\n    if (n < 10) return n;                 // base case: one digit\n    return n % 10 + digitSum(n / 10);     // last digit + sum of the rest (smaller input)\n}\n```\n\nOne-sentence contract: \"`digitSum(n)` returns the sum of the digits of n.\" The recursive line uses that contract on `n / 10`, trusting it, and adds the last digit.\n\n#### Worked example: the call stack for digitSum(472)\n\n| step | call | waiting for | returns |\n|---|---|---|---|\n| 1 | digitSum(472) | digitSum(47) | 2 + 11 = 13 |\n| 2 | digitSum(47) | digitSum(4) | 7 + 4 = 11 |\n| 3 | digitSum(4) | nothing (base case) | 4 |\n\nCalls go down the table, and results come back up. At the deepest point three frames are on the stack.\n\n#### Returning values versus accumulating\n\n```cpp\nstruct Node { int val; vector<Node*> kids; };\n\n// Style 1: return the answer (pure, easy to reason about).\nint countNodes(Node* root) {\n    if (!root) return 0;\n    int total = 1;\n    for (Node* k : root->kids) total += countNodes(k);\n    return total;\n}\n\n// Style 2: accumulate into a reference parameter (handy for collecting many results).\nvoid collectLeaves(Node* root, vector<int>& out) {\n    if (!root) return;\n    if (root->kids.empty()) out.push_back(root->val);\n    for (Node* k : root->kids) collectLeaves(k, out);\n}\n```\n\n```python\ndef digit_sum(n):\n    return n if n < 10 else n % 10 + digit_sum(n // 10)\n\ndef power_set_sizes(items):\n    \"\"\"Returns how many subsets have each size, using recursion on the rest of the list.\"\"\"\n    if not items:\n        return [1]                       # the empty set: one subset of size 0\n    rest = power_set_sizes(items[1:])    # trust: counts for the smaller list\n    with_first = [0] + rest              # adding the first item shifts every size by one\n    return [a + b for a, b in zip(rest + [0], with_first)]\n```\n\n#### Complexity\n\nTime is the sum of the work over all calls (draw the recursion tree). Space is the maximum depth times the frame size, plus anything the calls allocate. `digitSum` is $O(\\log_{10} n)$ time and space.\n\n#### Edge cases and bugs\n\n- **Missing or unreachable base case**: `f(n) = f(n - 2)` with odd `n` and base case `n == 0` never stops.\n- **Not shrinking the input**: calling `f(n)` from `f(n)` with the same arguments.\n- **Deep recursion**: a linked list of $10^5$ nodes recursed node by node can overflow the stack; use iteration, or raise the limit carefully (`sys.setrecursionlimit` in Python).\n- **Shared mutable state**: appending to a list and forgetting to remove (see backtracking).\n- **Slicing** in Python (`items[1:]`) copies, adding $O(n)$ per call; pass an index instead when performance matters.\n\n#### Variants\n\n- Multiple recursion (trees, Fibonacci), mutual recursion (`isEven` calls `isOdd`), recursion on structure (trees, nested lists), recursion with memoization (DP), and backtracking (recursion that undoes choices).\n\nConnects to: recursion tree thinking, backtracking, tree traversals, divide and conquer, space complexity."
    }
   },
   {
@@ -6809,9 +6838,34 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A recursion tree is a drawing of every call a recursive function makes, with each call's own calls hanging beneath it. It is like a family tree where every parent is a function call and its children are the calls it makes. Counting the nodes and the work at each level tells you how fast the function is.",
+    "interview": [
+     "Draw a node per call, labeled with its arguments; children are the calls it makes.",
+     "**Number of calls** ≈ branching^depth for uniform trees: two calls, depth n → about 2ⁿ.",
+     "**Total time** = sum over levels of (calls on that level × work per call).",
+     "**Space** = depth of the tree (the longest root-to-leaf path), not the number of nodes.",
+     "**Repeated labels** in the tree mean overlapping subproblems: memoize them.",
+     "Use it to explain complexity out loud: \"the tree has log n levels and each level does O(n) work.\""
+    ],
+    "questions": [
+     {
+      "q": "How do you estimate the running time of a recursive function using its recursion tree?",
+      "a": "Sum the non-recursive work over all nodes, usually level by level: number of calls on the level times the work per call. Then see which levels dominate. For merge sort, every level costs O(n) and there are log n levels, giving O(n log n)."
+     },
+     {
+      "q": "How many calls does naive recursive Fibonacci make, and what does the tree reveal?",
+      "a": "About φ^n (roughly 1.618^n), since the tree branches twice with depths n and n − 2. The tree shows the same arguments repeated many times, which is the signal that memoization will collapse it to O(n) distinct calls."
+     },
+     {
+      "q": "What determines the space used by a recursion, the size or the depth of the tree?",
+      "a": "The depth. Only one root-to-leaf path of calls is active on the stack at a time, so space is proportional to the longest path, even when the tree has exponentially many nodes."
+     },
+     {
+      "q": "A function makes two recursive calls on n − 1 and does O(1) work. What is its complexity?",
+      "a": "O(2^n). The tree doubles at every level and has n levels, so it has about 2^n nodes, each doing constant work. The Tower of Hanoi and naive subset generation look like this."
+     }
+    ],
+    "deep": "#### Intuition\n\nRecurrences can feel abstract; a drawing makes them concrete. Draw the first few levels, spot the pattern (how many nodes per level, how big each subproblem is), and add up the work. The same picture also shows repeated work that memoization would remove.\n\n#### Worked example: naive Fibonacci\n\n```\n                    fib(5)\n              /               \\\n          fib(4)             fib(3)\n         /      \\            /     \\\n     fib(3)    fib(2)    fib(2)   fib(1)\n     /    \\     /  \\      /  \\\n fib(2) fib(1) f(1) f(0) f(1) f(0)\n  /  \\\nf(1) f(0)\n```\n\n| label | times computed |\n|---|---|\n| fib(3) | 2 |\n| fib(2) | 3 |\n| fib(1) | 5 |\n| fib(0) | 3 |\n\nThat is 15 calls for `fib(5)`. The count grows like $\\varphi^n$ with $\\varphi \\approx 1.618$, yet there are only 6 distinct labels: memoization cuts the tree to $O(n)$ nodes.\n\n#### Worked example: counting work per level\n\nFor `solve(n)` that loops over n items and then calls `solve(n/2)` twice:\n\n| level | calls | size each | work per level |\n|---|---|---|---|\n| 0 | 1 | n | n |\n| 1 | 2 | n/2 | n |\n| 2 | 4 | n/4 | n |\n| … | … | … | n |\n| log n | n | 1 | n |\n\nTotal: $n \\log n$. If instead each call made **three** half-size calls, level $k$ would do $(3/2)^k n$ work and the bottom level would dominate: $O(n^{\\log_2 3}) \\approx O(n^{1.585})$.\n\n#### Instrumenting a recursion\n\n```cpp\n// Count calls to see the tree's size empirically.\nlong long calls = 0;\nlong long fibNaive(int n) {\n    calls++;\n    return n < 2 ? n : fibNaive(n - 1) + fibNaive(n - 2);\n}\n// fibNaive(30) makes 2,692,537 calls; the memoized version makes 59.\n```\n\n```python\nfrom collections import Counter\n\ndef label_counts(n):\n    \"\"\"How many times each argument appears in the naive Fibonacci tree.\"\"\"\n    seen = Counter()\n    def fib(k):\n        seen[k] += 1\n        return k if k < 2 else fib(k - 1) + fib(k - 2)\n    fib(n)\n    return seen\n```\n\n#### How to use the tree in an interview\n\n1. Draw two or three levels for a small input.\n2. Say the branching factor and the depth.\n3. Say the work per node (excluding recursive calls).\n4. Sum per level; identify whether the top, the bottom, or every level dominates.\n5. Point out repeated labels and propose memoization if there are any.\n\n#### Edge cases and bugs\n\n- Counting nodes but forgetting non-recursive work inside each call (slicing, loops).\n- Confusing total nodes (time) with depth (space).\n- Trees whose branching varies (backtracking with pruning): give the worst case, then mention pruning.\n\nConnects to: recursion complexity (recurrences and the Master theorem), memoization, backtracking, divide and conquer."
    }
   },
   {
@@ -6833,9 +6887,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Divide and conquer splits a problem into smaller independent parts, solves each part the same way, and combines their answers. It is like organizing a huge pile of paperwork by giving half to each of two helpers, who each split their half again, until every piece is tiny and easy. The skill is in making the combining step cheap.",
+    "interview": [
+     "Three steps: **divide** into subproblems (usually halves), **conquer** each recursively, **combine** the results.",
+     "Subproblems are **independent** (unlike DP, where they overlap).",
+     "Merge sort: T(n) = 2T(n/2) + O(n) = **O(n log n)**. Binary search: T(n) = T(n/2) + O(1) = **O(log n)**.",
+     "**Fast power**: xⁿ = (x^(n/2))² (times x if n is odd): **O(log n)** multiplications instead of n.",
+     "Others: quicksort, maximum subarray (cross-middle case), closest pair of points (O(n log n)), Karatsuba multiplication, counting inversions.",
+     "Analyze with the recursion tree or the Master theorem."
+    ],
+    "questions": [
+     {
+      "q": "What are the three steps of divide and conquer?",
+      "a": "Divide the problem into smaller independent subproblems, conquer each by solving it recursively, and combine the sub-answers into the answer for the whole. The efficiency comes from a cheap combine step."
+     },
+     {
+      "q": "How does fast exponentiation compute x^n in O(log n)?",
+      "a": "It uses x^n = (x^(n/2))² for even n and x · (x^(n/2))² for odd n. Each step halves the exponent, so there are about log₂ n levels, each doing one or two multiplications."
+     },
+     {
+      "q": "Why must fast power compute the half only once?",
+      "a": "Calling the recursive function twice for the same half doubles the calls at every level, turning T(n) = T(n/2) + O(1) into T(n) = 2T(n/2) + O(1), which is O(n). Storing the half in a variable keeps it O(log n)."
+     },
+     {
+      "q": "How does divide and conquer differ from dynamic programming?",
+      "a": "In divide and conquer the subproblems are independent and each is solved once, like the two halves in merge sort. In DP the subproblems overlap, so the same subproblem appears many times and its answer is cached or tabulated."
+     },
+     {
+      "q": "How do you find the maximum subarray with divide and conquer?",
+      "a": "The best subarray lies entirely in the left half, entirely in the right half, or crosses the middle. Solve the halves recursively, and compute the crossing case in O(n) as the best sum ending at mid plus the best sum starting at mid + 1. Total O(n log n)."
+     }
+    ],
+    "deep": "#### Intuition\n\nA problem of size $n$ may be expensive to solve directly, but two problems of size $n/2$ plus a cheap combination can be far cheaper overall. The savings come from the combine step being small compared with the direct solution. Sorting is the classic case: combining two sorted halves takes $O(n)$, giving $O(n \\log n)$ instead of $O(n^2)$.\n\n#### Example 1: fast power\n\n$x^{13} = x^{8} \\cdot x^{4} \\cdot x^{1}$ because $13 = 1101_2$. Recursively:\n\n| call | n | computed as |\n|---|---|---|\n| pow(x, 13) | odd | pow(x, 6)² · x |\n| pow(x, 6) | even | pow(x, 3)² |\n| pow(x, 3) | odd | pow(x, 1)² · x |\n| pow(x, 1) | odd | pow(x, 0)² · x = x |\n\nFour levels instead of 13 multiplications: $O(\\log n)$.\n\n```cpp\nlong long fastPow(long long x, long long n, long long mod) {   // x^n mod `mod`, n >= 0\n    if (n == 0) return 1 % mod;\n    long long half = fastPow(x, n / 2, mod);                   // solve one half once\n    long long result = half * half % mod;                       // combine\n    if (n % 2 == 1) result = result * (x % mod) % mod;          // odd: one extra factor\n    return result;\n}\n\n// Maximum subarray sum by divide and conquer: best is left, right, or crosses the middle.\nlong long maxCross(const vector<int>& a, int lo, int mid, int hi) {\n    long long best = LLONG_MIN, sum = 0, leftBest, rightBest;\n    for (int i = mid; i >= lo; i--) { sum += a[i]; best = max(best, sum); }\n    leftBest = best;\n    best = LLONG_MIN, sum = 0;\n    for (int i = mid + 1; i <= hi; i++) { sum += a[i]; best = max(best, sum); }\n    rightBest = best;\n    return leftBest + rightBest;\n}\n\nlong long maxSubarrayDC(const vector<int>& a, int lo, int hi) {\n    if (lo == hi) return a[lo];\n    int mid = lo + (hi - lo) / 2;\n    return max({maxSubarrayDC(a, lo, mid), maxSubarrayDC(a, mid + 1, hi), maxCross(a, lo, mid, hi)});\n}\n```\n\n```python\ndef fast_pow(x, n, mod):\n    if n == 0:\n        return 1 % mod\n    half = fast_pow(x, n // 2, mod)\n    result = half * half % mod\n    return result * x % mod if n % 2 else result\n\ndef max_subarray_dc(a, lo=0, hi=None):\n    if hi is None:\n        hi = len(a) - 1\n    if lo == hi:\n        return a[lo]\n    mid = (lo + hi) // 2\n    best_left_part = cur = float(\"-inf\")\n    s = 0\n    for i in range(mid, lo - 1, -1):\n        s += a[i]\n        best_left_part = max(best_left_part, s)\n    s = 0\n    for i in range(mid + 1, hi + 1):\n        s += a[i]\n        cur = max(cur, s)\n    return max(max_subarray_dc(a, lo, mid), max_subarray_dc(a, mid + 1, hi), best_left_part + cur)\n```\n\n#### Complexity\n\n- Fast power: $T(n) = T(n/2) + O(1) = O(\\log n)$.\n- Maximum subarray: $T(n) = 2T(n/2) + O(n) = O(n \\log n)$ (Kadane is $O(n)$, but this version shows the pattern and parallelizes).\n\n#### The cost of the mistake in fast power\n\nWriting `fastPow(x, n/2) * fastPow(x, n/2)` computes the same half twice: $T(n) = 2T(n/2) + O(1) = O(n)$. Always compute the half once and reuse it.\n\n#### When divide and conquer fits\n\n- The problem splits into independent parts of the same kind.\n- The combine step is cheaper than solving directly (often linear or constant).\n- Base cases are trivial.\n\nIf the parts share subproblems, the tree repeats work: switch to memoization or DP.\n\n#### Edge cases and bugs\n\n- Uneven splits on odd sizes: make sure both halves shrink (`mid = lo + (hi - lo) / 2`, halves `[lo, mid]` and `[mid + 1, hi]`).\n- `1 % mod` for $n = 0$ when `mod == 1`.\n- Negative exponents need a modular inverse or a floating-point reciprocal.\n\n#### Variants\n\n- Closest pair of points: split by x, solve halves, check a strip of width $d$ around the middle sorted by y: $O(n \\log n)$.\n- Karatsuba: three half-size multiplications instead of four: $O(n^{1.585})$.\n- Majority element, count inversions, build a balanced BST from a sorted array, the skyline problem.\n\nConnects to: merge sort, quick sort, binary search, recursion complexity, fast exponentiation."
    }
   },
   {
@@ -6857,9 +6940,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Any recursive function can be rewritten as a loop by keeping your own stack of pending work, like a to-do list where you push new tasks and pop the most recent one. This avoids running out of the system's limited call stack on very deep inputs. When the recursive call is the very last thing a function does, a plain loop with no stack is enough.",
+    "interview": [
+     "Replace the call stack with an **explicit stack** (a vector or deque) holding what each frame needs: arguments and, if necessary, how far it got.",
+     "Order matters: push children in reverse to process them in the original order (for preorder DFS, push right then left).",
+     "**Tail recursion**: the recursive call is the last action, with nothing left to do after it. It can become a loop that updates the parameters. C++ compilers may optimize it; Java and Python never do.",
+     "Postorder (work after the children) needs a visited flag or two stacks.",
+     "Reasons to convert: deep recursion (stack overflow), languages with small limits (Python's 1,000), or needing to pause and resume (iterators)."
+    ],
+    "questions": [
+     {
+      "q": "How do you convert a recursive DFS into an iterative one?",
+      "a": "Push the start node onto an explicit stack. While the stack isn't empty, pop a node, process it, and push its unvisited neighbors (in reverse if the order matters). The stack plays the role of the call stack, and it lives on the heap, which is much larger."
+     },
+     {
+      "q": "What is tail recursion?",
+      "a": "A recursive call that is the final action of the function, so its result is returned directly with no further work. Such a function can be turned into a loop by reassigning the parameters, and some compilers do this automatically (tail-call optimization)."
+     },
+     {
+      "q": "Does Python or Java optimize tail recursion?",
+      "a": "No. Neither performs tail-call optimization, so deep tail recursion still overflows. Convert it to a loop yourself."
+     },
+     {
+      "q": "How do you do an iterative postorder traversal?",
+      "a": "One way is to push (node, visited) pairs: the first time a node is popped, push it back marked visited and then push its children; when a visited node is popped, process it. Another is to do a modified preorder (root, right, left) and reverse the output."
+     }
+    ]
    }
   },
   {
@@ -6881,9 +6987,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Memoization means remembering the answer to a question the first time you work it out, so you never work it out again. It is like writing answers in the margin of a textbook: next time the same question comes up, you just read your note. Recursive functions that keep solving the same small problems become dramatically faster this way.",
+    "interview": [
+     "Add a cache keyed by the function's arguments: check it first, compute on a miss, store before returning.",
+     "Only valid when the result depends **only on the arguments** (a pure function), not on outside mutable state.",
+     "Cost becomes **number of distinct states × work per state**: naive Fibonacci O(φⁿ) becomes O(n).",
+     "Keys: arrays for small integer arguments, hash maps (or tuples in Python) otherwise. Python: `@functools.cache` / `lru_cache`.",
+     "Memoization is **top-down DP**: it computes only the states actually reached; tabulation (bottom-up) fills every state in order.",
+     "Recursion depth still applies; very deep memoized recursions may need to become bottom-up."
+    ],
+    "questions": [
+     {
+      "q": "What is memoization, and when is it valid?",
+      "a": "Storing the result of a function call keyed by its arguments, and returning the stored result when the same arguments come again. It is only valid when the function's result depends solely on its arguments, with no hidden state such as a global that changes between calls."
+     },
+     {
+      "q": "How does memoization change the complexity of a recursive solution?",
+      "a": "Each distinct state is computed once, so the time becomes the number of distinct states times the work per state, ignoring cache hits. Naive Fibonacci drops from exponential to O(n), and a grid path count with states (r, c) becomes O(R · C)."
+     },
+     {
+      "q": "What is the relationship between memoization and dynamic programming?",
+      "a": "Memoization is top-down dynamic programming: a recursion with a cache, which computes only the states it reaches. Tabulation is bottom-up DP, which fills a table in an order that guarantees each state's dependencies are ready. Both exploit overlapping subproblems."
+     },
+     {
+      "q": "How do you choose the cache structure?",
+      "a": "If the arguments are small integers with known bounds, use an array (fastest), initialized to a sentinel such as −1. Otherwise use a hash map keyed by the arguments, or in Python decorate the function with functools.cache."
+     }
+    ]
    }
   },
   {
@@ -6905,9 +7035,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Generating all subsets means listing every way to pick some items from a set, including picking none or all. For each item you make a yes-or-no decision, like choosing toppings for a pizza one at a time. With n items there are 2 × 2 × … × 2 = 2^n different pizzas.",
+    "interview": [
+     "**Include/exclude recursion**: at index `i`, recurse once without `a[i]` and once with it; record at `i == n`. 2ⁿ leaves.",
+     "**Start-index loop** (backtracking style): record the current subset, then for each `j >= start` add `a[j]`, recurse with `j + 1`, remove it. Every node of the tree is a subset.",
+     "**Iterative**: start with `[[]]`; for each element, append it to copies of all existing subsets.",
+     "**Bitmask**: for `mask` from 0 to 2ⁿ − 1, bit `i` says whether `a[i]` is included (n ≤ about 20).",
+     "**O(n · 2ⁿ)** time (2ⁿ subsets, O(n) to copy each), O(n) recursion depth besides the output.",
+     "With duplicates in the input, sort and skip equal values at the same level (subsets II)."
+    ],
+    "questions": [
+     {
+      "q": "How many subsets does a set of n elements have, and what does generating them all cost?",
+      "a": "2^n, because each element is either in or out independently. Generating them takes O(n · 2^n) time, since each subset has up to n elements to copy into the output."
+     },
+     {
+      "q": "How does the bitmask method generate subsets?",
+      "a": "Loop mask from 0 to 2^n − 1 and include a[i] when bit i of mask is set. Each integer corresponds to exactly one subset. It is iterative and simple, but limited to about n ≤ 20 in practice and 30 or so by integer width."
+     },
+     {
+      "q": "Why do you pass start = j + 1 rather than j or 0 in the loop version?",
+      "a": "Only elements after the last chosen one are allowed, which fixes one canonical order per subset. Starting from 0 would produce the same subset in different orders, like [1, 2] and [2, 1]."
+     },
+     {
+      "q": "Why must you copy the current list when recording a subset?",
+      "a": "The current list is one shared object that keeps changing as the recursion adds and removes elements. Storing a reference would leave every recorded entry pointing at the same list, which ends empty."
+     },
+     {
+      "q": "How do you generate subsets when the input has duplicates, without repeating subsets?",
+      "a": "Sort the input, then in the loop over choices skip an element equal to the previous one at the same level (j > start and a[j] == a[j − 1]). Equal elements can still be chosen together, but a subset is never generated twice."
+     }
+    ],
+    "deep": "#### Intuition\n\nA subset is a sequence of independent binary decisions, one per element. The recursion tree for include/exclude is a complete binary tree of depth $n$ whose $2^n$ leaves are the subsets. Backtracking walks that tree depth first, keeping one \"current subset\" that it modifies on the way down and restores on the way back up.\n\n#### Worked example: subsets of [1, 2, 3] with the start-index loop\n\n| path (current subset) | recorded | next choices |\n|---|---|---|\n| [] | [] | 1, 2, 3 |\n| [1] | [1] | 2, 3 |\n| [1, 2] | [1, 2] | 3 |\n| [1, 2, 3] | [1, 2, 3] | none |\n| [1, 3] | [1, 3] | none |\n| [2] | [2] | 3 |\n| [2, 3] | [2, 3] | none |\n| [3] | [3] | none |\n\nEight subsets. Choosing only indices after the last pick avoids generating `[2, 1]` as a separate subset.\n\n#### Code\n\n```cpp\nvoid subsetsFrom(const vector<int>& a, int start, vector<int>& cur, vector<vector<int>>& out) {\n    out.push_back(cur);                        // every node is a subset\n    for (int j = start; j < (int)a.size(); j++) {\n        cur.push_back(a[j]);                   // choose\n        subsetsFrom(a, j + 1, cur, out);       // explore with later elements only\n        cur.pop_back();                        // un-choose (backtrack)\n    }\n}\n\nvector<vector<int>> subsets(const vector<int>& a) {\n    vector<vector<int>> out;\n    vector<int> cur;\n    subsetsFrom(a, 0, cur, out);\n    return out;\n}\n\nvector<vector<int>> subsetsBitmask(const vector<int>& a) {\n    int n = a.size();\n    vector<vector<int>> out;\n    for (int mask = 0; mask < (1 << n); mask++) {\n        vector<int> s;\n        for (int i = 0; i < n; i++)\n            if (mask >> i & 1) s.push_back(a[i]);\n        out.push_back(s);\n    }\n    return out;\n}\n```\n\n```python\ndef subsets_include_exclude(a):\n    out, cur = [], []\n    def go(i):\n        if i == len(a):\n            out.append(cur[:])       # copy: cur keeps changing\n            return\n        go(i + 1)                    # exclude a[i]\n        cur.append(a[i])             # include a[i]\n        go(i + 1)\n        cur.pop()\n    go(0)\n    return out\n\ndef subsets_iterative(a):\n    out = [[]]\n    for x in a:\n        out += [s + [x] for s in out]\n    return out\n```\n\n#### Complexity\n\n$2^n$ subsets, each copied in $O(n)$: $O(n \\cdot 2^n)$ time and output size. Recursion depth $O(n)$. For $n = 20$ that is about 20 million element copies, which is fine; for $n = 30$ it is not.\n\n#### Edge cases and bugs\n\n- Appending `cur` itself (not a copy) to the output: every stored subset ends up as the final state of `cur`.\n- Forgetting `pop_back` after the recursive call: later branches see stale elements.\n- `1 << n` overflows `int` for $n \\ge 31$.\n\n#### Variants\n\n- Subsets with duplicates: sort, then in the loop skip `a[j] == a[j - 1]` when `j > start`.\n- Subsets with a target sum: prune when the running sum exceeds the target (non-negative values).\n- Count subsets with a property: often DP (subset sum), not enumeration.\n- Meet in the middle: enumerate subsets of each half separately for $n$ up to 40.\n\nConnects to: combinations, handling duplicates, bitmask enumeration, subset sum DP.",
+    "signals": [
+     "\"all subsets\", \"power set\", or every combination of items being present or absent",
+     "n up to about 20 with a choice per element",
+     "try every selection of items and keep the ones satisfying a condition",
+     "sum or property over every possible group of elements"
+    ],
+    "template": "```cpp\n// Backtracking over \"pick from index start onward\"; every node is a valid partial answer.\nvoid backtrack(const vector<int>& a, int start, vector<int>& cur, vector<vector<int>>& out) {\n    out.push_back(cur);                            // record (or check a condition first)\n    for (int j = start; j < (int)a.size(); j++) {\n        // if (j > start && a[j] == a[j - 1]) continue;   // skip duplicates (sorted input)\n        // if (cannot lead to an answer) break/continue;  // prune\n        cur.push_back(a[j]);                       // choose\n        backtrack(a, j + 1, cur, out);             // explore (j, not j + 1, to allow reuse)\n        cur.pop_back();                            // un-choose\n    }\n}\n```"
    }
   },
   {
@@ -6929,9 +7095,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A permutation is one way of arranging all the items in order. To list them all, you choose which item goes first, then which of the rest goes second, and so on, like seating guests one chair at a time. With n guests there are n × (n − 1) × … × 1 = n! seatings.",
+    "interview": [
+     "**Used-array** method: at each position, try every element not yet used; mark, recurse, unmark. Output in lexicographic order if the input is sorted.",
+     "**Swap** method: for position `i`, swap each `a[j]` (j ≥ i) into position `i`, recurse on `i + 1`, swap back. No extra array; order isn't lexicographic.",
+     "**n!** permutations, **O(n · n!)** time to output; n ≤ about 10 is practical.",
+     "**Duplicates**: sort, and skip `a[j]` if it equals `a[j-1]` and `a[j-1]` is **not used** (the used-array rule), so equal values are placed in one fixed order.",
+     "Alternatives: `next_permutation` in a loop; the kth permutation directly with factorials."
+    ],
+    "questions": [
+     {
+      "q": "How many permutations do n distinct elements have, and what is the cost of generating them?",
+      "a": "n! permutations. Generating and copying them all takes O(n · n!) time, so the approach is only practical for n up to about 10."
+     },
+     {
+      "q": "Compare the used-array and swapping methods.",
+      "a": "The used-array method builds a separate current list and marks which indices are taken; with sorted input it outputs in lexicographic order. The swap method rearranges the array in place, fixing position i by swapping each candidate into it, which needs no extra array but produces a non-lexicographic order."
+     },
+     {
+      "q": "How do you avoid duplicate permutations when the input has repeated values?",
+      "a": "Sort the input and skip a[j] when it equals a[j − 1] and a[j − 1] isn't currently used. This forces equal values to be placed in a fixed relative order, so each distinct arrangement appears once."
+     },
+     {
+      "q": "Why is the duplicate check !used[j − 1] and not used[j − 1]?",
+      "a": "Both conditions give correct results, but !used[j − 1] prunes much earlier: it rejects using a later copy before the earlier one at the same level, cutting whole branches. With used[j − 1] the duplicates are only removed deeper in the tree."
+     }
+    ],
+    "deep": "#### Intuition\n\nBuilding a permutation is filling positions one by one. Position 0 has $n$ choices, position 1 has $n - 1$, and so on. The recursion tree has $n!$ leaves. A `used` array records which elements are already placed so each appears exactly once.\n\n#### Worked example: permutations of [1, 2, 3] with a used array\n\n| path | used | next options |\n|---|---|---|\n| [1] | 1 | 2, 3 |\n| [1, 2] | 1, 2 | 3 → [1, 2, 3] |\n| [1, 3] | 1, 3 | 2 → [1, 3, 2] |\n| [2] | 2 | 1, 3 → [2, 1, 3], [2, 3, 1] |\n| [3] | 3 | 1, 2 → [3, 1, 2], [3, 2, 1] |\n\nSix permutations, in lexicographic order.\n\n#### Code\n\n```cpp\nvoid permute(const vector<int>& a, vector<bool>& used, vector<int>& cur, vector<vector<int>>& out) {\n    if (cur.size() == a.size()) { out.push_back(cur); return; }\n    for (int j = 0; j < (int)a.size(); j++) {\n        if (used[j]) continue;\n        // With duplicates (a sorted): skip a[j] if an equal earlier copy is not in use.\n        if (j > 0 && a[j] == a[j - 1] && !used[j - 1]) continue;\n        used[j] = true;\n        cur.push_back(a[j]);\n        permute(a, used, cur, out);\n        cur.pop_back();\n        used[j] = false;\n    }\n}\n\nvector<vector<int>> permuteUnique(vector<int> a) {\n    sort(a.begin(), a.end());\n    vector<vector<int>> out;\n    vector<bool> used(a.size(), false);\n    vector<int> cur;\n    permute(a, used, cur, out);\n    return out;\n}\n```\n\n```python\ndef permutations_by_swapping(a):\n    a, out = list(a), []\n    def go(i):\n        if i == len(a):\n            out.append(a[:])\n            return\n        seen = set()                      # avoids duplicate values at this position\n        for j in range(i, len(a)):\n            if a[j] in seen:\n                continue\n            seen.add(a[j])\n            a[i], a[j] = a[j], a[i]\n            go(i + 1)\n            a[i], a[j] = a[j], a[i]       # swap back\n    go(0)\n    return out\n```\n\n#### Why the duplicate rule works\n\nWith a sorted input like `[1, 1', 2]`, the rule \"use `1'` only if `1` is already in use\" means the two 1s always appear in the order `1, 1'` in any permutation. Each distinct arrangement of values is then produced exactly once. The swap version uses a per-level `seen` set instead: never put the same value in position `i` twice.\n\n#### Complexity\n\n$n!$ leaves, each copied in $O(n)$: $O(n \\cdot n!)$. For $n = 10$, $10! = 3{,}628{,}800$ permutations, which is at the edge; for $n = 12$ it is 479 million, too many.\n\n#### Edge cases and bugs\n\n- Forgetting to reset `used[j] = false` after recursing.\n- Applying the duplicate rule without sorting first.\n- Using the swap method and expecting lexicographic order.\n\n#### Variants\n\n- Letter case permutation, generate all strings from a phone keypad (choices per position differ).\n- Permutations with constraints (beautiful arrangement): check the constraint as you place each element and prune.\n- Kth permutation sequence: compute directly with factorials rather than enumerating.\n- Next permutation: the in-place successor algorithm.\n\nConnects to: subsets, handling duplicates in backtracking, next permutation, pruning strategies.",
+    "signals": [
+     "all orderings or arrangements of a set of items",
+     "\"every possible order\" with n up to about 10",
+     "placing each item exactly once under constraints",
+     "rearranging letters or digits in all possible ways"
+    ],
+    "template": "```cpp\n// Permutations with a used[] array; sort first if duplicates must be skipped.\nvoid perms(const vector<int>& a, vector<bool>& used, vector<int>& cur, vector<vector<int>>& out) {\n    if (cur.size() == a.size()) { out.push_back(cur); return; }   // all positions filled\n    for (int j = 0; j < (int)a.size(); j++) {\n        if (used[j]) continue;                                     // already placed\n        if (j > 0 && a[j] == a[j - 1] && !used[j - 1]) continue;   // duplicate at this level\n        used[j] = true; cur.push_back(a[j]);                       // place a[j] next\n        perms(a, used, cur, out);\n        cur.pop_back(); used[j] = false;                           // undo\n    }\n}\n```"
    }
   },
   {
@@ -6953,9 +7150,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A combination is a selection of items where order doesn't matter, like choosing 3 friends out of 10 to invite. Backtracking builds combinations by only choosing items after the last one picked, so the same group is never listed twice. Some problems let you pick the same item again, like buying several scoops of one flavor, which changes one small detail.",
+    "interview": [
+     "Use a **start index**: after choosing `a[j]`, recurse from `j + 1` (no reuse) or from `j` (unlimited reuse).",
+     "**Choose k of n**: stop when the size reaches k; prune when not enough elements remain (`n - j < k - size`). There are C(n, k) results.",
+     "**Combination sum** (reuse allowed): recurse from `j`, subtract from the remaining target, stop at 0, prune when an element exceeds the remaining target (sort first to `break` early).",
+     "**Each element once, input has duplicates**: sort, recurse from `j + 1`, skip `a[j] == a[j-1]` when `j > start`.",
+     "Output-sensitive: O(k · C(n, k)) for choose-k.",
+     "Counting combinations (rather than listing) is usually DP."
+    ],
+    "questions": [
+     {
+      "q": "How do you make sure each combination is generated only once?",
+      "a": "Only choose elements at or after a start index, so every combination is built in increasing index order. [2, 3] can be built, but [3, 2] can't, because after choosing 3 the loop never goes back to 2."
+     },
+     {
+      "q": "What changes between \"each element may be reused\" and \"each element at most once\"?",
+      "a": "Only the start index of the recursive call: recurse from j to allow picking a[j] again, or from j + 1 to move past it. Everything else stays the same."
+     },
+     {
+      "q": "How do you prune a combination sum search?",
+      "a": "Sort the candidates and stop the loop as soon as a candidate exceeds the remaining target, since every later candidate is larger. For choose-k, stop when too few elements remain to reach size k."
+     },
+     {
+      "q": "How do you handle duplicate values in the input for \"each element at most once\"?",
+      "a": "Sort the input and skip a[j] when j > start and a[j] == a[j − 1]. This avoids starting the same branch twice at one level while still allowing equal values deeper in the same combination."
+     },
+     {
+      "q": "How is counting combinations different from listing them?",
+      "a": "Listing is output-sensitive and exponential in the worst case. Counting can often be done with dynamic programming, such as coin change II for ways to reach a sum, in polynomial time."
+     }
+    ],
+    "deep": "#### Intuition\n\nCombinations are subsets with an extra condition (a size, or a sum). The start index gives each combination one canonical order (indices increasing), which prevents duplicates like `[2, 3]` and `[3, 2]`. Whether the recursive call starts at `j` or `j + 1` decides whether an element can be reused.\n\n#### Worked example: combination sum, candidates [2, 3, 6, 7], target 7, reuse allowed\n\n| path | remaining | action |\n|---|---|---|\n| [2] | 5 | recurse from 2 |\n| [2, 2] | 3 | recurse from 2 |\n| [2, 2, 2] | 1 | 2 > 1 and the rest are larger: stop |\n| [2, 2, 3] | 0 | record [2, 2, 3] |\n| [2, 3] | 2 | 3 > 2: stop (sorted, so break) |\n| [3] | 4 | [3, 3] leaves 1: stop |\n| [6] | 1 | stop |\n| [7] | 0 | record [7] |\n\nResult: `[2, 2, 3]` and `[7]`.\n\n#### Code\n\n```cpp\nvoid combinationSum(const vector<int>& c, int start, int remaining,\n                    vector<int>& cur, vector<vector<int>>& out) {   // c sorted ascending\n    if (remaining == 0) { out.push_back(cur); return; }\n    for (int j = start; j < (int)c.size(); j++) {\n        if (c[j] > remaining) break;           // sorted: everything after is too big\n        cur.push_back(c[j]);\n        combinationSum(c, j, remaining - c[j], cur, out);  // j: the same value may repeat\n        cur.pop_back();\n    }\n}\n\nvoid chooseK(int n, int k, int start, vector<int>& cur, vector<vector<int>>& out) {\n    if ((int)cur.size() == k) { out.push_back(cur); return; }\n    for (int x = start; x <= n - (k - (int)cur.size()) + 1; x++) {  // leave room for the rest\n        cur.push_back(x);\n        chooseK(n, k, x + 1, cur, out);        // x + 1: each number at most once\n        cur.pop_back();\n    }\n}\n```\n\n```python\ndef combination_sum_once(candidates, target):\n    \"\"\"Each candidate used at most once; the input may contain duplicates.\"\"\"\n    c, out, cur = sorted(candidates), [], []\n    def go(start, remaining):\n        if remaining == 0:\n            out.append(cur[:])\n            return\n        for j in range(start, len(c)):\n            if j > start and c[j] == c[j - 1]:\n                continue                     # same value already tried at this level\n            if c[j] > remaining:\n                break\n            cur.append(c[j])\n            go(j + 1, remaining - c[j])\n            cur.pop()\n    go(0, target)\n    return out\n```\n\n#### Complexity\n\nChoose-k produces $\\binom{n}{k}$ results in $O(k \\binom{n}{k})$ time. Combination sum with reuse is exponential in target / smallest candidate; pruning with sorting keeps it fast in practice. Depth is at most $k$ or target / smallest candidate.\n\n#### Edge cases and bugs\n\n- Recursing from `j + 1` when reuse is allowed (misses `[2, 2, 3]`), or from `j` when it isn't (reuses elements).\n- `break` on `c[j] > remaining` only works if `c` is sorted; otherwise use `continue`.\n- Target 0: the empty combination is usually the one valid answer.\n- Negative numbers break the pruning and can make sums loop forever with reuse.\n\n#### Variants\n\n- Combination sum III (k numbers from 1 to 9 summing to n), letter combinations of a phone number, factor combinations.\n- Counting the number of combinations to reach a target: coin change II (DP, order doesn't matter).\n- Counting ordered sequences: combination sum IV (DP where order matters).\n\nConnects to: subsets, handling duplicates in backtracking, unbounded knapsack, pruning strategies.",
+    "signals": [
+     "choose k items out of n, where order doesn't matter",
+     "all groups of numbers that add up to a target",
+     "\"each number may be used unlimited times\" versus \"at most once\"",
+     "letter or digit combinations from a fixed set of choices per slot"
+    ],
+    "template": "```cpp\n// Combinations toward a target: sorted input, start index, reuse controlled by j vs j + 1.\nvoid combos(const vector<int>& c, int start, int remaining, vector<int>& cur, vector<vector<int>>& out) {\n    if (remaining == 0) { out.push_back(cur); return; }         // found one\n    for (int j = start; j < (int)c.size(); j++) {\n        if (j > start && c[j] == c[j - 1]) continue;             // (no-reuse + duplicates) skip repeats\n        if (c[j] > remaining) break;                             // prune: sorted input\n        cur.push_back(c[j]);\n        combos(c, j + 1, remaining - c[j], cur, out);            // j for reuse, j + 1 for once\n        cur.pop_back();\n    }\n}\n```"
    }
   },
   {
@@ -6977,9 +7210,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "When the input has repeated values, backtracking can produce the same answer several times, like listing both \"apple, apple(2)\" and \"apple(2), apple\" when they are really the same fruit. The fix is to sort the input so equal values sit together, then never try the same value twice for the same slot. Answers stay complete, but each appears once.",
+    "interview": [
+     "Sort first so duplicates are adjacent.",
+     "**Skip rule for subsets and combinations**: in the loop `for j in start..n-1`, skip when `j > start && a[j] == a[j-1]`. It prevents two branches at the **same level** starting with the same value.",
+     "**Skip rule for permutations**: skip `a[j]` when `a[j] == a[j-1]` and `a[j-1]` is not used; equal values then always appear in index order.",
+     "Alternative: a per-level `seen` set of values already tried at this position (works without sorting, costs a set per level).",
+     "Deduplicating the output with a set afterwards works but wastes time exploring duplicate branches, which can be exponentially many."
+    ],
+    "questions": [
+     {
+      "q": "What is the standard way to avoid duplicate results in backtracking?",
+      "a": "Sort the input so equal values are adjacent, then at each level of the recursion skip a candidate equal to the previous candidate in the same loop. Each distinct value is tried once per decision point, so identical subtrees are never explored twice."
+     },
+     {
+      "q": "Why is the condition j > start rather than j > 0 in subsets II?",
+      "a": "The rule should only compare siblings, the choices made by the same loop. With j > 0, a deeper level whose first candidate equals the element just used would be skipped, removing valid results such as [1, 2, 2]."
+     },
+     {
+      "q": "How do you avoid duplicates in permutations of an array with repeated values?",
+      "a": "Sort, and skip a[j] if a[j] == a[j − 1] and a[j − 1] isn't currently used. Alternatively, keep a set of values already placed at the current position and skip values in it."
+     },
+     {
+      "q": "Why not generate everything and remove duplicates with a set at the end?",
+      "a": "It gives correct output but explores every duplicate branch, which can be exponentially more work than the number of distinct answers, and it needs extra memory to hash every result. Skipping at each level prunes those branches before exploring them."
+     }
+    ],
+    "deep": "#### Intuition\n\nDuplicates come from making \"the same choice\" twice at the same decision point. If two equal values are both available for the next slot, choosing either one leads to identical subtrees. So at each level, allow each distinct value once. Deeper levels are different decision points, where the second copy is still allowed, so combinations like `[1, 1, 2]` remain possible.\n\n#### Worked example: subsets of [1, 2, 2]\n\nWithout the rule, the start-index loop produces `[2]` twice (from index 1 and index 2) and `[1, 2]` twice. With the rule (skip `j > start` and `a[j] == a[j - 1]`):\n\n| level (start) | candidates tried | skipped |\n|---|---|---|\n| 0 | 1 (j=0), 2 (j=1) | 2 at j=2 (same as j=1 at this level) |\n| after [1], start 1 | 2 (j=1) | 2 at j=2 |\n| after [1, 2], start 2 | 2 (j=2): j == start, allowed | |\n| after [2], start 2 | 2 (j=2): allowed | |\n\nOutput: `[]`, `[1]`, `[1, 2]`, `[1, 2, 2]`, `[2]`, `[2, 2]`: six distinct subsets.\n\n#### Code\n\n```cpp\nvoid subsetsWithDup(const vector<int>& a, int start, vector<int>& cur, vector<vector<int>>& out) {\n    out.push_back(cur);\n    for (int j = start; j < (int)a.size(); j++) {\n        if (j > start && a[j] == a[j - 1]) continue;   // same value already tried at this level\n        cur.push_back(a[j]);\n        subsetsWithDup(a, j + 1, cur, out);\n        cur.pop_back();\n    }\n}\n\nvector<vector<int>> subsetsII(vector<int> a) {\n    sort(a.begin(), a.end());                          // duplicates must be adjacent\n    vector<vector<int>> out;\n    vector<int> cur;\n    subsetsWithDup(a, 0, cur, out);\n    return out;\n}\n```\n\n```python\ndef subsets_with_dup(a):\n    a, out, cur = sorted(a), [], []\n    def go(start):\n        out.append(cur[:])\n        for j in range(start, len(a)):\n            if j > start and a[j] == a[j - 1]:\n                continue\n            cur.append(a[j])\n            go(j + 1)\n            cur.pop()\n    go(0)\n    return out\n\ndef permutations_with_dup_seen_set(a):\n    out, cur, used = [], [], [False] * len(a)\n    def go():\n        if len(cur) == len(a):\n            out.append(cur[:])\n            return\n        tried = set()                      # values already placed at this position\n        for j in range(len(a)):\n            if used[j] or a[j] in tried:\n                continue\n            tried.add(a[j])\n            used[j] = True\n            cur.append(a[j])\n            go()\n            cur.pop()\n            used[j] = False\n    go()\n    return out\n```\n\n#### Why `j > start` and not `j > 0`\n\n`j > 0` would also skip the second 2 when it is the first choice at a deeper level (start = 2), which removes valid answers like `[1, 2, 2]`. The duplicate is only a problem among siblings, which are the choices of the same loop, so compare with the previous candidate **in this loop**, meaning `j > start`.\n\n#### Complexity\n\nThe skip rule doesn't change the worst case (distinct input), but with many duplicates it cuts the search to the number of distinct answers. Sorting adds $O(n \\log n)$. Deduplicating the output with a set instead would still explore every duplicate branch.\n\n#### Edge cases and bugs\n\n- Forgetting to sort: equal values aren't adjacent, and the rule misses duplicates.\n- Using `j > 0` (removes valid answers) or no condition (keeps duplicates).\n- For permutations, using the combination rule (`j > start`) doesn't apply because there is no start index; use the `used` rule or a per-level set.\n\nConnects to: subsets, permutations, combinations, sorting."
    }
   },
   {
@@ -6999,9 +7256,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Grid backtracking explores paths through a grid of cells, stepping to neighbors and retreating when a path fails. It is like tracing a word in a letter puzzle with your finger: you mark the letters you have used so you don't reuse them, and lift the mark when you back up to try another route. Undoing the mark is what lets other paths use that cell later.",
+    "interview": [
+     "DFS from each start cell; at each step check bounds, \"already on the path\", and whether the cell fits (the next letter).",
+     "**Mark** the cell before recursing (a `visited` grid or overwrite it with a sentinel like `'#'`), and **unmark** after: the cell is only blocked for the current path.",
+     "**Word search**: O(R · C · 3^L) for a word of length L (4 directions first, then 3 since you can't go back).",
+     "Unlike flood fill, cells are unmarked on return, because different paths may pass through the same cell.",
+     "Prune early: first-letter check, letter-count check against the grid, or search from the rarer end of the word.",
+     "Multiple words: build a trie of words and DFS once (word search II)."
+    ],
+    "questions": [
+     {
+      "q": "Why must a grid backtracking search unmark cells when it returns?",
+      "a": "The mark means \"used by the current path\". Another path, starting elsewhere or branching differently, may legitimately pass through the same cell. Leaving it marked would wrongly block those paths."
+     },
+     {
+      "q": "How does word search differ from counting islands, which also uses DFS on a grid?",
+      "a": "Counting islands asks about reachability, so a visited cell stays visited forever and each cell is processed once, O(R · C). Word search asks about simple paths spelling a word, so marks are undone on return and cells can be visited many times, which is exponential in the word length."
+     },
+     {
+      "q": "What is the time complexity of word search?",
+      "a": "O(R · C · 3^L) for a word of length L: every cell can start a path, and after the first step each cell has at most 3 unvisited neighbors to try. Recursion depth is O(L)."
+     },
+     {
+      "q": "How would you search for many words in the same grid efficiently?",
+      "a": "Put all words in a trie and run one DFS from each cell that walks the trie alongside the grid, stopping when the prefix leaves the trie. Removing found words (or pruning empty trie nodes) avoids redundant searching."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn a flood fill, once a cell is visited it stays visited: you only care which cells are reachable. In grid backtracking you care about **paths**, where each cell can appear at most once per path but different paths may share cells. So the visited mark belongs to the current path and must be removed when the path retreats.\n\n#### Worked example: find \"SEE\"\n\n```\nA B C E\nS F C S\nA D E E\n```\n\nThe S at (1,0) fails at once: none of its neighbors is an E. From the S at (1,3), the code tries down first: the E at (2,3) matches the second letter, and its left neighbor (2,2) is an E, so the word is found. Had that failed, the search would clear the mark on (2,3) and try the E above, at (0,3). As the recursion unwinds, the marks on (1,3) and (2,3) are cleared, so later searches can use those cells again.\n\n#### Code\n\n```cpp\nbool dfs(vector<vector<char>>& g, const string& w, int i, int r, int c) {\n    if (i == (int)w.size()) return true;                       // matched every letter\n    if (r < 0 || c < 0 || r >= (int)g.size() || c >= (int)g[0].size() || g[r][c] != w[i])\n        return false;                                          // off grid, used, or wrong letter\n    char saved = g[r][c];\n    g[r][c] = '#';                                             // mark as on the current path\n    bool found = dfs(g, w, i + 1, r + 1, c) || dfs(g, w, i + 1, r - 1, c) ||\n                 dfs(g, w, i + 1, r, c + 1) || dfs(g, w, i + 1, r, c - 1);\n    g[r][c] = saved;                                           // unmark on the way back\n    return found;\n}\n\nbool exist(vector<vector<char>>& g, const string& w) {\n    for (int r = 0; r < (int)g.size(); r++)\n        for (int c = 0; c < (int)g[0].size(); c++)\n            if (dfs(g, w, 0, r, c)) return true;\n    return false;\n}\n```\n\n```python\ndef exist(grid, word):\n    R, C = len(grid), len(grid[0])\n\n    def dfs(i, r, c):\n        if i == len(word):\n            return True\n        if not (0 <= r < R and 0 <= c < C) or grid[r][c] != word[i]:\n            return False\n        saved, grid[r][c] = grid[r][c], \"#\"\n        found = any(dfs(i + 1, r + dr, c + dc) for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)))\n        grid[r][c] = saved\n        return found\n\n    return any(dfs(0, r, c) for r in range(R) for c in range(C))\n```\n\nThe `||` and `any` short-circuit, so the search stops at the first success; the cell is still restored before returning.\n\n#### Complexity\n\nFrom each of $R \\cdot C$ start cells, the path branches at most 4 ways at the first step and 3 afterwards: $O(R \\cdot C \\cdot 3^{L})$ time, $O(L)$ recursion depth. Pruning makes real inputs much faster.\n\n#### Pruning ideas\n\n- If the word has more of some letter than the grid, return false immediately.\n- If the last letter is rarer in the grid than the first, search for the reversed word.\n- In word search II, remove found words from the trie so their branches die.\n\n#### Edge cases and bugs\n\n- Returning before restoring the cell leaves the grid corrupted for later searches.\n- Using a global visited set that is never cleared (that is flood fill, not backtracking).\n- Single-cell grids and one-letter words.\n\n#### Variants\n\n- Longest path or number of paths visiting cells at most once (unique paths III: count paths covering every empty cell).\n- Gold collection: maximize the sum along a path, restore cells on return.\n- Word search II: trie plus DFS.\n- Knight's tour, rat in a maze (all paths).\n\nConnects to: grids as graphs (flood fill without unmarking), tries (word search II), DFS.",
+    "signals": [
+     "find a word or path by moving between adjacent cells, each cell used at most once per path",
+     "count or list all paths through a grid under constraints",
+     "\"letters of sequentially adjacent cells\"",
+     "maximize a sum over a path that can't revisit cells"
+    ],
+    "template": "```cpp\n// Grid backtracking: mark on the way in, unmark on the way out.\nint dr[4] = {1, -1, 0, 0}, dc[4] = {0, 0, 1, -1};\n\nbool explore(vector<vector<char>>& g, int r, int c, int depth, const string& goal) {\n    if (depth == (int)goal.size()) return true;                  // complete path found\n    if (r < 0 || c < 0 || r >= (int)g.size() || c >= (int)g[0].size()) return false;\n    if (g[r][c] != goal[depth]) return false;                    // blocked, used or wrong\n    char keep = g[r][c];\n    g[r][c] = '#';                                               // mark on the current path\n    bool ok = false;\n    for (int k = 0; k < 4 && !ok; k++) ok = explore(g, r + dr[k], c + dc[k], depth + 1, goal);\n    g[r][c] = keep;                                              // undo before returning\n    return ok;\n}\n```"
    }
   },
   {
@@ -7021,9 +7310,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Constraint satisfaction problems ask you to fill slots so that every rule is respected, like placing queens on a chessboard so none attack each other, or filling a Sudoku. You fill one slot at a time and check the rules immediately, abandoning a partial answer the moment it breaks one. Fast checks with sets or bit masks make this practical.",
+    "interview": [
+     "Fill one variable at a time (a row for N-Queens, an empty cell for Sudoku); try each value; **check constraints before recursing**; undo after.",
+     "**N-Queens**: one queen per row; track used columns, diagonals (`r - c`) and anti-diagonals (`r + c`) in sets or boolean arrays for O(1) checks.",
+     "**Bitmasks**: available columns = `~(cols | diag1 | diag2) & full`; pick the lowest bit with `x & -x`; shift diagonal masks each row. The fastest N-Queens counter.",
+     "**Sudoku**: row, column and box masks of used digits; choose the empty cell with the **fewest options** first (most constrained variable) to prune hard.",
+     "Worst case exponential (N-Queens is roughly O(N!)), but pruning makes typical inputs fast."
+    ],
+    "questions": [
+     {
+      "q": "How do you check whether a queen can be placed at (r, c) in O(1)?",
+      "a": "Keep sets (or boolean arrays) of used columns, used diagonals keyed by r − c, and used anti-diagonals keyed by r + c. A cell is safe when its column and both diagonal keys are unused. Placing one queen per row handles row conflicts."
+     },
+     {
+      "q": "How do bitmasks speed up N-Queens?",
+      "a": "Represent attacked columns, diagonals and anti-diagonals as bits of three integers. The free columns in a row are ~(cols | d1 | d2) & full, the lowest free column is x & −x, and moving to the next row shifts the diagonal masks by one. Each step is a few machine instructions."
+     },
+     {
+      "q": "What is the \"most constrained variable\" heuristic, and why does it help Sudoku?",
+      "a": "Fill next the empty cell with the fewest legal values. If a cell has zero options, the branch fails immediately; if it has one, there is no branching. This detects dead ends early and shrinks the search tree dramatically."
+     },
+     {
+      "q": "What is the time complexity of N-Queens backtracking?",
+      "a": "Exponential: at most N choices for the first row, fewer for the next, so bounded by O(N!), with diagonal checks pruning much more. Space is O(N) for the board and recursion."
+     }
+    ],
+    "deep": "#### Intuition\n\nEnumerating complete assignments and checking them at the end is hopeless ($N^N$ placements for N-Queens). Checking each partial assignment as it grows cuts off entire subtrees at the first violated rule. The two big levers are how quickly you can check a constraint (sets or bitmasks for O(1)) and which variable you fill next (the most constrained one).\n\n#### Worked example: 4-Queens\n\nPlace one queen per row, trying columns left to right.\n\n| row | try column | conflict? | result |\n|---|---|---|---|\n| 0 | 0 | no | queen at (0,0) |\n| 1 | 0, 1 | column, diagonal | |\n| 1 | 2 | no | queen at (1,2) |\n| 2 | 0..3 | all attacked | backtrack row 1 |\n| 1 | 3 | no | queen at (1,3) |\n| 2 | 1 | no | queen at (2,1) |\n| 3 | 0..3 | all attacked | backtrack to row 0 eventually |\n| 0 | 1 | no | (0,1), then (1,3), (2,0), (3,2): solution |\n\nThe first solution is columns `1 3 0 2`; there are 2 solutions for N = 4 and 92 for N = 8.\n\n#### Code\n\n```cpp\n// Count N-Queens solutions with bitmasks.\nint countQueens(int n, int row = 0, int cols = 0, int d1 = 0, int d2 = 0) {\n    if (row == n) return 1;\n    int count = 0, full = (1 << n) - 1;\n    int avail = full & ~(cols | d1 | d2);           // columns not attacked in this row\n    while (avail) {\n        int bit = avail & -avail;                   // lowest available column\n        avail -= bit;\n        count += countQueens(n, row + 1, cols | bit, (d1 | bit) << 1, (d2 | bit) >> 1);\n    }\n    return count;\n}\n```\n\n```python\ndef solve_n_queens(n):\n    cols, diag, anti, board, out = set(), set(), set(), [], []\n    def place(r):\n        if r == n:\n            out.append([\".\" * c + \"Q\" + \".\" * (n - c - 1) for c in board])\n            return\n        for c in range(n):\n            if c in cols or r - c in diag or r + c in anti:\n                continue\n            cols.add(c); diag.add(r - c); anti.add(r + c); board.append(c)\n            place(r + 1)\n            cols.remove(c); diag.remove(r - c); anti.remove(r + c); board.pop()\n    place(0)\n    return out\n```\n\nIn the bitmask version, shifting `d1` left and `d2` right moves each diagonal's attack one column over as you go down a row, and `full &` discards bits that fall off the board.\n\n#### Sudoku with masks\n\nKeep `rowMask[9]`, `colMask[9]`, `boxMask[9]` of used digits. The candidates of cell `(r, c)` are the digits not in `rowMask[r] | colMask[c] | boxMask[3*(r/3) + c/3]`. Picking the empty cell with the fewest candidates first (popcount of the free mask) usually solves hard puzzles with very little backtracking.\n\n#### Complexity\n\nN-Queens without pruning is $O(N^N)$; with one queen per row and column checks it is $O(N!)$; diagonal pruning cuts it further, though it stays exponential. Space $O(N)$.\n\n#### Edge cases and bugs\n\n- Forgetting to remove a value from all three sets when backtracking.\n- Diagonal keys: `r - c` can be negative; offset by `n - 1` if you use arrays.\n- In the bitmask version, forgetting `& full` lets shifted bits outside the board block nothing but inflate numbers; with `int` and large n, shifts can overflow.\n\n#### Variants\n\n- Word puzzles, graph coloring with k colors, scheduling with conflicts.\n- Exact cover (Knuth's Algorithm X) solves Sudoku and pentomino tilings generally.\n- For optimization rather than feasibility, add bounds (branch and bound).\n\nConnects to: pruning strategies, bitmask enumeration, permutations, matrix traversal (diagonal keys).",
+    "signals": [
+     "place items on a board so that no two conflict (queens, rooks, colors)",
+     "fill a puzzle grid under row, column and box rules",
+     "assign values to variables with pairwise constraints",
+     "\"find one valid configuration\" or \"count all valid configurations\" with small n"
+    ],
+    "template": "```cpp\n// Constraint backtracking: fill slot i with each value that passes the fast checks.\nbool solve(int i, int n, vector<int>& assign,\n           function<bool(int, int)> ok, function<void(int, int, bool)> apply) {\n    if (i == n) return true;                 // every slot filled consistently\n    for (int v = 0; v < n; v++) {            // candidate values (order them if useful)\n        if (!ok(i, v)) continue;             // O(1) check with sets or bitmasks\n        apply(i, v, true);                   // record the constraint effects\n        assign[i] = v;\n        if (solve(i + 1, n, assign, ok, apply)) return true;   // stop at the first solution\n        apply(i, v, false);                  // undo the effects\n    }\n    return false;                            // no value works: backtrack\n}\n```"
    }
   },
   {
@@ -7045,9 +7365,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Partitioning problems cut a string into pieces where every piece must follow a rule, like slicing a loaf so each slice is a certain type. You choose where the first cut goes, check that the first piece is valid, and then solve the rest of the string the same way. Every valid set of cuts is one answer.",
+    "interview": [
+     "Recursion on the **start index**: for each end `e`, if `s[start..e]` is valid, add it and recurse from `e + 1`; record when `start == n`.",
+     "**Palindrome partitioning**: validity = palindrome; precompute an `isPal[i][j]` table in O(n²) to check in O(1). Up to 2ⁿ⁻¹ partitions, O(n · 2ⁿ) worst case.",
+     "**Restore IP addresses**: exactly 4 parts, each 1 to 3 digits, value ≤ 255, no leading zeros (except \"0\" itself); prune when the remaining length can't fit the remaining parts (between 1 and 3 each).",
+     "Word break (list all sentences): pieces must be dictionary words; memoize on the start index to avoid recomputation.",
+     "When only a **count** or **minimum number of cuts** is needed, use DP instead of enumeration."
+    ],
+    "questions": [
+     {
+      "q": "What is the recursive structure of partitioning problems?",
+      "a": "Choose the first piece s[start..end] for every valid end, and recursively partition the remainder starting at end + 1. When start reaches the end of the string, the pieces chosen so far form one complete answer."
+     },
+     {
+      "q": "How do you make palindrome checks O(1) in palindrome partitioning?",
+      "a": "Precompute isPal[i][j] with DP: s[i..j] is a palindrome if s[i] == s[j] and s[i+1..j−1] is a palindrome (or the length is at most 2). This costs O(n²) once, after which each check is a table lookup."
+     },
+     {
+      "q": "What makes a part of an IP address valid?",
+      "a": "It has one to three digits, its value is at most 255, and it has no leading zero unless it is exactly \"0\". A valid address has exactly four such parts and uses every digit."
+     },
+     {
+      "q": "How do you prune the IP address search?",
+      "a": "With k parts left and m digits left, continue only if k ≤ m ≤ 3k, since each part needs at least one and at most three digits. This removes most branches before trying them."
+     }
+    ]
    }
   },
   {
@@ -7067,9 +7410,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Pruning means cutting off branches of a search as soon as you can tell they won't lead anywhere useful. It is like a detective ruling out suspects early instead of following every lead to the end. Good pruning can turn a search that would take hours into one that takes milliseconds.",
+    "interview": [
+     "**Feasibility pruning**: stop when a partial answer already breaks a rule (sum over target, queen attacked).",
+     "**Bound pruning** (branch and bound): stop when even the best possible completion can't beat the best answer found so far.",
+     "**Choice ordering**: try the most promising or most constrained choices first so good answers (and failures) are found early; sort candidates descending for bin packing.",
+     "**Symmetry breaking**: avoid exploring mirrored or equivalent states (fix the first queen in the left half, identical buckets).",
+     "**Early exit**: return as soon as one solution is found if only existence is asked.",
+     "**Memoize failures**: remember states that are known to fail (a visited set of (index, state))."
+    ],
+    "questions": [
+     {
+      "q": "What is the difference between feasibility pruning and bound pruning?",
+      "a": "Feasibility pruning cuts a branch that already violates a constraint, so it can't produce any valid answer. Bound pruning, used for optimization, cuts a valid branch whose optimistic best outcome is still no better than the best answer already found."
+     },
+     {
+      "q": "Why does choice ordering matter in backtracking?",
+      "a": "Trying promising choices first finds a good or valid answer early, which makes bound pruning stronger and lets existence searches stop sooner. Trying the most constrained variable first exposes failures near the root, where cutting saves the most work."
+     },
+     {
+      "q": "How would you prune \"partition an array into k subsets with equal sum\"?",
+      "a": "Check that the total is divisible by k and no element exceeds the target, sort descending so large elements fail early, skip a bucket whose current sum equals one already tried (symmetric states), and stop filling a bucket once it exceeds the target."
+     },
+     {
+      "q": "How can memoization act as pruning in backtracking?",
+      "a": "If the future depends only on a compact state, such as the index plus a bitmask of used items, record states that are known to fail. Reaching the same state again returns immediately instead of re-exploring it."
+     }
+    ]
    }
   },
   {
@@ -7089,9 +7456,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A linked list is a chain of nodes where each node holds a value and a pointer to the next node, like a treasure hunt where every clue tells you where the next clue is hidden. You can add or remove a clue anywhere just by changing where the previous clue points. But to reach the 50th clue you must follow the first 49.",
+    "interview": [
+     "**Singly linked**: `next` only. **Doubly linked**: `prev` and `next`, so a known node can be removed in O(1) and the list can be walked backwards.",
+     "Access by position **O(n)**; insert or delete **after a known node O(1)**; search O(n). No random access, poor cache locality compared with arrays.",
+     "**Dummy (sentinel) head**: a fake node before the real head removes special cases when the head itself changes (deleting the first node, merging, partitioning). Return `dummy.next`.",
+     "Traverse with `while (cur)`; stop at the node **before** the one you want to change, since singly linked nodes can't look back.",
+     "Draw the pointers before and after each operation and change them in an order that never loses the rest of the list.",
+     "In C++, free removed nodes (or note the leak); in Java and Python garbage collection handles it."
+    ],
+    "questions": [
+     {
+      "q": "What are the trade-offs between a linked list and an array?",
+      "a": "A linked list inserts and deletes in O(1) once you hold the neighboring node, and grows without reallocation. But it has no random access (reaching position k is O(k)), uses extra memory for pointers, and is slow to scan because nodes are scattered in memory."
+     },
+     {
+      "q": "What is a dummy head node, and why use it?",
+      "a": "A placeholder node placed before the real head. Operations that may change the first node, such as deleting it or merging lists, then work the same way as operations elsewhere, and you return dummy.next at the end. It removes special-case code and bugs."
+     },
+     {
+      "q": "How do you delete a node in a singly linked list when you only have a pointer to the node before it?",
+      "a": "Set prev.next = prev.next.next, freeing the removed node in C++. The deletion is O(1); the cost is in finding prev, which takes O(n) from the head."
+     },
+     {
+      "q": "How can you delete a node when you only have a pointer to that node and it isn't the tail?",
+      "a": "Copy the next node's value into it and then unlink the next node. This \"deletes\" the value in O(1), but it doesn't work for the tail and changes node identities, so mention those caveats."
+     },
+     {
+      "q": "When is a doubly linked list worth the extra pointer?",
+      "a": "When you need to remove arbitrary known nodes in O(1) or move backwards, as in an LRU cache where a hash map points straight at the node to move. A singly linked list would need O(n) to find the predecessor."
+     }
+    ],
+    "deep": "#### Intuition\n\nAn array keeps elements side by side; a linked list keeps each element wherever memory is free and links them with pointers. That makes inserting and deleting cheap once you are at the right place (just rewire two pointers) but makes finding the place expensive (walk from the head).\n\n#### The node and basic operations\n\n```cpp\n// The node type used throughout this topic (the same shape LeetCode uses).\nstruct ListNode {\n    int val;\n    ListNode* next;\n    ListNode(int v = 0, ListNode* n = nullptr) : val(v), next(n) {}\n};\n\n// Insert a new value after node p: O(1).\nvoid insertAfter(ListNode* p, int v) {\n    p->next = new ListNode(v, p->next);       // new node points at p's old successor first\n}\n\n// Delete every node with value v, using a dummy head so the real head is not special.\nListNode* removeAll(ListNode* head, int v) {\n    ListNode dummy(0, head);\n    ListNode* prev = &dummy;\n    while (prev->next) {\n        if (prev->next->val == v) {\n            ListNode* gone = prev->next;\n            prev->next = gone->next;          // unlink\n            delete gone;\n        } else {\n            prev = prev->next;                // only advance when nothing was removed\n        }\n    }\n    return dummy.next;\n}\n```\n\n```python\nclass ListNode:\n    def __init__(self, val=0, next=None):\n        self.val = val\n        self.next = next\n\ndef from_list(values):\n    dummy = ListNode()\n    tail = dummy\n    for v in values:\n        tail.next = ListNode(v)\n        tail = tail.next\n    return dummy.next\n\ndef to_list(head):\n    out = []\n    while head:\n        out.append(head.val)\n        head = head.next\n    return out\n\ndef remove_all(head, v):\n    dummy = ListNode(0, head)\n    prev = dummy\n    while prev.next:\n        if prev.next.val == v:\n            prev.next = prev.next.next\n        else:\n            prev = prev.next\n    return dummy.next\n```\n\n#### Worked example: remove value 6 from 6 → 1 → 6 → 2\n\n| prev | prev.next | action | list |\n|---|---|---|---|\n| dummy | 6 | remove | dummy → 1 → 6 → 2 |\n| dummy | 1 | advance | |\n| 1 | 6 | remove | dummy → 1 → 2 |\n| 1 | 2 | advance | |\n| 2 | null | stop | 1 → 2 |\n\nWithout the dummy, removing the first 6 would need separate code to move `head`.\n\n#### Singly vs doubly linked\n\n| | Singly | Doubly |\n|---|---|---|\n| Memory per node | value + 1 pointer | value + 2 pointers |\n| Delete a given node | O(n) (need its predecessor) | O(1) |\n| Walk backwards | no | yes |\n| Typical use | stacks, hash buckets, most interview problems | LRU cache, deques, editors |\n\n#### Complexity summary\n\n| Operation | Cost |\n|---|---|\n| Access k-th | $O(k)$ |\n| Insert or delete at head | $O(1)$ |\n| Insert or delete after a known node | $O(1)$ |\n| Insert at tail | $O(1)$ with a tail pointer, else $O(n)$ |\n| Search | $O(n)$ |\n\n#### Edge cases and bugs\n\n- Empty list (`head == nullptr`) and one-node lists.\n- Dereferencing `cur->next->next` without checking `cur->next`.\n- Losing the rest of the list by overwriting `next` before saving it.\n- Advancing `prev` after a deletion skips the node that moved into place (two 6s in a row).\n\n#### Variants\n\nCircular lists (the tail points to the head), skip lists (extra \"express\" pointers for $O(\\log n)$ search), XOR lists (one field storing `prev ^ next`), and lists with random pointers.\n\nConnects to: linked list reversal, fast and slow pointers, merging lists, doubly linked list with hash map."
    }
   },
   {
@@ -7113,9 +7509,44 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Reversing a linked list means making every arrow point the other way. Walk along the chain holding three things: the node behind you, the node you are on, and the node ahead, like turning around each link of a paper chain one by one. Saving the next node before flipping an arrow keeps you from losing the rest of the chain.",
+    "interview": [
+     "Iterative: `prev = null, cur = head`; loop: `next = cur.next; cur.next = prev; prev = cur; cur = next`. Return `prev`. **O(n)** time, **O(1)** space.",
+     "Recursive: reverse the rest, then `head.next.next = head; head.next = null`. O(n) time, **O(n) stack**.",
+     "**Reverse a sublist [left, right]**: walk to the node before `left`, then repeatedly move the next node to the front of the sublist (\"head insertion\"), or reverse the segment and reconnect both ends.",
+     "**Reverse in k-groups**: check that k nodes remain, reverse them, connect the previous group's tail to the new group head, advance. O(n).",
+     "Used inside other problems: palindrome list (reverse the second half), reorder list, add two numbers stored forward."
+    ],
+    "questions": [
+     {
+      "q": "Describe iterative linked list reversal and its complexity.",
+      "a": "Keep prev (initially null) and cur (the head). At each step save cur.next, point cur.next at prev, then move prev to cur and cur to the saved node. When cur is null, prev is the new head. O(n) time and O(1) space."
+     },
+     {
+      "q": "How does the recursive reversal work, and what does it cost?",
+      "a": "Reverse everything after the head recursively, which returns the new head. Then head.next (now the last node of the reversed rest) points back to head, and head.next becomes null. It is O(n) time but uses O(n) stack space."
+     },
+     {
+      "q": "How do you reverse only the nodes from position left to right?",
+      "a": "Use a dummy head and walk to the node before position left. Then, right − left times, take the node after the segment's current tail and move it to the front of the segment. The rest of the list stays connected throughout."
+     },
+     {
+      "q": "How do you reverse a list in groups of k?",
+      "a": "For each group, first check that k nodes remain. Reverse those k nodes so the group's old first node points to the node after the group, then connect the previous group's tail to the group's new first node, and continue from the old first node. It is O(n) time and O(1) space."
+     },
+     {
+      "q": "Why must you save cur.next before changing it?",
+      "a": "Once cur.next points backwards, nothing points to the rest of the list, so it would be lost. Saving it in a temporary variable keeps the path forward."
+     }
+    ],
+    "deep": "#### Intuition\n\nEach node's `next` pointer must be turned around. The only danger is losing the rest of the list: once `cur.next` points backwards, the old next node is unreachable unless you saved it. So each step saves `next`, flips one pointer, and moves both `prev` and `cur` forward.\n\n#### Worked example: 1 → 2 → 3 → null\n\n| step | prev | cur | next (saved) | after flipping |\n|---|---|---|---|---|\n| 0 | null | 1 | 2 | 1 → null |\n| 1 | 1 | 2 | 3 | 2 → 1 → null |\n| 2 | 2 | 3 | null | 3 → 2 → 1 → null |\n| end | 3 | null | | return 3 |\n\n#### Code\n\n```cpp\nListNode* reverseList(ListNode* head) {\n    ListNode* prev = nullptr;\n    while (head) {\n        ListNode* next = head->next;   // save the rest\n        head->next = prev;             // flip one pointer\n        prev = head;                   // advance both\n        head = next;\n    }\n    return prev;\n}\n\n// Reverse nodes left..right (1-based) in one pass by moving nodes to the front of the segment.\nListNode* reverseBetween(ListNode* head, int left, int right) {\n    ListNode dummy(0, head);\n    ListNode* before = &dummy;\n    for (int i = 1; i < left; i++) before = before->next;\n    ListNode* tail = before->next;                 // becomes the segment's last node\n    for (int i = left; i < right; i++) {\n        ListNode* move = tail->next;               // next node to bring to the front\n        tail->next = move->next;\n        move->next = before->next;\n        before->next = move;\n    }\n    return dummy.next;\n}\n\nListNode* reverseKGroup(ListNode* head, int k) {\n    ListNode dummy(0, head);\n    ListNode* groupPrev = &dummy;\n    while (true) {\n        ListNode* kth = groupPrev;\n        for (int i = 0; i < k && kth; i++) kth = kth->next;\n        if (!kth) break;                           // fewer than k nodes left: keep as is\n        ListNode *groupNext = kth->next, *prev = groupNext, *cur = groupPrev->next;\n        while (cur != groupNext) {                 // reverse this group, tail -> groupNext\n            ListNode* next = cur->next;\n            cur->next = prev;\n            prev = cur;\n            cur = next;\n        }\n        ListNode* newTail = groupPrev->next;       // old first node is now the last\n        groupPrev->next = kth;                     // connect to the new first node\n        groupPrev = newTail;\n    }\n    return dummy.next;\n}\n```\n\n```python\ndef reverse_list(head):\n    prev = None\n    while head:\n        head.next, prev, head = prev, head, head.next\n    return prev\n\ndef reverse_recursive(head):\n    if head is None or head.next is None:\n        return head\n    new_head = reverse_recursive(head.next)   # the rest, reversed\n    head.next.next = head                     # the old next node now points back\n    head.next = None\n    return new_head\n```\n\nThe Python tuple assignment evaluates the right side first (`prev`, `head`, `head.next`) and then assigns left to right, which is exactly the save-flip-advance sequence.\n\n#### Complexity\n\nAll versions are $O(n)$ time. Iterative versions use $O(1)$ extra space; the recursive one uses $O(n)$ stack, which can overflow on long lists.\n\n#### Edge cases and bugs\n\n- Empty list and single node: return as is.\n- Forgetting `head.next = null` in the recursive version creates a two-node cycle at the end.\n- Sublist reversal when `left == 1`: the dummy node handles it.\n- K-groups: leave a final group with fewer than k nodes untouched (or reverse it, if the problem says so).\n\n#### Variants\n\n- Swap nodes in pairs (k = 2).\n- Palindrome linked list: find the middle, reverse the second half, compare, optionally restore.\n- Rotate list by k: connect into a ring, then cut at `n - k % n`.\n- Add two numbers stored most significant digit first: reverse both, add, reverse the result (or use stacks).\n\nConnects to: linked list basics, fast and slow pointers on lists, tricky pointer problems, recursion.",
+    "signals": [
+     "reverse a linked list, or part of it, in place",
+     "process a list in groups of k nodes",
+     "compare the first half of a list with the reversed second half (palindrome list)",
+     "rebuild a list in a different order with O(1) extra space"
+    ],
+    "template": "```cpp\n// Reverse the nodes from `start` up to (not including) `stop`; returns the new first node.\n// After the call, `start` is the last node of the segment and points to `stop`.\nListNode* reverseSegment(ListNode* start, ListNode* stop) {\n    ListNode* prev = stop;              // the reversed segment reconnects to `stop`\n    ListNode* cur = start;\n    while (cur != stop) {\n        ListNode* next = cur->next;     // 1. save\n        cur->next = prev;               // 2. flip\n        prev = cur;                     // 3. advance\n        cur = next;\n    }\n    return prev;\n}\n// Whole list: reverseSegment(head, nullptr). Sublist: link the node before it to the result.\n```"
    }
   },
   {
@@ -7137,9 +7568,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Two pointers walk the list at different speeds: the slow one takes one step while the fast one takes two. When the fast pointer reaches the end, the slow one is in the middle, like two friends on a trail where one walks twice as fast. If the trail loops, the faster friend eventually catches up from behind, which proves there is a loop.",
+    "interview": [
+     "**Middle**: `while (fast && fast->next) { slow = slow->next; fast = fast->next->next; }`. For even length, slow ends at the **second** middle; start `fast = head->next` to get the first.",
+     "**Cycle detection** (Floyd): if `slow == fast` at some point, there is a cycle; if `fast` hits null, there isn't. O(n) time, O(1) space.",
+     "**Cycle start**: after meeting, move one pointer to the head; step both one at a time; they meet at the cycle's entry.",
+     "**Cycle length**: from the meeting point, count steps until the pointer returns.",
+     "**Kth from the end**: a different two-pointer trick: move a lead pointer k steps ahead, then move both until the lead hits the end.",
+     "Hash set alternative: O(n) extra space."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the middle of a linked list in one pass?",
+      "a": "Move slow one node and fast two nodes at a time while fast and fast.next exist. When the loop ends, slow is at the middle (the second middle for even lengths). It is O(n) time and O(1) space."
+     },
+     {
+      "q": "How does Floyd's algorithm detect a cycle?",
+      "a": "Slow moves one step and fast moves two. If the list ends, fast reaches null and there is no cycle. If there is a cycle, both pointers eventually circle it and fast closes the gap by one node per step, so they meet."
+     },
+     {
+      "q": "After slow and fast meet, how do you find the node where the cycle starts?",
+      "a": "Put one pointer back at the head and advance both one step at a time. They meet at the cycle's entry, because the distance from the head to the entry equals the distance from the meeting point forward to the entry, modulo the cycle length."
+     },
+     {
+      "q": "How do you check whether a linked list is a palindrome in O(1) extra space?",
+      "a": "Find the middle with fast and slow pointers, reverse the second half, and compare it node by node with the first half. Reverse the second half back afterwards if the list must stay unchanged."
+     },
+     {
+      "q": "How would you find the length of the cycle?",
+      "a": "Once slow and fast meet inside the cycle, keep one pointer fixed and move the other until it returns, counting steps. The count is the cycle length."
+     }
+    ],
+    "deep": "#### Intuition\n\nWith speeds 1 and 2, when fast has walked $2k$ nodes, slow has walked $k$: exactly half. So when fast runs out of list, slow is at the midpoint. In a cycle, fast gains one node per step on slow, so once both are in the cycle the gap closes by one each step and they must meet within one lap.\n\n#### Worked example: middle of 1 → 2 → 3 → 4 → 5\n\n| step | slow | fast |\n|---|---|---|\n| 0 | 1 | 1 |\n| 1 | 2 | 3 |\n| 2 | 3 | 5 |\n| stop (fast.next is null) | 3 | |\n\nMiddle is 3. For 1 → 2 → 3 → 4, fast becomes null after two steps and slow is at 3, the second middle.\n\n#### Code\n\n```cpp\nListNode* middleNode(ListNode* head) {\n    ListNode *slow = head, *fast = head;\n    while (fast && fast->next) {\n        slow = slow->next;\n        fast = fast->next->next;\n    }\n    return slow;\n}\n\n// Returns the node where the cycle begins, or nullptr if there is no cycle.\nListNode* detectCycle(ListNode* head) {\n    ListNode *slow = head, *fast = head;\n    while (fast && fast->next) {\n        slow = slow->next;\n        fast = fast->next->next;\n        if (slow == fast) {                    // inside the cycle\n            ListNode* p = head;\n            while (p != slow) { p = p->next; slow = slow->next; }\n            return p;                          // both walked the tail length mu\n        }\n    }\n    return nullptr;\n}\n```\n\n```python\ndef has_cycle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow, fast = slow.next, fast.next.next\n        if slow is fast:\n            return True\n    return False\n\ndef is_palindrome_list(head):\n    # Find the middle, reverse the second half, compare, then restore it.\n    slow = fast = head\n    while fast and fast.next:\n        slow, fast = slow.next, fast.next.next\n    prev, cur = None, slow\n    while cur:\n        cur.next, prev, cur = prev, cur, cur.next\n    left, right, ok = head, prev, True\n    while right:\n        if left.val != right.val:\n            ok = False\n            break\n        left, right = left.next, right.next\n    # restore the second half\n    cur, back = prev, None\n    while cur:\n        cur.next, back, cur = back, cur, cur.next\n    return ok\n```\n\n#### Why the cycle entry is found\n\nLet $\\mu$ be the number of nodes before the cycle and $\\lambda$ its length. When they meet, slow has walked $d$ steps and fast $2d$; fast has gone around some whole number of extra laps, so $d$ is a multiple of $\\lambda$. The meeting point is $d - \\mu$ steps past the entry. Walking $\\mu$ more steps puts slow at $d$ steps past the entry modulo $\\lambda$, which is the entry itself. A pointer starting at the head reaches the entry after the same $\\mu$ steps, so they meet there.\n\n#### Complexity\n\nMiddle: $O(n)$ time. Cycle detection and entry: $O(\\mu + \\lambda) = O(n)$ time. All $O(1)$ space.\n\n#### Edge cases and bugs\n\n- Checking `fast->next->next` without checking `fast->next` crashes on even-length lists.\n- Comparing values instead of node identity (`is` in Python, pointer equality in C++) gives false cycles when values repeat.\n- A self-loop (a node pointing to itself) and a cycle that includes the head are good tests.\n\n#### Variants\n\n- Palindrome list (above), reorder list (middle, reverse second half, weave).\n- Delete the middle node: stop slow one node earlier (start `fast` at `head->next->next`).\n- Find the duplicate number in an array by treating indices as next pointers.\n- Intersection of two lists is a different trick (switching heads), not fast and slow.\n\nConnects to: fast and slow pointers on arrays, linked list reversal, tricky pointer problems.",
+    "signals": [
+     "detect whether a linked list loops back on itself",
+     "find the middle node in a single pass",
+     "where does the cycle begin",
+     "split a list into halves (for merge sort, palindrome check, reorder)"
+    ],
+    "template": "```cpp\n// Fast and slow pointers on a list: middle, cycle check and cycle entry.\nListNode* cycleEntry(ListNode* head) {\n    ListNode *slow = head, *fast = head;\n    while (fast && fast->next) {            // fast needs two valid steps\n        slow = slow->next;\n        fast = fast->next->next;\n        if (slow == fast) {                 // met inside a cycle\n            for (ListNode* p = head; p != slow; p = p->next) slow = slow->next;\n            return slow;                    // entry of the cycle\n        }\n    }\n    return nullptr;                         // no cycle; here slow is the middle node\n}\n```"
    }
   },
   {
@@ -7161,9 +7628,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Merging sorted lists stitches them into one sorted list by always taking the smallest front node. For two lists, it is like merging two lines of people sorted by height, repeatedly letting the shorter person at the front of either line go next. For many lists, a priority queue keeps track of which front node is currently the smallest.",
+    "interview": [
+     "**Two lists**: dummy head plus tail pointer; attach the smaller head, advance that list; attach the leftover list at the end. **O(n + m)**, O(1) extra (nodes are relinked, not copied).",
+     "Recursive version: `if (a.val <= b.val) { a.next = merge(a.next, b); return a; }`; O(n + m) stack.",
+     "**K lists with a min-heap** of current heads: pop the smallest, attach it, push its next. **O(N log k)** for N total nodes, O(k) heap.",
+     "**Divide and conquer**: merge lists in pairs, then pairs of results: also O(N log k), no heap.",
+     "Merging one by one into an accumulator is O(N · k): avoid.",
+     "Stable if you take from the first list on ties."
+    ],
+    "questions": [
+     {
+      "q": "How do you merge two sorted linked lists in O(1) extra space?",
+      "a": "Use a dummy node and a tail pointer. Repeatedly attach the smaller of the two current heads to the tail and advance that list. When one list runs out, attach the other list's remainder. Nodes are relinked rather than copied."
+     },
+     {
+      "q": "What is the best way to merge k sorted lists, and what does it cost?",
+      "a": "Keep a min-heap of the current head of each list. Pop the smallest node, append it to the output, and push its successor. With N total nodes that is O(N log k) time and O(k) extra space."
+     },
+     {
+      "q": "Why is merging lists one at a time into a result list slow?",
+      "a": "The result grows with each merge, so the i-th merge touches about i · (N/k) nodes. Summed over k lists that is O(N · k), compared with O(N log k) for a heap or pairwise merging."
+     },
+     {
+      "q": "How does the pairwise (divide and conquer) approach work?",
+      "a": "Merge list 0 with 1, 2 with 3, and so on, halving the number of lists each round. There are log k rounds and each touches every node once, so the total is O(N log k) without a heap."
+     },
+     {
+      "q": "Why does the Python heap store (value, index, node) rather than (value, node)?",
+      "a": "When two values are equal, heapq compares the next tuple element. ListNode objects can't be compared, so the unique index acts as a tiebreaker and the node is never compared."
+     }
+    ],
+    "deep": "#### Intuition\n\nBoth lists are sorted, so the smallest remaining node overall is always one of the heads. Relinking that head onto the output and advancing its list keeps everything sorted. For $k$ lists, comparing $k$ heads each step is slow, but a heap returns the minimum head in $O(\\log k)$.\n\n#### Worked example: merge 1 → 4 → 5, 1 → 3 → 4, 2 → 6\n\nHeap of heads (value, list): {1a, 1b, 2}.\n\n| pop | push | output so far |\n|---|---|---|\n| 1 (list a) | 4 (a) | 1 |\n| 1 (list b) | 3 (b) | 1 1 |\n| 2 (list c) | 6 (c) | 1 1 2 |\n| 3 (b) | 4 (b) | 1 1 2 3 |\n| 4 (a) | 5 (a) | 1 1 2 3 4 |\n| 4 (b) | none | 1 1 2 3 4 4 |\n| 5 (a) | none | 1 1 2 3 4 4 5 |\n| 6 (c) | none | 1 1 2 3 4 4 5 6 |\n\n#### Code\n\n```cpp\nListNode* mergeTwo(ListNode* a, ListNode* b) {\n    ListNode dummy;\n    ListNode* tail = &dummy;\n    while (a && b) {\n        if (a->val <= b->val) { tail->next = a; a = a->next; }   // <= keeps it stable\n        else { tail->next = b; b = b->next; }\n        tail = tail->next;\n    }\n    tail->next = a ? a : b;                  // attach whatever is left\n    return dummy.next;\n}\n\nListNode* mergeK(vector<ListNode*>& lists) {\n    auto cmp = [](ListNode* x, ListNode* y) { return x->val > y->val; };  // min-heap\n    priority_queue<ListNode*, vector<ListNode*>, decltype(cmp)> pq(cmp);\n    for (ListNode* l : lists) if (l) pq.push(l);\n    ListNode dummy;\n    ListNode* tail = &dummy;\n    while (!pq.empty()) {\n        ListNode* node = pq.top();\n        pq.pop();\n        tail->next = node;\n        tail = node;\n        if (node->next) pq.push(node->next);\n    }\n    return dummy.next;\n}\n```\n\n```python\nimport heapq\n\ndef merge_k(lists):\n    heap = [(node.val, i, node) for i, node in enumerate(lists) if node]\n    heapq.heapify(heap)              # the index i breaks ties so nodes are never compared\n    dummy = tail = ListNode()\n    while heap:\n        _, i, node = heapq.heappop(heap)\n        tail.next = tail = node\n        if node.next:\n            heapq.heappush(heap, (node.next.val, i, node.next))\n    return dummy.next\n```\n\n`tail.next = tail = node` assigns left to right: first `tail.next = node`, then `tail = node`.\n\n#### Complexity\n\n- Two lists: $O(n + m)$ time, $O(1)$ extra space.\n- $k$ lists with a heap: each of the $N$ nodes is pushed and popped once, $O(N \\log k)$ time, $O(k)$ space.\n- Pairwise divide and conquer: $\\log k$ rounds, each touching all $N$ nodes: $O(N \\log k)$.\n- Sequential merging: the accumulator grows each time, $O(N k)$.\n\n#### Edge cases and bugs\n\n- Empty lists in the input (skip nulls when building the heap).\n- Python's `heapq` compares tuples element by element; without the index tiebreaker it would try to compare `ListNode` objects and raise an error.\n- Forgetting to attach the leftover list after the two-list loop.\n\n#### Variants\n\n- Merge two sorted arrays (same loop, arrays).\n- Sort a linked list with merge sort (split with fast and slow pointers, merge).\n- Smallest range covering elements from k lists (heap of heads plus the current maximum).\n- Kth smallest element in a sorted matrix (heap of row heads).\n\nConnects to: merging sorted sequences, k-way merge, merge sort, heaps."
    }
   },
   {
@@ -7185,9 +7681,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Removing nodes from a linked list is about stopping at the node just before the one to remove and skipping over it. To remove the nth node from the end in one pass, send a scout pointer n steps ahead first; when the scout reaches the end, the follower is right before the target. A dummy head makes removing the very first node work the same way as any other.",
+    "interview": [
+     "**Remove by value**: dummy head; `while (prev.next)`: skip matching nodes, else advance `prev`.",
+     "**Nth from the end in one pass**: move `lead` n + 1 steps ahead of `trail` (both starting at the dummy); move both until `lead` is null; `trail.next` is the target.",
+     "**Remove duplicates from a sorted list, keep one**: if `cur.val == cur.next.val`, skip `cur.next`; else advance.",
+     "**Remove all nodes that have duplicates** (sorted): with `prev` at the last kept node, when a run of equal values starts, skip the whole run.",
+     "Remove duplicates from an **unsorted** list: hash set of seen values, O(n) time and space (or O(n²) without extra space).",
+     "All single-pass versions are **O(n)** time, **O(1)** extra space."
+    ],
+    "questions": [
+     {
+      "q": "How do you remove the nth node from the end of a list in one pass?",
+      "a": "Start two pointers at a dummy node before the head. Move the lead pointer n + 1 steps, then move both until the lead is null. The trailing pointer is now just before the node to remove, so set trail.next = trail.next.next."
+     },
+     {
+      "q": "Why use a dummy node when removing nodes?",
+      "a": "The node to remove might be the head, which would otherwise need special handling to update the head pointer. With a dummy in front, every node has a predecessor, and the answer is dummy.next."
+     },
+     {
+      "q": "How do you remove all nodes whose value appears more than once in a sorted list?",
+      "a": "Keep prev at the last node known to be unique (starting at a dummy). If the node after prev starts a run of equal values, skip past the whole run and link prev to the node after it; otherwise advance prev."
+     },
+     {
+      "q": "How do you remove duplicates from an unsorted linked list?",
+      "a": "Walk the list with a hash set of values seen so far, unlinking any node whose value is already in the set. That is O(n) time and O(n) space; without extra space, check each node against all later nodes in O(n²)."
+     }
+    ]
    }
   },
   {
@@ -7209,9 +7729,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some linked list problems combine several small tricks, and the challenge is keeping every pointer straight. Copying a list with extra random pointers, finding where two lists join, and reordering a list by weaving its halves together each have a clever idea. Drawing the arrows on paper before coding is the best habit.",
+    "interview": [
+     "**Copy list with random pointer**: hash map old → new (O(n) space), or **interleave** copies (A → A' → B → B'…), set `copy.random = orig.random.next`, then separate the lists (O(1) extra space).",
+     "**Intersection of two lists**: two pointers that switch to the other list's head at the end; they meet at the intersection (or both reach null) after at most m + n steps.",
+     "**Reorder list** (L0 → Ln → L1 → Ln−1 …): find the middle, reverse the second half, weave the two halves.",
+     "**Palindrome list**: middle, reverse the second half, compare, restore.",
+     "**Odd-even list**, **partition list** around x (two dummy lists joined at the end), **rotate list** (ring then cut).",
+     "All are O(n) time; most can be done in O(1) extra space."
+    ],
+    "questions": [
+     {
+      "q": "How do you deep-copy a linked list with random pointers in O(1) extra space?",
+      "a": "Insert each node's copy right after it, so the list reads A, A′, B, B′, and so on. Then set each copy's random to original.random.next (the copy of the random target), and finally unweave the two lists, restoring the original. It is O(n) time."
+     },
+     {
+      "q": "How do you find the node where two singly linked lists intersect?",
+      "a": "Walk two pointers, one per list; when a pointer reaches the end, restart it at the other list's head. Both then travel m + n steps in total, so they line up and meet at the intersection node, or both reach null together if there is none."
+     },
+     {
+      "q": "How do you reorder a list into L0, Ln, L1, Ln−1, …?",
+      "a": "Find the middle with fast and slow pointers, cut the list there, reverse the second half, then alternately take one node from each half. Each step is O(n), with O(1) extra space."
+     },
+     {
+      "q": "How do you partition a list around a value x while keeping the relative order?",
+      "a": "Build two lists with two dummy heads, one for nodes less than x and one for the rest, appending nodes as you walk the original. Connect the end of the first list to the start of the second and terminate the second with null."
+     }
+    ]
    }
   },
   {
@@ -7233,9 +7777,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Combining a hash map with a doubly linked list gives you instant lookup and instant reordering at the same time. The list keeps items in order of use, like a stack of papers where the most recently touched one goes on top. The map tells you exactly where each paper sits, so you can pull it out and move it to the top without searching.",
+    "interview": [
+     "The hash map stores `key → node`; the doubly linked list stores the order (most recent at the front, least recent at the back).",
+     "**Get**: look up the node, move it to the front: O(1). **Put**: update or insert at the front; if over capacity, remove the back node and erase its key from the map: O(1).",
+     "**Sentinel head and tail** nodes remove all null checks: every real node always has both neighbors.",
+     "Removing a known node in O(1) requires the `prev` pointer, which is why the list is doubly linked.",
+     "The node must store its **key** so the map entry can be erased on eviction.",
+     "C++ shortcut: `std::list` plus `unordered_map<key, list::iterator>` and `splice` to move nodes. Python: `collections.OrderedDict` with `move_to_end` and `popitem(last=False)`."
+    ],
+    "questions": [
+     {
+      "q": "Why does an LRU cache need both a hash map and a doubly linked list?",
+      "a": "The hash map finds a key's node in O(1), and the doubly linked list keeps the usage order so the least recently used item can be found at one end and any node moved to the other end in O(1). Neither structure alone gives both operations in O(1)."
+     },
+     {
+      "q": "Why must the list be doubly linked?",
+      "a": "To unlink a node in O(1) you need its predecessor. With a singly linked list, finding the predecessor takes O(n), so moving an accessed node to the front would be slow."
+     },
+     {
+      "q": "Why store the key inside each list node?",
+      "a": "When the cache is full, you evict the node at the least recent end, and you must also remove its entry from the hash map. The key stored in the node tells you which map entry to erase."
+     },
+     {
+      "q": "What do sentinel head and tail nodes simplify?",
+      "a": "With permanent dummy nodes at both ends, every real node has non-null prev and next pointers, so insertion and removal never need special cases for an empty list or for the first and last nodes."
+     }
+    ]
    }
   },
   {
