@@ -9449,9 +9449,37 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A tree is a set of nodes connected like a family tree, with one node at the top called the root and no loops. Nodes with no children are leaves, depth measures how far a node is below the root, and height measures how far the deepest leaf is below a node. Words like full, complete and balanced describe how evenly a tree is filled.",
+    "interview": [
+     "A tree with n nodes has **n − 1 edges**, one path between any two nodes, and no cycles. A **binary tree** has at most two children per node.",
+     "**Depth** of a node: edges from the root (root = 0). **Height** of a node: edges on the longest path down to a leaf (leaf = 0). Some problems count nodes instead (LeetCode's \"maximum depth\" does); say which you use.",
+     "**Full**: every node has 0 or 2 children. **Complete**: all levels full except possibly the last, filled left to right (heaps). **Perfect**: all leaves on the same level, 2^(h+1) − 1 nodes.",
+     "**Balanced** (height-balanced): at every node the two subtree heights differ by at most 1, so height is O(log n). A **degenerate** tree is a linked list, height n − 1.",
+     "Most tree algorithms are O(n) time and **O(h)** space for recursion, where h is between log n and n."
+    ],
+    "questions": [
+     {
+      "q": "What is the difference between depth and height?",
+      "a": "Depth is measured from the root down to a node: the number of edges on that path, so the root has depth 0. Height is measured from a node down to its deepest leaf, so leaves have height 0; the tree's height is the root's height."
+     },
+     {
+      "q": "Define full, complete and perfect binary trees.",
+      "a": "A full tree has every node with either 0 or 2 children. A complete tree has every level full except possibly the last, whose nodes are packed to the left. A perfect tree has every internal node with two children and all leaves at the same depth, so it has 2^(h+1) − 1 nodes."
+     },
+     {
+      "q": "What does balanced mean, and why does it matter?",
+      "a": "A height-balanced binary tree has, at every node, left and right subtree heights differing by at most 1. That keeps the height O(log n), so operations that walk root to leaf, like BST search, take O(log n) instead of O(n)."
+     },
+     {
+      "q": "How many edges does a tree with n nodes have, and why?",
+      "a": "n − 1. Every node except the root has exactly one edge to its parent, and there are no other edges because a tree has no cycles."
+     },
+     {
+      "q": "What is the space complexity of a recursive traversal of a tree?",
+      "a": "O(h), the height of the tree, for the call stack. That's O(log n) for a balanced tree but O(n) for a degenerate one, where the recursion may overflow on large inputs."
+     }
+    ],
+    "deep": "#### Intuition\n\nTrees model hierarchy: folders, organization charts, parsed expressions, decisions. The vocabulary exists so you can describe shape precisely, because shape decides cost: operations that walk from the root to a leaf take $O(h)$, and $h$ ranges from $\\log_2 n$ in a balanced tree to $n - 1$ in a chain.\n\n#### The standard node\n\n```cpp\n// The binary tree node used throughout the tree topics (LeetCode's shape).\nstruct TreeNode {\n    int val;\n    TreeNode* left;\n    TreeNode* right;\n    TreeNode(int v = 0, TreeNode* l = nullptr, TreeNode* r = nullptr) : val(v), left(l), right(r) {}\n};\n\nint height(TreeNode* root) {              // in edges; an empty tree has height -1\n    if (!root) return -1;\n    return 1 + max(height(root->left), height(root->right));\n}\n\nint countNodes(TreeNode* root) {\n    return root ? 1 + countNodes(root->left) + countNodes(root->right) : 0;\n}\n```\n\n```python\nclass TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val, self.left, self.right = val, left, right\n\ndef build_level_order(values):\n    \"\"\"Build a tree from a level-order list with None for missing nodes.\"\"\"\n    if not values or values[0] is None:\n        return None\n    root = TreeNode(values[0])\n    queue, i = [root], 1\n    for node in queue:\n        if i < len(values) and values[i] is not None:\n            node.left = TreeNode(values[i])\n            queue.append(node.left)\n        i += 1\n        if i < len(values) and values[i] is not None:\n            node.right = TreeNode(values[i])\n            queue.append(node.right)\n        i += 1\n    return root\n\ndef is_full(root):\n    if root is None:\n        return True\n    if (root.left is None) != (root.right is None):\n        return False                     # exactly one child\n    return is_full(root.left) and is_full(root.right)\n```\n\n#### Worked example\n\n```\n        1\n       / \\\n      2   3\n     / \\    \\\n    4   5    6\n```\n\n| property | value | reason |\n|---|---|---|\n| root | 1 | no parent |\n| leaves | 4, 5, 6 | no children |\n| depth of 5 | 2 | edges 1→2→5 |\n| height of 3 | 1 | 3→6 |\n| height of the tree | 2 | longest root-to-leaf path |\n| full? | no | node 3 has one child |\n| complete? | no | the last level isn't filled left to right (5 is followed by a gap, then 6) |\n| perfect? | no | not every internal node has two children |\n| balanced? | yes | every node's subtree heights differ by at most 1 |\n\n#### Useful counts\n\n- A perfect binary tree of height $h$ has $2^{h+1} - 1$ nodes and $2^h$ leaves.\n- A complete binary tree with $n$ nodes has height $\\lfloor \\log_2 n \\rfloor$.\n- In any binary tree, the number of leaves equals the number of nodes with two children plus one.\n- A binary tree with $n$ nodes has $n + 1$ null child pointers.\n\n#### Edge cases and bugs\n\n- The empty tree: decide what height it has (−1 in edges, 0 in nodes).\n- Confusing depth (measured from the root down) with height (measured from a node to the bottom).\n- Assuming balance: a BST built from sorted input is a chain.\n\n#### Variants\n\nN-ary trees (a list of children), trees stored as parent arrays, rooted versus unrooted trees (graph problems), and binary trees stored in arrays (heaps: children at `2i + 1` and `2i + 2`).\n\nConnects to: DFS traversals, level-order traversal, binary heaps, balanced BSTs."
    }
   },
   {
@@ -9474,9 +9502,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Depth-first traversal visits a tree by going as deep as possible down one branch before backing up to try the next. The three orders differ only in when you look at a node: before its children (preorder), between them (inorder) or after them (postorder). It is like exploring a building floor by floor through stairwells, noting each room on the way down, in the middle, or on the way back up.",
+    "interview": [
+     "**Preorder** (node, left, right): copy or serialize a tree, print the structure top-down.",
+     "**Inorder** (left, node, right): visits a **BST in sorted order**.",
+     "**Postorder** (left, right, node): compute from children first (heights, sizes, deleting a tree).",
+     "Recursive: three lines. Iterative: explicit stack. Preorder: pop, visit, push right then left. Inorder: go left pushing nodes, pop and visit, move to the right child.",
+     "All are **O(n)** time and **O(h)** space; Morris traversal gets O(1) extra space.",
+     "Choosing the order is the design decision: do you need the parent's info before the children (pre), or the children's results for the parent (post)?"
+    ],
+    "questions": [
+     {
+      "q": "What are preorder, inorder and postorder traversals?",
+      "a": "They are depth-first orders that differ in when the node is visited relative to its subtrees: preorder visits node, left, right; inorder visits left, node, right; postorder visits left, right, node. All take O(n) time."
+     },
+     {
+      "q": "Which traversal gives the values of a BST in sorted order, and why?",
+      "a": "Inorder. In a BST everything in the left subtree is smaller than the node and everything in the right subtree is larger, so visiting left, node, right lists values in increasing order."
+     },
+     {
+      "q": "How do you do an inorder traversal without recursion?",
+      "a": "Use a stack. Push nodes while moving left until you hit null, then pop a node, visit it, and move to its right child, repeating the process. Stop when both the current pointer is null and the stack is empty."
+     },
+     {
+      "q": "When would you choose postorder?",
+      "a": "When a node's answer depends on its children's answers, such as computing heights, subtree sums or diameters, or freeing a tree's memory. Postorder guarantees both children are processed before the node."
+     },
+     {
+      "q": "What is the space complexity of DFS on a tree?",
+      "a": "O(h), where h is the height, because the recursion stack or explicit stack holds at most one path from the root. That ranges from O(log n) for a balanced tree to O(n) for a chain."
+     }
+    ],
+    "deep": "#### Intuition\n\nEvery DFS visits nodes along the same path through the tree; the order only says when a node is \"reported\". Think of walking around the tree's outline starting at the root: preorder reports a node when you first pass it on its left side, inorder when you pass under it, postorder when you leave it on its right side.\n\n#### Worked example\n\n```\n        1\n       / \\\n      2   3\n     / \\\n    4   5\n```\n\n| order | sequence |\n|---|---|\n| preorder | 1 2 4 5 3 |\n| inorder | 4 2 5 1 3 |\n| postorder | 4 5 2 3 1 |\n\n#### Code\n\n```cpp\nvoid preorder(TreeNode* n, vector<int>& out) {\n    if (!n) return;\n    out.push_back(n->val);         // node first\n    preorder(n->left, out);\n    preorder(n->right, out);\n}\n\nvector<int> inorderIterative(TreeNode* root) {\n    vector<int> out;\n    vector<TreeNode*> st;\n    TreeNode* cur = root;\n    while (cur || !st.empty()) {\n        while (cur) { st.push_back(cur); cur = cur->left; }   // go as far left as possible\n        cur = st.back(); st.pop_back();\n        out.push_back(cur->val);                              // visit\n        cur = cur->right;                                     // then the right subtree\n    }\n    return out;\n}\n\nvector<int> postorderIterative(TreeNode* root) {\n    vector<int> out;                                          // node, right, left, reversed\n    vector<TreeNode*> st;\n    if (root) st.push_back(root);\n    while (!st.empty()) {\n        TreeNode* n = st.back(); st.pop_back();\n        out.push_back(n->val);\n        if (n->left) st.push_back(n->left);\n        if (n->right) st.push_back(n->right);\n    }\n    reverse(out.begin(), out.end());\n    return out;\n}\n```\n\n```python\ndef preorder_iterative(root):\n    out, st = [], [root] if root else []\n    while st:\n        node = st.pop()\n        out.append(node.val)\n        if node.right:\n            st.append(node.right)    # pushed first, so visited after the left subtree\n        if node.left:\n            st.append(node.left)\n    return out\n\ndef inorder_recursive(root, out=None):\n    out = [] if out is None else out\n    if root:\n        inorder_recursive(root.left, out)\n        out.append(root.val)\n        inorder_recursive(root.right, out)\n    return out\n```\n\n#### Recursive or iterative?\n\nWrite the recursive version first in an interview: it is short and hard to get wrong. Offer the iterative version when the tree may be very deep (a chain of $10^5$ nodes overflows a default stack), when the interviewer asks for it, or when you need to pause the traversal between steps, as a BST iterator does. The iterative inorder loop is worth memorizing exactly, because several BST problems are built on it.\n\n#### Complexity\n\nEvery node is pushed and popped (or called) once: $O(n)$ time. The stack holds at most one root-to-leaf path: $O(h)$ space.\n\n#### Choosing an order\n\n| Need | Order |\n|---|---|\n| Sorted output from a BST, kth smallest, validate BST | inorder |\n| Copy, serialize, or pass information downward | preorder |\n| Results computed from children (height, sums, deletion) | postorder |\n\n#### Edge cases and bugs\n\n- Empty tree: return an empty list, don't push null onto the stack.\n- Iterative preorder must push the right child before the left.\n- The \"reverse of modified preorder\" postorder trick produces the right order but not a true postorder walk (you can't stop early mid-traversal).\n\n#### Variants\n\n- N-ary tree traversals (loop over children).\n- Iterative postorder with a `lastVisited` pointer (a true postorder walk).\n- Morris traversal: inorder in O(1) space by temporarily threading right pointers.\n- Traversals are the base of tree construction and serialization.\n\nConnects to: recursion fundamentals, level-order traversal, BST inorder tricks, tree construction.",
+    "signals": [
+     "visit every node of a tree in a specific order (before, between or after children)",
+     "sorted order from a binary search tree",
+     "copy, print or serialize a tree's structure",
+     "answers that combine information from both subtrees"
+    ],
+    "template": "```cpp\n// DFS skeleton: choose where the \"visit\" happens.\nvoid dfs(TreeNode* node) {\n    if (!node) return;                 // base case: empty subtree\n    // preorder work here (node before children; pass info down)\n    dfs(node->left);\n    // inorder work here (BST: values in sorted order)\n    dfs(node->right);\n    // postorder work here (children done; combine their results)\n}\n```"
    }
   },
   {
@@ -9498,9 +9562,46 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Level-order traversal visits a tree one level at a time, from top to bottom and left to right, like reading a pyramid of names row by row. A queue does the work: take the next node from the front and add its children to the back. Counting how many nodes are in the queue at the start of each level lets you keep the levels apart.",
+    "interview": [
+     "BFS with a queue: `while (!q.empty()) { int size = q.size(); for (size times) { pop, record, push children } }`. The **size snapshot** separates levels.",
+     "**O(n)** time, **O(w)** space where w is the maximum width (up to n/2 in a perfect tree).",
+     "**Zigzag**: alternate the direction per level (fill a level array from the back, or reverse odd levels).",
+     "**Right side view**: the last node of each level. **Left view**: the first.",
+     "**Maximum width** (including nulls between): track positions `i` with children `2i` and `2i + 1`; width = last − first + 1 per level; re-base positions per level to avoid overflow.",
+     "Also: level averages, minimum depth (first leaf found), connect next pointers."
+    ],
+    "questions": [
+     {
+      "q": "How do you print a binary tree level by level?",
+      "a": "Use a queue starting with the root. For each level, record the queue's size, then pop exactly that many nodes, recording their values and pushing their children. The size snapshot keeps each level's nodes together."
+     },
+     {
+      "q": "How do you get the right side view of a tree?",
+      "a": "Do a level-order traversal and record the last node of each level. Alternatively, do a DFS visiting right before left and record the first node you reach at each new depth."
+     },
+     {
+      "q": "How do you compute the maximum width of a tree, counting gaps between nodes?",
+      "a": "Give nodes positions as in a complete tree: children of position p are 2p and 2p + 1. Each level's width is the last position minus the first plus one. Subtract the first position at each level to keep numbers from overflowing."
+     },
+     {
+      "q": "Why is BFS better than DFS for the minimum depth?",
+      "a": "BFS explores level by level and can stop at the first leaf it meets, which is at the minimum depth. DFS may explore a very deep branch fully before finding a shallow leaf."
+     },
+     {
+      "q": "What is the space complexity of level-order traversal?",
+      "a": "O(w), the maximum number of nodes on one level, since the queue holds at most about one level at a time. For a perfect tree the last level has roughly n/2 nodes, so the worst case is O(n)."
+     }
+    ],
+    "deep": "#### Intuition\n\nA queue processes nodes in the order they were discovered, and children are discovered level by level. If at the start of a level you remember how many nodes are in the queue, you know exactly which nodes belong to that level, even though their children are being added behind them.\n\n#### Worked example: zigzag of\n\n```\n        3\n       / \\\n      9   20\n         /  \\\n        15   7\n```\n\n| level | queue at start | values | direction | output row |\n|---|---|---|---|---|\n| 0 | 3 | 3 | left to right | 3 |\n| 1 | 9 20 | 9 20 | right to left | 20 9 |\n| 2 | 15 7 | 15 7 | left to right | 15 7 |\n\n#### Code\n\n```cpp\nvector<vector<int>> levelOrder(TreeNode* root) {\n    vector<vector<int>> levels;\n    if (!root) return levels;\n    queue<TreeNode*> q;\n    q.push(root);\n    while (!q.empty()) {\n        int size = q.size();                       // nodes on this level\n        vector<int> level;\n        for (int i = 0; i < size; i++) {\n            TreeNode* n = q.front(); q.pop();\n            level.push_back(n->val);\n            if (n->left) q.push(n->left);\n            if (n->right) q.push(n->right);\n        }\n        levels.push_back(level);\n    }\n    return levels;\n}\n\nint widthOfBinaryTree(TreeNode* root) {\n    if (!root) return 0;\n    queue<pair<TreeNode*, unsigned long long>> q;  // node, position in a complete tree\n    q.push({root, 0});\n    unsigned long long best = 0;\n    while (!q.empty()) {\n        int size = q.size();\n        unsigned long long first = q.front().second, last = first;\n        for (int i = 0; i < size; i++) {\n            auto [n, pos] = q.front(); q.pop();\n            pos -= first;                          // re-base to keep numbers small\n            last = pos;\n            if (n->left) q.push({n->left, 2 * pos});\n            if (n->right) q.push({n->right, 2 * pos + 1});\n        }\n        best = max(best, last + 1);\n    }\n    return (int)best;\n}\n```\n\n```python\nfrom collections import deque\n\ndef zigzag(root):\n    out, q, left_to_right = [], deque([root] if root else []), True\n    while q:\n        level = [q.popleft() for _ in range(len(q))]\n        vals = [n.val for n in level]\n        out.append(vals if left_to_right else vals[::-1])\n        left_to_right = not left_to_right\n        for n in level:\n            q.extend(c for c in (n.left, n.right) if c)\n    return out\n\ndef right_side_view(root):\n    view, q = [], deque([root] if root else [])\n    while q:\n        view.append(q[-1].val)            # the last node of this level\n        for _ in range(len(q)):\n            n = q.popleft()\n            q.extend(c for c in (n.left, n.right) if c)\n    return view\n```\n\n#### BFS or DFS for per-level questions?\n\nAnything phrased \"per level\" can also be done with DFS by passing the depth and writing into `result[depth]`: the right side view becomes \"the first node seen at each depth when visiting right before left\". DFS uses $O(h)$ space instead of $O(w)$, which is better for wide, shallow trees. BFS is more natural when the order within a level matters or when you want to stop at the first level that meets a condition.\n\n#### Complexity\n\n$O(n)$ time; $O(w)$ space for the queue, where $w$ is the widest level. A perfect tree's last level holds about $n/2$ nodes, so the worst case is $O(n)$.\n\n#### Edge cases and bugs\n\n- Reading `q.size()` inside the loop condition instead of snapshotting it merges levels.\n- Width positions overflow for deep, sparse trees (they double each level); re-basing each level keeps them small.\n- Empty tree: return an empty result.\n\n#### Variants\n\n- Bottom-up level order (reverse the result), level averages, largest value per level.\n- Minimum depth: BFS stops at the first leaf, which is faster than DFS on unbalanced trees.\n- Populate next-right pointers, including the O(1)-space version that walks each level using the pointers built for the level above.\n- Vertical order (BFS with column indices).\n\nConnects to: BFS on graphs, queues, views and vertical order, tree terminology.",
+    "signals": [
+     "process or print a tree level by level",
+     "the leftmost or rightmost node at each depth",
+     "zigzag or spiral order of levels",
+     "per-level values: averages, maximums, widths",
+     "the shallowest node satisfying a condition"
+    ],
+    "template": "```cpp\n// BFS by levels: snapshot the queue size to process one level at a time.\ntemplate <class OnLevel>\nvoid byLevels(TreeNode* root, OnLevel onLevel) {\n    if (!root) return;\n    queue<TreeNode*> q;\n    q.push(root);\n    for (int depth = 0; !q.empty(); depth++) {\n        int size = q.size();\n        vector<TreeNode*> level;\n        for (int i = 0; i < size; i++) {\n            TreeNode* n = q.front(); q.pop();\n            level.push_back(n);\n            if (n->left) q.push(n->left);\n            if (n->right) q.push(n->right);\n        }\n        onLevel(depth, level);         // first, last, sums, zigzag, ...\n    }\n}\n```"
    }
   },
   {
@@ -9522,9 +9623,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Bottom-up recursion asks each subtree to report a small summary to its parent, such as its height, and the parent combines the two reports. It is like a company where each team lead reports their team's numbers to their manager, who adds their own and reports upward. Sometimes the best answer is found inside a subtree rather than at the top, so you also keep a running record of the best seen anywhere.",
+    "interview": [
+     "Postorder: compute results for left and right children, combine them for the node, return upward.",
+     "**Height**: `1 + max(left, right)`. **Size**, **sum**: add the children.",
+     "**Diameter** (longest path between any two nodes): at each node, the path through it has length `leftHeight + rightHeight` (in edges); keep a **global maximum**, but return the height.",
+     "**Balanced check**: return the height, or −1 as a \"not balanced\" signal that propagates up. O(n) instead of O(n²).",
+     "**Maximum path sum**: return the best **downward** path (`node + max(0, left, right)`), and update the global answer with `node + max(0, left) + max(0, right)`.",
+     "Key idea: what the function **returns** (usable by the parent) can differ from the **answer** (which may bend through a node)."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the diameter of a binary tree in O(n)?",
+      "a": "Do a postorder traversal that returns each subtree's height. At every node, the longest path passing through it has length left height + right height, so update a global maximum with that, and return 1 + max(left, right) to the parent."
+     },
+     {
+      "q": "Why do bottom-up problems often use a global variable?",
+      "a": "The best answer may bend through a node, using both children, and such a path can't be extended upward. So the function returns what the parent can use, such as the best straight path down, while the global variable records the best bent path seen anywhere."
+     },
+     {
+      "q": "How do you check whether a tree is height-balanced in O(n)?",
+      "a": "Return the subtree height from each call, or a sentinel like −1 when a subtree is unbalanced. A node is unbalanced if either child returned −1 or their heights differ by more than 1. Each node is visited once."
+     },
+     {
+      "q": "In maximum path sum, why take max(0, child)?",
+      "a": "A child path with a negative sum only lowers the total, so it is better to not extend into that child at all. Clamping at 0 means \"stop the path at this node\" on that side."
+     },
+     {
+      "q": "What is the complexity of computing heights naively inside a balance check at every node?",
+      "a": "O(n²) in the worst case, since a chain recomputes the heights of long subtrees at each node. Returning the height from the same recursion that checks balance brings it to O(n)."
+     }
+    ],
+    "deep": "#### Intuition\n\nA single postorder traversal can compute many properties if each call returns exactly what the parent needs. The trap is that the best answer for the whole problem (a path that bends at some node) usually can't be extended by the parent. So you return one thing (the best path going straight down, which a parent can extend) and record another (the best bent path) in a variable outside the recursion.\n\n#### Worked example: maximum path sum\n\n```\n       -10\n       /  \\\n      9    20\n          /  \\\n         15   7\n```\n\n| node | best down-path from left | from right | returns (node + max(0, l, r)) | path through node | global best |\n|---|---|---|---|---|---|\n| 9 | 0 | 0 | 9 | 9 | 9 |\n| 15 | 0 | 0 | 15 | 15 | 15 |\n| 7 | 0 | 0 | 7 | 7 | 15 |\n| 20 | 15 | 7 | 35 | 20 + 15 + 7 = 42 | 42 |\n| −10 | 9 | 35 | 25 | −10 + 9 + 35 = 34 | 42 |\n\nAnswer: **42** (15 → 20 → 7), a path that bends at 20 and could never be returned to the root.\n\n#### Code\n\n```cpp\nint diameterOfBinaryTree(TreeNode* root) {\n    int best = 0;                                           // in edges\n    function<int(TreeNode*)> height = [&](TreeNode* n) -> int {\n        if (!n) return 0;                                   // height in nodes here\n        int l = height(n->left), r = height(n->right);\n        best = max(best, l + r);                            // longest path bending at n\n        return 1 + max(l, r);                               // what the parent can extend\n    };\n    height(root);\n    return best;\n}\n\nint maxPathSum(TreeNode* root) {\n    int best = INT_MIN;\n    function<int(TreeNode*)> down = [&](TreeNode* n) -> int {\n        if (!n) return 0;\n        int l = max(0, down(n->left));                      // drop negative branches\n        int r = max(0, down(n->right));\n        best = max(best, n->val + l + r);\n        return n->val + max(l, r);\n    };\n    down(root);\n    return best;\n}\n```\n\n```python\ndef is_balanced(root):\n    def height(node):                    # -1 means \"not balanced below here\"\n        if node is None:\n            return 0\n        lh = height(node.left)\n        if lh < 0:\n            return -1\n        rh = height(node.right)\n        if rh < 0 or abs(lh - rh) > 1:\n            return -1\n        return 1 + max(lh, rh)\n    return height(root) >= 0\n\ndef longest_univalue_path(root):\n    best = 0\n    def down(node):\n        nonlocal best\n        if node is None:\n            return 0\n        l, r = down(node.left), down(node.right)\n        l = l + 1 if node.left and node.left.val == node.val else 0\n        r = r + 1 if node.right and node.right.val == node.val else 0\n        best = max(best, l + r)\n        return max(l, r)\n    down(root)\n    return best\n```\n\n#### Complexity\n\nOne postorder pass: $O(n)$ time, $O(h)$ space. The naive balanced check that recomputes heights at every node is $O(n^2)$ on a chain, which is why the combined \"height or −1\" return matters.\n\n#### Edge cases and bugs\n\n- Counting diameter in nodes instead of edges (off by one).\n- Initializing the global max path sum to 0 when all values are negative; start at `INT_MIN` (the answer must contain at least one node).\n- Returning the bent path to the parent (it can't extend a path that already uses both children).\n\n#### Variants\n\n- Count good subtrees (return several values: min, max, size, validity), largest BST subtree.\n- Binary tree tilt, subtree sums, most frequent subtree sum.\n- Distribute coins (return the excess, add absolute moves to a global counter).\n- Tree DP where each node returns a small tuple (house robber III).\n\nConnects to: DFS traversals, top-down tree recursion, tree DP on subtrees, lowest common ancestor.",
+    "signals": [
+     "a property computed from both children's results: height, size, sums, diameter",
+     "the longest or maximum-sum path anywhere in the tree, not necessarily through the root",
+     "check a property that must hold at every node (balanced, BST, uni-value)",
+     "\"return one thing, record another\""
+    ],
+    "template": "```cpp\n// Bottom-up: return what the parent needs; record the answer that may bend at this node.\nstruct Solver {\n    long long best = LLONG_MIN;              // global answer (e.g. best path)\n    long long down(TreeNode* n) {            // e.g. best downward path from n\n        if (!n) return 0;\n        long long l = max(0LL, down(n->left));\n        long long r = max(0LL, down(n->right));\n        best = max(best, n->val + l + r);    // answer using both sides\n        return n->val + max(l, r);           // parent can extend only one side\n    }\n};\n```"
    }
   },
   {
@@ -9546,9 +9683,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Top-down recursion carries information from the root toward the leaves, handing each child what it needs to know about the path above it. It is like passing a note down a line of people where each person adds their own number before handing it on. When the note reaches a leaf, it holds everything about the path from the root.",
+    "interview": [
+     "Pass state as **parameters**: the running sum, the maximum so far, the current depth, the path.",
+     "**Path sum** (root to leaf equals target): subtract the node's value on the way down; check at a leaf.",
+     "**Good nodes** (no larger value above): pass the maximum seen so far; a node is good if its value ≥ that maximum.",
+     "**All root-to-leaf paths**: pass a path list; append before recursing and pop after (backtracking), or pass copies.",
+     "**Path sum III** (any downward path summing to K): prefix sums along the current path in a hash map; add on the way down, remove on the way up. O(n).",
+     "Preorder shape: act on the node using the incoming state, then recurse with the updated state."
+    ],
+    "questions": [
+     {
+      "q": "What is top-down recursion on a tree?",
+      "a": "A traversal where each call receives information about the path above it as parameters, such as a running sum or the maximum so far, uses it to decide something about the current node, and passes updated values to its children. It's the natural fit for questions about root-to-node paths."
+     },
+     {
+      "q": "How do you count good nodes, whose value is at least every value on the path from the root?",
+      "a": "DFS from the root carrying the maximum value seen so far. A node is good if its value is at least that maximum; pass max(current max, node value) to both children. It's O(n)."
+     },
+     {
+      "q": "How do you count downward paths with a given sum in O(n)?",
+      "a": "Do a DFS keeping the running sum from the root and a hash map of prefix sums on the current path, seeded with {0: 1}. At each node, add the count of (sum − target) from the map, add the current sum to the map, recurse, then remove it before returning."
+     },
+     {
+      "q": "Why must you undo changes to shared state when returning from a node?",
+      "a": "The shared list or map should describe only the current root-to-node path. Once you return from a node, it's no longer on the path, so leaving its entry would corrupt the results for sibling subtrees."
+     }
+    ],
+    "deep": "#### Intuition\n\nSome questions depend on the path from the root, not on the subtree below: \"is this node larger than every ancestor?\" or \"does the path from the root to here add up to K?\". The answer needs information from above, so the parent passes it down. Each call receives what it needs as arguments, does its local check, and passes updated arguments to its children.\n\n#### Worked example: count good nodes\n\n```\n        3\n       / \\\n      1   4\n     /   / \\\n    3   1   5\n```\n\n| node | max on the path above | good? (value ≥ max) | max passed to children |\n|---|---|---|---|\n| 3 (root) | −∞ | yes | 3 |\n| 1 | 3 | no | 3 |\n| 3 (left leaf) | 3 | yes | 3 |\n| 4 | 3 | yes | 4 |\n| 1 (under 4) | 4 | no | 4 |\n| 5 | 4 | yes | 5 |\n\nFour good nodes.\n\n#### Code\n\n```cpp\nint goodNodes(TreeNode* n, int maxAbove = INT_MIN) {\n    if (!n) return 0;\n    int good = n->val >= maxAbove ? 1 : 0;\n    int m = max(maxAbove, n->val);                          // state for the children\n    return good + goodNodes(n->left, m) + goodNodes(n->right, m);\n}\n\n// Number of downward paths (any start, any end below it) summing to target.\nint pathSumIII(TreeNode* root, long long target) {\n    unordered_map<long long, int> prefixCount{{0, 1}};      // prefix sums on the current path\n    function<int(TreeNode*, long long)> dfs = [&](TreeNode* n, long long sum) -> int {\n        if (!n) return 0;\n        sum += n->val;\n        int count = prefixCount.count(sum - target) ? prefixCount[sum - target] : 0;\n        prefixCount[sum]++;                                 // enter this node\n        count += dfs(n->left, sum) + dfs(n->right, sum);\n        prefixCount[sum]--;                                 // leave: undo before returning\n        return count;\n    };\n    return dfs(root, 0);\n}\n```\n\n```python\ndef has_path_sum(root, target):\n    if root is None:\n        return False\n    target -= root.val\n    if root.left is None and root.right is None:\n        return target == 0\n    return has_path_sum(root.left, target) or has_path_sum(root.right, target)\n\ndef all_root_to_leaf_paths(root):\n    paths, path = [], []\n    def dfs(node):\n        if node is None:\n            return\n        path.append(node.val)\n        if node.left is None and node.right is None:\n            paths.append(list(path))\n        dfs(node.left)\n        dfs(node.right)\n        path.pop()                     # backtrack\n    dfs(root)\n    return paths\n```\n\n#### Complexity\n\nEach node is visited once: $O(n)$ time, $O(h)$ stack. Collecting all paths costs $O(n \\cdot h)$ for copying the output. Path sum III is $O(n)$ with the prefix map (versus $O(n^2)$ by starting a search at every node).\n\n#### Top-down or bottom-up?\n\n| Information flows | Style | Example |\n|---|---|---|\n| from ancestors to descendants | top-down (parameters) | good nodes, path sums from the root, depth |\n| from descendants to ancestors | bottom-up (return values) | height, diameter, subtree sums |\n| both | combine: pass down and return up | path sum III (prefix map down, counts up) |\n\n#### Edge cases and bugs\n\n- Path sum must end at a **leaf**: checking at any node with a matching sum is wrong for the classic problem.\n- Forgetting to undo shared state (`path.pop()`, `prefixCount[sum]--`).\n- Negative values: path sum III must not stop early when the sum exceeds the target.\n\n#### Variants\n\n- Sum of root-to-leaf numbers (pass `value * 10 + digit`).\n- Pseudo-palindromic paths (pass a bitmask of digit parities).\n- Maximum difference between a node and an ancestor (pass the min and max above).\n- Smallest string starting from a leaf (pass the path, compare at leaves).\n\nConnects to: DFS traversals, bottom-up tree recursion, prefix sum with hash map, backtracking.",
+    "signals": [
+     "conditions on the path from the root to a node (ancestors' values, running sums)",
+     "root-to-leaf path sums or listing all root-to-leaf paths",
+     "\"compared with all ancestors\" or \"maximum on the path so far\"",
+     "counting downward paths with a target sum"
+    ],
+    "template": "```cpp\n// Top-down: carry path state as parameters; check at nodes or leaves.\nint topDown(TreeNode* n, long long state) {\n    if (!n) return 0;\n    long long next = state + n->val;               // update with this node (sum, max, mask...)\n    int here = 0;\n    if (!n->left && !n->right) here = (next == 0); // leaf check (example: remaining sum)\n    return here + topDown(n->left, next) + topDown(n->right, next);\n}\n```"
    }
   },
   {
@@ -9570,9 +9739,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The lowest common ancestor of two nodes is the deepest node that has both of them below it, like the most recent shared grandparent in a family tree. In a binary search tree you find it by walking down from the root toward both values until they split to different sides. In a general tree, each subtree reports whether it contains either node, and the first node that hears \"yes\" from both sides is the answer.",
+    "interview": [
+     "**BST**: from the root, if both values are smaller go left, if both larger go right, otherwise the current node is the LCA. **O(h)** time, O(1) space iteratively.",
+     "**Binary tree**: recursive: if the node is null or equals p or q, return it; recurse left and right; if both return non-null, the node is the LCA; otherwise return the non-null side. **O(n)**.",
+     "That recursion assumes both nodes exist; if not guaranteed, count how many were found.",
+     "With parent pointers: walk up from both like the linked-list intersection trick, or put one node's ancestors in a set.",
+     "Many queries: **binary lifting** (O(log n) per query after O(n log n) preprocessing) or Euler tour plus RMQ.",
+     "Distance between two nodes = depth(p) + depth(q) − 2 · depth(LCA)."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the LCA in a binary search tree?",
+      "a": "Start at the root. If both values are less than the node, go left; if both are greater, go right. Otherwise the values split here (or one equals the node), so the current node is the LCA. It takes O(h) time and O(1) space."
+     },
+     {
+      "q": "How do you find the LCA in a general binary tree?",
+      "a": "Recurse: return the node if it is null, p or q. Otherwise compute the results of both subtrees. If both are non-null, p and q are on different sides, so this node is the LCA; otherwise return whichever side is non-null. It's O(n)."
+     },
+     {
+      "q": "Why is it fine to stop at a node that equals p without searching below it?",
+      "a": "If q is below p, then p is the LCA and returning p is correct. If q is elsewhere, another subtree will return q, and the first common ancestor where both are found will be returned instead. The assumption is that both nodes exist in the tree."
+     },
+     {
+      "q": "What happens in the recursive LCA if one of the nodes is missing from the tree?",
+      "a": "It returns the node that was found, which is not a valid LCA. To handle missing nodes, count how many of p and q the traversal actually found and return null unless both were found."
+     },
+     {
+      "q": "How do you answer many LCA queries quickly?",
+      "a": "Preprocess with binary lifting: store each node's 2^k-th ancestor and its depth. Lift the deeper node to the same depth, then lift both together by decreasing powers of two while their ancestors differ. Each query takes O(log n) after O(n log n) preprocessing."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn a BST, values tell you where nodes are: at a node between p and q (inclusive), p and q are on different sides (or one of them is the node), so the node is their split point. In a general binary tree, there is no order, so ask each subtree \"do you contain p or q?\". The first node, on the way back up, where both subtrees answer yes (or the node itself is one of them and a subtree answers yes) is the lowest common ancestor.\n\n#### Worked example (binary tree)\n\n```\n          3\n        /   \\\n       5     1\n      / \\   / \\\n     6   2 0   8\n        / \\\n       7   4\n```\n\nLCA of 7 and 4: at node 2, the left subtree returns 7 and the right returns 4, so 2 is returned. Nodes 5 and 3 each get a non-null result from only one side and pass the 2 upward. Answer: **2**.\n\nLCA of 5 and 4: the recursion at node 5 returns 5 immediately (it equals p) without exploring below. The root's right subtree returns null, so the answer is **5**, which is correct because 4 is below 5.\n\n#### Code\n\n```cpp\nTreeNode* lcaBST(TreeNode* root, int p, int q) {\n    while (root) {\n        if (p < root->val && q < root->val) root = root->left;\n        else if (p > root->val && q > root->val) root = root->right;\n        else return root;                              // split point (or equal to one of them)\n    }\n    return nullptr;\n}\n\nTreeNode* lca(TreeNode* root, TreeNode* p, TreeNode* q) {\n    if (!root || root == p || root == q) return root;\n    TreeNode* l = lca(root->left, p, q);\n    TreeNode* r = lca(root->right, p, q);\n    if (l && r) return root;                           // p and q on different sides\n    return l ? l : r;                                  // pass up whatever was found\n}\n```\n\n```python\ndef lca_with_parents(p, q):\n    \"\"\"Nodes have a .parent pointer; walk up like intersecting two linked lists.\"\"\"\n    a, b = p, q\n    while a is not b:\n        a = a.parent if a else q\n        b = b.parent if b else p\n    return a\n\ndef lca_safe(root, p, q):\n    \"\"\"Returns None unless both p and q are in the tree.\"\"\"\n    found = 0\n    def dfs(node):\n        nonlocal found\n        if node is None:\n            return None\n        left, right = dfs(node.left), dfs(node.right)\n        if node is p or node is q:\n            found += 1\n            return node\n        if left and right:\n            return node\n        return left or right\n    ans = dfs(root)\n    return ans if found == 2 else None\n```\n\n#### Complexity\n\n- BST: $O(h)$ time, $O(1)$ space.\n- Binary tree: $O(n)$ time, $O(h)$ stack.\n- Parent pointers: $O(h)$ time, $O(1)$ space.\n\n#### Edge cases and bugs\n\n- One node is an ancestor of the other: the recursion returns the ancestor, which is correct.\n- Nodes not present: the basic recursion returns the one it finds, which is wrong; use the counting version.\n- Comparing values instead of node identity in the binary tree version when values repeat.\n\n#### Variants\n\n- LCA of deepest leaves (bottom-up returning depth and candidate).\n- LCA of many nodes (return a node when it is any of the targets).\n- Distance between nodes, path between nodes (via the LCA).\n- Offline LCA with union-find (Tarjan's), online with binary lifting.\n\nConnects to: bottom-up tree recursion, BST operations, binary lifting, linked list intersection."
    }
   },
   {
@@ -9594,9 +9792,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "You can rebuild a binary tree from two of its traversal orders. Preorder tells you which node is the root (it comes first), and inorder tells you which nodes are on its left and which on its right. Repeating that split for each subtree rebuilds the whole tree, like reassembling a family tree from two differently sorted guest lists.",
+    "interview": [
+     "**Preorder + inorder**: the first preorder value is the root; its position in inorder splits the left and right subtrees; recurse with the matching ranges.",
+     "Use a **hash map value → inorder index** so each split is O(1): **O(n)** total (O(n²) with linear search).",
+     "Keep a moving **preorder index** instead of slicing arrays.",
+     "**Postorder + inorder**: the root is the **last** postorder value; build the **right** subtree first when consuming postorder from the end.",
+     "Preorder + postorder doesn't determine a unique tree unless it's full.",
+     "Values must be **distinct** for the inorder lookup to be unambiguous."
+    ],
+    "questions": [
+     {
+      "q": "How do you rebuild a binary tree from its preorder and inorder traversals?",
+      "a": "The first element of preorder is the root. Find it in inorder: everything to its left forms the left subtree and everything to its right forms the right subtree. Recurse on those ranges, taking roots from preorder in order. With a hash map of inorder positions, it's O(n)."
+     },
+     {
+      "q": "Why do you need a hash map of inorder indices?",
+      "a": "Each recursive call must find the root's position in the inorder range. Searching linearly costs O(n) per call, O(n²) overall; a precomputed map from value to index makes each lookup O(1)."
+     },
+     {
+      "q": "What changes when building from postorder and inorder?",
+      "a": "The root is the last element of postorder. Consuming postorder from the end gives root, then right subtree, then left, so build the right subtree before the left."
+     },
+     {
+      "q": "Can you rebuild a tree from preorder and postorder alone?",
+      "a": "Not uniquely in general: a node with a single child could have it on either side, and both traversals look the same. It works for full binary trees, where every node has zero or two children."
+     }
+    ]
    }
   },
   {
@@ -9616,9 +9838,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Serializing a tree turns it into a string so it can be saved or sent, and deserializing rebuilds the same tree from that string. Writing each node in preorder and marking empty children with a placeholder like \"#\" is enough to rebuild the exact shape. It is like describing a family tree aloud so precisely that someone else can redraw it.",
+    "interview": [
+     "**Preorder with null markers**: `1,2,#,#,3,4,#,#,5,#,#`. Deserialize by reading tokens recursively: a `#` returns null, otherwise build the node, then its left, then its right. O(n).",
+     "**Level order with nulls** (LeetCode style): BFS writing children, including nulls; trailing nulls can be trimmed.",
+     "The null markers make one traversal enough (without them you'd need two traversals and distinct values).",
+     "**BST** special case: preorder alone suffices (no markers), rebuilding with value bounds; more compact.",
+     "Use a separator between values; handle negative and multi-digit numbers."
+    ],
+    "questions": [
+     {
+      "q": "How do you serialize a binary tree so it can be rebuilt exactly?",
+      "a": "Write a preorder traversal where every null child is written as a marker such as \"#\", with values separated by commas. Deserialize by reading tokens in the same order: a marker means null; otherwise create the node and recursively build its left and right children."
+     },
+     {
+      "q": "Why are null markers needed?",
+      "a": "Without them, a single traversal doesn't capture the shape: a node with only a left child and one with only a right child produce the same sequence. Marking nulls records exactly where subtrees end."
+     },
+     {
+      "q": "How can a BST be serialized more compactly?",
+      "a": "Store only its preorder values without null markers. To rebuild, read values in order and place each one using bounds: a value belongs in the current subtree only if it fits between the allowed minimum and maximum, which the BST ordering determines."
+     },
+     {
+      "q": "What is the complexity of serialize and deserialize?",
+      "a": "Both are O(n) time, visiting each node and each null marker once, and the string has O(n) tokens. The recursion uses O(h) stack; a BFS-based version avoids deep recursion."
+     }
+    ]
    }
   },
   {
@@ -9640,9 +9885,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Views describe what you would see looking at a tree from one side. From the left you see the first node on each level, from the right the last one, and from above the topmost node in each vertical column. Giving every node a row and a column number turns all these questions into simple bookkeeping.",
+    "interview": [
+     "Give coordinates: root `(row 0, col 0)`; left child `(row + 1, col − 1)`; right child `(row + 1, col + 1)`.",
+     "**Left/right view**: first/last node per level (BFS), or DFS recording the first node seen at each new depth.",
+     "**Top view**: for each column, the node with the smallest row (BFS guarantees the first seen is the topmost).",
+     "**Bottom view**: for each column, the last node seen in BFS (the deepest; ties go to the later one).",
+     "**Vertical order traversal** (sorted by column, then row, then value): collect `(col, row, val)`, sort, group by column. O(n log n).",
+     "Columns range over `[−n, n]`; use an offset array or an ordered map."
+    ],
+    "questions": [
+     {
+      "q": "How do you compute the top view of a binary tree?",
+      "a": "Assign each node a column: the root is 0, left children subtract 1, right children add 1. Traverse in BFS order and keep, for each column, the first node you meet, which is the topmost. Output columns from left to right."
+     },
+     {
+      "q": "Why use BFS rather than DFS for the top view?",
+      "a": "BFS visits nodes in order of depth, so the first node seen in a column is guaranteed to be the highest. A DFS could reach a deeper node in a column before a shallower one, requiring you to compare rows explicitly."
+     },
+     {
+      "q": "How does vertical order traversal break ties?",
+      "a": "Sort all nodes by (column, row, value): by column first, then from top to bottom, and nodes in the same row and column by value. Then group consecutive nodes with the same column. That's O(n log n)."
+     },
+     {
+      "q": "How do you get the left side view with DFS?",
+      "a": "Visit the left child before the right child and pass the depth. The first time you reach a new depth, that node is the leftmost at that depth, so record it."
+     }
+    ]
    }
   },
   {
@@ -9662,9 +9931,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A tree is a special graph, and some tree questions are easier if you forget about \"up\" and \"down\". To find all nodes at distance K from a given node, you need to move to parents as well as children. Adding parent links turns the tree into an ordinary undirected graph, and a breadth-first search from the node finds everything K steps away.",
+    "interview": [
+     "Build a **parent map** with one DFS (or an adjacency list), then treat edges as undirected.",
+     "**Nodes at distance K**: BFS from the target over left, right and parent, with a visited set; collect the level K frontier. **O(n)**.",
+     "**Time to infect/burn the whole tree** from a node: BFS from it; the answer is the number of levels.",
+     "Tree facts in graph language: connected, acyclic, n − 1 edges, a unique path between any two nodes.",
+     "Tree diameter in a general (unrooted) tree: BFS from any node to the farthest node u, then BFS from u; the farthest distance is the diameter."
+    ],
+    "questions": [
+     {
+      "q": "How do you find all nodes at distance K from a target node in a binary tree?",
+      "a": "First record each node's parent with a DFS. Then BFS from the target, treating left child, right child and parent as neighbors and marking visited nodes. The nodes in the frontier after K levels are the answer. It's O(n) time and space."
+     },
+     {
+      "q": "Why do you need a visited set in the BFS on a tree with parent pointers?",
+      "a": "With parent links, edges can be followed in both directions, so without marking you would go from a child to its parent and back to the child forever. The visited set makes it a proper BFS on an undirected graph."
+     },
+     {
+      "q": "How do you find the diameter of an unrooted tree given as edges?",
+      "a": "Run BFS or DFS from any node to find the farthest node u. Run it again from u; the farthest distance found is the diameter. This works because the farthest node from any start is an endpoint of some longest path."
+     },
+     {
+      "q": "How long does it take for an infection to spread through a tree from one node, spreading one edge per minute?",
+      "a": "Convert the tree to an undirected graph with parent pointers and BFS from the starting node. The number of BFS levels minus one, the largest distance from the start, is the time in minutes."
+     }
+    ]
    }
   },
   {
@@ -9684,9 +9976,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Morris traversal walks a binary tree in order without a stack or recursion, using only a couple of pointers. It temporarily points the rightmost node of each left subtree back to the current node, like leaving a string to find your way back through a maze. After using each temporary link once, it removes it, so the tree ends up unchanged.",
+    "interview": [
+     "For the current node: if it has no left child, visit it and go right.",
+     "Otherwise find its **inorder predecessor** (rightmost node of the left subtree). If the predecessor's right is null, set it to the current node (a **thread**) and go left. If it already points to the current node, remove the thread, visit the current node and go right.",
+     "**O(n)** time (each edge walked at most a constant number of times), **O(1)** extra space.",
+     "Temporarily modifies the tree; not safe with concurrent readers. Preorder variant: visit when creating the thread.",
+     "Use when the interviewer asks for O(1) space inorder (recover a BST, kth smallest with no stack)."
+    ],
+    "questions": [
+     {
+      "q": "How does Morris traversal avoid a stack?",
+      "a": "It uses the empty right pointer of each node's inorder predecessor to point back to the node, which records where to return after finishing the left subtree. When the traversal comes back along that thread, it removes it, visits the node and moves right."
+     },
+     {
+      "q": "Why is Morris traversal still O(n) time even though it searches for predecessors?",
+      "a": "Each predecessor search walks down the right edge of a left subtree, and each such edge is walked at most twice: once to create the thread and once to remove it. So the total work over all nodes is proportional to the number of edges."
+     },
+     {
+      "q": "What is the downside of Morris traversal?",
+      "a": "It modifies the tree temporarily, which is unsafe if other code reads the tree during the traversal, and the tree is left broken if the traversal stops early without cleaning up. The code is also trickier than the stack version."
+     },
+     {
+      "q": "How would you do a Morris preorder traversal?",
+      "a": "Same structure, but visit the node when you first create the thread to its predecessor (before going left), and when there is no left child. Don't visit again when the thread is removed."
+     }
+    ]
    }
   },
   {
@@ -9708,9 +10023,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Binary lifting precomputes, for every node, its ancestor 1, 2, 4, 8, … steps up. To jump k steps up, you break k into powers of two, like paying an amount with coins worth 1, 2, 4 and 8. That makes finding far ancestors, and the lowest common ancestor of two nodes, take only a few jumps.",
+    "interview": [
+     "Table `up[k][v]` = the 2ᵏ-th ancestor of v: `up[0][v] = parent`, `up[k][v] = up[k−1][ up[k−1][v] ]`. **O(n log n)** time and space.",
+     "**Kth ancestor**: for each set bit j of k, jump `v = up[j][v]`. O(log n).",
+     "**LCA(u, v)**: lift the deeper node to the same depth; if equal, done; else for j from high to low, if `up[j][u] != up[j][v]`, jump both; the answer is `parent(u)`. O(log n).",
+     "Needs depths (one DFS or BFS from the root). Use a sentinel (root's parent = root, or −1) for jumps past the root.",
+     "Also: path maximums or sums (store aggregates alongside ancestors), jumping in functional graphs."
+    ],
+    "questions": [
+     {
+      "q": "What does the binary lifting table store and how is it built?",
+      "a": "up[k][v] is the ancestor of v that is 2^k levels above it. It's built from parents with up[k][v] = up[k − 1][up[k − 1][v]], because jumping 2^k equals two jumps of 2^(k − 1). Building takes O(n log n)."
+     },
+     {
+      "q": "How do you find the kth ancestor of a node?",
+      "a": "Write k in binary and, for every set bit j, jump v = up[j][v]. Each jump is O(1) and there are at most log k of them, so a query is O(log n)."
+     },
+     {
+      "q": "How does binary lifting find the LCA?",
+      "a": "First lift the deeper node until both are at the same depth; if they are now equal, that node is the LCA. Otherwise, for j from the largest power down, jump both nodes by 2^j whenever their ancestors differ. They end just below the LCA, so the answer is their parent."
+     },
+     {
+      "q": "When is binary lifting worth it compared with the simple recursive LCA?",
+      "a": "When there are many queries on the same tree. The recursive method costs O(n) per query, while binary lifting costs O(n log n) once and then O(log n) per query."
+     }
+    ]
    }
   },
   {
@@ -9732,9 +10070,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Tree DP solves optimization problems on trees by having each node report the best result for its subtree under a few different situations. For a node you might ask \"what's the best if I take this node?\" and \"what's the best if I skip it?\", and the parent combines these answers. It is dynamic programming where the tree's shape decides the order of computation.",
+    "interview": [
+     "Each node returns a **small tuple of states** computed from its children's tuples (postorder).",
+     "**House robber III**: return `(robThis, skipThis)`; `robThis = val + skipLeft + skipRight`, `skipThis = max(left) + max(right)`. O(n).",
+     "**Binary tree cameras**: states \"covered without a camera\", \"has a camera\", \"not covered\"; greedy postorder: place a camera at a parent of any uncovered child.",
+     "**Maximum independent set**, **minimum vertex cover** on trees are the same shape.",
+     "For general trees, loop over children; rerooting DP answers \"for every node as root\" in O(n)."
+    ],
+    "questions": [
+     {
+      "q": "How do you solve house robber on a binary tree?",
+      "a": "For each node return two values: the best total if you rob it and if you skip it. Robbing it adds its value to both children's \"skip\" results; skipping it adds the better of each child's two results. The answer is the larger value at the root, in O(n)."
+     },
+     {
+      "q": "Why is a single value per node not enough for tree DP problems like this?",
+      "a": "The parent's choice depends on the child's choice: robbing a parent is only allowed if the children were skipped. Returning the best result under each child state lets the parent combine them correctly."
+     },
+     {
+      "q": "How does the binary tree cameras solution work?",
+      "a": "Postorder with three states per node: needs coverage, covered without a camera, or has a camera. If any child needs coverage, put a camera here; if any child has a camera, this node is covered; otherwise it needs coverage from its parent. At the end, add a camera at the root if it still needs coverage."
+     },
+     {
+      "q": "What is rerooting DP?",
+      "a": "A technique to compute a subtree-style answer for every node as the root in O(n): first compute answers for subtrees with one DFS, then do a second DFS that passes down the contribution of the rest of the tree to each child."
+     }
+    ]
    }
   },
   {
@@ -9754,9 +10115,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A binary search tree keeps values in order: everything in a node's left subtree is smaller, and everything in its right subtree is larger. Finding a value is like a guessing game where each answer of \"higher\" or \"lower\" tells you which branch to take. Inserting and deleting follow the same path, with a little care when removing a node that has two children.",
+    "interview": [
+     "**Search/insert**: compare and go left or right; insert where you fall off the tree. **O(h)**.",
+     "**Delete** has three cases: a **leaf** (remove it), **one child** (replace the node with its child), **two children** (copy the **inorder successor**, the minimum of the right subtree, into the node, then delete the successor from the right subtree).",
+     "h is O(log n) if balanced but **O(n)** if the tree degenerates (for example, inserting sorted keys).",
+     "Duplicates need a policy: store counts, or send equal keys consistently to one side.",
+     "Inorder traversal gives the keys in sorted order.",
+     "Recursive versions return the (possibly new) subtree root, which keeps the parent's pointer updates simple."
+    ],
+    "questions": [
+     {
+      "q": "How do you delete a node with two children from a BST?",
+      "a": "Replace its value with its inorder successor, the smallest value in its right subtree, and then delete that successor from the right subtree. The successor has no left child, so its deletion is one of the easy cases. The inorder predecessor works too."
+     },
+     {
+      "q": "What is the time complexity of BST operations?",
+      "a": "O(h), the height of the tree, because each operation follows one root-to-leaf path. That is O(log n) for a balanced tree but O(n) for a degenerate one, such as a tree built by inserting sorted keys."
+     },
+     {
+      "q": "Why do recursive BST insert and delete return the subtree root?",
+      "a": "The subtree's root may change: inserting into an empty subtree creates a new root, and deleting can replace the root with a child. Returning it lets the parent reassign its child pointer in one line, with no special cases."
+     },
+     {
+      "q": "How can you handle duplicate keys in a BST?",
+      "a": "Store a count in each node, or consistently send equal keys to one side (for example, the right). Whichever you choose, searches and validity checks must use the same convention."
+     },
+     {
+      "q": "How do you find the minimum and maximum of a BST?",
+      "a": "The minimum is the leftmost node: keep following left children. The maximum is the rightmost node. Both take O(h)."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe BST property is the binary search invariant stored in a tree: at every node, the search space splits into \"smaller\" and \"larger\" halves. Operations follow one root-to-leaf path, so their cost is the tree's height. Deletion is the only tricky operation, because removing a node with two children would leave two orphaned subtrees; replacing its value with the next larger value (the successor) keeps the ordering intact.\n\n#### Worked example: delete 3 from\n\n```\n        5\n       / \\\n      3   6\n     / \\    \\\n    2   4    7\n```\n\nNode 3 has two children. Its inorder successor is the minimum of its right subtree: 4. Copy 4 into the node, then delete 4 from the right subtree (a leaf).\n\n```\n        5\n       / \\\n      4   6\n     /     \\\n    2       7\n```\n\n#### Code\n\n```cpp\nTreeNode* search(TreeNode* root, int key) {\n    while (root && root->val != key) root = key < root->val ? root->left : root->right;\n    return root;\n}\n\nTreeNode* insert(TreeNode* root, int key) {\n    if (!root) return new TreeNode(key);\n    if (key < root->val) root->left = insert(root->left, key);\n    else if (key > root->val) root->right = insert(root->right, key);\n    return root;                                       // duplicates are ignored\n}\n\nTreeNode* erase(TreeNode* root, int key) {\n    if (!root) return nullptr;\n    if (key < root->val) root->left = erase(root->left, key);\n    else if (key > root->val) root->right = erase(root->right, key);\n    else {\n        if (!root->left) { TreeNode* r = root->right; delete root; return r; }   // 0 or 1 child\n        if (!root->right) { TreeNode* l = root->left; delete root; return l; }\n        TreeNode* succ = root->right;                  // two children: inorder successor\n        while (succ->left) succ = succ->left;\n        root->val = succ->val;\n        root->right = erase(root->right, succ->val);\n    }\n    return root;\n}\n```\n\n```python\ndef bst_insert(root, key):\n    if root is None:\n        return TreeNode(key)\n    if key < root.val:\n        root.left = bst_insert(root.left, key)\n    elif key > root.val:\n        root.right = bst_insert(root.right, key)\n    return root\n\ndef bst_delete(root, key):\n    if root is None:\n        return None\n    if key < root.val:\n        root.left = bst_delete(root.left, key)\n    elif key > root.val:\n        root.right = bst_delete(root.right, key)\n    else:\n        if root.left is None:\n            return root.right\n        if root.right is None:\n            return root.left\n        succ = root.right\n        while succ.left:\n            succ = succ.left\n        root.val = succ.val\n        root.right = bst_delete(root.right, succ.val)\n    return root\n```\n\n#### Why the successor keeps the tree valid\n\nThe inorder successor is the smallest key larger than the deleted key. Every key in the left subtree is smaller than the deleted key, so also smaller than the successor; every other key in the right subtree is larger than the successor, because the successor is the minimum there. Writing the successor's value into the node therefore preserves the BST property, and removing the original successor node is easy because it has no left child.\n\n#### Complexity\n\n| Operation | Balanced | Degenerate |\n|---|---|---|\n| search, insert, delete | $O(\\log n)$ | $O(n)$ |\n| min, max | $O(\\log n)$ | $O(n)$ |\n| inorder traversal | $O(n)$ | $O(n)$ |\n\nRecursive versions use $O(h)$ stack; iterative search and insert use $O(1)$.\n\n#### Edge cases and bugs\n\n- Deleting the root, or a key that isn't present.\n- Forgetting to reassign the child pointer (`root->left = erase(...)`), which leaves the tree unchanged.\n- Using the predecessor (maximum of the left subtree) instead of the successor is equally valid; just be consistent.\n- Inserting sorted data creates a chain; mention self-balancing trees.\n\n#### Variants\n\n- Iterative insert and delete with a parent pointer.\n- Trim a BST to a range, convert a BST to a greater-sum tree (reverse inorder), recover a BST with two swapped nodes (inorder finds the two out-of-order spots).\n- Augmented BSTs (store subtree sizes for order statistics).\n\nConnects to: validate a BST, inorder tricks, self-balancing BSTs, binary search."
    }
   },
   {
@@ -9778,9 +10168,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "To check that a tree really is a binary search tree, it isn't enough to compare each node with its two children. Every node must fit between limits set by all its ancestors, like a guest who must be shorter than everyone on their right and taller than everyone on their left all the way up the family line. Passing those limits down while traversing checks every node against every ancestor at once.",
+    "interview": [
+     "**Bounds method**: recurse with `(low, high)`; each node must satisfy `low < val < high`; the left child gets `(low, val)`, the right child `(val, high)`. **O(n)**.",
+     "**Inorder method**: an inorder traversal of a BST is strictly increasing; keep the previous value and compare. O(n).",
+     "Checking only parent and children is **wrong**: `5 → left 4 → right 6` passes the local check but 6 > 5 in the left subtree.",
+     "Use 64-bit or null bounds because node values can equal `INT_MIN` or `INT_MAX`.",
+     "Decide on duplicates (strict `<` means no duplicates allowed)."
+    ],
+    "questions": [
+     {
+      "q": "Why isn't it enough to check each node against its left and right child?",
+      "a": "The BST property says every node in the left subtree is smaller than the node, not just the child. A grandchild can satisfy the local check with its parent while violating the order with an ancestor, like 6 in the left subtree of 5."
+     },
+     {
+      "q": "How do you validate a BST with bounds?",
+      "a": "Recurse with an allowed open interval (low, high), starting from (−∞, +∞). Each node's value must lie strictly inside; its left child gets (low, value) and its right child (value, high). It's O(n)."
+     },
+     {
+      "q": "How does an inorder traversal validate a BST?",
+      "a": "The inorder sequence of a valid BST is strictly increasing. Traverse in order while remembering the previous value, and fail as soon as a value is not larger than the previous one."
+     },
+     {
+      "q": "What goes wrong if you use INT_MIN and INT_MAX as the initial bounds?",
+      "a": "A node whose value is exactly INT_MIN or INT_MAX would fail the strict check even in a valid tree. Use a wider integer type, or pass nullable bounds meaning \"no limit\"."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe BST property is about whole subtrees, not just immediate children: every value in the left subtree of a node must be smaller than the node. As you go down, each step to the left lowers the upper limit and each step to the right raises the lower limit, so each node inherits an allowed interval from its ancestors.\n\n#### Worked example\n\n```\n        5\n       / \\\n      1   6\n         / \\\n        3   7\n```\n\n| node | allowed range | ok? |\n|---|---|---|\n| 5 | (−∞, +∞) | yes |\n| 1 | (−∞, 5) | yes |\n| 6 | (5, +∞) | yes |\n| 3 | (5, 6) | **no**: 3 < 5 |\n\nLocal checks would pass (3 < 6 is fine as a left child of 6), but 3 sits in the right subtree of 5, so the tree isn't a BST.\n\n#### Code\n\n```cpp\nbool validRange(TreeNode* n, long long low, long long high) {\n    if (!n) return true;\n    if (n->val <= low || n->val >= high) return false;\n    return validRange(n->left, low, n->val) && validRange(n->right, n->val, high);\n}\n\nbool isValidBST(TreeNode* root) {\n    return validRange(root, LLONG_MIN, LLONG_MAX);   // wider than int, so INT_MIN/MAX work\n}\n\nbool isValidBSTInorder(TreeNode* root) {\n    vector<TreeNode*> st;\n    TreeNode* prev = nullptr;\n    while (root || !st.empty()) {\n        while (root) { st.push_back(root); root = root->left; }\n        root = st.back(); st.pop_back();\n        if (prev && root->val <= prev->val) return false;   // must strictly increase\n        prev = root;\n        root = root->right;\n    }\n    return true;\n}\n```\n\n```python\ndef is_valid_bst(root, low=float(\"-inf\"), high=float(\"inf\")):\n    if root is None:\n        return True\n    if not (low < root.val < high):\n        return False\n    return is_valid_bst(root.left, low, root.val) and is_valid_bst(root.right, root.val, high)\n```\n\n#### Which method to present\n\nBoth run in $O(n)$. The bounds method states the invariant directly and generalizes well (for example, to checking that a preorder sequence could come from a BST). The inorder method reuses a traversal you already know and makes the \"strictly increasing\" condition obvious. Mention that you would stop early on the first violation in either version, and state your duplicate policy before coding.\n\n#### Complexity\n\n$O(n)$ time, visiting each node once; $O(h)$ space for recursion or the stack.\n\n#### Edge cases and bugs\n\n- Using `INT_MIN`/`INT_MAX` as initial bounds when nodes can hold those values: a single node with value `INT_MAX` would be rejected. Use wider types or nullable bounds.\n- Allowing equality when the problem forbids duplicates.\n- Comparing only with the parent.\n\n#### Variants\n\n- Recover a BST where two nodes were swapped: in the inorder sequence, find the first and last out-of-order positions and swap them back.\n- Largest BST subtree: bottom-up, each node returns (is BST, size, min, max).\n- Validate a preorder sequence of a BST using a stack and a lower bound.\n\nConnects to: BST operations, DFS traversals (inorder), bottom-up tree recursion."
    }
   },
   {
@@ -9802,9 +10216,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Walking a binary search tree in order visits its values from smallest to largest, like reading a sorted list. That one fact solves many problems: the kth smallest value is the kth one you visit, and the next larger value after any node is the next one in that walk. Doing the walk step by step with a stack lets you pause and resume it.",
+    "interview": [
+     "**Kth smallest**: iterative inorder, stop at the kth visit. **O(h + k)** time.",
+     "**BST iterator**: keep a stack of the left spine; `next()` pops a node and pushes the left spine of its right child. **O(1) amortized** per call, **O(h)** memory.",
+     "**Inorder successor** of p: if p has a right subtree, it's that subtree's leftmost node; otherwise it's the last ancestor where you went left. Walk from the root in O(h): `if (p->val < cur->val) { succ = cur; cur = cur->left; } else cur = cur->right;`",
+     "**Predecessor** is the mirror image.",
+     "Reverse inorder (right, node, left) visits values in **decreasing** order (greater-sum tree, kth largest).",
+     "Two-sum in a BST: two iterators, one forward and one backward, like two pointers on a sorted array."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the kth smallest element in a BST?",
+      "a": "Do an inorder traversal, which visits values in increasing order, and stop at the kth visited node. With an iterative traversal that is O(h + k) time and O(h) space."
+     },
+     {
+      "q": "How does a BST iterator achieve O(1) amortized next() with O(h) memory?",
+      "a": "It keeps a stack of the left spine of the unvisited part. next() pops the smallest node and pushes the left spine of its right subtree. Over a full traversal each node is pushed and popped once, so the average cost per call is O(1)."
+     },
+     {
+      "q": "How do you find the inorder successor of a node in a BST without parent pointers?",
+      "a": "Walk from the root: when the target is smaller than the current node, the current node is a candidate successor, so remember it and go left; otherwise go right. The last candidate remembered is the successor. It's O(h)."
+     },
+     {
+      "q": "How do you check whether two values in a BST sum to a target in O(h) space?",
+      "a": "Use two iterators: one yields values in increasing order and the other in decreasing order. Move them like two pointers on a sorted array until the sum matches or they meet."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe inorder walk of a BST is a sorted sequence that you never have to materialize. An explicit stack holding the \"left spine\" of the unvisited part lets you produce the next value on demand, so problems that would need a sorted array (kth element, two pointers, merging) work directly on the tree in $O(h)$ memory.\n\n#### Worked example: BST iterator\n\n```\n        7\n       / \\\n      3   15\n         /  \\\n        9    20\n```\n\n| call | stack before (top right) | returns | pushes |\n|---|---|---|---|\n| init | | | 7, 3 (left spine) |\n| next | 7 3 | 3 | (3 has no right child) |\n| next | 7 | 7 | 15, 9 (left spine of 15) |\n| next | 15 9 | 9 | |\n| next | 15 | 15 | 20 |\n| next | 20 | 20 | |\n\n#### Code\n\n```cpp\nclass BSTIterator {\n    vector<TreeNode*> st;\n    void pushLeft(TreeNode* n) { for (; n; n = n->left) st.push_back(n); }\npublic:\n    explicit BSTIterator(TreeNode* root) { pushLeft(root); }\n    bool hasNext() const { return !st.empty(); }\n    int next() {\n        TreeNode* n = st.back(); st.pop_back();\n        pushLeft(n->right);                           // the next values live there\n        return n->val;\n    }\n};\n\nint kthSmallest(TreeNode* root, int k) {\n    BSTIterator it(root);\n    int v = 0;\n    while (k-- > 0) v = it.next();\n    return v;\n}\n\nTreeNode* inorderSuccessor(TreeNode* root, TreeNode* p) {\n    TreeNode* succ = nullptr;\n    while (root) {\n        if (p->val < root->val) { succ = root; root = root->left; }  // candidate; look for smaller\n        else root = root->right;\n    }\n    return succ;\n}\n```\n\n```python\ndef two_sum_bst(root, target):\n    \"\"\"Two pointers with a forward and a backward inorder iterator.\"\"\"\n    def push(stack, node, forward):\n        while node:\n            stack.append(node)\n            node = node.left if forward else node.right\n\n    lo, hi = [], []\n    push(lo, root, True)\n    push(hi, root, False)\n    while lo and hi and lo[-1] is not hi[-1]:\n        s = lo[-1].val + hi[-1].val\n        if s == target:\n            return True\n        if s < target:\n            node = lo.pop()\n            push(lo, node.right, True)       # next larger\n        else:\n            node = hi.pop()\n            push(hi, node.left, False)       # next smaller\n    return False\n```\n\n#### When the tree keeps changing\n\nIf the BST is modified often and you are asked for the kth smallest repeatedly, an $O(h + k)$ walk per query is wasteful. Store in every node the size of its subtree (updated on insert and delete). Then at a node with left subtree size $L$: if $k \\le L$ go left, if $k = L + 1$ the node is the answer, otherwise go right with $k - L - 1$. Each query is $O(h)$, which is $O(\\log n)$ in a balanced tree.\n\n#### Complexity\n\n- Iterator: each node is pushed and popped once over a full traversal, so `next` is $O(1)$ amortized; memory $O(h)$.\n- Kth smallest: $O(h + k)$.\n- Successor from the root: $O(h)$.\n\n#### Edge cases and bugs\n\n- `k` larger than the number of nodes.\n- Successor of the maximum: return null.\n- In two-sum, stop when both iterators point at the same node (a value can't pair with itself).\n\n#### Variants\n\n- Kth smallest with frequent updates: store subtree sizes in each node, answer in $O(h)$.\n- Recover a swapped BST, minimum absolute difference between values (compare consecutive inorder values).\n- Merge two BSTs into a sorted list (two iterators), closest value to a target.\n\nConnects to: DFS traversals, BST operations, opposite-ends pointers, validate a BST.",
+    "signals": [
+     "kth smallest or kth largest value in a BST",
+     "iterate a BST in sorted order on demand",
+     "next larger or next smaller value (successor, predecessor)",
+     "two-pointer style questions on a BST instead of an array"
+    ],
+    "template": "```cpp\n// Controlled inorder walk: pushLeft + pop gives values in increasing order.\nstruct InorderWalk {\n    vector<TreeNode*> st;\n    explicit InorderWalk(TreeNode* root) { pushLeft(root); }\n    void pushLeft(TreeNode* n) { while (n) { st.push_back(n); n = n->left; } }\n    bool done() const { return st.empty(); }\n    TreeNode* next() {                   // next node in sorted order\n        TreeNode* n = st.back(); st.pop_back();\n        pushLeft(n->right);\n        return n;\n    }\n};\n// Mirror (push right spines, then pushLeft of the left child) for decreasing order.\n```"
    }
   },
   {
@@ -9826,9 +10272,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "If you already have sorted values, you can build a perfectly balanced search tree by always making the middle value the root. The middle splits the values into a smaller half and a larger half, which become the left and right subtrees, built the same way. It is like organizing a tournament bracket so both halves are always equal in size.",
+    "interview": [
+     "**Sorted array → balanced BST**: root = middle element; recurse on the left and right halves. **O(n)**, height ⌈log₂(n + 1)⌉ − 1.",
+     "**Sorted linked list → BST**: find the middle with fast and slow pointers (O(n log n)), or build in inorder order while advancing the list pointer (O(n)).",
+     "**From preorder** (BST): the first value is the root; build with bounds `(low, high)`, consuming values that fit: **O(n)**. Alternatively a monotonic stack.",
+     "**Rebalance an existing BST**: inorder to a sorted array, then rebuild from the middle: O(n).",
+     "Pass index ranges, not slices, to keep the time linear."
+    ],
+    "questions": [
+     {
+      "q": "How do you convert a sorted array into a height-balanced BST?",
+      "a": "Pick the middle element as the root, then recursively build the left subtree from the left half and the right subtree from the right half. Each element is placed once, so it's O(n), and the sizes of the halves differ by at most one, so the tree is balanced."
+     },
+     {
+      "q": "How do you build a BST from its preorder traversal in O(n)?",
+      "a": "Keep a global index into the preorder array and recurse with bounds. A call builds a node from the current value only if it fits within (low, high), then builds its left subtree with bound (low, value) and its right subtree with (value, high). Each value is consumed once."
+     },
+     {
+      "q": "How do you convert a sorted linked list into a balanced BST in O(n)?",
+      "a": "Count the nodes, then build the tree by an inorder recursion over index ranges: build the left subtree from the first half, create the root from the current list node and advance the list pointer, then build the right subtree. The list is consumed in order, so no middle-finding is needed."
+     },
+     {
+      "q": "How would you rebalance an unbalanced BST?",
+      "a": "Do an inorder traversal to get the values in sorted order, then build a balanced tree from that array by always choosing the middle element as the root. It takes O(n) time and O(n) extra space."
+     }
+    ]
    }
   },
   {
@@ -9859,9 +10328,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A plain binary search tree can become lopsided and slow, like a shelf where every new book is added at one end. Self-balancing trees fix their shape after each insert or delete with small local moves called rotations. That keeps the height around log n, so searches, inserts and deletes stay fast no matter the order of the data.",
+    "interview": [
+     "**Rotations** (left and right) change the local shape while keeping the inorder order, in O(1).",
+     "**AVL trees**: every node's subtree heights differ by at most 1; rebalanced with single or double rotations; height ≤ about 1.44 log₂ n; faster lookups, more rotations on updates.",
+     "**Red-black trees**: nodes are red or black; no red node has a red child; every root-to-null path has the same number of black nodes; height ≤ 2 log₂(n + 1); fewer rotations per update.",
+     "`std::map`/`set`, Java `TreeMap`/`TreeSet` are red-black trees: search, insert, delete, floor and ceiling in **O(log n)** worst case.",
+     "Alternatives: B-trees (databases, many keys per node), skip lists, treaps, splay trees (amortized).",
+     "In interviews you rarely implement these; know the guarantees and when to use an ordered map."
+    ],
+    "questions": [
+     {
+      "q": "What is a rotation in a BST, and why is it safe?",
+      "a": "A rotation restructures a node and one of its children, making the child the new subtree root and moving one grandchild subtree across. It changes heights but keeps the inorder order of all keys, so the tree remains a valid BST, and it takes O(1)."
+     },
+     {
+      "q": "How do AVL trees and red-black trees differ?",
+      "a": "AVL trees keep a strict balance (subtree heights differ by at most 1), so they are shorter and faster to search but rotate more on updates. Red-black trees use a looser color-based rule that bounds the height by about 2 log n, so updates need fewer rotations. Standard libraries typically use red-black trees."
+     },
+     {
+      "q": "Why are ordered maps like std::map O(log n) per operation?",
+      "a": "They're implemented as self-balancing BSTs, whose invariants keep the height O(log n) after every insertion and deletion. Each operation follows one root-to-leaf path and does O(1) rotations or O(log n) recolorings."
+     },
+     {
+      "q": "When would you use an ordered map instead of a hash map in an interview?",
+      "a": "When you need keys in sorted order or queries like floor, ceiling, smallest, largest, or range iteration. Hash maps are faster on average for plain lookups but can't answer order-based questions."
+     }
+    ]
    }
   },
   {
@@ -9883,9 +10376,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The floor of a value is the largest item not bigger than it, and the ceiling is the smallest item not smaller than it. In a binary search tree you find them by walking down as in a normal search, remembering the best candidate on the way. It is the tree version of looking up the nearest page number in a book's index.",
+    "interview": [
+     "**Floor(x)**: walk from the root; if `node.val == x` return it; if `node.val < x`, it's a candidate, go right for something closer; else go left.",
+     "**Ceiling(x)**: mirror image: if `node.val > x`, candidate, go left; else go right.",
+     "**O(h)** time, O(1) space iteratively.",
+     "Equivalent to `lower_bound` (ceiling) and the element before `upper_bound` (floor) on a sorted array; in libraries: C++ `set::lower_bound`, Java `TreeSet.floor/ceiling`.",
+     "Uses: closest value in a BST, scheduling (next free slot), range counting with an augmented tree."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the floor of x in a BST?",
+      "a": "Start at the root with no candidate. If the node equals x, it's the floor. If it's less than x, it's a candidate, so remember it and go right looking for a larger one. If it's greater than x, go left. The last candidate is the answer, in O(h)."
+     },
+     {
+      "q": "How is finding the ceiling different?",
+      "a": "It's the mirror image: when the node is greater than x, it's a candidate, so remember it and go left to look for a smaller one; when it's less than x, go right. Equal values are returned immediately."
+     },
+     {
+      "q": "How do you find the value in a BST closest to a target?",
+      "a": "Walk down as in a search, updating the best value whenever the current node is closer to the target, and go left or right by comparing the target with the node. The floor and the ceiling are both visited on this path, so the closest value is found in O(h)."
+     },
+     {
+      "q": "Which library calls give floor and ceiling on ordered sets?",
+      "a": "In Java, TreeSet.floor(x) and ceiling(x) (and floorKey, ceilingKey on TreeMap). In C++, lower_bound(x) on a set gives the ceiling, and the element before upper_bound(x) gives the floor."
+     }
+    ]
    }
   },
   {
@@ -9910,9 +10426,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A trie stores words letter by letter in a tree, so words with the same beginning share the same path. It is like a phone's contact search: type \"Sa\" and you're already on the branch holding Sam, Sara and Sanjay. Looking up a word takes as many steps as it has letters, no matter how many words are stored.",
+    "interview": [
+     "Each node has up to σ children (26 for lowercase) and an **end-of-word** flag (or a count).",
+     "**Insert**, **search** (path exists and ends at a word), **startsWith** (path exists): all **O(L)** for a word of length L.",
+     "Children as a **fixed array** (fast, more memory: 26 pointers per node) or a **hash map** (compact for large alphabets, slower).",
+     "Memory: up to total characters × σ pointers; compressed tries (radix trees) merge single-child chains.",
+     "Beats a hash set when you need **prefix** queries, autocomplete, or letter-by-letter matching with DFS (word search II, wildcards).",
+     "Deleting a word: unset the flag, optionally prune nodes with no children and no flag."
+    ],
+    "questions": [
+     {
+      "q": "What is a trie, and what are its main operations' costs?",
+      "a": "A tree where each edge is a character and each node represents the prefix spelled from the root to it, with a flag marking complete words. Insert, search and startsWith each take O(L) for a word of length L, independent of how many words are stored."
+     },
+     {
+      "q": "Why does search need an end-of-word flag?",
+      "a": "The path for \"car\" exists whenever \"cart\" was inserted, even if \"car\" itself wasn't. The flag records that a word actually ends at that node, which distinguishes stored words from mere prefixes."
+     },
+     {
+      "q": "When is a trie better than a hash set?",
+      "a": "When you need prefix operations: checking whether any word starts with a prefix, counting such words, autocomplete, or searching letter by letter with early pruning, as in word search II. For exact membership only, a hash set is simpler and uses less memory."
+     },
+     {
+      "q": "What are the memory trade-offs of array children versus hash-map children?",
+      "a": "An array of 26 pointers per node makes each step O(1) with no hashing but wastes space when most children are empty. A hash map per node stores only existing children, which suits large alphabets or sparse tries, at the cost of hashing on every step."
+     },
+     {
+      "q": "How would you count how many stored words start with a given prefix?",
+      "a": "Store on each node the number of words passing through it, incremented during insertion. Walk to the prefix's node and return its count, in O(L)."
+     }
+    ],
+    "deep": "#### Intuition\n\nA hash set can answer \"is this exact word stored?\" but not \"does any stored word start with 'pre'?\" without scanning. A trie organizes words by their prefixes, so every prefix corresponds to one node. Answering any prefix query is walking down one edge per character.\n\n#### Worked example: insert \"car\", \"cat\", \"cart\", \"dog\"\n\n```\nroot\n ├─ c\n │   └─ a\n │       ├─ r*        (car)\n │       │   └─ t*    (cart)\n │       └─ t*        (cat)\n └─ d\n     └─ o\n         └─ g*        (dog)\n```\n\n`*` marks the end of a word. `search(\"ca\")` walks to the `a` node but it isn't marked: false. `startsWith(\"ca\")`: true. `search(\"cart\")`: true.\n\n#### Code\n\n```cpp\nclass Trie {\n    struct Node {\n        array<int, 26> next;\n        bool end = false;\n        Node() { next.fill(-1); }\n    };\n    vector<Node> nodes{Node()};              // node 0 is the root; indices avoid pointer churn\n\n    int walk(const string& s) const {        // index of the node for s, or -1\n        int cur = 0;\n        for (char c : s) {\n            cur = nodes[cur].next[c - 'a'];\n            if (cur == -1) return -1;\n        }\n        return cur;\n    }\npublic:\n    void insert(const string& word) {\n        int cur = 0;\n        for (char c : word) {\n            if (nodes[cur].next[c - 'a'] == -1) {\n                nodes[cur].next[c - 'a'] = nodes.size();\n                nodes.emplace_back();\n            }\n            cur = nodes[cur].next[c - 'a'];\n        }\n        nodes[cur].end = true;\n    }\n    bool search(const string& word) const { int n = walk(word); return n != -1 && nodes[n].end; }\n    bool startsWith(const string& prefix) const { return walk(prefix) != -1; }\n};\n```\n\n```python\nclass Trie:\n    def __init__(self):\n        self.root = {}\n\n    def insert(self, word):\n        node = self.root\n        for c in word:\n            node = node.setdefault(c, {})\n        node[\"$\"] = True                    # end-of-word marker\n\n    def _walk(self, s):\n        node = self.root\n        for c in s:\n            if c not in node:\n                return None\n            node = node[c]\n        return node\n\n    def search(self, word):\n        node = self._walk(word)\n        return node is not None and \"$\" in node\n\n    def starts_with(self, prefix):\n        return self._walk(prefix) is not None\n```\n\nIn the C++ version, `nodes.emplace_back()` can reallocate the vector, which is why the code stores indices, not references, across the call.\n\n#### Complexity\n\n| Operation | Time | Notes |\n|---|---|---|\n| insert, search, startsWith | $O(L)$ | independent of the number of words |\n| build from words | $O(\\text{total characters})$ | |\n| space | $O(\\text{total characters} \\cdot \\sigma)$ with arrays | hash-map children use less for sparse nodes |\n\n#### Trie or hash set?\n\n| Question | Better choice |\n|---|---|\n| Exact membership only | hash set (less memory) |\n| Prefix exists, count words with a prefix | trie |\n| Letter-by-letter search with pruning (word search II) | trie |\n| Longest common prefix of many words | trie (or sorting) |\n\n#### Edge cases and bugs\n\n- Treating \"ca\" as found because the path exists; check the end flag.\n- Empty string: the root itself; decide whether it counts as a word.\n- Characters outside the expected alphabet: validate or use a map.\n- Pointer-based nodes in C++ leak without a destructor; an index-based pool avoids that.\n\n#### Variants\n\n- Count words and prefixes (store counts on nodes), replace words by their shortest root.\n- Tries with DFS (wildcard search, word search II), bitwise tries (maximum XOR), autocomplete.\n- Suffix tries and suffix trees for substring queries.\n\nConnects to: trie with DFS, autocomplete with tries, bitwise trie, hashing."
    }
   },
   {
@@ -9934,9 +10479,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some searches need to explore several branches of a trie at once, which is where depth-first search comes in. A wildcard like \"b.d\" means \"any letter here\", so you try every child at that position. In a letter grid, walking the trie alongside the grid lets you drop a path the moment its letters stop matching any word.",
+    "interview": [
+     "**Wildcard search** (`.` matches any letter): DFS over the trie; for `.` try every child; for a letter follow one edge. Worst case O(σ^L) per query, usually far less.",
+     "**Word search II**: build a trie of all words; DFS from each grid cell moving through the trie in step with the grid; mark visited cells; record a word when you reach its end node.",
+     "Prune: stop when the trie has no child for the next letter; remove found words (clear the end flag, delete empty leaves) so branches die.",
+     "Store the whole word at its end node to avoid rebuilding strings during DFS.",
+     "Complexity for word search II: O(R · C · 4 · 3^(L−1)) worst case, but the trie prunes most paths."
+    ],
+    "questions": [
+     {
+      "q": "How do you support wildcard searches where \".\" matches any letter?",
+      "a": "Store words in a trie and search with DFS. For a normal letter, follow that single child; for \".\", try every child. Return true when the pattern ends at a node marked as the end of a word."
+     },
+     {
+      "q": "Why does a trie speed up searching for many words in a grid?",
+      "a": "Without it you would run one grid search per word. With a trie, one DFS from each cell follows all words that share the current prefix at once, and stops immediately when the prefix isn't in the trie, so common prefixes are explored only once."
+     },
+     {
+      "q": "How do you avoid reporting the same word twice in word search II?",
+      "a": "When a word's end node is reached, add the word and clear its marker in the trie (or remove the node if it has no children). Later paths reaching that node then don't report it again, and pruning dead branches speeds up the rest of the search."
+     },
+     {
+      "q": "What is the worst-case cost of a wildcard search in a trie?",
+      "a": "A pattern made mostly of dots may have to visit every node of the trie, so the worst case is O(number of nodes), which is bounded by the total characters stored. Patterns with few dots are close to O(L)."
+     }
+    ],
+    "deep": "#### Intuition\n\nA trie turns \"does any word start with this prefix?\" into one pointer step. Any search that grows a string letter by letter can walk the trie at the same time and stop as soon as the prefix leaves the trie. For many words at once, this shares the work of common prefixes: one DFS over the grid finds all words together instead of one search per word.\n\n#### Worked example: word search II\n\nGrid and words `[\"oath\", \"eat\", \"rain\"]`:\n\n```\no a a n\ne t a e\ni h k r\ni f l v\n```\n\nFrom the `o` at (0,0), the trie has child `o`, then `a` at (0,1), `t` at (1,1), `h` at (2,1): \"oath\" found. From the `e` at (1,0), `a`? Its neighbors are `o`, `t`, `i`: no `a`, pruned. From the `e` at (1,3): neighbors `a` at (1,2), then `t` at (1,1): \"eat\" found. \"rain\" is never completed, because no `a` is adjacent to the `r`.\n\n#### Code\n\n```cpp\nclass WordFinder {\n    struct Node { array<int, 26> next; int word = -1; Node() { next.fill(-1); } };\n    vector<Node> t{Node()};\n    vector<string> found;\n    const vector<string>* words = nullptr;\n\n    void dfs(vector<vector<char>>& g, int r, int c, int node) {\n        if (r < 0 || c < 0 || r >= (int)g.size() || c >= (int)g[0].size()) return;\n        char ch = g[r][c];\n        if (ch == '#') return;                                  // on the current path\n        int nxt = t[node].next[ch - 'a'];\n        if (nxt == -1) return;                                  // prefix not in the trie: prune\n        if (t[nxt].word != -1) {\n            found.push_back((*words)[t[nxt].word]);\n            t[nxt].word = -1;                                   // report each word once\n        }\n        g[r][c] = '#';\n        dfs(g, r + 1, c, nxt); dfs(g, r - 1, c, nxt);\n        dfs(g, r, c + 1, nxt); dfs(g, r, c - 1, nxt);\n        g[r][c] = ch;                                           // undo\n    }\npublic:\n    vector<string> findWords(vector<vector<char>>& g, const vector<string>& ws) {\n        words = &ws;\n        for (int i = 0; i < (int)ws.size(); i++) {\n            int cur = 0;\n            for (char ch : ws[i]) {\n                if (t[cur].next[ch - 'a'] == -1) { t[cur].next[ch - 'a'] = t.size(); t.emplace_back(); }\n                cur = t[cur].next[ch - 'a'];\n            }\n            t[cur].word = i;\n        }\n        for (int r = 0; r < (int)g.size(); r++)\n            for (int c = 0; c < (int)g[0].size(); c++) dfs(g, r, c, 0);\n        return found;\n    }\n};\n```\n\n```python\nclass WordDictionary:\n    \"\"\"add(word) and search(pattern) where '.' matches any letter.\"\"\"\n    def __init__(self):\n        self.root = {}\n\n    def add(self, word):\n        node = self.root\n        for c in word:\n            node = node.setdefault(c, {})\n        node[\"$\"] = True\n\n    def search(self, pattern):\n        def dfs(node, i):\n            if i == len(pattern):\n                return \"$\" in node\n            c = pattern[i]\n            if c == \".\":\n                return any(dfs(child, i + 1) for k, child in node.items() if k != \"$\")\n            return c in node and dfs(node[c], i + 1)\n        return dfs(self.root, 0)\n```\n\n#### Complexity\n\n- Wildcard search: $O(L)$ without dots; with dots, up to the number of trie nodes in the worst case.\n- Word search II: building the trie is $O(\\text{total letters})$; the grid DFS is bounded by $O(R \\cdot C \\cdot 4 \\cdot 3^{L-1})$ for the longest word $L$, but pruning makes it far faster in practice.\n\n#### Edge cases and bugs\n\n- Reporting the same word twice when it can be formed along two paths: clear the word marker after the first find (or use a set).\n- Forgetting to restore the grid cell after DFS.\n- Wildcard at the end of the pattern must still require an end-of-word flag.\n\n#### Variants\n\n- Concatenated words (DFS over a trie with memoization on the start index).\n- Stream of characters: a trie of reversed words, checked against the latest characters.\n- Longest word in a dictionary built one letter at a time (BFS or DFS through nodes that are words).\n\nConnects to: trie structure, grid backtracking, DFS, autocomplete.",
+    "signals": [
+     "search many words at once in a grid or a text",
+     "patterns with wildcards matched against a dictionary",
+     "build words letter by letter and stop when no word has that prefix",
+     "prefix pruning during backtracking"
+    ],
+    "template": "```cpp\n// DFS over a trie in step with some other structure (a pattern, a grid, a stream).\nstruct TrieNode { TrieNode* next[26] = {}; bool end = false; };\n\nbool matchPattern(TrieNode* node, const string& p, int i) {\n    if (!node) return false;                       // prefix left the trie: prune\n    if (i == (int)p.size()) return node->end;      // pattern consumed: must end a word\n    if (p[i] == '.') {                             // branch: try every child\n        for (TrieNode* child : node->next)\n            if (matchPattern(child, p, i + 1)) return true;\n        return false;\n    }\n    return matchPattern(node->next[p[i] - 'a'], p, i + 1);  // follow one edge\n}\n```"
    }
   },
   {
@@ -9958,9 +10534,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A bitwise trie stores numbers by their binary digits, from the highest bit down, like a trie of words where every letter is 0 or 1. To make an XOR as large as possible, you want each bit to differ, starting from the most valuable bit. So for each number you walk the trie choosing the opposite bit whenever that branch exists.",
+    "interview": [
+     "Insert each number's bits from the most significant (bit 31 or the highest needed) down to 0; each node has two children.",
+     "**Maximum XOR of two numbers**: for each number, greedily go to the child with the **opposite** bit if it exists (that bit becomes 1 in the XOR), else the same bit. **O(n · B)** for B bits.",
+     "Greedy is correct because a higher bit outweighs all lower bits combined.",
+     "**Queries with a limit** (maximum XOR with an element ≤ m): sort queries and numbers offline, insert numbers up to m, then query.",
+     "Store counts on nodes to support deletion (sliding windows) and \"count pairs with XOR < k\".",
+     "Memory: up to n · B nodes; use arrays of children with an index pool."
+    ],
+    "questions": [
+     {
+      "q": "How does a bitwise trie find the maximum XOR of two numbers?",
+      "a": "Insert every number's bits from the most significant down. For each number, walk the trie preferring the child with the opposite bit at each level, which sets that bit of the XOR to 1. The best result over all numbers is the answer, in O(n · bits)."
+     },
+     {
+      "q": "Why is choosing the opposite bit greedily from the top correct?",
+      "a": "Bit k is worth 2^k, more than all lower bits combined (2^k − 1). So a partner that differs at a higher bit always beats one that doesn't, no matter what happens at lower bits, and the greedy choice at each level is safe."
+     },
+     {
+      "q": "How do you find the maximum XOR of any subarray?",
+      "a": "The XOR of a subarray equals the XOR of two prefix XORs. Insert prefix XORs (starting with 0) into a bitwise trie as you go, and for each new prefix query the trie for its best partner. It's O(n · bits)."
+     },
+     {
+      "q": "How can a bitwise trie support deletions?",
+      "a": "Store a count on each node of how many inserted numbers pass through it. Deleting decrements the counts along the path, and queries treat nodes with a count of 0 as absent. This supports sliding windows."
+     }
+    ],
+    "deep": "#### Intuition\n\nXOR sets a bit to 1 exactly where two numbers differ. Since bit $k$ is worth more than all lower bits together ($2^k > 2^k - 1$), the best partner for $x$ is the one that differs from $x$ in the highest possible bit, then the next highest, and so on. A trie of bits lets you make these choices one bit at a time, checking whether any stored number has the opposite bit at each position given the choices so far.\n\n#### Worked example (4-bit numbers)\n\nNumbers `3 (0011)`, `10 (1010)`, `5 (0101)` and `8 (1000)`. Query x = 5 (0101):\n\n| bit | x's bit | want | available? | XOR bit |\n|---|---|---|---|---|\n| 3 | 0 | 1 | yes (10, 8) | 1 |\n| 2 | 1 | 0 | yes (10 = 1010, 8 = 1000) | 1 |\n| 1 | 0 | 1 | yes (10) | 1 |\n| 0 | 1 | 0 | yes (10 ends in 0) | 1 |\n\nBest partner 10: 5 XOR 10 = 1111 = **15**.\n\n#### Code\n\n```cpp\nint findMaximumXOR(const vector<int>& nums) {\n    const int B = 30;                                     // values < 2^31: bits 30..0\n    vector<array<int, 2>> child(1, {-1, -1});\n    auto insert = [&](int x) {\n        int cur = 0;\n        for (int b = B; b >= 0; b--) {\n            int bit = (x >> b) & 1;\n            if (child[cur][bit] == -1) { child[cur][bit] = child.size(); child.push_back({-1, -1}); }\n            cur = child[cur][bit];\n        }\n    };\n    auto bestWith = [&](int x) {\n        int cur = 0, res = 0;\n        for (int b = B; b >= 0; b--) {\n            int bit = (x >> b) & 1;\n            if (child[cur][bit ^ 1] != -1) { res |= 1 << b; cur = child[cur][bit ^ 1]; }\n            else cur = child[cur][bit];\n        }\n        return res;\n    };\n    int best = 0;\n    for (int x : nums) { insert(x); best = max(best, bestWith(x)); }  // pairs with earlier ones\n    return best;\n}\n```\n\n```python\ndef max_xor_prefix_method(nums):\n    \"\"\"Alternative without a trie: build the answer bit by bit with a set of prefixes.\"\"\"\n    answer = 0\n    for b in range(max(nums).bit_length() - 1, -1, -1):\n        prefixes = {x >> b for x in nums}\n        candidate = (answer << 1) | 1                  # try to set this bit\n        if any((candidate ^ p) in prefixes for p in prefixes):\n            answer = candidate\n        else:\n            answer <<= 1\n    return answer\n```\n\nThe prefix-set version uses the same greedy (decide the highest bit first) with $O(n \\cdot B)$ time and no trie.\n\n#### Complexity\n\n$O(n \\cdot B)$ time and up to $O(n \\cdot B)$ nodes, with $B \\approx 31$ for 32-bit integers.\n\n#### Edge cases and bugs\n\n- Inserting the number before querying lets it pair with itself (XOR 0), which is harmless for the maximum but wrong for counting pairs.\n- Using too few bits when values can reach $2^{31} - 1$, or signed shifts with negative numbers.\n- Memory: $10^5$ numbers × 31 bits ≈ 3.1 million nodes; array-based pools keep this manageable.\n\n#### Variants\n\n- Maximum XOR with an element from the array not exceeding m (offline sorting).\n- Maximum XOR of a subarray: insert prefix XORs, query each prefix.\n- Count pairs with XOR in a range: store counts per node and walk with the limit.\n- Minimum XOR pair: sort, then check adjacent elements (or use the trie choosing the same bit).\n\nConnects to: trie structure, XOR tricks, prefix XOR, greedy on bits.",
+    "signals": [
+     "maximize (or minimize) the XOR of a pair of numbers",
+     "maximum XOR of a subarray via prefix XORs",
+     "queries asking for the best XOR partner under a limit",
+     "greedy decisions bit by bit from the most significant bit"
+    ],
+    "template": "```cpp\n// Binary trie over B+1 bits with counts (supports insert, erase, best-XOR query).\nstruct BitTrie {\n    static const int B = 30;\n    vector<array<int, 2>> ch{{-1, -1}};\n    vector<int> cnt{0};\n    void add(int x, int d) {                           // d = +1 insert, -1 erase\n        int cur = 0;\n        for (int b = B; b >= 0; b--) {\n            int bit = (x >> b) & 1;\n            if (ch[cur][bit] == -1) { ch[cur][bit] = ch.size(); ch.push_back({-1, -1}); cnt.push_back(0); }\n            cur = ch[cur][bit];\n            cnt[cur] += d;\n        }\n    }\n    int maxXor(int x) const {                          // requires at least one stored number\n        int cur = 0, res = 0;\n        for (int b = B; b >= 0; b--) {\n            int want = ((x >> b) & 1) ^ 1;             // prefer the opposite bit\n            int nx = ch[cur][want];\n            if (nx != -1 && cnt[nx] > 0) { res |= 1 << b; cur = nx; }\n            else cur = ch[cur][want ^ 1];\n        }\n        return res;\n    }\n};\n```"
    }
   },
   {
@@ -9987,9 +10595,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Autocomplete suggests whole words or phrases after you type a few letters. A trie finds every stored phrase that starts with what you typed, and a score such as popularity decides which few to show first. To keep it fast while typing, each node can remember its own short list of best suggestions.",
+    "interview": [
+     "Walk to the prefix's node in O(L); then collect completions below it with DFS, and pick the top k by score (a heap of size k).",
+     "**Precompute top-k per node**: during insertion, update the k best (sentence, score) pairs stored on every node along the path. Queries become O(L + k), inserts O(L · k).",
+     "Ranking: frequency first, then lexicographic order for ties (a common interview rule), or recency.",
+     "Typing character by character: keep the current node pointer and move one step per keystroke instead of restarting from the root.",
+     "System design angle: tries sharded by prefix, cached top results, offline aggregation of query logs.",
+     "Alternative: a sorted list of words with binary search for the prefix range, then sort that range by score."
+    ],
+    "questions": [
+     {
+      "q": "How does a trie support autocomplete?",
+      "a": "Walk down the trie following the typed prefix; every word below that node starts with the prefix. Collect them with a DFS and return the best few by score, for example with a min-heap of size k."
+     },
+     {
+      "q": "How do you make each query fast even when a prefix has millions of completions?",
+      "a": "Store, on each node, the top k suggestions for its prefix, maintained during insertion by updating every node on the word's path. A query then only walks the prefix and reads the stored list, in O(L + k)."
+     },
+     {
+      "q": "How should ties in popularity be ordered?",
+      "a": "A common rule is lexicographic order for equal counts, so the ranking is deterministic. Encode it in the comparator: higher count first, then the smaller string."
+     },
+     {
+      "q": "How do you handle the user typing one character at a time?",
+      "a": "Keep a pointer to the node for the current prefix and advance it by one child per new character, rather than walking from the root each time. If the child doesn't exist, all later suggestions are empty until the input is cleared."
+     }
+    ]
    }
   },
   {

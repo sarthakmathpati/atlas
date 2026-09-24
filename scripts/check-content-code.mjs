@@ -25,7 +25,7 @@ const PRELUDE = [
   "#include <condition_variable>",
   "using namespace std;",
   "struct ListNode { int val; ListNode* next; ListNode(int v = 0, ListNode* n = nullptr) : val(v), next(n) {} };",
-  "struct TreeNode { int val; TreeNode* left; TreeNode* right; TreeNode(int v = 0) : val(v), left(nullptr), right(nullptr) {} };",
+  "struct TreeNode { int val; TreeNode* left; TreeNode* right; TreeNode(int v = 0, TreeNode* l = nullptr, TreeNode* r = nullptr) : val(v), left(l), right(r) {} };",
   "",
 ].join("\n");
 
