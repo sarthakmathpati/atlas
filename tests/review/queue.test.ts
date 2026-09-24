@@ -74,3 +74,24 @@ describe("buildReviewQueue", () => {
     expect(dueReason(q.problems[0]!, "2026-09-24")).toBe("You solved it alone 7 days ago.");
   });
 });
+
+describe("the owner's own concepts in the review queue", () => {
+  it("lists them when the lookup knows them", async () => {
+    const { buildReviewQueue } = await import("@/lib/review/queue");
+    const { createConceptState } = await import("@/lib/storage/defaults");
+    const state = {
+      ...createConceptState("custom.abc"),
+      srs: { step: 0, lapses: 0, soloStreak: 0, dueAt: "2026-09-20" },
+    };
+    const without = buildReviewQueue({}, { "custom.abc": state }, "normal", "2026-09-24");
+    expect(without.concepts).toHaveLength(0);
+    const withIt = buildReviewQueue(
+      {},
+      { "custom.abc": state },
+      "normal",
+      "2026-09-24",
+      () => true,
+    );
+    expect(withIt.concepts.map((c) => c.conceptId)).toEqual(["custom.abc"]);
+  });
+});

@@ -47,6 +47,8 @@ export function buildReviewQueue(
   conceptStates: Readonly<Record<string, ConceptState>>,
   intensity: Profile["reviewIntensity"],
   today: string,
+  /** Concepts that exist (the syllabus, plus the owner's own when given). */
+  knownConcept: (id: string) => boolean = (id) => conceptById.has(id),
 ): ReviewQueue {
   const problems: DueProblem[] = [];
   const upcoming: UpcomingProblem[] = [];
@@ -86,8 +88,7 @@ export function buildReviewQueue(
   const concepts: DueConcept[] = [];
   for (const state of Object.values(conceptStates)) {
     const dueAt = state.srs.dueAt;
-    if (!dueAt || state.hidden || !conceptById.has(state.conceptId) || !isDue(dueAt, today))
-      continue;
+    if (!dueAt || state.hidden || !knownConcept(state.conceptId) || !isDue(dueAt, today)) continue;
     const daysLate = daysBetween(dueAt, today);
     concepts.push({
       conceptId: state.conceptId,

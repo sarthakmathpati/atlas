@@ -18,7 +18,7 @@ export const PAGES: Record<RouteName, Page> = {
   review: lazy(() => import("@/features/review/ReviewPage")),
   practice: placeholder("PracticePage"),
   drill: placeholder("DrillPage"),
-  quiz: placeholder("QuizPage"),
+  quiz: lazy(() => import("@/features/review/QuizPage")),
   "mental-math": placeholder("MentalMathPage"),
   puzzles: placeholder("PuzzlesPage"),
   mock: placeholder("MockPage"),
@@ -32,5 +32,6 @@ export const PAGES: Record<RouteName, Page> = {
   revision: placeholder("RevisionPage"),
   settings: lazy(() => import("@/features/settings/SettingsPage")),
   kit: lazy(() => import("@/features/kit/KitPage")),
+  welcome: lazy(() => import("@/features/onboarding/OnboardingPage")),
   "not-found": placeholder("NotFoundPage"),
 };

@@ -3,7 +3,11 @@
 import { useEffect } from "react";
 import { hydrateActivity } from "@/stores/activityStore";
 import { useClockStore, tickClock } from "@/stores/clockStore";
+import { flushNotes, hydrateConceptNotes } from "@/stores/conceptNoteStore";
 import { hydrateConceptStates, refreshAllConcepts } from "@/stores/conceptStateStore";
+import { hydrateCustomConcepts } from "@/stores/customConceptStore";
+import { hydrateMapOverrides } from "@/stores/mapStore";
+import { hydratePlan } from "@/stores/planStore";
 import { detachAll, hydrateAll } from "@/stores/hydrate";
 import { hydrateProfile, useProfileStore } from "@/stores/profileStore";
 import { toast } from "@/stores/toastStore";
@@ -24,7 +28,12 @@ export function StoreHydrator() {
       if (event.type === "remote-change") {
         if (event.table === "profile") void hydrateProfile(repository);
         else if (event.table === "activity") void hydrateActivity(repository);
-        else if (event.table === "conceptStates") void hydrateConceptStates(repository);
+        else if (event.table === "conceptStates" || event.table === "checks")
+          void hydrateConceptStates(repository);
+        else if (event.table === "conceptNotes") void hydrateConceptNotes(repository);
+        else if (event.table === "customConcepts") void hydrateCustomConcepts(repository);
+        else if (event.table === "mapOverrides") void hydrateMapOverrides(repository);
+        else if (event.table === "dayPlans") void hydratePlan(repository);
         return;
       }
       toast(event.message, {
@@ -33,9 +42,11 @@ export function StoreHydrator() {
       });
     });
     const unwatch = repository.watch("profile", "profile");
+    const unwatchPlan = repository.watch("dayPlans", useClockStore.getState().today);
     return () => {
       unsubscribe();
       unwatch();
+      unwatchPlan();
       detachAll();
     };
   }, [repository]);
@@ -46,17 +57,22 @@ export function StoreHydrator() {
     const id = setInterval(check, 60_000);
     const onVisible = () => {
       if (document.visibilityState === "visible") check();
+      else flushNotes();
     };
+    window.addEventListener("pagehide", flushNotes);
     document.addEventListener("visibilitychange", onVisible);
     const unsubscribe = useClockStore.subscribe((state, prev) => {
-      if (state.today !== prev.today) refreshAllConcepts();
+      if (state.today === prev.today) return;
+      refreshAllConcepts();
+      if (repository) void hydratePlan(repository, state.today);
     });
     return () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pagehide", flushNotes);
       unsubscribe();
     };
-  }, []);
+  }, [repository]);
 
   return null;
 }

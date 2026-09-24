@@ -3,6 +3,7 @@
 import type { Services } from "@/app/providers/servicesContext";
 import { backupFilename } from "@/lib/storage/exportImport";
 import { nowIso } from "@/lib/time";
+import { flushNotes } from "@/stores/conceptNoteStore";
 import { useProfileStore } from "@/stores/profileStore";
 
 export interface BackupResult {
@@ -13,6 +14,9 @@ export interface BackupResult {
 
 export async function exportBackup(services: Services): Promise<BackupResult> {
   try {
+    // Notes typed in the last moment are still waiting to be saved: include them.
+    flushNotes();
+    await services.repository.flush();
     const backup = await services.repository.exportAll();
     const result = await services.fileSaver.save({
       filename: backupFilename(),

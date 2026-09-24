@@ -7,7 +7,7 @@ import { useServicesState } from "@/app/providers/servicesContext";
 import { BottomSheet, Drawer } from "@/components/ui/Dialog";
 import { useIsMobile } from "@/components/ui/hooks";
 import { problemInfo } from "@/lib/problems/catalog";
-import { conceptById } from "@/data/syllabus";
+import { findConcept } from "@/stores/customConceptStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useUiStore } from "@/stores/uiStore";
 import type { Route } from "../router";
@@ -18,8 +18,11 @@ interface ContextChip {
 }
 
 function contextFor(route: Route): ContextChip {
-  if (route.name === "concept" && route.id) {
-    const concept = conceptById.get(route.id);
+  // A concept page, or a concept open in the map's panel.
+  const conceptId =
+    route.name === "concept" ? route.id : route.name === "map" ? route.query.get("focus") : null;
+  if (conceptId) {
+    const concept = findConcept(conceptId);
     if (concept) return { label: concept.name, icon: BookOpen };
   }
   if ((route.name === "problem" || route.name === "design") && route.id) {

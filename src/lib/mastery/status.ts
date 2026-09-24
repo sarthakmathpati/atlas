@@ -41,45 +41,105 @@ export const DIFFICULTY_WEIGHT: Record<Difficulty, number> = { easy: 0.5, medium
 
 const byNewest = (a: Check, b: Check) => (a.createdAt < b.createdAt ? 1 : -1);
 
+export type CheckKind = Check["kind"];
+
+/** One kind of check's contribution to knowledge ("Why this color?"). */
+export interface KnowledgeSource {
+  kind: CheckKind;
+  /** The kind's score before its weight (flashcards: average of the last 3; drills: last 5). */
+  raw: number;
+  /** raw × the kind's weight. */
+  weighted: number;
+  /** How many checks the score is based on. */
+  count: number;
+  /** When the newest of them was recorded. */
+  at: string;
+}
+
+export interface KnowledgeDetails {
+  /** The knowledge value used by the status rules (0 to 1). */
+  value: number;
+  /** Every kind present in the last 180 days, strongest first. */
+  sources: KnowledgeSource[];
+  /** The newest check is older than 120 days, so the best score was multiplied by 0.8. */
+  stale: boolean;
+  /** "Marked as studied" lifted knowledge to 0.3. */
+  studiedFloor: boolean;
+  /** The onboarding self-assessment lifted knowledge to its value (no real checks yet). */
+  selfAssessedFloor: boolean;
+}
+
 /**
- * Knowledge (0 to 1): the best of the latest check of each kind within 180 days (flashcards
- * average their last 3, drills the last 5), times 0.8 when the newest check is over 120 days old.
- * Marked studied → at least 0.3; self-assessed → at least that value until real checks exist.
+ * Knowledge (0 to 1) and where it came from: the best of the latest check of each kind within
+ * 180 days (flashcards average their last 3, drills the last 5), times 0.8 when the newest check
+ * is over 120 days old. Marked studied → at least 0.3; self-assessed → at least that value until
+ * real checks exist. The popover and the status rules both read this, so they always agree.
  */
+export function knowledgeDetails(
+  checks: readonly Check[],
+  state: Pick<ConceptState, "studied" | "selfAssessed"> | undefined,
+  now: Date,
+): KnowledgeDetails {
+  const cutoff = now.getTime() - CHECK_WINDOW_DAYS * DAY_MS;
+  const recent = checks.filter((c) => Date.parse(c.createdAt) >= cutoff).sort(byNewest);
+  const of = (kind: CheckKind) => recent.filter((c) => c.kind === kind);
+  const avg = (list: Check[]) =>
+    list.length ? list.reduce((s, c) => s + c.score, 0) / list.length : 0;
+
+  const sources: KnowledgeSource[] = [];
+  const add = (kind: CheckKind, list: Check[], raw: number) => {
+    if (list.length === 0) return;
+    sources.push({
+      kind,
+      raw,
+      weighted: raw * CHECK_WEIGHT[kind],
+      count: list.length,
+      at: list[0]!.createdAt,
+    });
+  };
+  for (const kind of ["explain", "quiz", "manual"] as const) {
+    const latest = of(kind).slice(0, 1);
+    add(kind, latest, latest[0]?.score ?? 0);
+  }
+  const cards = of("flashcard").slice(0, 3);
+  add("flashcard", cards, avg(cards));
+  const drills = of("drill").slice(0, 5);
+  add("drill", drills, avg(drills));
+  sources.sort((a, b) => b.weighted - a.weighted);
+
+  let value = sources.length ? sources[0]!.weighted : 0;
+  const newest = recent[0];
+  const stale = Boolean(
+    newest && now.getTime() - Date.parse(newest.createdAt) > STALE_CHECK_DAYS * DAY_MS,
+  );
+  if (stale) value *= STALE_FACTOR;
+  let studiedFloor = false;
+  let selfAssessedFloor = false;
+  if (state?.studied && value < 0.3) {
+    value = 0.3;
+    studiedFloor = true;
+  }
+  if (state?.selfAssessed !== undefined && checks.length === 0 && value < state.selfAssessed) {
+    value = state.selfAssessed;
+    selfAssessedFloor = true;
+    studiedFloor = false;
+  }
+  return {
+    value: Math.min(1, Math.max(0, value)),
+    sources,
+    stale,
+    studiedFloor,
+    selfAssessedFloor,
+  };
+}
+
+/** Knowledge (0 to 1) for a concept; see knowledgeDetails. */
 export function computeKnowledge(
   checks: readonly Check[],
   state: Pick<ConceptState, "studied" | "selfAssessed"> | undefined,
   now: Date,
 ): number {
-  const cutoff = now.getTime() - CHECK_WINDOW_DAYS * DAY_MS;
-  const recent = checks.filter((c) => Date.parse(c.createdAt) >= cutoff).sort(byNewest);
-  const of = (kind: Check["kind"]) => recent.filter((c) => c.kind === kind);
-  const avg = (list: Check[]) =>
-    list.length ? list.reduce((s, c) => s + c.score, 0) / list.length : 0;
-
-  const scores: number[] = [];
-  const latest = (kind: "explain" | "quiz" | "manual") => {
-    const c = of(kind)[0];
-    if (c) scores.push(c.score * CHECK_WEIGHT[kind]);
-  };
-  latest("explain");
-  latest("quiz");
-  latest("manual");
-  const cards = of("flashcard").slice(0, 3);
-  if (cards.length) scores.push(avg(cards) * CHECK_WEIGHT.flashcard);
-  const drills = of("drill").slice(0, 5);
-  if (drills.length) scores.push(avg(drills) * CHECK_WEIGHT.drill);
-
-  let knowledge = scores.length ? Math.max(...scores) : 0;
-  const newest = recent[0];
-  if (newest && now.getTime() - Date.parse(newest.createdAt) > STALE_CHECK_DAYS * DAY_MS) {
-    knowledge *= STALE_FACTOR;
-  }
-  if (state?.studied) knowledge = Math.max(knowledge, 0.3);
-  if (state?.selfAssessed !== undefined && checks.length === 0) {
-    knowledge = Math.max(knowledge, state.selfAssessed);
-  }
-  return Math.min(1, Math.max(0, knowledge));
+  return knowledgeDetails(checks, state, now).value;
 }
 
 export interface LinkedProblem {
@@ -123,6 +183,25 @@ export function computePractice(linked: readonly LinkedProblem[]): Practice {
   return { practice: Math.min(1, sum / PRACTICE_TARGET), sum, hasMediumPlus, attempted };
 }
 
+/** Linked problems by difficulty, counted from each one's latest attempt ("Why this color?"). */
+export function practiceBreakdown(linked: readonly LinkedProblem[]): {
+  alone: Record<Difficulty, number>;
+  withHints: Record<Difficulty, number>;
+  total: Record<Difficulty, number>;
+} {
+  const zero = (): Record<Difficulty, number> => ({ easy: 0, medium: 0, hard: 0 });
+  const alone = zero();
+  const withHints = zero();
+  const total = zero();
+  for (const p of linked) {
+    total[p.difficulty]++;
+    const last = latestAttempt(p.state);
+    if (last?.result === "solved_alone") alone[p.difficulty]++;
+    else if (last?.result === "solved_with_hints") withHints[p.difficulty]++;
+  }
+  return { alone, withHints, total };
+}
+
 export interface StatusInput {
   concept: { id: string; isPattern: boolean };
   state?: ConceptState;
@@ -143,6 +222,8 @@ export interface StatusResult {
   overdue: boolean;
   /** Days past due, from the concept's own schedule or its most overdue linked problem. */
   overdueDays: number;
+  /** The review interval (days) of whatever is most overdue (readiness recency, 11.3). */
+  overdueInterval: number;
   strongCriteria: boolean;
   /** "What would turn it green": the unmet parts of the strong criteria, in plain words. */
   toGreen: string[];
@@ -170,10 +251,18 @@ export function computeStatus(input: StatusInput): StatusResult {
     srs?.dueAt !== undefined && isOverdue(srs.dueAt, conceptInterval(srs.step, intensity), today);
   const lateProblems = concept.isPattern ? overdueLinked(linked, today, intensity) : [];
   const overdue = ownOverdue || lateProblems.length >= 2;
-  const overdueDays = Math.max(
-    ownOverdue ? daysOverdue(srs?.dueAt, today) : 0,
-    ...lateProblems.map((p) => daysOverdue(p.state?.srs.dueAt, today)),
-  );
+  let overdueDays = 0;
+  let overdueInterval = srs ? conceptInterval(srs.step, intensity) : 1;
+  if (ownOverdue) overdueDays = daysOverdue(srs?.dueAt, today);
+  if (lateProblems.length >= 2) {
+    for (const p of lateProblems) {
+      const days = daysOverdue(p.state?.srs.dueAt, today);
+      if (days > overdueDays) {
+        overdueDays = days;
+        overdueInterval = problemInterval(p.state!.srs.step, intensity, p.difficulty);
+      }
+    }
+  }
 
   const evidence =
     Boolean(state?.studied) || state?.selfAssessed !== undefined || checks.length > 0 || attempted;
@@ -229,6 +318,7 @@ export function computeStatus(input: StatusInput): StatusResult {
     evidence,
     overdue,
     overdueDays,
+    overdueInterval,
     strongCriteria,
     toGreen: status === "strong" ? [] : toGreen,
   };

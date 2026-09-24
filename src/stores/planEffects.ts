@@ -4,6 +4,7 @@ import type { Repository } from "@/lib/storage/Repository";
 import { nowIso } from "@/lib/time";
 import type { PlanItem } from "@/lib/types";
 import { recordActivity } from "./activityStore";
+import { notePlanWritten, usePlanStore } from "./planStore";
 
 export async function markPlanItemDone(
   repo: Repository | null,
@@ -13,7 +14,7 @@ export async function markPlanItemDone(
 ): Promise<boolean> {
   if (!repo) return false;
   try {
-    const plan = await repo.dayPlans.get(date);
+    const plan = usePlanStore.getState().plans[date] ?? (await repo.dayPlans.get(date));
     if (!plan) return false;
     const index = plan.items.findIndex(
       (item) =>
@@ -23,7 +24,9 @@ export async function markPlanItemDone(
     );
     if (index < 0) return false;
     const items = plan.items.map((item, i) => (i === index ? { ...item, done: true } : item));
-    await repo.dayPlans.put({ ...plan, items, updatedAt: nowIso() });
+    const next = { ...plan, items, updatedAt: nowIso() };
+    await repo.dayPlans.put(next);
+    notePlanWritten(next);
     recordActivity(date, { planItemsDone: 1 });
     return true;
   } catch {

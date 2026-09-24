@@ -506,4 +506,33 @@ describe("Markdown export of notes", () => {
     expect(markdown).toContain("**Insight:** Store what you've seen in a hash map.");
     expect(markdown.indexOf("Graphs: basics")).toBeLessThan(markdown.indexOf("Shortest paths"));
   });
+
+  it("includes notes on the owner's own concepts under their topic", async () => {
+    const { customToConcept } = await import("@/lib/concepts/custom");
+    const own = customToConcept({
+      id: "custom.x1",
+      topicId: "dsa.graph-basics",
+      name: "Euler tours",
+      scope: "",
+      importance: "important",
+      createdAt: "2026-09-01T00:00:00Z",
+      updatedAt: "2026-09-01T00:00:00Z",
+    })!;
+    const { markdown, count } = buildNotesMarkdown(
+      [
+        {
+          conceptId: "custom.x1",
+          markdown: "Flatten the tree.",
+          savedAnswers: [],
+          updatedAt: "2026-09-01T00:00:00Z",
+        },
+      ],
+      [],
+      new Date("2026-09-24T10:00:00"),
+      (id) => (id === own.id ? own : undefined),
+    );
+    expect(count).toBe(1);
+    expect(markdown).toContain("### Graphs: basics and traversal");
+    expect(markdown).toContain("#### Euler tours (your own concept)");
+  });
 });

@@ -256,6 +256,8 @@ export const activityMonthSchema: z.ZodType<ActivityMonth> = z.object({
       attempts: z.number().int().min(0).optional(),
       checks: z.number().int().min(0).optional(),
       planItemsDone: z.number().int().min(0).optional(),
+      turnedStrong: z.number().int().min(0).optional(),
+      turnedFading: z.number().int().min(0).optional(),
     }),
   ),
   streakFreezeUsed: z.array(localDay).optional(),

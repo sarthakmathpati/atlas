@@ -1,9 +1,9 @@
 // Search documents for the command palette, built from the bundled syllabus and seed banks.
-import { conceptHref, problemHref, routeHref } from "@/app/router";
+import { problemHref, routeHref } from "@/app/router";
 import { SEED_PROBLEMS } from "@/data/seed";
 import { conceptById, concepts, subjectById, subjects, topicById, topics } from "@/data/syllabus";
 import { SearchIndex, type SearchDoc } from "@/lib/search/searchIndex";
-import type { MistakeTag, ProblemState } from "@/lib/types";
+import type { Concept, MistakeTag, ProblemState } from "@/lib/types";
 
 const DIFFICULTY = { easy: "Easy", medium: "Medium", hard: "Hard" } as const;
 const IMPORTANCE_BOOST = { must: 1.3, important: 1.1, advanced: 1 } as const;
@@ -42,7 +42,8 @@ export function buildSeedDocs(): SearchDoc[] {
       subtitle: `${topic?.name ?? ""}${c.isPattern ? ", pattern" : ""}`,
       text: [c.scope, c.content.simple].filter(Boolean).join(" "),
       keywords: `${subjectById.get(c.subjectId)?.shortName ?? ""} ${c.isPattern ? "pattern" : ""}`,
-      href: conceptHref(c.id),
+      // A search jump flies the map to the concept and opens it (F2).
+      href: routeHref("/map", undefined, { focus: c.id }),
       boost: IMPORTANCE_BOOST[c.importance],
     });
   }
@@ -119,6 +120,20 @@ export function customProblemDocs(states: Readonly<Record<string, ProblemState>>
     });
   }
   return docs;
+}
+
+/** The owner's own concepts (F2 "Add your own concept"). */
+export function customConceptDocs(list: readonly Concept[]): SearchDoc[] {
+  return list.map((c) => ({
+    id: `concept:${c.id}`,
+    kind: "concept" as const,
+    title: c.name,
+    subtitle: `${topicById.get(c.topicId)?.name ?? ""}, yours`,
+    text: c.scope,
+    keywords: "custom mine my own",
+    href: routeHref("/map", undefined, { focus: c.id }),
+    boost: IMPORTANCE_BOOST[c.importance],
+  }));
 }
 
 let index: SearchIndex | null = null;

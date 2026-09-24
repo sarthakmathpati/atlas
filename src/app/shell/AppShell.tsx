@@ -1,6 +1,6 @@
 // The app shell (F1): sidebar (desktop) or bottom tabs (phones), top bar, notices, the current
 // page, and the layers every page can open (Ask Claude, search, shortcuts, More).
-import { Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useMediaQuery } from "@/components/ui/hooks";
 import { PageSkeleton } from "@/components/ui/Misc";
 import { CommandPalette } from "@/features/palette/CommandPalette";
@@ -8,10 +8,12 @@ import { getSearchIndex } from "@/features/palette/docs";
 import { CsvImportDialog } from "@/features/problems/CsvImportDialog";
 import { QuickAddDialog } from "@/features/problems/QuickAddDialog";
 import { useReviewQueue } from "@/features/review/useReviewQueue";
+import { useConceptDialogs } from "@/stores/conceptDialogStore";
+import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { PAGES } from "../routes";
-import { useRoute } from "../router";
+import { navigate, parseHash, useRoute } from "../router";
 import { AskClaudePanel } from "./AskClaude";
 import { FocusTimerController } from "./FocusTimer";
 import { BottomTabs, MoreSheet } from "./MobileNav";
@@ -21,6 +23,37 @@ import { useGlobalShortcuts } from "./shortcuts";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+
+const ConceptDialogs = lazy(() => import("@/features/review/concepts/ConceptDialogs"));
+
+/** Flashcards, explain it back, concept reviews, status and "add a concept": loaded on first use. */
+function ConceptDialogHost() {
+  const open = useConceptDialogs((s) =>
+    Boolean(s.flashcards || s.explain || s.review || s.status || s.addConcept !== null),
+  );
+  const [used, setUsed] = useState(false);
+  if (open && !used) setUsed(true);
+  if (!used) return null;
+  return (
+    <Suspense fallback={null}>
+      <ConceptDialogs />
+    </Suspense>
+  );
+}
+
+/** On the very first visit, Today hands over to the welcome questions (F5). */
+function useFirstRunWelcome() {
+  const loaded = useProfileStore((s) => s.profile !== null);
+  const done = useProfileStore((s) => s.profile?.onboardingDone ?? true);
+  const checked = useRef(false);
+  useEffect(() => {
+    if (!loaded || checked.current) return;
+    checked.current = true;
+    if (!done && parseHash(window.location.hash).name === "today") {
+      navigate("/welcome", { replace: true });
+    }
+  }, [loaded, done]);
+}
 
 type IdleWindow = Window & {
   requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
@@ -52,6 +85,7 @@ export function AppShell() {
 
   useGlobalShortcuts();
   usePrebuiltSearchIndex();
+  useFirstRunWelcome();
 
   // A new page starts at the top.
   useEffect(() => {
@@ -74,7 +108,7 @@ export function AppShell() {
           ref={mainRef}
           id="main"
           tabIndex={-1}
-          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
+          className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
         >
           <ShellNotices />
           <ErrorBoundary key={route.path} inline>
@@ -98,6 +132,7 @@ export function AppShell() {
       <QuickAddDialog />
       <CsvImportDialog />
       <FocusTimerController />
+      <ConceptDialogHost />
     </div>
   );
 }

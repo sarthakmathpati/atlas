@@ -9,6 +9,8 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Input, Switch } from "@/components/ui/Field";
 import { Callout } from "@/components/ui/Misc";
 import { buildNotesMarkdown, notesFilename } from "@/lib/export/notesMarkdown";
+import { flushNotes } from "@/stores/conceptNoteStore";
+import { findConcept } from "@/stores/customConceptStore";
 import { prepareRepository } from "@/lib/storage";
 import {
   ImportError,
@@ -321,11 +323,13 @@ export function DataSection({ profile, services }: { profile: Profile; services:
   const onExportNotes = async () => {
     setBusy(true);
     try {
+      flushNotes();
+      await services.repository.flush();
       const [notes, problems] = await Promise.all([
         services.repository.conceptNotes.list(),
         services.repository.problemStates.list(),
       ]);
-      const { markdown, count } = buildNotesMarkdown(notes, problems);
+      const { markdown, count } = buildNotesMarkdown(notes, problems, new Date(), findConcept);
       const result = await services.fileSaver.save({
         filename: notesFilename(),
         data: markdown,

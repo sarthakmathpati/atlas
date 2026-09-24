@@ -271,3 +271,21 @@ describe("nextConceptState", () => {
     expect(nextConceptState("x", s, r, NOW)).toBeNull();
   });
 });
+
+describe("knowledge details (Why this color?)", () => {
+  it("names the strongest source and matches computeKnowledge", async () => {
+    const { knowledgeDetails } = await import("@/lib/mastery/status");
+    const checks = [check("quiz", 0.6, 5), check("flashcard", 1, 3), check("explain", 0.7, 2)];
+    const d = knowledgeDetails(checks, undefined, NOW);
+    expect(d.value).toBeCloseTo(computeKnowledge(checks, undefined, NOW));
+    expect(d.sources.map((s) => s.kind)).toEqual(["flashcard", "explain", "quiz"]);
+    expect(d.sources[0]!.weighted).toBeCloseTo(0.9);
+    expect(d.studiedFloor).toBe(false);
+    const floor = knowledgeDetails([], { studied: true }, NOW);
+    expect(floor).toMatchObject({ value: 0.3, studiedFloor: true, selfAssessedFloor: false });
+    const self = knowledgeDetails([], { studied: true, selfAssessed: 0.5 }, NOW);
+    expect(self).toMatchObject({ value: 0.5, studiedFloor: false, selfAssessedFloor: true });
+    const stale = knowledgeDetails([check("quiz", 1, 150)], undefined, NOW);
+    expect(stale).toMatchObject({ value: 0.8, stale: true });
+  });
+});
