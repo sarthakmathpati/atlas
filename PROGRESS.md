@@ -90,8 +90,8 @@ deep for every must-know concept; signals and template for every pattern.
 ## Known issues and notes
 
 - **GitHub push (session 1):** the first push failed with "Claude doesn't have GitHub access"
-  (HTTP 403). The owner was asked to connect GitHub at https://claude.ai/connect-github. If a later
-  push also fails, commits are safe locally but the session must not end before they're pushed.
+  (HTTP 403); it worked after GitHub was reconnected at https://claude.ai/connect-github. If it
+  happens again, commits stay safe locally, but push before the session ends.
 - **Bundle size:** the web build's main JavaScript file is about 1.06 MB before compression (the
   syllabus JSON alone is about 440 KB). Fine for now; split routes and lazy-load heavy pages in
   Phase 2/4 to keep first paint under 1.5 s on phones.
