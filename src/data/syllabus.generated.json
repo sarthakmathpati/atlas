@@ -12213,9 +12213,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Dynamic programming solves a big problem by solving smaller versions of it once each and reusing those answers. It is like climbing a staircase and writing on each step how many ways there are to reach it: the count for a step is just the sum of the counts on the one or two steps below. DP works whenever the same smaller questions keep coming up and the best answer is built from best answers to them.",
+    "interview": [
+     "DP applies when a problem has **optimal substructure** (an optimal answer is built from optimal answers to subproblems) and **overlapping subproblems** (the same subproblems recur).",
+     "Recipe: define the **state** (what a subproblem is), the **transition** (how it's built from smaller states), **base cases**, the **order** of computation, and where the **answer** is.",
+     "Cost = number of states × work per transition.",
+     "Two styles: top-down **memoization** (recursion + cache) and bottom-up **tabulation** (fill a table in order).",
+     "Divide and conquer has independent subproblems (no overlap); greedy commits to one choice; DP considers all choices but solves each subproblem once.",
+     "Signals: \"number of ways\", \"minimum or maximum cost\", \"is it possible\", choices at each step, constraints like n ≤ 5000 or target ≤ 10⁴."
+    ],
+    "questions": [
+     {
+      "q": "What two properties must a problem have for dynamic programming to apply?",
+      "a": "Optimal substructure, meaning an optimal solution is composed of optimal solutions to subproblems, and overlapping subproblems, meaning the same subproblems are needed many times. The first makes the recurrence correct; the second makes caching worthwhile."
+     },
+     {
+      "q": "How is dynamic programming different from divide and conquer?",
+      "a": "Both split a problem into subproblems, but divide and conquer's subproblems are independent and solved once each naturally, like merge sort's halves. DP's subproblems overlap, so their answers are stored and reused to avoid exponential repetition."
+     },
+     {
+      "q": "How do you estimate the complexity of a DP solution?",
+      "a": "Multiply the number of distinct states by the work each state's transition does. For example, coin change has amount + 1 states, each checking k coins, so O(amount · k)."
+     },
+     {
+      "q": "How does DP differ from a greedy algorithm?",
+      "a": "A greedy algorithm commits to one locally best choice at each step and never reconsiders. DP evaluates every choice at each state and keeps the best, so it is correct in cases like coin change with unusual denominations where greedy fails."
+     },
+     {
+      "q": "What are common signals that a problem needs DP?",
+      "a": "Questions asking for the number of ways, the minimum or maximum cost, or whether something is achievable, where each step involves a choice and the brute force recomputes the same situations. Constraints that allow O(n²) or O(n · target) also hint at DP."
+     }
+    ],
+    "deep": "#### Intuition\n\nA naive recursion that tries every choice often recomputes the same subproblem an exponential number of times. DP notices the repetition: if the answer to a subproblem depends only on a few parameters, there are only as many distinct subproblems as parameter combinations. Solve each once, store it, and look it up afterwards.\n\n#### Worked example: climbing stairs\n\nYou can climb 1 or 2 steps at a time. How many ways to reach step 5?\n\n- State: `ways[i]` = number of ways to reach step i.\n- Transition: the last move was from step i − 1 or i − 2, so `ways[i] = ways[i-1] + ways[i-2]`.\n- Base: `ways[0] = 1` (standing at the bottom), `ways[1] = 1`.\n\n| i | 0 | 1 | 2 | 3 | 4 | 5 |\n|---|---|---|---|---|---|---|\n| ways | 1 | 1 | 2 | 3 | 5 | 8 |\n\nThe naive recursion makes about $\\varphi^n$ calls; the table has $n + 1$ entries.\n\n#### The two properties\n\n**Optimal substructure**: the best path from A to C through B consists of the best path from A to B plus the best path from B to C. If a problem's optimal solution could use a non-optimal sub-solution, DP on that state doesn't work (for example, the longest **simple** path in a general graph: the best path to B might block vertices needed later).\n\n**Overlapping subproblems**: without overlap, memoization doesn't save anything, and the problem is divide and conquer (merge sort's halves are never shared).\n\n#### Code: from brute force to DP\n\n```cpp\n// Minimum coins to make `amount` (unlimited coins of each value), or -1.\nint minCoinsNaive(const vector<int>& coins, int amount) {     // exponential\n    if (amount == 0) return 0;\n    int best = INT_MAX;\n    for (int c : coins)\n        if (c <= amount) {\n            int sub = minCoinsNaive(coins, amount - c);\n            if (sub != -1) best = min(best, sub + 1);\n        }\n    return best == INT_MAX ? -1 : best;\n}\n\nint minCoinsDp(const vector<int>& coins, int amount) {         // O(amount * coins)\n    vector<int> dp(amount + 1, INT_MAX);                        // dp[a] = min coins for a\n    dp[0] = 0;\n    for (int a = 1; a <= amount; a++)\n        for (int c : coins)\n            if (c <= a && dp[a - c] != INT_MAX) dp[a] = min(dp[a], dp[a - c] + 1);\n    return dp[amount] == INT_MAX ? -1 : dp[amount];\n}\n```\n\n```python\nfrom functools import lru_cache\n\ndef climb_stairs(n):\n    a, b = 1, 1                  # ways[i-2], ways[i-1]\n    for _ in range(n - 1):\n        a, b = b, a + b\n    return b if n >= 1 else 1\n\ndef min_coins_memo(coins, amount):\n    @lru_cache(maxsize=None)\n    def best(a):                 # min coins for amount a, or inf\n        if a == 0:\n            return 0\n        return min((best(a - c) + 1 for c in coins if c <= a), default=float(\"inf\"))\n    ans = best(amount)\n    return -1 if ans == float(\"inf\") else ans\n```\n\n#### Complexity\n\nCoin change: `amount + 1` states, each trying every coin: $O(\\text{amount} \\cdot k)$ time, $O(\\text{amount})$ space. In general, count states and multiply by the transition cost; then check it against the constraints.\n\n#### How to approach a DP problem in an interview\n\n1. Write the brute-force recursion with clear parameters.\n2. Notice which parameters the answer depends on: that's the state.\n3. Add memoization (top-down) and state the complexity.\n4. If needed, convert to a table (bottom-up) and optimize space.\n5. Test on the smallest cases, including the base cases.\n\n#### Pitfalls\n\n- A state missing information (the answer also depends on something not in the state) gives wrong results.\n- A state with too much information (the whole path) blows up the number of states.\n- Mixing \"number of ways\" (sum) with \"best\" (min/max) in the same recurrence.\n\nConnects to: memoization intro, memoization vs tabulation, designing DP states, greedy fundamentals."
    }
   },
   {
@@ -12238,9 +12267,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "There are two ways to fill in DP answers. Memoization starts from the big question and works down, saving each answer the first time it's computed, like a student who looks things up only when needed and keeps notes. Tabulation starts from the smallest questions and fills a table upward in order, like a student who works through the textbook from chapter one.",
+    "interview": [
+     "**Memoization (top-down)**: write the recursion, add a cache. Computes only **reachable** states. Easy to derive from brute force. Costs recursion overhead and stack depth.",
+     "**Tabulation (bottom-up)**: loop over states in an order where dependencies are ready. No recursion, often faster, enables **space optimization**. Requires knowing the order.",
+     "Same asymptotic complexity in most problems.",
+     "Choose memoization when the state space is sparse or the order is awkward (DP on trees, on intervals, with complex states); tabulation when the order is simple and memory or speed matters.",
+     "Deep recursion (n = 10⁵) favors tabulation, especially in Python (recursion limit).",
+     "Convert between them: the memo's recursive calls tell you the dependencies; tabulation fills states so those dependencies come first."
+    ],
+    "questions": [
+     {
+      "q": "What is the difference between memoization and tabulation?",
+      "a": "Memoization is top-down: a recursive function stores each result in a cache the first time it computes it. Tabulation is bottom-up: an iterative loop fills a table starting from base cases in an order where every dependency is ready. Both compute the same recurrence."
+     },
+     {
+      "q": "When is memoization easier or better?",
+      "a": "When the recurrence follows naturally from a brute-force recursion, when the computation order is awkward (trees, intervals, complex states), or when only a small fraction of states is actually reachable. It avoids computing states you never need."
+     },
+     {
+      "q": "When is tabulation better?",
+      "a": "When recursion would be very deep, when speed matters (no call overhead), and when you want to reduce memory with rolling arrays, which depends on a known fill order. It's also safer in Python, which has a low recursion limit."
+     },
+     {
+      "q": "How do you convert a memoized solution into a tabulated one?",
+      "a": "Look at which states each call depends on, choose a loop order in which those states are always computed first (for example, increasing index or increasing length), initialize the base cases, and replace recursive calls with table reads."
+     },
+     {
+      "q": "What bug can a sentinel value in the memo cause?",
+      "a": "If the sentinel, such as −1 or 0, is also a legitimate answer, computed states look uncomputed and are recalculated every time, which can make the solution exponential again. Use a separate visited flag or a value that can't occur."
+     }
+    ],
+    "deep": "#### Intuition\n\nBoth approaches compute the same recurrence. Memoization follows the recursion's natural order: ask for the answer, recurse into what it needs, cache on the way back. Tabulation reverses the direction: compute base cases first, then every state whose dependencies are already known, until the target state is filled.\n\n#### Worked example: unique paths in a 3 × 3 grid (right and down moves)\n\nRecurrence: `paths(r, c) = paths(r-1, c) + paths(r, c-1)`, with the first row and column equal to 1.\n\nTabulation fills row by row:\n\n| | c=0 | c=1 | c=2 |\n|---|---|---|---|\n| r=0 | 1 | 1 | 1 |\n| r=1 | 1 | 2 | 3 |\n| r=2 | 1 | 3 | 6 |\n\nMemoization starts at `(2,2)`, calls `(1,2)` and `(2,1)`, which both call `(1,1)`; the second call hits the cache.\n\n#### Code\n\n```cpp\n// Top-down: recursion + cache.\nlong long pathsMemo(int r, int c, vector<vector<long long>>& memo) {\n    if (r == 0 || c == 0) return 1;\n    long long& m = memo[r][c];\n    if (m != -1) return m;                          // cached\n    return m = pathsMemo(r - 1, c, memo) + pathsMemo(r, c - 1, memo);\n}\n\nlong long uniquePathsTopDown(int R, int C) {\n    vector<vector<long long>> memo(R, vector<long long>(C, -1));\n    return pathsMemo(R - 1, C - 1, memo);\n}\n\n// Bottom-up: fill in an order where dependencies are ready (row by row).\nlong long uniquePathsBottomUp(int R, int C) {\n    vector<vector<long long>> dp(R, vector<long long>(C, 1));\n    for (int r = 1; r < R; r++)\n        for (int c = 1; c < C; c++)\n            dp[r][c] = dp[r - 1][c] + dp[r][c - 1];\n    return dp[R - 1][C - 1];\n}\n```\n\n```python\nfrom functools import cache\n\ndef unique_paths_top_down(R, C):\n    @cache\n    def paths(r, c):\n        if r == 0 or c == 0:\n            return 1\n        return paths(r - 1, c) + paths(r, c - 1)\n    return paths(R - 1, C - 1)\n\ndef unique_paths_bottom_up(R, C):\n    row = [1] * C                      # one row suffices (see space optimization)\n    for _ in range(1, R):\n        for c in range(1, C):\n            row[c] += row[c - 1]\n    return row[-1]\n```\n\n#### Comparison\n\n| | Memoization | Tabulation |\n|---|---|---|\n| Derivation | directly from brute force | needs a computation order |\n| States computed | only reachable ones | all in the table |\n| Overhead | function calls, hash lookups | tight loops |\n| Stack depth | up to the longest dependency chain | none |\n| Space optimization | hard | natural (rolling rows) |\n\n#### Complexity\n\nBoth: states × transition cost. Unique paths: $O(R \\cdot C)$ time; memo and table both $O(R \\cdot C)$ space, and the bottom-up version reduces to $O(C)$.\n\n#### Pitfalls\n\n- Memo keys that miss a parameter (caching `f(i)` when the result also depends on `j`).\n- A sentinel like −1 that can also be a real answer; use a separate \"computed\" flag or `optional`.\n- Python `@cache` on a function with mutable arguments (lists aren't hashable), or reusing the cache between test cases with different inputs.\n- Wrong fill order in tabulation: reading `dp[r][c+1]` before it's computed.\n\nConnects to: what DP is, memoization intro, space optimization, transitions and base cases."
    }
   },
   {
@@ -12271,9 +12329,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A DP state is the smallest description of \"where you are\" that is enough to decide everything that comes next. When painting a row of houses so no two neighbors match, you only need to know which house you're on and what color the previous one was, not the whole history. Choosing the right state is most of the work in DP.",
+    "interview": [
+     "Ask: \"If I stopped here, what do I need to know to finish optimally?\" That information is the state; the history beyond it must not matter (the **Markov property**).",
+     "Common state shapes: prefix index `i`; pair of indices `(i, j)` for two strings or an interval; `(i, extra)` where extra is a remaining budget, the last choice, a count, or a bitmask.",
+     "Common meanings: \"best answer for the first i items\", \"best answer **ending at** i\" (subarrays, LIS), \"best for the range [i, j]\".",
+     "Size check: product of dimension sizes must fit the constraints (10⁷ to 10⁸ operations).",
+     "If two situations with the same state can have different futures, the state is missing something; if the state count is too large, look for something redundant.",
+     "Write the state's meaning in one sentence before writing the recurrence."
+    ],
+    "questions": [
+     {
+      "q": "What makes a good DP state?",
+      "a": "It contains exactly the information needed to solve the rest of the problem optimally, so that two situations with the same state have the same best future. It should also be small enough that the number of states times the transition cost fits the time limit."
+     },
+     {
+      "q": "Why isn't dp[i] = \"minimum cost to paint the first i houses\" enough when adjacent houses must differ?",
+      "a": "The next house's allowed colors depend on the color of house i, which that state forgets. Adding the last color to the state, dp[i][c], makes the future depend only on the state."
+     },
+     {
+      "q": "What is the difference between \"best for the first i elements\" and \"best ending at i\"?",
+      "a": "\"Ending at i\" forces element i to be the last one used, which is needed when the next step depends on it, as in longest increasing subsequence or maximum subarray. The final answer is then the maximum over all i, not just the last entry."
+     },
+     {
+      "q": "How do you know your state is missing information?",
+      "a": "If you can find two partial solutions with the same state but different possible continuations or different best futures, the state is incomplete. Typical missing pieces are the last choice, a remaining budget, or whether something is in progress."
+     },
+     {
+      "q": "How do you reduce a state space that is too large?",
+      "a": "Look for information that can be derived from other parts of the state, for redundant dimensions (such as a count that equals the index), or for a monotonic structure that allows a smaller representation. Sometimes swapping which quantity is the value and which is the index helps, like storing the minimum weight for each value instead of the best value for each weight."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe state is a compression of the past. A good state keeps exactly the information that affects the future. Too little, and the recurrence is wrong; too much, and there are too many states. Most DP difficulty is in finding this compression.\n\n#### Worked example: paint houses with 3 colors\n\nCosts `cost[i][c]`; adjacent houses must differ in color; minimize the total.\n\n- Attempt 1: `dp[i]` = min cost for the first i houses. Not enough: whether house i + 1 can be red depends on house i's color, which `dp[i]` forgot.\n- Attempt 2: `dp[i][c]` = min cost to paint houses 0..i with house i painted color c. Now the future depends only on c. Transition: `dp[i][c] = cost[i][c] + min(dp[i-1][c'] for c' != c)`.\n\nCosts `[[17, 2, 17], [16, 16, 5], [14, 3, 19]]`:\n\n| i | red | blue | green |\n|---|---|---|---|\n| 0 | 17 | 2 | 17 |\n| 1 | 16 + min(2, 17) = 18 | 16 + min(17, 17) = 33 | 5 + min(17, 2) = 7 |\n| 2 | 14 + min(33, 7) = 21 | 3 + min(18, 7) = 10 | 19 + min(18, 33) = 37 |\n\nAnswer: min(21, 10, 37) = **10** (blue, green, blue).\n\n#### Code\n\n```cpp\nint minCostPaint(const vector<array<int, 3>>& cost) {\n    if (cost.empty()) return 0;\n    array<int, 3> dp = cost[0];                    // dp[c]: best with the last house in color c\n    for (int i = 1; i < (int)cost.size(); i++) {\n        array<int, 3> next;\n        for (int c = 0; c < 3; c++)\n            next[c] = cost[i][c] + min(dp[(c + 1) % 3], dp[(c + 2) % 3]);  // other colors\n        dp = next;\n    }\n    return *min_element(dp.begin(), dp.end());\n}\n```\n\n```python\ndef longest_arithmetic_subsequence(nums):\n    \"\"\"State (i, diff): the longest arithmetic subsequence ending at i with difference diff.\"\"\"\n    dp = [{} for _ in nums]\n    best = 1 if nums else 0\n    for i in range(len(nums)):\n        for j in range(i):\n            d = nums[i] - nums[j]\n            dp[i][d] = dp[j].get(d, 1) + 1\n            best = max(best, dp[i][d])\n    return best\n```\n\nThe second example shows a state with an extra parameter (the common difference) stored sparsely in hash maps: the future of a subsequence depends on its last element and its difference, nothing else.\n\n#### A checklist for states\n\n| Question | Typical state |\n|---|---|\n| Choices along a sequence | index `i` (+ last choice or remaining budget) |\n| Two sequences | `(i, j)` prefixes |\n| Substrings or ranges | `(l, r)` |\n| Subsets of a small set | bitmask |\n| Trees | node (+ a small flag), computed bottom-up |\n| Resource limits | `(i, capacity)` |\n| Games | `(state, whose turn)` or the difference of scores |\n\n#### Complexity\n\nNumber of states times transition cost: paint houses is $O(n \\cdot 3 \\cdot 2) = O(n)$; with k colors, $O(n k^2)$, or $O(n k)$ by tracking the smallest and second-smallest previous values.\n\n#### Pitfalls\n\n- \"Ending at i\" versus \"within the first i\" changes both the recurrence and where the answer is (max over all i versus the last entry).\n- States that include things you can recompute (like the sum of chosen items when it follows from other state variables).\n- Forgetting a flag that matters (holding a stock or not, whether a transaction is in progress).\n\nConnects to: transitions and base cases, what DP is, bitmask DP, interval DP."
    }
   },
   {
@@ -12295,9 +12382,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A transition is the rule that builds one state's answer from smaller states' answers, and base cases are the smallest states you can answer directly. It is like a recipe that says a big cake needs two smaller layers, with the smallest layer made from scratch. You also need to cook in the right order, so every layer is ready before the cake that needs it.",
+    "interview": [
+     "Transition: consider the **last decision** (or first): what options are there, and which smaller state does each lead to? Combine with min, max, sum or OR.",
+     "Base cases: the smallest states (empty prefix, zero capacity, single element); choose them so the recurrence works without special cases (often `dp[0] = 0` or `1`).",
+     "Unreachable states: initialize to ±∞ (or a sentinel) and skip them in transitions.",
+     "**Order**: every state must be computed after the states it reads. Increasing index for prefixes; increasing length for intervals; any topological order in general.",
+     "Final answer location: `dp[n]`, `dp[n][target]`, `max over i dp[i]`, or `dp[0][n-1]`.",
+     "Verify with a hand-traced small example before coding."
+    ],
+    "questions": [
+     {
+      "q": "How do you derive a DP transition?",
+      "a": "Think about the last decision in an optimal (or counted) solution for a state. List every option for that decision and the smaller state each option leaves, then combine them: minimum or maximum for optimization, sum for counting, OR for feasibility."
+     },
+     {
+      "q": "What is the role of base cases, and how do you pick them?",
+      "a": "They give answers for the smallest states directly and stop the recursion. Pick them so the general recurrence also works at the boundary, such as dp[0] = 1 for counting (one way to do nothing) or dp[0] = 0 with infinity elsewhere for minimization."
+     },
+     {
+      "q": "How do you choose the order in which to fill a DP table?",
+      "a": "Every state must be computed after all the states it depends on. Prefix states go in increasing index order, suffix states in decreasing order, interval states by increasing length, and general state graphs in topological order (or you use memoization)."
+     },
+     {
+      "q": "Why does decode ways set dp[0] = 1?",
+      "a": "The empty prefix has exactly one decoding, the empty one. With that base, a two-digit code at the start adds dp[0] = 1 way without a special case, and all other counts follow from the same rule."
+     },
+     {
+      "q": "How do you handle unreachable states in a minimization DP?",
+      "a": "Initialize them to infinity (or a sentinel) and never extend from a state that is still infinity. At the end, if the target is still infinity, report that it's impossible (for example, −1 in coin change)."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe recurrence is a statement about the last step of an optimal solution: \"the best way to reach state S ends with one of these moves, each from some smaller state.\" If you enumerate every possible last move correctly and take the best, the recurrence is complete. Base cases stop the recursion; computation order makes the table version work.\n\n#### Worked example: decode ways\n\nDigits map `1..26` to letters. Count decodings of \"226\".\n\n- State: `dp[i]` = number of ways to decode the first i characters.\n- Last step: the last letter came from one digit (`s[i-1]`, if it isn't '0') or two digits (`s[i-2..i-1]`, if between 10 and 26).\n- Transition: `dp[i] = (s[i-1] != '0' ? dp[i-1] : 0) + (10 <= two-digit <= 26 ? dp[i-2] : 0)`.\n- Base: `dp[0] = 1` (empty prefix: one way, decoding nothing).\n\n| i | prefix | one digit | two digits | dp[i] |\n|---|---|---|---|---|\n| 0 | \"\" | | | 1 |\n| 1 | \"2\" | 2 → dp[0] = 1 | | 1 |\n| 2 | \"22\" | 2 → dp[1] = 1 | 22 → dp[0] = 1 | 2 |\n| 3 | \"226\" | 6 → dp[2] = 2 | 26 → dp[1] = 1 | 3 |\n\nThree decodings: BBF, BZ, VF.\n\n#### Code\n\n```cpp\nint numDecodings(const string& s) {\n    int n = s.size();\n    vector<long long> dp(n + 1, 0);\n    dp[0] = 1;                                              // base: empty prefix\n    for (int i = 1; i <= n; i++) {\n        if (s[i - 1] != '0') dp[i] += dp[i - 1];            // last letter from one digit\n        if (i >= 2) {\n            int two = (s[i - 2] - '0') * 10 + (s[i - 1] - '0');\n            if (two >= 10 && two <= 26) dp[i] += dp[i - 2]; // last letter from two digits\n        }\n    }\n    return (int)dp[n];\n}\n```\n\n```python\ndef min_cost_tickets(days, costs):\n    \"\"\"Travel days (sorted); passes of 1, 7, 30 days with given costs. Minimum total cost.\"\"\"\n    travel = set(days)\n    last = days[-1]\n    dp = [0] * (last + 1)                    # dp[d]: min cost to cover travel days up to d\n    for d in range(1, last + 1):\n        if d not in travel:\n            dp[d] = dp[d - 1]                # nothing to cover today\n            continue\n        dp[d] = min(dp[d - 1] + costs[0],    # last decision: which pass covers day d\n                    dp[max(0, d - 7)] + costs[1],\n                    dp[max(0, d - 30)] + costs[2])\n    return dp[last]\n```\n\n#### Choosing base cases well\n\nA good base case makes the general rule work at the edges. With `dp[0] = 1` for \"the empty string can be decoded one way\", the two-digit case at `i = 2` needs no special handling. Similarly, for minimum coins, `dp[0] = 0` and every other entry starts at ∞, so unreachable amounts stay ∞ automatically.\n\n#### Order of computation\n\n| State shape | Safe order |\n|---|---|\n| prefix `dp[i]` depends on smaller i | i increasing |\n| `dp[i][j]` depends on `[i-1][*]` and `[i][j-1]` | row by row, left to right |\n| interval `dp[l][r]` depends on shorter intervals | by increasing length |\n| `dp[i]` depends on larger i (suffixes) | i decreasing |\n| DAG of states | topological order (or memoization) |\n\n#### Pitfalls\n\n- Forgetting a case in the transition (for decode ways, a '0' can't stand alone).\n- Base cases that double count (initializing both `dp[0]` and `dp[1]` inconsistently).\n- Returning `dp[n]` when the answer is a maximum over all states.\n- Reading uninitialized states because the loop order is wrong.\n\nConnects to: designing DP states, memoization vs tabulation, counting DP, linear DP."
    }
   },
   {
@@ -12319,9 +12435,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Many DP tables only ever look one row back, so keeping the whole table wastes memory. You can keep just the previous row and the current one, like a notepad where you only need the last page to write the next one. Sometimes even a single row works, if you fill it in the right direction.",
+    "interview": [
+     "If `dp[i][*]` depends only on `dp[i-1][*]`, keep **two rows** (or `prev` and `cur` variables): O(n·m) → O(m).",
+     "**One row in place**: works when each cell reads only cells that haven't been overwritten yet for this row; the loop direction decides that (0/1 knapsack loops capacity **downward**, unbounded knapsack **upward**).",
+     "1D recurrences reading the last k values: keep k variables (Fibonacci: two).",
+     "For 2D grids reading the cell above and to the left: one row, left to right; the \"diagonal\" value (LCS, edit distance) needs one saved variable.",
+     "Trade-off: the full table is needed to **reconstruct** the solution, unless you store choices separately or use divide-and-conquer tricks (Hirschberg)."
+    ],
+    "questions": [
+     {
+      "q": "When can you reduce a 2D DP table to one or two rows?",
+      "a": "When each row depends only on the previous row (and possibly earlier cells of the same row). Then all older rows are never read again, so keeping the previous and current rows, or a single row updated carefully, is enough."
+     },
+     {
+      "q": "Why does the 0/1 knapsack loop over capacities in decreasing order with a single row?",
+      "a": "dp[c] needs dp[c − w] from before the current item was considered. Going downward means dp[c − w] hasn't been updated yet for this item, so each item is used at most once. Going upward would reuse the updated value and allow the item multiple times."
+     },
+     {
+      "q": "How do you keep the diagonal dependency in a one-row LCS or edit distance?",
+      "a": "Before overwriting row[j], save its old value, which is the cell above; after processing j, that saved value becomes the diagonal (top-left) for j + 1. One extra variable holds the diagonal as the row is scanned."
+     },
+     {
+      "q": "What do you lose when you optimize space?",
+      "a": "The full table, which is usually needed to reconstruct the actual solution (the chosen items or the alignment), not just its value. You can keep a separate table of choices, or use divide-and-conquer techniques like Hirschberg's algorithm to recover the path in linear space."
+     }
+    ],
+    "deep": "#### Intuition\n\nSpace optimization is about data lifetimes. Once no future state will read a value, you can overwrite it. Draw the dependency arrows of one cell; if they only reach the previous row, older rows are dead weight. The remaining question is whether updating in place destroys values that are still needed.\n\n#### Worked example: minimum path sum with one row\n\nGrid:\n\n```\n1 3 1\n1 5 1\n4 2 1\n```\n\n`row[c]` holds the best cost to reach cell (r, c). Update left to right: `row[c] = grid[r][c] + min(row[c] (the cell above, old value), row[c-1] (the cell to the left, new value))`.\n\n| after row | row |\n|---|---|\n| 0 | 1 4 5 |\n| 1 | 2 7 6 |\n| 2 | 6 8 7 |\n\nAnswer 7. Each update reads `row[c]` before overwriting it (the value from above) and `row[c-1]` after it was updated (the value to the left): exactly the two dependencies.\n\n#### Code\n\n```cpp\nint minPathSum(const vector<vector<int>>& g) {\n    int R = g.size(), C = g[0].size();\n    vector<int> row(C, INT_MAX);\n    row[0] = 0;\n    for (int r = 0; r < R; r++) {\n        row[0] += g[r][0];                                  // only from above\n        for (int c = 1; c < C; c++)\n            row[c] = g[r][c] + min(row[c], row[c - 1]);     // above (old) vs left (new)\n    }\n    return row[C - 1];\n}\n\n// Longest common subsequence with two rows: O(m) memory.\nint lcsTwoRows(const string& a, const string& b) {\n    vector<int> prev(b.size() + 1, 0), cur(b.size() + 1, 0);\n    for (int i = 1; i <= (int)a.size(); i++) {\n        for (int j = 1; j <= (int)b.size(); j++)\n            cur[j] = a[i - 1] == b[j - 1] ? prev[j - 1] + 1 : max(prev[j], cur[j - 1]);\n        swap(prev, cur);\n    }\n    return prev[b.size()];\n}\n```\n\n```python\ndef knapsack_01_one_row(weights, values, cap):\n    dp = [0] * (cap + 1)\n    for w, v in zip(weights, values):\n        for c in range(cap, w - 1, -1):      # downward: dp[c - w] is still last item's row\n            dp[c] = max(dp[c], dp[c - w] + v)\n    return dp[cap]\n\ndef edit_distance_one_row(a, b):\n    row = list(range(len(b) + 1))            # distances from \"\" to prefixes of b\n    for i in range(1, len(a) + 1):\n        diag, row[0] = row[0], i             # diag holds the old row[j-1] (the top-left cell)\n        for j in range(1, len(b) + 1):\n            above = row[j]\n            row[j] = diag if a[i - 1] == b[j - 1] else 1 + min(diag, above, row[j - 1])\n            diag = above\n    return row[len(b)]\n```\n\n#### A procedure that always works\n\n1. Write the full-table solution and make sure it is correct.\n2. For one cell, list exactly which cells it reads (above, left, diagonal, two rows up).\n3. If it only reads the previous row, keep two rows and swap them after each row.\n4. To go down to one row, decide the loop direction so that every value a cell reads is either already updated (if it needs the new value, like \"left\" in grid paths) or not yet updated (if it needs the old one, like `dp[c - w]` in 0/1 knapsack); save any value that would be overwritten too early (the diagonal).\n5. Re-run the small examples; loop-direction mistakes usually show up immediately.\n\n#### Complexity\n\nTime is unchanged; space drops from $O(n \\cdot m)$ to $O(m)$ (choose $m$ as the smaller dimension). For 1D recurrences with a fixed look-back, space becomes $O(1)$.\n\n#### Pitfalls\n\n- Wrong loop direction for one-row knapsacks: upward in 0/1 knapsack lets an item be used many times.\n- Losing the diagonal value (top-left) in LCS or edit distance when using one row: save it before overwriting.\n- Forgetting to reset `cur` between rows when a row isn't fully overwritten.\n- Optimizing space before the solution is correct; do it last.\n\nConnects to: 0/1 knapsack, unbounded knapsack, longest common subsequence, edit distance, reconstructing the answer."
    }
   },
   {
@@ -12343,9 +12483,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A DP table tells you the best value, but often you also need the actual choices that achieve it. You can walk backward from the final cell, at each step asking which option produced this value, like retracing footprints in snow. Storing the chosen option in each cell while filling the table makes the walk back simple.",
+    "interview": [
+     "Two methods: **store the choice** (a `choice[state]` or `parent[state]` array filled with the transition), or **recompute** it by checking which option matches the stored value.",
+     "Walk back from the answer state to a base state, collecting decisions; reverse at the end if needed.",
+     "Examples: LCS string, the coins used in coin change, the items in knapsack, the LIS sequence (parent pointers), the edit operations.",
+     "Requires the full table (or the choices table); space-optimized DP can't reconstruct directly.",
+     "Ties: decide which option to prefer (for example, the lexicographically smallest answer may need a specific order)."
+    ],
+    "questions": [
+     {
+      "q": "How do you recover which coins make up the minimum coin change?",
+      "a": "While filling dp[a], record which coin achieved the minimum in choice[a]. Then start at the target amount, add choice[a] to the answer, subtract it, and repeat until the amount is 0."
+     },
+     {
+      "q": "How do you reconstruct a longest common subsequence from the table?",
+      "a": "Start at dp[n][m]. If the characters at i − 1 and j − 1 match, that character is in the LCS, so take it and move diagonally; otherwise move to whichever neighbor, dp[i − 1][j] or dp[i][j − 1], holds the same value. Reverse the collected characters at the end."
+     },
+     {
+      "q": "What is the trade-off between storing choices and recomputing them?",
+      "a": "Storing a choice table costs extra memory but makes the walk back trivial and unambiguous. Recomputing uses only the DP table but repeats the transition logic at each step, which must match exactly how the table was filled."
+     },
+     {
+      "q": "Why can't you usually reconstruct the answer after optimizing the DP to one row?",
+      "a": "The walk back needs values from earlier rows that were overwritten. You need either the full table, a separate record of choices, or a divide-and-conquer method that recomputes parts of the table."
+     }
+    ]
    }
   },
   {
@@ -12367,9 +12530,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Counting problems ask how many ways something can happen, and the numbers grow huge very quickly. Problems usually ask for the answer modulo 1,000,000,007, meaning you only keep the remainder after dividing by that number. You take the remainder after every addition or multiplication, like an odometer that rolls over, so numbers never overflow.",
+    "interview": [
+     "Counting DP sums over choices instead of taking min or max: `ways[state] = Σ ways[previous]`.",
+     "Take `% MOD` after each addition and multiplication; `(a + b) % M` and `(a * b) % M` are safe with 64-bit intermediates when `a, b < M ≈ 10⁹`.",
+     "Subtraction: `((a - b) % M + M) % M` to avoid negative results.",
+     "Division needs a **modular inverse** (Fermat: `b^(M-2) mod M` for prime M), not `/`.",
+     "**1e9+7** is prime and fits in 32 bits; the product of two values fits in 64 bits.",
+     "Counting needs care about **double counting**: order matters or not (combinations vs permutations), and base cases like \"one way to do nothing\"."
+    ],
+    "questions": [
+     {
+      "q": "Why do counting problems ask for the answer modulo 1e9+7?",
+      "a": "The counts grow exponentially and overflow any fixed-width integer. Taking the result modulo a large prime keeps numbers small while still letting the judge check the exact answer's residue. 1e9 + 7 is prime and small enough that the product of two residues fits in 64 bits."
+     },
+     {
+      "q": "How do you subtract safely under a modulus?",
+      "a": "Compute ((a − b) % M + M) % M. In C++ and Java, % can return a negative number for a negative left operand, so adding M before the final modulus keeps the result in [0, M)."
+     },
+     {
+      "q": "Can you divide under a modulus?",
+      "a": "Not directly. Multiply by the modular inverse instead: for a prime modulus M and b not divisible by M, the inverse is b^(M − 2) mod M by Fermat's little theorem, computed with fast exponentiation."
+     },
+     {
+      "q": "What are common double-counting mistakes in counting DP?",
+      "a": "Counting ordered sequences when the problem wants unordered combinations (or the reverse), which depends on loop order in coin-change style DP, and counting the same configuration from two base cases. Checking a tiny example by hand catches both."
+     }
+    ]
    }
   },
   {
@@ -12391,9 +12578,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Linear DP walks along a line of positions and computes each position's answer from the few positions just before it. Climbing stairs is the classic: the number of ways to reach a step is the ways to reach the step below plus the ways to reach the one two below. One pass from left to right fills everything in.",
+    "interview": [
+     "State `dp[i]` for position i; transition from a constant number of earlier positions (`i-1`, `i-2`, …) or from all earlier ones (O(n²)).",
+     "**Climbing stairs**: `dp[i] = dp[i-1] + dp[i-2]` (Fibonacci). **Min cost climbing stairs**: `dp[i] = cost[i] + min(dp[i-1], dp[i-2])`, answer `min(dp[n-1], dp[n-2])`.",
+     "**O(n)** time; **O(1)** space when only the last few values are needed.",
+     "Variants with k step sizes: `dp[i] = Σ dp[i - s]`; with a sliding window sum it stays O(n).",
+     "Tribonacci, tiling a 2×n board, number of ways to paint a fence with at most two same-colored neighbors: all linear DP."
+    ],
+    "questions": [
+     {
+      "q": "How do you count the ways to climb n stairs taking 1 or 2 steps at a time?",
+      "a": "Let ways[i] be the ways to reach step i. The last move came from i − 1 or i − 2, so ways[i] = ways[i − 1] + ways[i − 2], with ways[0] = ways[1] = 1. It's the Fibonacci sequence, computed in O(n) time and O(1) space."
+     },
+     {
+      "q": "How does min cost climbing stairs work?",
+      "a": "Let dp[i] be the cheapest way to stand on step i: cost[i] plus the cheaper of dp[i − 1] and dp[i − 2]. You can start on step 0 or 1, and the top is reached from either of the last two steps, so the answer is the smaller of the last two dp values."
+     },
+     {
+      "q": "How do you handle a set of allowed step sizes?",
+      "a": "dp[i] is the sum of dp[i − s] over every allowed step size s ≤ i, with dp[0] = 1. That's O(n · k) for k step sizes, or O(n) for consecutive step sizes 1..k with a sliding window sum."
+     },
+     {
+      "q": "How do you reduce linear DP to O(1) space?",
+      "a": "Keep only the last few values the recurrence reads, updating them as you move forward, like a and b for the previous two steps. The full array is unnecessary once each value is used."
+     }
+    ],
+    "deep": "#### Intuition\n\nMany problems ask about reaching the end of a line, where each move is a short hop. Whatever happens at position i depends only on how you arrived: from one of a few earlier positions. So the answer at i is a simple combination of a few earlier answers, and a single left-to-right pass computes them all.\n\n#### Worked example: min cost climbing stairs\n\n`cost = [10, 15, 20]`. You can start at step 0 or 1, pay a step's cost when you stand on it, then climb 1 or 2 steps; the top is past the last step.\n\n| i | cost | dp[i] = cost[i] + min(dp[i-1], dp[i-2]) |\n|---|---|---|\n| 0 | 10 | 10 |\n| 1 | 15 | 15 |\n| 2 | 20 | 20 + min(15, 10) = 30 |\n\nAnswer: `min(dp[1], dp[2]) = min(15, 30) = 15` (start at step 1, jump 2 steps to the top).\n\n#### Code\n\n```cpp\nint minCostClimbing(const vector<int>& cost) {\n    int a = 0, b = 0;                         // dp[i-2], dp[i-1] (cost to stand on those steps)\n    for (int c : cost) {\n        int cur = c + min(a, b);\n        a = b;\n        b = cur;\n    }\n    return min(a, b);                         // the top is reached from either of the last two\n}\n\n// Ways to climb n steps with allowed step sizes (mod 1e9+7).\nlong long waysWithSteps(int n, const vector<int>& steps) {\n    const long long MOD = 1'000'000'007;\n    vector<long long> dp(n + 1, 0);\n    dp[0] = 1;\n    for (int i = 1; i <= n; i++)\n        for (int s : steps)\n            if (s <= i) dp[i] = (dp[i] + dp[i - s]) % MOD;\n    return dp[n];\n}\n```\n\n```python\ndef tile_2xn(n):\n    \"\"\"Ways to tile a 2 x n board with 2 x 1 dominoes: the last column is a vertical domino\n    (from n - 1) or two horizontal dominoes (from n - 2).\"\"\"\n    a, b = 1, 1                    # tilings of width 0 and 1\n    for _ in range(n - 1):\n        a, b = b, a + b\n    return b if n >= 1 else 1\n\ndef paint_fence(n, k):\n    \"\"\"No three consecutive posts share a color.\"\"\"\n    if n == 0:\n        return 0\n    same, diff = 0, k               # last two posts same color / different\n    for _ in range(n - 1):\n        same, diff = diff, (same + diff) * (k - 1)\n    return same + diff\n```\n\n#### Recognizing it\n\nThe words to listen for are \"positions in a line\", \"each step you may move 1 or 2\" (or any small set of moves), and \"how many ways\" or \"what is the minimum cost to reach the end\". Before coding, say the state in one sentence (\"`dp[i]` is the cheapest way to stand on step i\"), list the ways to arrive at i, and check the first two positions by hand, because off-by-one mistakes at the start (can you begin on step 1 for free?) are the most common bug in this pattern.\n\n#### Complexity\n\n$O(n)$ time for a constant number of previous states ($O(n \\cdot k)$ with $k$ step sizes), and $O(1)$ space with rolling variables.\n\n#### Edge cases and bugs\n\n- Start conditions: can you start at step 0 and 1 for free? Read the problem.\n- n = 0 or 1: make sure the rolling variables give the right answer without the loop running.\n- Counting problems overflow: take the modulus.\n\n#### Variants\n\n- Frog jumps with costs `|h[i] - h[j]|` for the last k stones: O(n·k).\n- Delete and earn: bucket values, then it's house robber on the buckets.\n- Domino and tromino tiling: a few states per column (full, top missing, bottom missing).\n\nConnects to: what DP is, take or skip DP, decoding and segmentation DP, space optimization.",
+    "signals": [
+     "reach the end of a line of positions with small moves (1 or 2 steps)",
+     "number of ways or minimum cost where each position depends on the previous few",
+     "tilings or colorings built one column or post at a time",
+     "\"climbing stairs\" style recurrences in disguise"
+    ],
+    "template": "```cpp\n// Linear DP: dp[i] from the previous k positions; rolling storage when k is small.\nlong long linearDp(int n, const vector<long long>& weight) {\n    vector<long long> dp(n + 1, LLONG_MAX / 2);\n    dp[0] = 0;                                         // base state\n    for (int i = 1; i <= n; i++) {\n        for (int step = 1; step <= 2 && step <= i; step++)   // allowed previous positions\n            dp[i] = min(dp[i], dp[i - step] + weight[i - 1]); // combine (min / max / sum)\n    }\n    return dp[n];\n}\n```"
    }
   },
   {
@@ -12416,9 +12634,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Take-or-skip DP decides, item by item, whether to take the current item or skip it, when taking one blocks its neighbor. A burglar robbing a street can't rob two houses next to each other, so for each house they compare \"rob this one plus the best up to two houses back\" with \"skip it and keep the best so far\". The better of the two is the best for that stretch of street.",
+    "interview": [
+     "**House robber**: `dp[i] = max(dp[i-1], dp[i-2] + nums[i])`. O(n) time, O(1) space with two variables.",
+     "**House robber II** (circular street): first and last houses are neighbors; answer = max(rob houses 0..n−2, rob houses 1..n−1). Handle n = 1 separately.",
+     "General shape: `best(i) = max(skip: best(i-1), take: value(i) + best(last compatible before i))`.",
+     "**Delete and earn**: taking value v removes v − 1 and v + 1; group points by value, then house robber over values.",
+     "Tree version (house robber III) needs two values per node: robbed and not robbed.",
+     "Also: maximum sum of non-adjacent elements, scheduling with a cooldown of one."
+    ],
+    "questions": [
+     {
+      "q": "What is the recurrence for house robber?",
+      "a": "dp[i] = max(dp[i − 1], dp[i − 2] + nums[i]): either skip house i and keep the best for the first i − 1 houses, or rob it and add its value to the best for the first i − 2 houses. It runs in O(n) time and O(1) space with two variables."
+     },
+     {
+      "q": "How do you solve house robber when the houses are in a circle?",
+      "a": "The first and last houses are adjacent, so they can't both be robbed. Run the linear solution twice, once without the last house and once without the first, and take the maximum. A single house is a special case."
+     },
+     {
+      "q": "How does \"delete and earn\" reduce to house robber?",
+      "a": "Taking a value v earns v times its count and forbids v − 1 and v + 1. Group the points by value and walk through values in order; adjacent values conflict like adjacent houses, while values with a gap between them don't."
+     },
+     {
+      "q": "How would you solve house robber on a binary tree?",
+      "a": "Each node returns two numbers: the best total if it's robbed (its value plus both children's not-robbed totals) and if it isn't (the sum of each child's better option). The answer is the larger value at the root, in O(n)."
+     }
+    ],
+    "deep": "#### Intuition\n\nFor each item there are only two possibilities: it's in the chosen set or it isn't. If it isn't, the best is whatever was best for the previous items. If it is, its neighbor can't be, so add its value to the best for the items two back. Taking the maximum covers both cases.\n\n#### Worked example\n\n`nums = [2, 7, 9, 3, 1]`\n\n| i | nums[i] | skip: dp[i-1] | take: dp[i-2] + nums[i] | dp[i] |\n|---|---|---|---|---|\n| 0 | 2 | 0 | 2 | 2 |\n| 1 | 7 | 2 | 0 + 7 | 7 |\n| 2 | 9 | 7 | 2 + 9 | 11 |\n| 3 | 3 | 11 | 7 + 3 | 11 |\n| 4 | 1 | 11 | 11 + 1 | 12 |\n\nAnswer **12** (houses 0, 2, 4: 2 + 9 + 1).\n\n#### Code\n\n```cpp\nint robLine(const vector<int>& a, int lo, int hi) {   // houses lo..hi inclusive\n    int prev2 = 0, prev1 = 0;                          // best up to i-2, up to i-1\n    for (int i = lo; i <= hi; i++) {\n        int cur = max(prev1, prev2 + a[i]);            // skip or take\n        prev2 = prev1;\n        prev1 = cur;\n    }\n    return prev1;\n}\n\nint robCircle(const vector<int>& a) {\n    int n = a.size();\n    if (n == 1) return a[0];\n    return max(robLine(a, 0, n - 2), robLine(a, 1, n - 1));   // can't take both ends\n}\n```\n\n```python\nfrom collections import Counter\n\ndef delete_and_earn(nums):\n    \"\"\"Taking value v earns v but removes every v - 1 and v + 1.\"\"\"\n    points = Counter(nums)\n    skip = take = 0\n    prev_value = None\n    for v in sorted(points):\n        gain = v * points[v]\n        if prev_value == v - 1:                # adjacent values conflict\n            skip, take = max(skip, take), skip + gain\n        else:                                  # no conflict with the previous value\n            skip, take = max(skip, take), max(skip, take) + gain\n        prev_value = v\n    return max(skip, take)\n```\n\n#### Complexity\n\n$O(n)$ time, $O(1)$ space. Delete and earn: $O(n \\log n)$ for sorting distinct values (or $O(n + \\max)$ with a bucket array).\n\n#### Edge cases and bugs\n\n- Empty array: 0. One house (circular version): take it.\n- Circular version: running the linear solver on the whole array double-uses the first and last houses.\n- Negative values (not in the classic problem): skipping everything must be allowed, so initialize with 0.\n\n#### Variants\n\n- House robber III (binary tree): each node returns (best if robbed, best if not).\n- Maximum sum with no two chosen elements within distance k: `dp[i] = max(dp[i-1], a[i] + dp[i-k-1])`.\n- Weighted interval scheduling: \"take\" jumps back to the last compatible interval found by binary search.\n- Pizza with 3n slices (circular, choose exactly n non-adjacent): add a count dimension.\n\nConnects to: linear DP, tree DP on subtrees, 0/1 knapsack, weighted interval scheduling.",
+    "signals": [
+     "choose items to maximize a total when adjacent items can't both be chosen",
+     "\"no two consecutive\", \"can't pick neighbors\"",
+     "values where picking one forbids its immediate neighbors (in position or in value)",
+     "a circular arrangement where the first and last are neighbors"
+    ],
+    "template": "```cpp\n// Take-or-skip over a sequence where taking i forbids i - 1.\nlong long takeOrSkip(const vector<long long>& value) {\n    long long skipBest = 0, takeBest = LLONG_MIN / 2;   // best with item i skipped / taken\n    for (long long v : value) {\n        long long take = skipBest + v;                  // previous must be skipped\n        long long skip = max(skipBest, takeBest);       // previous can be anything\n        takeBest = take;\n        skipBest = skip;\n    }\n    return max(skipBest, takeBest);\n}\n```"
    }
   },
   {
@@ -12441,9 +12691,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Segmentation DP asks whether, or in how many ways, a string can be cut into valid pieces. For each position you look back at every possible last piece, and if that piece is valid, you add up (or check) the answers for the part before it. It is like checking whether a long sentence without spaces can be split into dictionary words.",
+    "interview": [
+     "State `dp[i]` about the prefix of length i (`dp[0]` = empty prefix: 1 way, or true).",
+     "Transition: for each possible last piece `s[j..i-1]` that is valid, combine `dp[j]`: OR for feasibility (word break), sum for counting (decode ways), min for fewest pieces.",
+     "**Decode ways**: last piece has length 1 (not '0') or 2 (10 to 26). O(n).",
+     "**Word break**: try every j, or only lengths up to the longest dictionary word; use a hash set: **O(n · L)** substring checks (each O(L)), or a trie walk from j.",
+     "Word break II (all sentences): memoize lists of sentences per suffix; the output can be exponential.",
+     "Palindrome partitioning min cuts is the same shape with \"valid = palindrome\"."
+    ],
+    "questions": [
+     {
+      "q": "How do you decide whether a string can be split into dictionary words?",
+      "a": "Let dp[i] mean the first i characters can be segmented, with dp[0] = true. dp[i] is true if some j < i has dp[j] true and s[j..i − 1] in the dictionary. Limiting j to the longest word length and using a hash set makes it efficient."
+     },
+     {
+      "q": "What is the transition for decode ways?",
+      "a": "dp[i] = (dp[i − 1] if the last digit isn't '0') + (dp[i − 2] if the last two digits form a number from 10 to 26). With dp[0] = 1, this counts every way to split the digits into valid letters."
+     },
+     {
+      "q": "How do you list every valid sentence in word break II without timing out?",
+      "a": "Memoize, for each start index, the list of sentences that segment the suffix from that index. Each suffix is solved once, and results are combined by prefixing each valid first word. The output itself can be exponential, so the time is at least its size."
+     },
+     {
+      "q": "How is palindrome partitioning with minimum cuts related?",
+      "a": "It's the same segmentation shape: dp[i] is the fewest palindromic pieces for the first i characters, taking the minimum over j where s[j..i − 1] is a palindrome, plus one. A precomputed palindrome table makes each check O(1), giving O(n²)."
+     }
+    ],
+    "deep": "#### Intuition\n\nEvery valid segmentation of a prefix ends with some last piece. If you know which prefixes can be segmented (or in how many ways), then checking each possible last piece tells you about the longer prefix. The pieces are independent once you fix where the last one starts.\n\n#### Worked example: word break\n\n`s = \"applepenapple\"`, dictionary `{apple, pen}`.\n\n| i | prefix | a valid last piece ending here | dp[i] |\n|---|---|---|---|\n| 0 | \"\" | | true |\n| 5 | apple | \"apple\" from j = 0 (dp[0] true) | true |\n| 8 | applepen | \"pen\" from j = 5 (dp[5] true) | true |\n| 13 | applepenapple | \"apple\" from j = 8 (dp[8] true) | true |\n\nAll other positions are false. `dp[13]` is true, so the string can be segmented.\n\n#### Code\n\n```cpp\nbool wordBreak(const string& s, const vector<string>& dict) {\n    unordered_set<string> words(dict.begin(), dict.end());\n    size_t maxLen = 0;\n    for (auto& w : dict) maxLen = max(maxLen, w.size());\n    int n = s.size();\n    vector<bool> dp(n + 1, false);\n    dp[0] = true;                                        // empty prefix\n    for (int i = 1; i <= n; i++)\n        for (int len = 1; len <= (int)maxLen && len <= i && !dp[i]; len++)\n            if (dp[i - len] && words.count(s.substr(i - len, len))) dp[i] = true;\n    return dp[n];\n}\n```\n\n```python\ndef num_decodings(s):\n    prev2, prev1 = 1, 1 if s and s[0] != \"0\" else 0   # dp[i-2], dp[i-1] for i = 2\n    if not s:\n        return 0\n    for i in range(2, len(s) + 1):\n        cur = 0\n        if s[i - 1] != \"0\":\n            cur += prev1\n        if 10 <= int(s[i - 2:i]) <= 26:\n            cur += prev2\n        prev2, prev1 = prev1, cur\n    return prev1\n\ndef word_break_all(s, words):\n    \"\"\"Every sentence that segments s (memoized on the start index).\"\"\"\n    word_set, memo = set(words), {}\n    def from_index(i):\n        if i == len(s):\n            return [\"\"]\n        if i not in memo:\n            memo[i] = [\n                s[i:j] + (\" \" + rest if rest else \"\")\n                for j in range(i + 1, len(s) + 1) if s[i:j] in word_set\n                for rest in from_index(j)\n            ]\n        return memo[i]\n    return from_index(0)\n```\n\n#### Complexity\n\nDecode ways: $O(n)$. Word break: $O(n \\cdot L)$ candidate pieces, each hashed in $O(L)$, so $O(n \\cdot L^2)$ worst case with $L$ the longest word (a trie walk from each start avoids re-hashing). Listing all sentences is output-sensitive and can be exponential.\n\n#### Edge cases and bugs\n\n- Leading zeros in decode ways (\"06\" has no decoding; \"0\" alone is invalid).\n- Word break without the `maxLen` bound is $O(n^2)$ substrings: fine for small n, slow for long strings with short words.\n- Returning `dp[n]` for \"true or false\" versus counting: don't mix OR and sum.\n\n#### Variants\n\n- Decode ways II (`*` wildcard): multiply counts by the number of matching digits.\n- Concatenated words: word break for each word against the others.\n- Minimum number of pieces (or extra characters left over): replace OR with min.\n- Palindrome partitioning II: minimum cuts with an `isPal` table.\n\nConnects to: transitions and base cases, tries, palindromic DP, minimum palindrome cuts.",
+    "signals": [
+     "split a string into valid pieces (words, codes, palindromes)",
+     "\"can it be segmented\", \"in how many ways\", \"fewest pieces\"",
+     "digit strings mapped to letters",
+     "the answer for a prefix depends on shorter prefixes plus one valid last piece"
+    ],
+    "template": "```cpp\n// Segmentation DP: dp[i] over prefixes, last piece s[j..i-1] must be valid.\ntemplate <class Valid>\nlong long countSegmentations(const string& s, int maxPiece, Valid valid) {\n    int n = s.size();\n    vector<long long> dp(n + 1, 0);\n    dp[0] = 1;                                         // empty prefix: one way\n    for (int i = 1; i <= n; i++)\n        for (int len = 1; len <= maxPiece && len <= i; len++)\n            if (dp[i - len] && valid(i - len, len))    // last piece is s.substr(i - len, len)\n                dp[i] += dp[i - len];                  // OR for feasibility, min for fewest\n    return dp[n];\n}\n```"
    }
   },
   {
@@ -12465,9 +12747,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "When multiplying numbers, a very negative running product can become the largest after one more negative number. So for products you track both the largest and the smallest product ending at each position. It is like keeping both your best and worst debts in mind, because a sign flip can turn the worst into the best.",
+    "interview": [
+     "For each i, keep `hi` = max product of a subarray ending at i and `lo` = min product ending at i.",
+     "`hi = max(a[i], a[i]·hi_prev, a[i]·lo_prev)`, `lo = min(a[i], a[i]·hi_prev, a[i]·lo_prev)`; answer = max over i of `hi`. **O(n)**, O(1) space.",
+     "Equivalent trick: if `a[i] < 0`, swap `hi` and `lo` before updating.",
+     "Zeros reset both to 0 (a subarray can restart after a zero).",
+     "The same \"keep both extremes\" idea applies to max subarray with the option to negate, and any DP where multiplying by a negative flips the order.",
+     "Alternative: prefix and suffix product scans, resetting at zeros; the answer is the max over both."
+    ],
+    "questions": [
+     {
+      "q": "Why does maximum product subarray need the minimum as well as the maximum?",
+      "a": "Multiplying by a negative number reverses the order: the most negative product ending at i − 1 becomes the most positive after multiplying by a negative a[i]. Tracking only the maximum would miss that candidate."
+     },
+     {
+      "q": "What is the recurrence for maximum product subarray?",
+      "a": "For each i, the new maximum is the largest of a[i], a[i] times the previous maximum, and a[i] times the previous minimum; the new minimum is the smallest of the same three. The answer is the largest maximum seen. It's O(n) time and O(1) space."
+     },
+     {
+      "q": "How do zeros affect the algorithm?",
+      "a": "A zero makes every product through it zero, so both the running maximum and minimum become 0 (or restart from the next element). The recurrence handles it automatically, since a[i] = 0 makes all three candidates 0."
+     },
+     {
+      "q": "What is the prefix and suffix alternative?",
+      "a": "Scan left to right keeping a running product and scan right to left likewise, resetting to 1 after a zero; the answer is the maximum product seen in either scan. It works because the best subarray either excludes an odd negative at the start or at the end."
+     }
+    ]
    }
   },
   {
@@ -12489,9 +12795,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some DP problems are about a number itself: the fewest perfect squares that add up to n, or the best way to split n into parts with the largest product. You compute the answer for every smaller number first, then build n's answer from the smaller answers. It is like building a price list for every quantity up to the one you need.",
+    "interview": [
+     "State `dp[x]` for every x from 0 to n; transition over \"the last part\": `dp[x] = best over parts p of dp[x - p] ⊕ p`.",
+     "**Perfect squares**: `dp[x] = 1 + min(dp[x - k²])` over squares ≤ x: **O(n √n)**. (Lagrange: every number is a sum of at most 4 squares.)",
+     "**Integer break** (max product, at least two parts): `dp[x] = max over j of max(j, dp[j]) · (x - j)`: O(n²); or the math shortcut: use as many 3s as possible (O(1) or O(log n)).",
+     "**Coin change** is the same shape with coin values as parts.",
+     "Count partitions of n into parts: counting version, loop order decides ordered versus unordered."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the least number of perfect squares summing to n?",
+      "a": "Let dp[x] be the least count for x, with dp[0] = 0. For each x, try every square k² ≤ x and set dp[x] = min(dp[x − k²] + 1). That's O(n√n). BFS over remainders also works, and number theory says the answer is at most 4."
+     },
+     {
+      "q": "How do you split n into at least two positive integers to maximize their product?",
+      "a": "DP: dp[x] = max over j from 1 to x − 1 of max(j, dp[j]) · (x − j), where max(j, dp[j]) allows j itself to stay unsplit. The math shortcut is to use as many 3s as possible, replacing a leftover 1 with a 4 (3 + 1 → 2 + 2)."
+     },
+     {
+      "q": "Why are 3s optimal in integer break?",
+      "a": "For any part of 5 or more, splitting it into 2 and the rest (or 3 and the rest) increases the product, so optimal parts are 2s and 3s. Since 3 · 3 > 2 · 2 · 2 for the same sum of 6, prefer 3s, using 2s only for remainders."
+     },
+     {
+      "q": "What do perfect squares, coin change and integer break have in common?",
+      "a": "Each computes an answer for every amount from 0 to n, and each amount's answer comes from choosing the last part (a square, a coin or a piece) and combining with the answer for the remaining amount."
+     }
+    ]
    }
   },
   {
@@ -12513,9 +12842,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Grid path DP counts or optimizes routes through a grid when you can only move right or down. Each cell's answer comes from the cell above and the cell to its left, because those are the only ways in. Filling the grid row by row from the top-left corner builds every answer in one sweep.",
+    "interview": [
+     "State `dp[r][c]` = answer for reaching cell (r, c). Moves right or down, so `dp[r][c]` combines `dp[r-1][c]` and `dp[r][c-1]`.",
+     "**Unique paths**: sum; first row and column are 1. Also `C(R + C − 2, R − 1)` by combinatorics.",
+     "**With obstacles**: an obstacle cell has 0 paths; the first row or column stops at the first obstacle.",
+     "**Minimum path sum**: `grid[r][c] + min(above, left)`.",
+     "**O(R · C)** time; **O(C)** space with one row.",
+     "Other directions or diagonal moves change which neighbors you read, and possibly the fill order."
+    ],
+    "questions": [
+     {
+      "q": "How do you count paths from the top-left to the bottom-right moving only right or down?",
+      "a": "dp[r][c] = dp[r − 1][c] + dp[r][c − 1], with every cell in the first row and column equal to 1. It fills in O(R · C). The count also equals C(R + C − 2, R − 1), since a path is a choice of which moves go down."
+     },
+     {
+      "q": "How do obstacles change the recurrence?",
+      "a": "An obstacle cell gets 0 paths, so it contributes nothing to its right and lower neighbors. In the first row or column, every cell after an obstacle also gets 0, since it has no other way in."
+     },
+     {
+      "q": "How do you compute the minimum path sum in O(C) space?",
+      "a": "Keep one row where row[c] is the best cost to reach column c in the current row. Update left to right with row[c] = grid[r][c] + min(row[c], row[c − 1]): the old row[c] is the cell above and row[c − 1] is the updated cell to the left."
+     },
+     {
+      "q": "When must you fill a grid DP from the bottom-right instead?",
+      "a": "When a cell's value depends on what happens after it, as in the dungeon game, where the health needed at a cell depends on the rooms still ahead. Then the state \"minimum health needed from here to the end\" is computed backward from the goal."
+     }
+    ],
+    "deep": "#### Intuition\n\nA path that reaches (r, c) by right and down moves must have come from (r − 1, c) or (r, c − 1). So the number of paths to (r, c) is the sum of the paths to those two cells, and the cheapest path is the cheaper of the two plus the current cell. Filling rows top to bottom and columns left to right guarantees both neighbors are ready.\n\n#### Worked example: unique paths with an obstacle\n\n3 × 3 grid, obstacle at the center (1, 1).\n\n| | c=0 | c=1 | c=2 |\n|---|---|---|---|\n| r=0 | 1 | 1 | 1 |\n| r=1 | 1 | 0 (obstacle) | 1 |\n| r=2 | 1 | 1 | 2 |\n\nTwo paths: around the top-right and around the bottom-left.\n\n#### Code\n\n```cpp\nlong long uniquePathsWithObstacles(const vector<vector<int>>& g) {\n    int C = g[0].size();\n    vector<long long> row(C, 0);\n    row[0] = 1;                                         // one way to stand at the start\n    for (const auto& line : g)\n        for (int c = 0; c < C; c++) {\n            if (line[c] == 1) row[c] = 0;               // obstacle: nothing passes through\n            else if (c > 0) row[c] += row[c - 1];       // above (old row[c]) + left\n        }\n    return row[C - 1];\n}\n\nint minPathSumGrid(const vector<vector<int>>& g) {\n    int R = g.size(), C = g[0].size();\n    vector<vector<int>> dp(R, vector<int>(C));\n    for (int r = 0; r < R; r++)\n        for (int c = 0; c < C; c++) {\n            if (r == 0 && c == 0) dp[r][c] = g[0][0];\n            else if (r == 0) dp[r][c] = dp[r][c - 1] + g[r][c];\n            else if (c == 0) dp[r][c] = dp[r - 1][c] + g[r][c];\n            else dp[r][c] = min(dp[r - 1][c], dp[r][c - 1]) + g[r][c];\n        }\n    return dp[R - 1][C - 1];\n}\n```\n\n```python\nfrom math import comb\n\ndef unique_paths_formula(R, C):\n    \"\"\"Choose which of the R + C - 2 moves are the R - 1 downward ones.\"\"\"\n    return comb(R + C - 2, R - 1)\n\ndef min_path_sum(grid):\n    R, C = len(grid), len(grid[0])\n    row = [float(\"inf\")] * C\n    row[0] = 0\n    for r in range(R):\n        row[0] += grid[r][0]\n        for c in range(1, C):\n            row[c] = grid[r][c] + min(row[c], row[c - 1])\n    return row[-1]\n```\n\n#### Complexity\n\n$O(R \\cdot C)$ time. Space $O(R \\cdot C)$ for the full table, $O(C)$ with one row. The combinatorial formula is $O(\\min(R, C))$ but doesn't handle obstacles.\n\n#### Edge cases and bugs\n\n- An obstacle at the start or the end: the answer is 0.\n- Obstacles in the first row or column block everything after them in that row or column; the one-row code handles it because `row[c]` stays 0.\n- Counting paths can overflow 32 bits for large grids (use 64-bit or a modulus).\n\n#### Variants\n\n- Paths with exactly k turns or through required cells (multiply path counts across segments).\n- Minimum falling path sum (three possible predecessors), triangle.\n- Dungeon game: fill from the bottom-right because the needed health depends on the future.\n- Cherry pickup: two walkers moving together, state (step, r1, r2).\n- Unique paths III (visit every empty cell exactly once): backtracking, not DP.\n\nConnects to: memoization vs tabulation, space optimization, triangle and falling paths, hard grid DP.",
+    "signals": [
+     "count paths or find the cheapest path in a grid moving only right and down (or down and diagonally)",
+     "obstacles that block some cells of a route grid",
+     "each cell's answer depends on the cell above and the cell to the left",
+     "robot or person moving from one corner to the opposite corner"
+    ],
+    "template": "```cpp\n// Grid DP: each cell combines its upper and left neighbors.\nlong long gridDp(const vector<vector<int>>& g) {\n    int R = g.size(), C = g[0].size();\n    vector<vector<long long>> dp(R, vector<long long>(C, 0));\n    for (int r = 0; r < R; r++)\n        for (int c = 0; c < C; c++) {\n            if (g[r][c] == 1) { dp[r][c] = 0; continue; }       // blocked cell\n            if (r == 0 && c == 0) { dp[r][c] = 1; continue; }   // base: the start\n            long long up = r > 0 ? dp[r - 1][c] : 0;\n            long long left = c > 0 ? dp[r][c - 1] : 0;\n            dp[r][c] = up + left;                               // sum (or min/max plus cost)\n        }\n    return dp[R - 1][C - 1];\n}\n```"
    }
   },
   {
@@ -12537,9 +12898,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "In a triangle of numbers, you walk from the top to the bottom row, stepping to one of the two numbers below you, and want the smallest total. Working from the bottom row upward is easiest: each number's best total is itself plus the better of the two below it. By the time you reach the top, the single number there holds the answer.",
+    "interview": [
+     "**Triangle**: bottom-up `dp[j] = tri[i][j] + min(dp[j], dp[j+1])` from the second-to-last row upward; answer `dp[0]`. O(n²) time, O(n) space (can reuse the last row).",
+     "Top-down works too but the answer is the minimum over the bottom row, with edge cells having one parent.",
+     "**Minimum falling path sum** (square matrix, move down, down-left or down-right): `dp[r][c] = m[r][c] + min(dp[r-1][c-1..c+1])`; answer min of the last row. O(n²).",
+     "**Falling path with non-zero shifts** (next row must use a different column): keep the smallest and second smallest of the previous row for O(n²) instead of O(n³).",
+     "Bottom-up is often simpler because the goal (a single top cell) collects everything."
+    ],
+    "questions": [
+     {
+      "q": "Why is bottom-up convenient for the triangle problem?",
+      "a": "Starting from the bottom row, each cell's best path down is itself plus the smaller of its two children's best paths, which are already known. The top ends up holding the answer, and no special handling is needed for edges or for taking a minimum over the last row."
+     },
+     {
+      "q": "How do you solve the triangle problem in O(n) extra space?",
+      "a": "Keep one array initialized to the bottom row and update it upward: dp[j] = triangle[i][j] + min(dp[j], dp[j + 1]) for each row i, left to right. Each update reads values from the row below that haven't been overwritten yet."
+     },
+     {
+      "q": "How does minimum falling path sum differ from the triangle?",
+      "a": "Each cell can be reached from up to three cells above (up-left, up, up-right), columns at the edges have fewer options, and the path can start anywhere in the top row and end anywhere in the bottom row, so the answer is the minimum over the last row."
+     },
+     {
+      "q": "How do you handle \"consecutive rows must use different columns\" efficiently?",
+      "a": "For each row, record the smallest and second smallest dp values of the previous row and the column of the smallest. A cell takes the smallest unless it's in the same column, in which case it takes the second smallest. That brings each row to O(n) and the total to O(n²)."
+     }
+    ]
    }
   },
   {
@@ -12562,9 +12946,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "To find the biggest square made entirely of 1s in a grid, ask for each cell: how large a square of 1s can end here, with this cell as its bottom-right corner? That square is limited by the squares ending just above, just to the left and diagonally up-left, like a stack of blocks that can only grow as tall as its shortest support. The smallest of those three, plus one, is the answer for the cell.",
+    "interview": [
+     "`dp[r][c]` = side of the largest all-1 square with bottom-right corner (r, c): `min(dp[r-1][c], dp[r][c-1], dp[r-1][c-1]) + 1` if the cell is 1, else 0.",
+     "**Maximal square**: area = (max dp)². **O(R · C)**, O(C) space with one row plus a saved diagonal.",
+     "**Count square submatrices**: the sum of all dp values (a cell with dp = k ends k squares: sides 1..k).",
+     "Rectangles (not squares) need the histogram method instead.",
+     "Border-only or other shapes need different states (for example, runs of 1s in each direction)."
+    ],
+    "questions": [
+     {
+      "q": "What does dp[r][c] mean in the maximal square problem, and what is the recurrence?",
+      "a": "It's the side length of the largest all-1 square whose bottom-right corner is at (r, c). If the cell is 1, it equals 1 + min(dp above, dp left, dp diagonally up-left); if the cell is 0, it's 0. The answer is the square of the maximum value."
+     },
+     {
+      "q": "Why is the minimum of the three neighbors the right limit?",
+      "a": "A square of side k at (r, c) requires squares of side k − 1 ending at the cells above, to the left and diagonally above-left, which together with the cell cover it exactly. If any of the three supports less, a side-k square has a 0 inside it."
+     },
+     {
+      "q": "How do you count all square submatrices of 1s?",
+      "a": "Use the same dp and add up every value. A cell with dp = k is the bottom-right corner of exactly k squares, with sides 1 through k, so the total sum counts each square once."
+     },
+     {
+      "q": "Why doesn't this approach find the largest rectangle?",
+      "a": "Rectangles aren't determined by one side length: a cell can end many rectangles of different widths and heights, and the three-neighbor minimum doesn't capture them. Use the histogram method with a monotonic stack instead."
+     }
+    ],
+    "deep": "#### Intuition\n\nA square of side $k$ ending at (r, c) contains three squares of side $k - 1$ ending at its top, left and top-left neighbors. Conversely, if all three neighbors support side $k - 1$ and the cell is 1, the square of side $k$ is filled. So the side at (r, c) is exactly one more than the minimum of the three.\n\n#### Worked example\n\n```\n1 0 1 0 0\n1 0 1 1 1\n1 1 1 1 1\n1 0 0 1 0\n```\n\ndp:\n\n```\n1 0 1 0 0\n1 0 1 1 1\n1 1 1 2 2\n1 0 0 1 0\n```\n\nThe maximum is 2, so the largest square has area 4 (rows 1 to 2, columns 3 to 4 or 2 to 3). Summing all dp values counts every square submatrix.\n\n#### Code\n\n```cpp\nint maximalSquare(const vector<vector<char>>& m) {\n    int R = m.size(), C = m[0].size(), best = 0;\n    vector<int> row(C + 1, 0);                       // row[c + 1] = dp for column c\n    for (int r = 0; r < R; r++) {\n        int diag = 0;                                // dp[r-1][c-1]\n        for (int c = 0; c < C; c++) {\n            int above = row[c + 1];                  // dp[r-1][c], before overwriting\n            row[c + 1] = m[r][c] == '1' ? 1 + min({above, row[c], diag}) : 0;\n            diag = above;\n            best = max(best, row[c + 1]);\n        }\n    }\n    return best * best;\n}\n```\n\n```python\ndef count_squares(matrix):\n    R, C = len(matrix), len(matrix[0])\n    dp = [[0] * C for _ in range(R)]\n    total = 0\n    for r in range(R):\n        for c in range(C):\n            if matrix[r][c]:\n                dp[r][c] = 1 if r == 0 or c == 0 else 1 + min(dp[r - 1][c], dp[r][c - 1], dp[r - 1][c - 1])\n                total += dp[r][c]            # squares of side 1..dp[r][c] end here\n    return total\n```\n\n#### Complexity\n\n$O(R \\cdot C)$ time. Space $O(R \\cdot C)$, or $O(C)$ with one row and a saved diagonal.\n\n#### Edge cases and bugs\n\n- Char grids ('0'/'1') versus int grids.\n- Returning the side instead of the area.\n- In the one-row version, losing the diagonal value (save the old value above before overwriting).\n\n#### Variants\n\n- Largest square of 1s on the border only: precompute runs of 1s to the left and up.\n- Largest plus sign: runs of 1s in four directions, take the minimum.\n- Maximal rectangle: histogram with a monotonic stack per row.\n\nConnects to: grid path DP, space optimization, largest rectangle in histogram.",
+    "signals": [
+     "the largest square of 1s (or of equal cells) in a binary matrix",
+     "count all square submatrices made of 1s",
+     "a cell's answer limited by the smallest of its neighbors' answers",
+     "growing squares from the bottom-right corner"
+    ],
+    "template": "```cpp\n// Square DP: side of the largest square ending at each cell.\nvector<vector<int>> squareSides(const vector<vector<int>>& a) {\n    int R = a.size(), C = a[0].size();\n    vector<vector<int>> dp(R, vector<int>(C, 0));\n    for (int r = 0; r < R; r++)\n        for (int c = 0; c < C; c++) {\n            if (!a[r][c]) continue;                                   // blocked cell\n            if (r == 0 || c == 0) dp[r][c] = 1;                       // edges: side 1\n            else dp[r][c] = 1 + min({dp[r - 1][c], dp[r][c - 1], dp[r - 1][c - 1]});\n        }\n    return dp;                                 // max for the largest square, sum to count them\n}\n```"
    }
   },
   {
@@ -12586,9 +13001,31 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some grid problems break the simple \"look above and to the left\" rule. In the dungeon game, the health you need at a room depends on the rooms still ahead, so you compute from the exit backward. In cherry pickup, two trips interact, so you move two walkers at the same time and track both of their positions.",
+    "interview": [
+     "**Dungeon game** (minimum starting health): reverse DP from the bottom-right: `need[r][c] = max(1, min(need[r+1][c], need[r][c+1]) - dungeon[r][c])`. Forward DP fails because both the current health and the minimum so far matter.",
+     "**Cherry pickup** (go to the corner and back): model as two walkers from the start moving simultaneously; state `(step, r1, r2)` (columns follow from the step): O(n³). If both are on the same cell, count its cherries once.",
+     "**Cherry pickup II** (two robots moving down rows): state `(row, c1, c2)`, 9 transitions each: O(R · C²).",
+     "Lesson: when a path's value depends on the future, reverse the direction; when two paths interact, move them together."
+    ],
+    "questions": [
+     {
+      "q": "Why must the dungeon game be solved from the bottom-right?",
+      "a": "The health needed when entering a room depends on the rooms after it: you need enough to survive this room and still have what the rest of the path requires. Computing from the exit backward makes \"minimum health needed from here\" well-defined, while a forward DP would have to track both current health and the lowest point reached."
+     },
+     {
+      "q": "What is the recurrence for the dungeon game?",
+      "a": "need[r][c] = max(1, min(need[r + 1][c], need[r][c + 1]) − dungeon[r][c]), with the cells past the exit set so that the exit needs max(1, 1 − dungeon[exit]). Health must always stay at least 1."
+     },
+     {
+      "q": "Why is cherry pickup solved with two walkers instead of two separate trips?",
+      "a": "Taking the best first trip greedily can leave a poor second trip, and the trips interact because a cherry can be picked only once. Moving two walkers simultaneously from the start, with state (step, r1, r2), lets the DP see both paths together and avoid counting a shared cell twice."
+     },
+     {
+      "q": "What is the complexity of the two-walker cherry pickup DP?",
+      "a": "There are about 2n steps and n choices for each walker's row, so O(n³) states with 4 transitions each, O(n³) time. Rolling over steps reduces space to O(n²)."
+     }
+    ]
    }
   },
   {
@@ -12610,9 +13047,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The 0/1 knapsack problem picks items with weights and values to fit in a bag of limited capacity, maximizing total value, and each item can be taken at most once. For each item and each capacity you decide: leave it out, or take it and use the best answer for the remaining capacity. A table of \"best value for this many items and this much room\" answers everything.",
+    "interview": [
+     "State `dp[i][c]` = best value using the first i items with capacity c. Transition: `max(dp[i-1][c], dp[i-1][c - w_i] + v_i)` (if `w_i <= c`).",
+     "**O(n · W)** time; **O(W)** space with one array, looping capacity **from high to low** so each item is used once.",
+     "Pseudo-polynomial: fine for W up to about 10⁵ to 10⁶; hopeless for W = 10⁹ (then swap roles: dp over value → minimum weight, or meet in the middle).",
+     "Greedy by value/weight ratio is **wrong** for 0/1 (right only for fractional knapsack).",
+     "Many problems are knapsack in disguise: subset sum, partition, target sum, ones and zeroes, last stone weight II.",
+     "Answer is `dp[W]` (capacity at most W) with initialization 0; for \"exactly W\" initialize unreachable capacities to −∞."
+    ],
+    "questions": [
+     {
+      "q": "What is the recurrence for 0/1 knapsack?",
+      "a": "dp[i][c] = max(dp[i − 1][c], dp[i − 1][c − w_i] + v_i), the better of skipping item i or taking it and filling the remaining capacity optimally with earlier items. The answer is dp[n][W], computed in O(n · W)."
+     },
+     {
+      "q": "Why does the one-dimensional version loop over capacity in decreasing order?",
+      "a": "Each dp[c] update must use dp[c − w] from before the current item was considered. Iterating downward reads smaller capacities before they're updated in this round, so each item is used at most once. Iterating upward would allow reusing the item."
+     },
+     {
+      "q": "Is 0/1 knapsack polynomial?",
+      "a": "No. O(n · W) is pseudo-polynomial: it depends on the numeric capacity W, which can be exponential in the input size (the number of digits of W). The problem is NP-hard in general, but the DP is fast when W is modest."
+     },
+     {
+      "q": "Why doesn't the greedy value-per-weight strategy work for 0/1 knapsack?",
+      "a": "Items can't be split, so taking the best-ratio item can waste capacity. With capacity 50 and items (10, 60), (20, 100), (30, 120), greedy by ratio takes the first two for 160, but the second and third give 220."
+     },
+     {
+      "q": "How do you find which items were chosen?",
+      "a": "Keep the full 2D table. Starting at (n, W), if dp[i][c] differs from dp[i − 1][c], item i was taken, so record it and subtract its weight; either way move to row i − 1."
+     }
+    ],
+    "deep": "#### Intuition\n\nConsider items one at a time. For the current item, either it isn't in the optimal bag (so the answer is the best without it), or it is (so the rest of the bag is the best selection of earlier items in the remaining capacity). Both options refer to the problem with one fewer item, which is why a table over (items considered, capacity) works.\n\n#### Worked example\n\nCapacity 5; items (weight, value): A (1, 1), B (3, 4), C (4, 5).\n\n| capacity → | 0 | 1 | 2 | 3 | 4 | 5 |\n|---|---|---|---|---|---|---|\n| no items | 0 | 0 | 0 | 0 | 0 | 0 |\n| + A (1, 1) | 0 | 1 | 1 | 1 | 1 | 1 |\n| + B (3, 4) | 0 | 1 | 1 | 4 | 5 | 5 |\n| + C (4, 5) | 0 | 1 | 1 | 4 | 5 | 6 |\n\nAt capacity 5 with C: max(skip C: 5, take C: dp[1] + 5 = 1 + 5 = 6) = **6** (items A and C).\n\n#### Code\n\n```cpp\nint knapsack01(const vector<int>& w, const vector<int>& v, int W) {\n    vector<int> dp(W + 1, 0);                        // dp[c]: best value within capacity c\n    for (int i = 0; i < (int)w.size(); i++)\n        for (int c = W; c >= w[i]; c--)              // downward: dp[c - w] is from before item i\n            dp[c] = max(dp[c], dp[c - w[i]] + v[i]);\n    return dp[W];\n}\n```\n\n```python\ndef knapsack_01(weights, values, W):\n    dp = [0] * (W + 1)\n    for w, v in zip(weights, values):\n        for c in range(W, w - 1, -1):\n            dp[c] = max(dp[c], dp[c - w] + v)\n    return dp[W]\n\ndef knapsack_items(weights, values, W):\n    \"\"\"Full table to recover which items were taken.\"\"\"\n    n = len(weights)\n    dp = [[0] * (W + 1) for _ in range(n + 1)]\n    for i in range(1, n + 1):\n        w, v = weights[i - 1], values[i - 1]\n        for c in range(W + 1):\n            dp[i][c] = dp[i - 1][c]\n            if w <= c:\n                dp[i][c] = max(dp[i][c], dp[i - 1][c - w] + v)\n    taken, c = [], W\n    for i in range(n, 0, -1):                 # walk back: did item i change the value?\n        if dp[i][c] != dp[i - 1][c]:\n            taken.append(i - 1)\n            c -= weights[i - 1]\n    return dp[n][W], taken[::-1]\n```\n\n#### Why the loop goes downward\n\nWith one array, `dp[c - w]` must still hold the value **before** considering the current item. Looping capacities downward updates larger capacities first, so the smaller `dp[c - w]` hasn't changed yet. Looping upward would let `dp[c - w]` already include the current item, which is exactly the unbounded knapsack (items reusable).\n\n#### Complexity\n\n$O(n \\cdot W)$ time, $O(W)$ space (or $O(n \\cdot W)$ to reconstruct the chosen items). This is pseudo-polynomial: polynomial in the numeric value $W$, exponential in the number of bits needed to write $W$; 0/1 knapsack is NP-hard in general.\n\n#### Edge cases and bugs\n\n- Upward loop in the 1D version: silently turns it into unbounded knapsack.\n- \"At most W\" (initialize with 0) versus \"exactly W\" (initialize `dp[0] = 0`, others −∞).\n- Huge W with few items: switch the DP to be over total value, or enumerate subsets (meet in the middle for n ≤ 40).\n\n#### Variants\n\n- Subset sum, partition equal subset sum, target sum (count assignments of + and −).\n- Last stone weight II: split into two groups with the closest sums (subset sum up to total / 2).\n- Ones and zeroes: two capacities (zeros and ones), 2D knapsack.\n- Knapsack with item counts (bounded): binary splitting of counts into 0/1 items.\n\nConnects to: subset sum and partition, unbounded knapsack, space optimization, greedy fundamentals (fractional knapsack).",
+    "signals": [
+     "choose a subset of items under a capacity or budget to maximize value",
+     "each item can be used at most once",
+     "\"can a subset reach exactly this sum\", \"split into two groups\"",
+     "a small numeric capacity (up to about 10^5) and a few hundred items"
+    ],
+    "template": "```cpp\n// 0/1 knapsack skeleton: items once each, capacities downward.\ntemplate <class Combine>\nvector<long long> knapsack(const vector<int>& weight, const vector<long long>& value, int W,\n                           long long init, Combine combine) {\n    vector<long long> dp(W + 1, init);       // init: 0 for \"at most W\", -INF for \"exactly W\"\n    dp[0] = 0;\n    for (size_t i = 0; i < weight.size(); i++)\n        for (int c = W; c >= weight[i]; c--)  // downward = each item at most once\n            dp[c] = combine(dp[c], dp[c - weight[i]] + value[i]);\n    return dp;\n}\n// max value: knapsack(w, v, W, 0, [](long long a, long long b) { return max(a, b); })\n```"
    }
   },
   {
@@ -12635,9 +13108,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Subset sum asks whether some of the numbers can add up to exactly a target, like checking whether you can pay an exact amount with the coins in your pocket. You track every total you can make, adding one number at a time. Splitting numbers into two groups with equal sums is the same question with the target set to half the total.",
+    "interview": [
+     "`can[s]` = some subset of the items seen so far sums to s. For each x, for s from T down to x: `can[s] |= can[s - x]`. **O(n · T)**.",
+     "**Partition equal subset sum**: total must be even; target = total / 2.",
+     "**Target sum** (assign + or − to each number to reach S): the plus group P satisfies `P = (total + S) / 2`; count subsets with that sum (requires total + S even and non-negative, |S| ≤ total).",
+     "Counting version: `ways[s] += ways[s - x]`, with `ways[0] = 1`. Zeros double the count (both signs), which the recurrence handles.",
+     "**Bitset** speed-up in C++: `bits |= bits << x` does a whole row in O(T / 64).",
+     "Last stone weight II: the largest achievable sum ≤ total / 2."
+    ],
+    "questions": [
+     {
+      "q": "How do you check whether an array can be split into two subsets with equal sums?",
+      "a": "If the total is odd, it can't. Otherwise, check whether some subset sums to total / 2 with subset-sum DP: a boolean array of reachable sums, updated for each number from high sums to low. It runs in O(n · total)."
+     },
+     {
+      "q": "How does \"target sum\" (assigning + or − to every number) become subset sum?",
+      "a": "If P is the sum of the numbers given + and N the rest, then P − N = target and P + N = total, so P = (total + target) / 2. The number of sign assignments equals the number of subsets summing to P, which a counting subset-sum DP computes."
+     },
+     {
+      "q": "Why must the inner loop go from high sums to low?",
+      "a": "can[s − x] must reflect subsets that don't include the current number yet. Going downward updates larger sums first, so the smaller sums read are still from before this number, and each number is used at most once."
+     },
+     {
+      "q": "How does a bitset speed up subset sum?",
+      "a": "Represent reachable sums as bits and update with reach |= reach << x, which processes 64 sums per machine word. The complexity drops to O(n · T / 64), a big constant-factor gain."
+     },
+     {
+      "q": "How do you minimize the difference between two groups' sums?",
+      "a": "Compute all reachable subset sums up to total / 2 and take the largest one, s. The best difference is total − 2s, since the other group then sums to total − s."
+     }
+    ],
+    "deep": "#### Intuition\n\nSubset sum is 0/1 knapsack where every item's value equals its weight and the question is feasibility. The set of reachable sums grows as you add numbers: each new number x adds x to every sum already reachable. Tracking reachable sums in a boolean array (or bitset) makes this linear per number.\n\n#### Worked example: partition [1, 5, 11, 5]\n\nTotal 22, target 11.\n\n| after | reachable sums up to 11 |\n|---|---|\n| start | 0 |\n| 1 | 0, 1 |\n| 5 | 0, 1, 5, 6 |\n| 11 | 0, 1, 5, 6, 11 |\n| 5 | 0, 1, 5, 6, 10, 11 |\n\n11 is reachable ({11} or {1, 5, 5}), so the array can be split into two equal halves.\n\n#### Code\n\n```cpp\nbool canPartition(const vector<int>& nums) {\n    int total = accumulate(nums.begin(), nums.end(), 0);\n    if (total % 2) return false;\n    int T = total / 2;\n    vector<bool> can(T + 1, false);\n    can[0] = true;\n    for (int x : nums)\n        for (int s = T; s >= x; s--)                  // downward: each number once\n            if (can[s - x]) can[s] = true;\n    return can[T];\n}\n\n// Bitset version: each number shifts the whole reachable set at once.\nbool canPartitionBitset(const vector<int>& nums) {\n    int total = accumulate(nums.begin(), nums.end(), 0);\n    if (total % 2) return false;\n    bitset<20001> reach;                               // sums up to 20000 (problem bound)\n    reach[0] = 1;\n    for (int x : nums) reach |= reach << x;\n    return reach[total / 2];\n}\n```\n\n```python\ndef find_target_sum_ways(nums, target):\n    total = sum(nums)\n    if abs(target) > total or (total + target) % 2:\n        return 0\n    goal = (total + target) // 2              # sum of the numbers given a '+'\n    ways = [0] * (goal + 1)\n    ways[0] = 1\n    for x in nums:\n        for s in range(goal, x - 1, -1):\n            ways[s] += ways[s - x]\n    return ways[goal]\n\ndef last_stone_weight_ii(stones):\n    total = sum(stones)\n    can = 1                                   # Python int as a bitset of reachable sums\n    for x in stones:\n        can |= can << x\n    best = max(s for s in range(total // 2 + 1) if can >> s & 1)\n    return total - 2 * best\n```\n\n#### Why target sum reduces to subset sum\n\nSplit the numbers into P (given +) and N (given −). Then P − N = S and P + N = total, so P = (total + S) / 2. Counting sign assignments equals counting subsets with sum P. If total + S is odd or negative, the answer is 0.\n\n#### Complexity\n\n$O(n \\cdot T)$ time, $O(T)$ space; the bitset version runs in $O(n \\cdot T / 64)$.\n\n#### Edge cases and bugs\n\n- Odd total: partition is impossible.\n- Target sum with |S| > total: 0 ways (and an index error if you don't check).\n- Zeros in target sum: each zero doubles the count; the counting recurrence with the inner loop down to x = 0 (`range(goal, -1, -1)`) handles it; don't skip zeros.\n- Upward loops reuse numbers.\n\n#### Variants\n\n- Partition into k equal-sum subsets (bitmask DP or backtracking).\n- Minimum subset sum difference (last stone weight II).\n- Count subsets with sum at most k, number of subsets with a given XOR (bitwise DP).\n- Split an array into two parts with equal averages (DP over (count, sum)).\n\nConnects to: 0/1 knapsack, combinations vs permutations counting, bitmask enumeration, meet in the middle.",
+    "signals": [
+     "can some subset of the numbers sum to exactly a target",
+     "split numbers into two groups with equal (or closest) sums",
+     "assign + or − to each number to reach a target",
+     "small total sum (up to about 10^4 or 10^5) with up to a few hundred numbers"
+    ],
+    "template": "```cpp\n// Subset-sum DP over reachable sums (counting version; use OR for feasibility).\nlong long countSubsetsWithSum(const vector<int>& nums, int target) {\n    vector<long long> ways(target + 1, 0);\n    ways[0] = 1;                                      // the empty subset\n    for (int x : nums)\n        for (int s = target; s >= x; s--)             // downward: each number used once\n            ways[s] += ways[s - x];\n    return ways[target];\n}\n```"
    }
   },
   {
@@ -12660,9 +13169,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "In the unbounded knapsack you may take each kind of item as many times as you like, like buying as many copies of a product as fit in your budget. Making change with the fewest coins is the classic example: for each amount, try ending with each coin and use the best answer for the amount left over. Filling amounts from small to large lets a coin be reused naturally.",
+    "interview": [
+     "State `dp[c]` over capacity (amount); transition over item types: `dp[c] = best(dp[c], dp[c - w] ⊕ v)`.",
+     "One array, capacity loop **upward** (from w to W): `dp[c - w]` may already include this item, which is exactly what reuse means.",
+     "**Coin change (minimum coins)**: `dp[a] = min(dp[a], dp[a - coin] + 1)`, `dp[0] = 0`, others ∞; return −1 if still ∞. **O(amount · coins)**.",
+     "**Rod cutting** (maximize price): `dp[L] = max(dp[L - len] + price[len])`.",
+     "Counting ways (coin change II) is also unbounded, but loop order decides combinations vs permutations.",
+     "Greedy coin change only works for canonical coin systems."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the minimum number of coins to make an amount, with unlimited coins?",
+      "a": "dp[a] = min over coins c ≤ a of dp[a − c] + 1, with dp[0] = 0 and everything else infinity. Fill amounts from 0 upward; if dp[amount] is still infinity, the amount can't be made. It's O(amount · coins)."
+     },
+     {
+      "q": "What is the difference between the loops for 0/1 and unbounded knapsack?",
+      "a": "With one array, 0/1 knapsack loops capacity downward so dp[c − w] excludes the current item, while unbounded knapsack loops upward so dp[c − w] may already include it, allowing repeats."
+     },
+     {
+      "q": "Why does the greedy \"largest coin first\" fail for coin change in general?",
+      "a": "With coins {1, 3, 4} and amount 6, greedy takes 4 + 1 + 1, three coins, while 3 + 3 needs two. Greedy only works for special (canonical) coin systems like common currencies."
+     },
+     {
+      "q": "How do you solve rod cutting?",
+      "a": "For each length L, try every first piece length len ≤ L, and take the best price[len] + dp[L − len], with dp[0] = 0. Pieces can repeat, so it's unbounded knapsack over lengths, O(n²)."
+     }
+    ],
+    "deep": "#### Intuition\n\nWith unlimited copies, the last item added to an optimal bag of capacity $c$ could be any item type $i$ with $w_i \\le c$, and the rest is an optimal bag of capacity $c - w_i$, which may itself contain more copies of item $i$. So each capacity depends on smaller capacities of the same \"all items allowed\" problem. Filling capacities upward in one array expresses exactly that.\n\n#### Worked example: coin change, coins [1, 2, 5], amount 11\n\n| a | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n| dp | 0 | 1 | 1 | 2 | 2 | 1 | 2 | 2 | 3 | 3 | 2 | 3 |\n\n`dp[11] = min(dp[10] + 1, dp[9] + 1, dp[6] + 1) = min(3, 4, 3) = 3` (5 + 5 + 1).\n\n#### Code\n\n```cpp\nint coinChange(const vector<int>& coins, int amount) {\n    const int INF = INT_MAX / 2;\n    vector<int> dp(amount + 1, INF);\n    dp[0] = 0;\n    for (int coin : coins)\n        for (int a = coin; a <= amount; a++)          // upward: this coin can be reused\n            dp[a] = min(dp[a], dp[a - coin] + 1);\n    return dp[amount] >= INF ? -1 : dp[amount];\n}\n\nint rodCutting(const vector<int>& price, int n) {     // price[len - 1] for a piece of length len\n    vector<int> dp(n + 1, 0);\n    for (int L = 1; L <= n; L++)\n        for (int len = 1; len <= L && len <= (int)price.size(); len++)\n            dp[L] = max(dp[L], dp[L - len] + price[len - 1]);\n    return dp[n];\n}\n```\n\n```python\ndef unbounded_knapsack(weights, values, W):\n    dp = [0] * (W + 1)\n    for w, v in zip(weights, values):\n        for c in range(w, W + 1):           # upward: reuse allowed\n            dp[c] = max(dp[c], dp[c - w] + v)\n    return dp[W]\n\ndef min_coins(coins, amount):\n    INF = float(\"inf\")\n    dp = [0] + [INF] * amount\n    for a in range(1, amount + 1):\n        dp[a] = min((dp[a - c] + 1 for c in coins if c <= a), default=INF)\n    return -1 if dp[amount] == INF else dp[amount]\n```\n\nFor minimum coins (and maximum value), the loop order (coins outside or amounts outside) doesn't matter; for **counting** it does (next concept).\n\n#### Complexity\n\n$O(W \\cdot k)$ for $k$ item types, $O(W)$ space.\n\n#### Edge cases and bugs\n\n- `INT_MAX + 1` overflow when extending an unreachable state; use `INT_MAX / 2` or check first.\n- Amount 0: zero coins, not −1.\n- Coins larger than the amount: skipped by the loop bounds.\n- Using the 0/1 downward loop by mistake: each coin used at most once.\n\n#### Variants\n\n- Coin change II (count combinations), combination sum IV (count ordered sequences).\n- Perfect squares (items are squares), minimum cost for tickets (a variant with durations), integer break.\n- Bounded knapsack (each item up to k copies): binary splitting into 0/1 items or a monotonic queue.\n\nConnects to: 0/1 knapsack, combinations vs permutations counting, DP on numbers, greedy fundamentals.",
+    "signals": [
+     "unlimited copies of each item, coin or piece",
+     "fewest coins or items to make an exact amount",
+     "cut something into pieces of given sizes to maximize value",
+     "\"you may use each element any number of times\""
+    ],
+    "template": "```cpp\n// Unbounded knapsack: capacities upward so an item can be taken again.\nvector<long long> unbounded(const vector<int>& weight, const vector<long long>& value, int W) {\n    vector<long long> dp(W + 1, LLONG_MIN / 2);       // -INF: capacity not reachable exactly\n    dp[0] = 0;\n    for (size_t i = 0; i < weight.size(); i++)\n        for (int c = weight[i]; c <= W; c++)          // upward = reuse allowed\n            dp[c] = max(dp[c], dp[c - weight[i]] + value[i]);\n    return dp;                                        // for \"at most W\" initialize with 0\n}\n```"
    }
   },
   {
@@ -12684,9 +13225,34 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "When counting ways to reach an amount, it matters whether 1 + 2 and 2 + 1 count as the same way or as two different ways. If the outer loop goes over the coins, each combination is built in one fixed coin order, so it is counted once. If the outer loop goes over the amounts, every ordering is built separately, so different orders are counted as different ways.",
+    "interview": [
+     "**Combinations** (order doesn't matter, coin change II): `for coin in coins: for a = coin..amount: ways[a] += ways[a - coin]`.",
+     "**Permutations / ordered sequences** (combination sum IV, climbing stairs with steps): `for a = 1..amount: for coin in coins: ways[a] += ways[a - coin]`.",
+     "Base `ways[0] = 1` in both.",
+     "Why: with coins outside, when coin k is processed, only coins ≤ k have been used, so every combination is generated in non-decreasing coin order exactly once.",
+     "Example, coins {1, 2}, amount 3: combinations 2 ({1,1,1}, {1,2}); permutations 3 (1+1+1, 1+2, 2+1).",
+     "Same idea in 0/1 settings: counting subsets (combinations) uses items outside."
+    ],
+    "questions": [
+     {
+      "q": "Why does putting the coin loop outside count combinations rather than permutations?",
+      "a": "With coins in the outer loop, each coin is added only on top of ways that use earlier coins, so every multiset of coins is built in one fixed order, all copies of the first coin, then the second, and so on. Each combination is therefore counted exactly once."
+     },
+     {
+      "q": "How do you count ordered sequences that sum to a target instead?",
+      "a": "Put the amount loop outside and the coin loop inside: ways[a] = sum of ways[a − c] over all coins c. Every amount can end with any coin, so different orders produce different sequences, each counted separately."
+     },
+     {
+      "q": "With coins {1, 2} and amount 3, what do the two versions return?",
+      "a": "Combinations: 2 ({1, 1, 1} and {1, 2}). Ordered sequences: 3 (1+1+1, 1+2, 2+1)."
+     },
+     {
+      "q": "Why is ways[0] = 1 in both versions?",
+      "a": "There is exactly one way to make amount zero: choose nothing. Every counted way to make a positive amount extends that empty choice, so the base must be 1 rather than 0."
+     }
+    ],
+    "deep": "#### Intuition\n\nA combination is a multiset of coins; to count each multiset once, fix a canonical order in which it's built, such as \"all 1s, then all 2s, then all 5s\". Putting the coin loop outside does exactly that: when processing coin k, the table only contains ways using coins before k, and adding coin k on top extends them in that fixed order. With the amount loop outside, every amount can end with any coin, so every order of the same coins is a different path to the total.\n\n#### Worked example: coins {1, 2}, amount 4\n\nCoins outside (combinations):\n\n| after coin | ways[0..4] |\n|---|---|\n| start | 1 0 0 0 0 |\n| 1 | 1 1 1 1 1 |\n| 2 | 1 1 2 2 3 |\n\n`ways[4] = 3`: {1,1,1,1}, {1,1,2}, {2,2}.\n\nAmounts outside (ordered):\n\n| a | ways[a] = ways[a-1] + ways[a-2] |\n|---|---|\n| 0 | 1 |\n| 1 | 1 |\n| 2 | 2 |\n| 3 | 3 |\n| 4 | 5 |\n\n`ways[4] = 5`: 1111, 112, 121, 211, 22.\n\n#### Code\n\n```cpp\nlong long countCombinations(const vector<int>& coins, int amount) {\n    vector<long long> ways(amount + 1, 0);\n    ways[0] = 1;\n    for (int c : coins)                      // coins outside: each multiset counted once\n        for (int a = c; a <= amount; a++)\n            ways[a] += ways[a - c];\n    return ways[amount];\n}\n\nlong long countOrdered(const vector<int>& nums, int target) {\n    vector<unsigned long long> ways(target + 1, 0);   // unsigned: the problem only guarantees\n    ways[0] = 1;                                       // the final answer fits\n    for (int a = 1; a <= target; a++)        // amounts outside: every order counted\n        for (int x : nums)\n            if (x <= a) ways[a] += ways[a - x];\n    return (long long)ways[target];\n}\n```\n\n```python\ndef count_both(coins, amount):\n    combos = [1] + [0] * amount\n    for c in coins:\n        for a in range(c, amount + 1):\n            combos[a] += combos[a - c]\n    ordered = [1] + [0] * amount\n    for a in range(1, amount + 1):\n        ordered[a] = sum(ordered[a - c] for c in coins if c <= a)\n    return combos[amount], ordered[amount]\n```\n\n#### Complexity\n\nBoth $O(\\text{amount} \\cdot k)$ time and $O(\\text{amount})$ space; only the loop order differs.\n\n#### Edge cases and bugs\n\n- Swapping the loops by accident gives the other count, silently.\n- Ordered counts grow fast; use a modulus or unsigned arithmetic as the problem specifies.\n- `ways[0] = 1` (one way to make zero: choose nothing).\n\n#### Variants\n\n- Number of dice rolls with a target sum (ordered: the dice are distinct positions, dp over dice count).\n- Count partitions of n (combinations with coins 1..n).\n- Count compositions of n with parts in a set (ordered).\n\nConnects to: unbounded knapsack, counting DP and modulo, linear DP (climbing stairs is the ordered case)."
    }
   },
   {
@@ -12708,9 +13274,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Sometimes each item uses up two kinds of resource, like a trip that costs both money and vacation days. The knapsack table then has one dimension per resource, and each item is tested against both budgets at once. Everything else works exactly like the ordinary knapsack.",
+    "interview": [
+     "State `dp[a][b]` = best with at most a units of resource 1 and b of resource 2. For each item (costs x, y): for a from A down to x, for b from B down to y: `dp[a][b] = max(dp[a][b], dp[a-x][b-y] + value)`.",
+     "**Ones and zeroes**: strings are items, costs are their counts of 0s and 1s, value 1 each; maximize the number of strings with at most m zeros and n ones. **O(L · m · n)**.",
+     "Both capacity loops go **downward** for 0/1 items.",
+     "A third dimension is usually \"count of items chosen\" (choose exactly k items).",
+     "Memory grows with each dimension; check the product of capacities against the limits."
+    ],
+    "questions": [
+     {
+      "q": "How do you solve \"ones and zeroes\", choosing the most strings with at most m zeros and n ones?",
+      "a": "Treat each string as an item costing its number of zeros and ones, with value 1. Use a 2D knapsack dp[i][j] = most strings with at most i zeros and j ones, and for each string update i and j downward: dp[i][j] = max(dp[i][j], dp[i − zeros][j − ones] + 1)."
+     },
+     {
+      "q": "Why do both capacity loops run downward?",
+      "a": "For 0/1 items, each update must read the table as it was before this item was considered. Iterating both dimensions from high to low guarantees dp[i − zeros][j − ones] hasn't been updated for the current item yet."
+     },
+     {
+      "q": "What is the complexity of a two-constraint knapsack?",
+      "a": "O(number of items · capacity1 · capacity2) time and O(capacity1 · capacity2) space with the rolling technique. It's practical when the product of the capacities is up to about 10^5 to 10^6."
+     },
+     {
+      "q": "How do you handle \"choose exactly k items\" in a knapsack?",
+      "a": "Add the number of items chosen as another dimension: dp[count][capacity]. Process count downward along with capacity for 0/1 items, and read the answer at count = k."
+     }
+    ]
    }
   },
   {

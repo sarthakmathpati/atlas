@@ -8,9 +8,9 @@
 // namespace with the usual headers, so snippets may reuse names. Python blocks (```python) are
 // parsed with `ast.parse`. A block whose first line is `// sketch` or `# sketch` is skipped (for
 // deliberately partial code). Needs g++ and python3; missing tools are reported and skipped.
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -62,13 +62,24 @@ function blocksOf(text) {
 
 const skipped = (code) => /^\s*(\/\/|#) sketch\b/.test(code);
 
-function checkCpp(blocks, tmp) {
-  const failures = [];
-  // One compile per block keeps error messages attributable; the prelude is precompiled.
+function compile(file, cwd) {
+  return new Promise((resolve) => {
+    const child = spawn("g++", ["-std=c++20", "-fsyntax-only", "-Wall", "-Wno-unused", file], {
+      cwd,
+    });
+    let stderr = "";
+    child.stderr.on("data", (d) => (stderr += d));
+    child.on("close", (status) => resolve({ status, stderr: stderr.trim() }));
+  });
+}
+
+async function checkCpp(blocks, tmp) {
+  // One compile per block keeps error messages attributable; the prelude is precompiled and
+  // blocks compile in parallel.
   const header = join(tmp, "prelude.hpp");
   writeFileSync(header, PRELUDE);
   spawnSync("g++", ["-std=c++20", "-x", "c++-header", header, "-o", `${header}.gch`]);
-  blocks.forEach((b, i) => {
+  const files = blocks.map((b, i) => {
     const body = b.code
       .split("\n")
       .filter((l) => !/^\s*#include\b/.test(l) && !/^\s*using namespace std;\s*$/.test(l))
@@ -79,13 +90,22 @@ function checkCpp(blocks, tmp) {
       : `#include "prelude.hpp"\nnamespace block_${i} {\n${body}\n}\n`;
     const file = join(tmp, `b${i}.cpp`);
     writeFileSync(file, src);
-    const r = spawnSync("g++", ["-std=c++20", "-fsyntax-only", "-Wall", "-Wno-unused", file], {
-      cwd: tmp,
-      encoding: "utf8",
-    });
-    const msg = `${r.stderr}`.trim();
-    if (r.status !== 0) failures.push({ block: b, message: msg });
-    else if (/warning:/.test(msg)) failures.push({ block: b, message: msg, warning: true });
+    return file;
+  });
+  const results = new Array(blocks.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < files.length) {
+      const i = next++;
+      results[i] = await compile(files[i], tmp);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, availableParallelism()) }, worker));
+  const failures = [];
+  results.forEach(({ status, stderr }, i) => {
+    if (status !== 0) failures.push({ block: blocks[i], message: stderr });
+    else if (/warning:/.test(stderr))
+      failures.push({ block: blocks[i], message: stderr, warning: true });
   });
   return failures;
 }
@@ -108,7 +128,7 @@ function checkPython(blocks) {
   return JSON.parse(r.stdout).map(([i, message]) => ({ block: blocks[i], message }));
 }
 
-function main() {
+async function main() {
   const wanted = process.argv.slice(2).filter((a) => !a.startsWith("-"));
   const subjects = readdirSync(CONTENT).filter(
     (d) => statSync(join(CONTENT, d)).isDirectory() && (!wanted.length || wanted.includes(d)),
@@ -129,7 +149,7 @@ function main() {
   const tmp = mkdtempSync(join(tmpdir(), "atlas-code-"));
   let failures = [];
   try {
-    if (has("g++", ["--version"])) failures.push(...checkCpp(cpp, tmp));
+    if (has("g++", ["--version"])) failures.push(...(await checkCpp(cpp, tmp)));
     else console.warn("! g++ not found; C++ blocks not checked");
     if (has("python3", ["--version"])) failures.push(...checkPython(py));
     else console.warn("! python3 not found; Python blocks not checked");
@@ -155,4 +175,4 @@ function main() {
   process.exit(errors ? 1 : 0);
 }
 
-main();
+await main();
