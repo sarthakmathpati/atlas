@@ -489,14 +489,21 @@ function TableRows({ rows, today }: { rows: ProblemRow[]; today: string }) {
             <td className="w-9 py-2.5 pr-1 pl-4 align-middle">
               <ProblemStatusGlyph state={row.state} />
             </td>
-            <td className="min-w-[220px] px-2 py-2.5">{titleOf(row)}</td>
+            <td className="min-w-[200px] px-2 py-2.5">
+              {titleOf(row)}
+              {row.info.conceptIds.length > 0 && (
+                <span className="mt-1 block lg:hidden">
+                  <PatternChips ids={row.info.conceptIds} max={1} />
+                </span>
+              )}
+            </td>
             <td className="px-2 py-2.5">
               <DifficultyChip difficulty={row.info.difficulty} />
             </td>
-            <td className="px-2 py-2.5">
+            <td className="px-2 py-2.5 max-lg:hidden">
               <PatternChips ids={row.info.conceptIds} />
             </td>
-            <td className="px-2 py-2.5 text-sm">
+            <td className="px-2 py-2.5 text-sm max-lg:hidden">
               {row.lastResult ? (
                 <ResultLabel result={row.lastResult} short />
               ) : (
@@ -680,10 +687,16 @@ function ProblemList({
               />
               <SortHeader label="Problem" sortKey="title" filters={filters} set={set} />
               <SortHeader label="Difficulty" sortKey="difficulty" filters={filters} set={set} />
-              <th scope="col" className="px-2 py-2 text-left font-medium text-muted">
+              <th scope="col" className="px-2 py-2 text-left font-medium text-muted max-lg:hidden">
                 Patterns
               </th>
-              <SortHeader label="Last result" sortKey="result" filters={filters} set={set} />
+              <SortHeader
+                label="Last result"
+                sortKey="result"
+                filters={filters}
+                set={set}
+                className="max-lg:hidden"
+              />
               <SortHeader
                 label="Last tried"
                 sortKey="last"
@@ -783,7 +796,7 @@ export default function ProblemsPage() {
       ) : (
         <>
           <StatsStrip rows={rows} today={today} />
-          <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center">
+          <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center">
             <div className="relative min-w-0 flex-1">
               <Search
                 size={16}

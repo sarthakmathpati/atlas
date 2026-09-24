@@ -51,8 +51,15 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 - **Types**: `src/lib/types.ts` (section 4). zod schemas for every stored entity in
   `src/lib/storage/schemas.ts`; AI JSON schemas in `src/lib/ai/schemas.ts`.
 - **State**: Zustand, one store per domain in `src/stores/` (profile, activity, focus timer,
-  concept statuses, toasts, shell UI), loaded by `app/providers/StoreHydrator.tsx` once storage is
-  ready, reloaded after import/reset and on remote changes. Stores write through the Repository.
+  concept statuses and checks, problems, mistake tags, today's date, toasts, shell UI), loaded by
+  `stores/hydrate.ts` (via `app/providers/StoreHydrator.tsx`) once storage is ready, reloaded after
+  import/reset and on remote changes. Stores write through the Repository. Saving an attempt
+  (`problemStore.saveAttempt`) reschedules, refreshes linked concept statuses, logs activity and
+  ticks a matching Today item.
+- **Algorithms** (section 11, pure, tested): `lib/srs/` (intervals, grace, problem and concept
+  scheduling), `lib/mastery/status.ts` (knowledge, practice, status rules, "what would turn it
+  green"), `lib/review/queue.ts`, `lib/mistakes/stats.ts`. Problem helpers in `lib/problems/`
+  (catalog of seed plus custom problems, filters, quick add, CSV, offline hints, progress labels).
 - **Routing**: hash routes (`#/map`, `#/problems/lc-1`) from a small router in `src/app/router.ts`;
   `src/app/routes.tsx` maps every route to a lazy page. Links are plain `<a href="#/…">`.
 - **Shell**: `src/app/shell/` (AppShell, Sidebar, TopBar, MobileNav, PageHeader, PageFrame,
@@ -178,4 +185,44 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     what works). Concept, problem and design pages already show everything the seed data knows.
 28. **Per-browser conveniences in localStorage** (never synced, always in try/catch):
     `atlas.theme`, `atlas.sidebar`, `atlas.recent` (palette), `atlas.setup.map|search` (Today
-    checklist), `atlas.askWidth` (drawer width).
+    checklist), `atlas.askWidth` (drawer width), `atlas.split` (workspace split), `atlas.template`
+    (start attempts from the starter template).
+29. **Problem scheduling reading of 11.1**: "first ever attempt" means the problem has never been
+    scheduled (`srs.dueAt` unset). Retirement needs a solo solve made *at* step 5 or higher (the
+    60-day interval was reached) with `soloStreak ≥ 3` after it; a retired problem that is later
+    not solved alone comes back. Status is never downgraded (solved once stays solved). Deleting an
+    attempt keeps the schedule. CSV imports replay the whole history through the same scheduler
+    (`replaySchedule`), so imported and hand-saved history schedule identically.
+30. **Mastery engine pulled into Phase 3** (section 11.2 in `lib/mastery/status.ts`), because an
+    attempt must update its concepts' statuses. Without checks, attempts on linked problems make a
+    concept "learning"; strong needs checks (Phase 4). Statuses are recomputed after attempts, on
+    start and when the local date changes (`clockStore`); only changed ConceptStates are written.
+31. **Draft = attempt in progress**: `ProblemDraft` adds `mode`, `startedAt`, `elapsedMs`,
+    `hintsUsed`, `sawSolution`, `revealed` to the spec's `{ language, code, updatedAt }`, so reloads
+    keep the timer, hints and re-solve state. Autosave 2 s after the last change, plus on
+    `pagehide`, tab hidden and leaving the page. A re-solve draft forces `?mode=resolve`, and a
+    re-solve opened over an unsaved normal draft asks before replacing it.
+32. **Workspace layout**: full-bleed (no PageFrame, like the map); a resizable split from 1024 px,
+    "Problem" and "Code" tabs below; the workspace is keyed by problem and mode, so each starts
+    from its own draft. Re-solve hides patterns, insight, notes, attempts and mistakes; revealing
+    marks the attempt "saw the solution". Hints used lock "Solved alone"; a revealed or opened
+    solution locks both "solved" results.
+33. **Offline hint ladder** (F11): `src/data/hintLadder.ts` has original per-topic text (a broad
+    area that doesn't name the technique, a guiding question, a step outline) with subject and
+    generic fallbacks. Level 2 names the pattern with its scope and signals; level 3 shows the
+    pattern's template, or the outline until templates are written (Phase 5). "Show full solution"
+    opens the LeetCode editorial (quant puzzles show their answer).
+34. **Offline "Suggest patterns"** in quick add: patterns of the seed problems whose titles share
+    the most distinctive words (IDF-weighted). Claude suggestions arrive in Phase 6.
+35. **Library filters live in the URL** (`#/problems?status=solved&difficulty=easy&topic=dsa`);
+    a subject id works as a topic filter. Rows render progressively (150, then more on scroll).
+36. **CSV import**: header synonyms, `,` `;` or tab, dates day first by default (switchable),
+    rows without a result count as the chosen default, unmatched rows can become own problems,
+    attempt ids are stable hashes so re-importing adds nothing, and the import can be undone.
+37. **Links without a scheme** go through `withScheme()` (a protocol-relative URL resolved against
+    leetcode.com), because a literal `https://${…}` would fail the artifact URL check.
+38. **Mistake numbers**: counts once per attempt; the trend compares the window with the one
+    before it (all time: last 30 days against the 30 before); the checklist is the top 5 of the
+    last 90 days, topped up from all time; archived tags stay on attempts but leave the pickers.
+39. **Claude buttons before Phase 6** ("Review my code", "Dry run", "Suggest with Claude") open a
+    short dialog saying what they will do (`LaterClaudeButton`); nothing pretends to work.
