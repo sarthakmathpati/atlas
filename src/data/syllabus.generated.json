@@ -15393,9 +15393,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "An LRU cache keeps a limited number of items and, when it's full, throws out the one that was used least recently. Think of a small desk with room for five books: every time you use a book you put it on top of the pile, and when a new book arrives you remove the one at the bottom. A hash map finds any book instantly, and a doubly linked list keeps the pile's order.",
+    "interview": [
+     "Operations `get(key)` and `put(key, value)`, both **O(1)**; capacity fixed.",
+     "**Hash map** key → list node; **doubly linked list** ordered from most to least recently used.",
+     "`get`: if present, move the node to the front and return its value. `put`: update and move to the front, or insert at the front; if over capacity, remove the **back** node and erase its key from the map.",
+     "Use **sentinel head and tail** nodes; store the **key** in each node so eviction can erase the map entry.",
+     "C++: `list<pair<K,V>>` plus `unordered_map<K, list::iterator>` with `splice`. Java: `LinkedHashMap` with access order and `removeEldestEntry`. Python: `OrderedDict` with `move_to_end` and `popitem(last=False)`.",
+     "Follow-ups: thread safety (a lock, or sharded caches), TTL expiry, LFU instead of LRU."
+    ],
+    "questions": [
+     {
+      "q": "How do you implement an LRU cache with O(1) get and put?",
+      "a": "Combine a hash map from key to node with a doubly linked list ordered by recency. get looks up the node and moves it to the front; put updates or inserts at the front and, when over capacity, removes the node at the back and deletes its key from the map. All steps are O(1)."
+     },
+     {
+      "q": "Why a doubly linked list and not a singly linked list or an array?",
+      "a": "Moving an accessed node to the front requires removing it from the middle. A doubly linked list removes a known node in O(1) using its prev pointer; a singly linked list would need O(n) to find the predecessor, and an array would need O(n) shifting."
+     },
+     {
+      "q": "Why does each list node store its key?",
+      "a": "Eviction removes the tail node, and the map entry for that node must be deleted too. The node's stored key tells you which entry to erase."
+     },
+     {
+      "q": "What happens on put for a key that's already in the cache?",
+      "a": "Update its value and move it to the front as most recently used. Nothing is evicted, since the number of keys doesn't change."
+     },
+     {
+      "q": "How would you make an LRU cache thread-safe?",
+      "a": "The simplest way is a single mutex around get and put, since both modify the list. For higher throughput, shard the cache by key hash into several independent LRU caches, each with its own lock."
+     }
+    ],
+    "deep": "#### Intuition\n\nYou need three things fast: find a key (hash map), know which key is least recently used (an ordered structure), and move any key to \"most recent\" when it's touched. A doubly linked list gives O(1) removal of a known node and O(1) insertion at either end, and the hash map gives you the node for a key in O(1). Together every operation is constant time.\n\n#### Worked example: capacity 2\n\n| operation | list (most recent first) | result |\n|---|---|---|\n| put(1, A) | 1 | |\n| put(2, B) | 2 1 | |\n| get(1) | 1 2 | A |\n| put(3, C) | 3 1 (evict 2, the least recent) | |\n| get(2) | 3 1 | miss (−1) |\n| put(4, D) | 4 3 (evict 1) | |\n| get(1) | 4 3 | miss |\n| get(3) | 3 4 | C |\n\n#### Code\n\n```cpp\nclass LRUCache {\n    int capacity;\n    list<pair<int, int>> order;                                   // front = most recent\n    unordered_map<int, list<pair<int, int>>::iterator> where;\npublic:\n    explicit LRUCache(int cap) : capacity(cap) {}\n    int get(int key) {\n        auto it = where.find(key);\n        if (it == where.end()) return -1;\n        order.splice(order.begin(), order, it->second);          // move to front, O(1)\n        return it->second->second;\n    }\n    void put(int key, int value) {\n        if (capacity <= 0) return;                                // nothing can be stored\n        auto it = where.find(key);\n        if (it != where.end()) {\n            it->second->second = value;\n            order.splice(order.begin(), order, it->second);\n            return;\n        }\n        if ((int)order.size() == capacity) {                      // evict the least recent\n            where.erase(order.back().first);\n            order.pop_back();\n        }\n        order.emplace_front(key, value);\n        where[key] = order.begin();\n    }\n};\n```\n\n```python\nclass Node:\n    __slots__ = (\"key\", \"value\", \"prev\", \"next\")\n    def __init__(self, key=0, value=0):\n        self.key, self.value, self.prev, self.next = key, value, None, None\n\nclass LRUCacheManual:\n    \"\"\"Explicit doubly linked list with sentinels (what interviewers usually want to see).\"\"\"\n    def __init__(self, capacity):\n        self.capacity, self.map = capacity, {}\n        self.head, self.tail = Node(), Node()          # head.next = most recent\n        self.head.next, self.tail.prev = self.tail, self.head\n\n    def _remove(self, node):\n        node.prev.next, node.next.prev = node.next, node.prev\n\n    def _add_front(self, node):\n        node.prev, node.next = self.head, self.head.next\n        self.head.next.prev = node\n        self.head.next = node\n\n    def get(self, key):\n        node = self.map.get(key)\n        if node is None:\n            return -1\n        self._remove(node)\n        self._add_front(node)\n        return node.value\n\n    def put(self, key, value):\n        if self.capacity <= 0:\n            return\n        if key in self.map:\n            node = self.map[key]\n            node.value = value\n            self._remove(node)\n            self._add_front(node)\n            return\n        if len(self.map) == self.capacity:\n            lru = self.tail.prev\n            self._remove(lru)\n            del self.map[lru.key]                      # the node stores its key for this\n        node = Node(key, value)\n        self.map[key] = node\n        self._add_front(node)\n```\n\n#### Complexity\n\n`get` and `put` are $O(1)$ average (hash map operations plus constant pointer updates). Space $O(\\text{capacity})$.\n\n#### Why each piece is there\nThe node keeps its own key because eviction starts from the list, not the map: you find the least recent node at the tail and then need its key to delete the map entry. The sentinels remove every special case for an empty list or for the first and last node, so `_remove` and `_add_front` are two lines each. A singly linked list would not do, because removing a node from the middle needs its predecessor, and finding it would take linear time.\n\n#### Library shortcuts, and when to avoid them\nPython's `OrderedDict` (with `move_to_end` and `popitem(last=False)`) and Java's `LinkedHashMap` (with access order and `removeEldestEntry`) already are a hash map threaded through a linked list. They are fine to mention, and fine in production code, but most interviewers ask you to build the list yourself, so write the manual version unless told otherwise.\n\n#### Edge cases and bugs\n\n- `put` on an existing key must update the value **and** refresh recency, without evicting.\n- Capacity 0 or 1.\n- Forgetting to erase the evicted key from the map (memory leak and wrong hits).\n- In C++, storing iterators into a `vector` would be invalidated by reallocation; `list` iterators stay valid after `splice`.\n\n#### Variants\n\n- LFU cache (evict the least frequently used, ties by recency).\n- LRU with time-to-live (expire entries after t seconds; check on access or with a heap).\n- Concurrent LRU caches (lock striping), caches in system design (Redis eviction policies, CDN caches).\n\nConnects to: doubly linked list with hash map, LFU cache, caching (system design), hash table internals."
    }
   },
   {
@@ -15417,9 +15446,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "An LFU cache evicts the item used the fewest times, and among ties, the one used least recently. It keeps items grouped by how often they were used, like shelves labeled \"used once\", \"used twice\" and so on, each ordered by recency. Remembering the lowest non-empty shelf makes finding the item to evict instant.",
+    "interview": [
+     "Maps: `key → (value, freq)` and `freq → list of keys` (most recent first), plus `minFreq`.",
+     "`get`: move the key from list `freq` to list `freq + 1`; if list `freq` became empty and `freq == minFreq`, increment `minFreq`.",
+     "`put` of a new key when full: evict the **least recent** key in list `minFreq`; insert the new key with freq 1 and set `minFreq = 1`.",
+     "All operations **O(1)** (hash maps plus linked lists, with iterators stored per key).",
+     "Compared with LRU: LFU keeps long-term popular items; it can hold stale items that were popular long ago (aging or decay fixes that)."
+    ],
+    "questions": [
+     {
+      "q": "How does an LFU cache find the item to evict in O(1)?",
+      "a": "It groups keys into lists by use count and tracks the smallest count that has any keys, minFreq. The victim is the least recently used key in the minFreq list, found at that list's end in O(1)."
+     },
+     {
+      "q": "How is minFreq maintained?",
+      "a": "When a key's count increases from f to f + 1 and the list for f becomes empty, minFreq becomes f + 1 if it was f. When a new key is inserted, minFreq resets to 1, since the new key has been used once."
+     },
+     {
+      "q": "How are ties between keys with the same frequency broken?",
+      "a": "By recency: each frequency list is ordered from most to least recently used, so eviction takes the least recently used key among those with the minimum frequency."
+     },
+     {
+      "q": "When is LFU better than LRU, and what is its weakness?",
+      "a": "LFU keeps items that are popular over the long term even if they weren't used just now, which suits stable hot sets. Its weakness is that items that were once very popular can stay forever even after they stop being used, unless counts decay over time."
+     }
+    ]
    }
   },
   {
@@ -15439,9 +15491,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "To pick a random item from a set quickly, the items must sit in an array so you can choose a random position. To also delete in constant time, you move the last item into the deleted item's slot and shrink the array, like filling a gap in a row of chairs by moving the last person into it. A hash map remembers where each item sits so you can find it instantly.",
+    "interview": [
+     "`vector<int> vals` + `unordered_map<int, int> index` (value → position).",
+     "**Insert**: if absent, append and record the index. **Remove**: swap the element with the last one, update the moved element's index, pop back, erase from the map. **getRandom**: a random index into `vals`.",
+     "All **O(1)** average.",
+     "**With duplicates**: map value → set of indices; on removal, move the last element and fix its index set.",
+     "The swap-with-last trick works because order in the array doesn't matter."
+    ],
+    "questions": [
+     {
+      "q": "How do you support insert, remove and getRandom in O(1)?",
+      "a": "Store values in an array for uniform random access and a hash map from value to its array index. To remove, copy the last element into the removed element's slot, update its index in the map, pop the last slot and erase the removed value from the map."
+     },
+     {
+      "q": "Why is swapping with the last element necessary for O(1) removal?",
+      "a": "Removing from the middle of an array would shift everything after it, which is O(n). Moving the last element into the hole keeps the array contiguous with a single copy, and the order of elements doesn't matter for a set."
+     },
+     {
+      "q": "How does the design change when duplicates are allowed?",
+      "a": "The map stores, for each value, the set of all indices where it appears. Removal takes any one index from the set, moves the last element there, and updates the moved element's index set by removing the old last index and adding the new one."
+     },
+     {
+      "q": "Why can't a hash set alone support getRandom in O(1)?",
+      "a": "A hash set has no indexable positions, so picking a uniformly random element would require iterating over it or over its buckets, which is O(n) or not uniform. The array provides the random access."
+     }
+    ]
    }
   },
   {
@@ -15461,9 +15536,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "An augmented stack stores a little extra information with each element so it can answer an extra question instantly. A min stack remembers, at every height, the smallest value in the stack so far, so the current minimum is always at hand. A frequency stack groups elements by how many times they were pushed, so it can pop the most frequent one.",
+    "interview": [
+     "**Min stack**: push pairs `(value, min(value, previous min))`; `getMin` reads the top's second field. All O(1).",
+     "Space-saving variant: a second stack pushed only when the new value ≤ current min (popped when equal).",
+     "**Maximum frequency stack**: `freq[x]` and `group[f]` = stack of elements pushed when their frequency reached f; `maxFreq`. Push: increment freq, push onto `group[freq]`. Pop: pop from `group[maxFreq]`, decrement its freq, decrease `maxFreq` if the group empties. O(1).",
+     "Ties in the frequency stack are broken by recency automatically (each group is a stack).",
+     "Related: max stack with popMax (needs an ordered structure, O(log n))."
+    ],
+    "questions": [
+     {
+      "q": "How does a min stack return the minimum in O(1)?",
+      "a": "Each entry stores the value together with the minimum of the stack up to and including that entry. The current minimum is the top entry's stored minimum, and popping automatically restores the previous minimum."
+     },
+     {
+      "q": "How does a maximum frequency stack pop the most frequent element, breaking ties by recency?",
+      "a": "It keeps a count per value and a stack for each frequency level, where each push appends the value to the stack for its new count. Popping takes from the stack at the maximum frequency, which holds the most recent element at that frequency, then decrements its count and lowers the maximum if that stack is empty."
+     },
+     {
+      "q": "Why does the frequency stack keep a value in several level stacks at once?",
+      "a": "A value pushed three times appears in the stacks for frequencies 1, 2 and 3, one entry for each time it reached that count. That way, after popping it from level 3, it's still correctly present at level 2 without any extra work."
+     },
+     {
+      "q": "How can a min stack save space?",
+      "a": "Keep a second stack of minimums and push onto it only when the new value is less than or equal to the current minimum; when popping a value equal to the current minimum, pop the minimum stack too. The equality case matters for duplicates."
+     }
+    ]
    }
   },
   {
@@ -15485,9 +15583,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A time-based key-value store keeps every value a key has had, stamped with the time it was set. Asking for a key at some time returns the value that was current then: the latest one set at or before that moment. Because values arrive in time order, a binary search over each key's history finds the answer quickly.",
+    "interview": [
+     "`set(key, value, t)`: append `(t, value)` to `history[key]`; timestamps are usually strictly increasing per key, so the list stays sorted.",
+     "`get(key, t)`: binary search for the **last** entry with timestamp ≤ t (`upper_bound` − 1); return \"\" if none.",
+     "`set` O(1) amortized, `get` **O(log h)** for h entries of that key.",
+     "If timestamps can arrive out of order, use an ordered map per key (`std::map`, `TreeMap.floorEntry`).",
+     "Related: snapshot arrays, versioned configuration, database MVCC (multi-version concurrency control)."
+    ],
+    "questions": [
+     {
+      "q": "How do you design a key-value store that can return a key's value at any past time?",
+      "a": "Keep, for each key, a list of (timestamp, value) pairs in increasing time order. For get(key, t), binary search for the last pair whose timestamp is at most t and return its value, or an empty result if every timestamp is later."
+     },
+     {
+      "q": "What are the complexities of set and get?",
+      "a": "set appends to the key's list in O(1) amortized, assuming timestamps arrive in increasing order. get is O(log h), where h is the number of versions stored for that key."
+     },
+     {
+      "q": "What changes if set calls can arrive with timestamps out of order?",
+      "a": "The per-key list would no longer be sorted, so use an ordered map from timestamp to value per key. Then set is O(log h) and get uses the map's floor lookup, also O(log h)."
+     },
+     {
+      "q": "Which binary search gives \"the latest timestamp at most t\"?",
+      "a": "Find the first timestamp strictly greater than t (upper_bound) and step back one position. If upper_bound returns the start of the list, no timestamp is at most t."
+     }
+    ]
    }
   },
   {
@@ -15507,9 +15628,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "An iterator hands out elements one at a time through next() and hasNext(), hiding how the data is stored. Designing one means keeping just enough state to know what comes next, like a bookmark in a book. A peeking iterator adds the ability to look at the next element without taking it, and a flattening iterator walks through lists nested inside lists.",
+    "interview": [
+     "**Peeking iterator**: cache the next element (`hasPeeked`, `peekedValue`); `peek` fills the cache; `next` returns the cache if filled.",
+     "**Flatten nested list**: a stack of (list, index) positions, or of iterators; `hasNext` advances until the top is an integer (skipping empty lists). Lazy: O(1) amortized per element, O(depth) memory.",
+     "Eager alternative: flatten everything in the constructor (simpler, O(n) memory up front).",
+     "**Zigzag iterator** over k lists: a queue of (list, index), rotate.",
+     "**Iterator for a BST**: stack of the left spine (see inorder tricks).",
+     "Contract: `next` is valid only when `hasNext` is true; `hasNext` must not consume elements."
+    ],
+    "questions": [
+     {
+      "q": "How do you implement peek() on top of an iterator that only has next() and hasNext()?",
+      "a": "Keep a one-element cache. peek() fetches the next element into the cache if it's empty and returns it; next() returns and clears the cache if it's filled, otherwise delegates to the underlying iterator; hasNext() is true if the cache is filled or the underlying iterator has more."
+     },
+     {
+      "q": "How do you flatten a nested list lazily?",
+      "a": "Keep a stack of positions in the lists being traversed. hasNext() advances the top position: when it points to a nested list, push that list; when a list is exhausted, pop it; stop when the top points to an integer. next() then returns that integer. Each element is visited once, O(depth) memory."
+     },
+     {
+      "q": "Why should hasNext() do the work of finding the next integer in the flattening iterator?",
+      "a": "Nested lists can be empty, like [[]], so knowing whether another integer exists requires skipping empty lists. Doing that in hasNext() makes it answer correctly, and next() can then simply return the integer found."
+     },
+     {
+      "q": "What is the trade-off between eager and lazy iterators?",
+      "a": "An eager iterator precomputes everything into a list in the constructor: simple code, but O(n) memory and upfront time. A lazy iterator computes elements on demand, using little memory and starting immediately, at the cost of more complex state."
+     }
+    ]
    }
   },
   {
@@ -15529,9 +15674,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A circular queue stores items in a fixed-size array whose end wraps around to the beginning, like seats around a round table. A front index and a count tell you where items are, so adding and removing never requires shifting anything. A circular deque works the same way but lets you add and remove at both ends.",
+    "interview": [
+     "Fixed array of capacity k, `head` index and `count` (or head and tail with one slot left empty).",
+     "Enqueue at `(head + count) % k`; dequeue by advancing `head = (head + 1) % k`; rear element at `(head + count − 1) % k`.",
+     "**Deque**: insert at the front with `head = (head − 1 + k) % k` (avoid negative modulo); delete at the back by decrementing count.",
+     "`isFull` = `count == k`; `isEmpty` = `count == 0`. All operations O(1).",
+     "Uses: bounded buffers (producer-consumer), sliding windows, rate limiters, audio and network buffers."
+    ],
+    "questions": [
+     {
+      "q": "How does a circular queue avoid shifting elements?",
+      "a": "It keeps a head index and a count in a fixed array and wraps indices with modulo capacity. Enqueue writes at (head + count) mod capacity, and dequeue just advances head, so each operation is O(1)."
+     },
+     {
+      "q": "How do you distinguish a full buffer from an empty one?",
+      "a": "Track the number of elements explicitly, so full means count equals capacity and empty means count is 0. Alternatively, use head and tail indices and leave one slot unused, so full means the next position after tail is head."
+     },
+     {
+      "q": "How do you insert at the front of a circular deque?",
+      "a": "Move head back one position with (head − 1 + capacity) mod capacity, write the element there and increase the count. Adding capacity before the modulo avoids a negative index in languages whose % can return negatives."
+     },
+     {
+      "q": "Where are ring buffers used in practice?",
+      "a": "Anywhere a fixed amount of recent data is kept: bounded producer-consumer queues between threads, logging the last N events, network and audio buffers, and sliding-window counters in rate limiters."
+     }
+    ]
    }
   },
   {
@@ -15551,9 +15719,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Versioned data remembers old versions without copying everything each time something changes. A snapshot array stores, for each position, a short history of (version, value) changes, like a notebook where each line records when a value changed. Reading an old version means finding the last change at or before that version.",
+    "interview": [
+     "**Snapshot array**: `history[i]` = list of `(snapId, value)`; `set` writes to the current snap (overwriting if the last entry has the same snap id); `snap` increments the counter and returns the previous id; `get(i, snap)` binary searches for the last entry with id ≤ snap.",
+     "Memory O(number of sets), not O(n × snaps); `set` O(1), `get` O(log changes of i).",
+     "Same idea as the time-based key-value store.",
+     "Generalizations: **persistent data structures** (path copying in trees: O(log n) new nodes per update), copy-on-write.",
+     "Real systems: MVCC in databases, Git (content-addressed snapshots), immutable collections."
+    ],
+    "questions": [
+     {
+      "q": "How do you implement a snapshot array efficiently?",
+      "a": "Store, for each index, a list of (snapshot id, value) entries recorded when the index is set. snap() just increments a counter. get(index, id) binary searches that index's list for the last entry with snapshot id at most id, defaulting to 0 if none."
+     },
+     {
+      "q": "Why not copy the whole array on each snap?",
+      "a": "Copying costs O(n) time and memory per snapshot, which is prohibitive with many snapshots of a large array. Recording only changes costs memory proportional to the number of set calls."
+     },
+     {
+      "q": "What should set do if called several times before the next snap?",
+      "a": "Only the last value before the snapshot matters, so if the index's latest entry already has the current snapshot id, overwrite it instead of appending. This keeps each list sorted by id without duplicates."
+     },
+     {
+      "q": "What is a persistent data structure?",
+      "a": "One where updates create a new version while keeping old versions accessible and unchanged. Trees achieve this by path copying: an update copies only the nodes on the path from the root to the change, sharing everything else, so each version costs O(log n) extra memory."
+     }
+    ]
    }
   },
   {
@@ -15575,9 +15766,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "This structure counts keys and must, all in constant time, increase or decrease a key's count and report a key with the largest and the smallest count. The trick is to keep \"count buckets\" in a doubly linked list sorted by count, each bucket holding the keys that currently have that count. Moving a key up or down by one only ever moves it to a neighboring bucket.",
+    "interview": [
+     "Doubly linked list of buckets `(count, set of keys)`, sorted by count; map key → its bucket.",
+     "**inc(key)**: move the key to the next bucket (count + 1), creating it right after the current bucket if missing; delete the old bucket if empty.",
+     "**dec(key)**: move to the previous bucket (count − 1) or remove the key when its count hits 0.",
+     "**getMaxKey**: any key in the tail bucket; **getMinKey**: any key in the head bucket.",
+     "All O(1) because counts change by exactly 1, so the target bucket is always adjacent.",
+     "Same bucket idea as the LFU cache."
+    ],
+    "questions": [
+     {
+      "q": "How can increment, decrement, getMax and getMin all be O(1)?",
+      "a": "Keep buckets of keys grouped by count in a doubly linked list sorted by count, and a map from each key to its bucket. Since counts change by one, a key always moves to an adjacent bucket, which is found or created next to its current one in O(1). The extremes are the list's first and last buckets."
+     },
+     {
+      "q": "Why must counts change by exactly one for this design to work?",
+      "a": "The new bucket for a key must be adjacent to the old one so it can be found without searching. If counts could jump by arbitrary amounts, finding the right position in the sorted bucket list would take more than O(1)."
+     },
+     {
+      "q": "What cleanup is needed after moving a key?",
+      "a": "If the old bucket becomes empty, unlink it from the list so the first and last buckets always contain keys, keeping getMin and getMax correct."
+     },
+     {
+      "q": "How does this relate to the LFU cache?",
+      "a": "Both group keys into buckets by count and move keys between adjacent buckets as counts change. LFU additionally orders keys within a bucket by recency to break ties when evicting."
+     }
+    ]
    }
   },
   {
@@ -15597,9 +15812,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Before solving anything, make sure you understand exactly what goes in, what must come out, and what limits apply. It is like reading a recipe completely before cooking, so you don't discover halfway through that you needed an oven. A couple of well-chosen questions at the start prevent solving the wrong problem.",
+    "interview": [
+     "Restate the problem in your own words, with a tiny example, and confirm it with the interviewer.",
+     "Pin down **inputs** (types, ranges, sorted or not, duplicates, negatives, empty allowed?) and **outputs** (return value or print, any valid answer or a specific one, indices or values, order).",
+     "Ask about **constraints**: n, value ranges, time and memory limits. They decide the target complexity.",
+     "Clarify ambiguous cases: ties, what \"distinct\" means, 0- or 1-indexed, can the input be modified?",
+     "Write down the examples, and invent one small tricky example of your own.",
+     "Two or three focused questions are enough; don't stall."
+    ],
+    "questions": [
+     {
+      "q": "What should you clarify before designing a solution?",
+      "a": "The input's shape and ranges (sizes, negatives, duplicates, empty, sorted), the exact output (values or indices, any valid answer or a specific one, format), the constraints (n and value ranges, time and memory), and behavior in ambiguous cases such as ties or invalid input."
+     },
+     {
+      "q": "Why ask about the input size?",
+      "a": "It decides the target complexity: n ≤ 20 allows exponential search, n ≤ 5,000 allows O(n²), and n around 10^5 needs O(n log n) or better. Without it you may over- or under-engineer the solution."
+     },
+     {
+      "q": "How do you confirm you understood the problem?",
+      "a": "Restate it in your own words, walk through one of the given examples, and try a small example of your own, including an edge case, checking the expected output with the interviewer."
+     },
+     {
+      "q": "How many clarifying questions should you ask?",
+      "a": "A few targeted ones, usually two to four, that could change the approach or the edge-case handling. Asking many generic questions wastes time and suggests you aren't prioritizing."
+     },
+     {
+      "q": "Why write down the agreed contract before coding?",
+      "a": "It keeps you and the interviewer aligned on assumptions, reminds you which edge cases to handle, and gives you a checklist for testing at the end."
+     }
+    ],
+    "deep": "#### Intuition\n\nMost failed interview answers aren't wrong algorithms; they're right algorithms for a slightly different problem. Reading carefully and asking targeted questions costs a minute and removes whole categories of mistakes: off-by-one boundaries, overflow, missed duplicates, wrong output format.\n\n#### A checklist to run through\n\n| Area | Questions to settle |\n|---|---|\n| Input shape | array, string, graph, tree? size range? can it be empty? |\n| Values | negatives? zeros? duplicates? range (overflow)? sorted? |\n| Output | exact format; any valid answer or a canonical one; indices or values |\n| Constraints | n up to what? how many queries? time limit? |\n| Behavior | ties, invalid input, modifying the input allowed? |\n| Scale | will it be called once or many times (preprocessing worth it)? |\n\n#### Worked example\n\nPrompt: \"Given a list of numbers, return two that add up to a target.\"\n\nQuestions that change the solution:\n\n1. Is the list sorted? (Sorted allows two pointers with O(1) space.)\n2. Return the values or their indices? (Sorting loses indices.)\n3. Is there always exactly one answer? What if none exists?\n4. Can the same element be used twice? Duplicates?\n5. How large can the list and the values be? (Overflow of `a + b`.)\n\nWith \"unsorted, return indices, exactly one answer, no reuse, n up to 10⁵\", the answer is the O(n) hash-map complement lookup.\n\n#### Turning the reading into code\n\n```cpp\n// Encode the clarified contract at the top of the function: preconditions and edge cases.\nvector<int> twoSumIndices(const vector<int>& nums, long long target) {\n    // Contract (confirmed with the interviewer): unsorted input, return indices,\n    // at most one valid pair, an element can't be used twice, empty result if none.\n    unordered_map<long long, int> seen;\n    for (int i = 0; i < (int)nums.size(); i++) {\n        auto it = seen.find(target - nums[i]);\n        if (it != seen.end()) return {it->second, i};\n        seen[nums[i]] = i;\n    }\n    return {};\n}\n```\n\n```python\ndef restate(problem, examples):\n    \"\"\"A habit, not an algorithm: write the contract and small cases before solving.\"\"\"\n    return {\n        \"problem\": problem,\n        \"examples\": examples,\n        \"edge_cases\": [\"empty input\", \"one element\", \"duplicates\", \"negatives\", \"no answer\"],\n    }\n```\n\n#### Pitfalls\n\n- Starting to code after reading the first sentence.\n- Assuming the input is sorted, distinct or non-empty without asking.\n- Asking ten generic questions instead of the two that matter for this problem.\n- Missing the output format (for example, lists sorted in a specific order, or \"return −1 if impossible\").\n\nConnects to: constraints to complexity, from brute force to optimal, edge case checklist, communicating in interviews."
    }
   },
   {
@@ -15621,9 +15865,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A reliable way to find a good solution is to start with the simplest correct one, even if it's slow, and then improve it. You look for the slowest part, the bottleneck, and ask which technique removes it, like noticing that you keep searching the same list and deciding to index it once. Each step keeps the solution correct while making it faster.",
+    "interview": [
+     "**Say the brute force first** with its complexity. It proves you understand the problem and gives a baseline.",
+     "**Find the bottleneck**: which loop or repeated work dominates? Is something recomputed? Searched repeatedly? Sorted repeatedly?",
+     "**Apply a tool**: repeated lookups → hash map; sorted data or pairs → two pointers or binary search; contiguous ranges → sliding window or prefix sums; repeated subproblems → memoization / DP; \"best so far\" → heap or monotonic stack.",
+     "**Best conceivable runtime**: you must at least read the input (O(n)); if the optimal answer is near that bound, aim for it.",
+     "**Trade space for time** when allowed (precompute, index, cache).",
+     "Keep each step correct; verify on the example after each change."
+    ],
+    "questions": [
+     {
+      "q": "Why should you state a brute-force solution first?",
+      "a": "It shows you understand the problem, gives a correct baseline to compare against, and often reveals the bottleneck to optimize. It also guarantees you have something to fall back on if time runs out."
+     },
+     {
+      "q": "How do you find the bottleneck in a brute-force solution?",
+      "a": "Look at which part does the most work and whether that work is repeated: nested loops that re-search the same data, subproblems recomputed many times, sums recomputed over overlapping ranges. The repeated work is what a better technique should eliminate."
+     },
+     {
+      "q": "What is the \"best conceivable runtime\"?",
+      "a": "A lower bound on any solution, usually the time to read the input or to produce the output. If your current solution is O(n log n) and the bound is O(n), there may be room to improve; if you're already at the bound, you're done optimizing time."
+     },
+     {
+      "q": "Give examples of mapping a bottleneck to a technique.",
+      "a": "Repeated lookups in unsorted data suggest a hash map; repeated range sums suggest prefix sums or a sliding window; recomputed subproblems suggest memoization; repeatedly finding the minimum suggests a heap; pairs in sorted data suggest two pointers."
+     },
+     {
+      "q": "How do you keep the solution correct while optimizing?",
+      "a": "Change one thing at a time and re-run the small examples after each change, ideally comparing against the brute force on random small inputs when writing code outside the interview."
+     }
+    ],
+    "deep": "#### Intuition\n\nOptimizing is easier than inventing. The brute force enumerates everything; an optimal solution avoids work that can't matter or that repeats. By naming exactly which work is repeated or wasted, you usually land on a known pattern.\n\n#### Worked example: longest substring without repeating characters\n\n1. **Brute force**: check every substring for duplicates: $O(n^2)$ substrings, $O(n)$ each to check: $O(n^3)$.\n2. **Bottleneck**: re-checking each substring from scratch. Extending a substring by one character only needs to check that character: build substrings from each start with a set, $O(n^2)$.\n3. **Still repeated**: after a duplicate at position j, every start before the duplicate's earlier position will also fail at j. So don't restart; move the start past the duplicate: sliding window, $O(n)$.\n\n| step | idea | time |\n|---|---|---|\n| 1 | check every substring | $O(n^3)$ |\n| 2 | extend with a set from each start | $O(n^2)$ |\n| 3 | sliding window with last-seen positions | $O(n)$ |\n\n#### Code: the three stages\n\n```cpp\nint longestUniqueBrute(const string& s) {              // O(n^2) with incremental checks\n    int best = 0;\n    for (int i = 0; i < (int)s.size(); i++) {\n        bool seen[256] = {};\n        for (int j = i; j < (int)s.size(); j++) {\n            if (seen[(unsigned char)s[j]]) break;\n            seen[(unsigned char)s[j]] = true;\n            best = max(best, j - i + 1);\n        }\n    }\n    return best;\n}\n\nint longestUniqueOptimal(const string& s) {             // O(n): the start only moves forward\n    vector<int> last(256, -1);\n    int best = 0, start = 0;\n    for (int j = 0; j < (int)s.size(); j++) {\n        start = max(start, last[(unsigned char)s[j]] + 1);   // jump past the previous copy\n        last[(unsigned char)s[j]] = j;\n        best = max(best, j - start + 1);\n    }\n    return best;\n}\n```\n\n```python\ndef optimize_checklist(bottleneck):\n    \"\"\"Map a named bottleneck to the usual fix (a thinking aid).\"\"\"\n    fixes = {\n        \"repeated search in unsorted data\": \"hash map or set\",\n        \"repeated search in sorted data\": \"binary search or two pointers\",\n        \"recomputing range sums\": \"prefix sums or a sliding window\",\n        \"recomputing the same subproblem\": \"memoization or DP\",\n        \"repeatedly finding the min or max\": \"heap or monotonic stack/deque\",\n        \"trying all pairs of sorted values\": \"two pointers\",\n        \"trying all subsets\": \"DP over sums or bitmask DP, or meet in the middle\",\n    }\n    return fixes.get(bottleneck, \"look for structure: sorting, monotonicity, or a graph model\")\n```\n\n#### Useful questions when stuck\n\n- What would I precompute if I could?\n- Is there monotonicity (a condition that flips once) to binary search on?\n- If the array were sorted, what would be easy? Is sorting allowed?\n- Can I process from the end instead of the start?\n- What does the answer for i tell me about the answer for i + 1?\n\n#### A second run of the same steps\nCount the pairs of positions whose values differ by exactly `k` (with `k > 0`). The brute force checks every pair, $O(n^2)$. Now name the repeated work: for each value `x`, the inner loop scans the whole array to ask \"how many elements equal `x + k`?\". That is a counting question, and a hash map of counts answers it in $O(1)$, so one pass gives $O(n)$ time and $O(n)$ space. If memory is tight, sorting and walking two pointers gives $O(n \\log n)$ time with $O(1)$ extra space. Naming the repeated question usually names the tool:\n\n- \"Is there an element equal to …?\" or \"how many equal …?\": a hash set or hash map.\n- \"How many are at most …?\": sort, then binary search or two pointers.\n- \"What is the best among the last few?\": a monotonic deque or a heap.\n- \"What was the answer for a smaller input?\": dynamic programming.\n\n#### Pitfalls\n\n- Skipping the brute force and freezing when the optimal idea doesn't come.\n- Optimizing the wrong part (a loop that isn't the bottleneck).\n- Breaking correctness while optimizing; retest the example after each step.\n\nConnects to: pattern recognition, constraints to complexity, dry running and testing."
    }
   },
   {
@@ -15645,9 +15918,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Most interview problems are variations of a few dozen patterns, and certain words in the question hint at which one applies. \"Contiguous subarray\" suggests a sliding window or prefix sums, \"shortest path\" suggests BFS or Dijkstra, and \"number of ways\" suggests dynamic programming. Learning these signals lets you narrow down the approach quickly, like a doctor recognizing symptoms.",
+    "interview": [
+     "Read for **structure**: sorted? contiguous? pairs? intervals? grid? dependencies? tree? stream?",
+     "Read for **question type**: count ways / min / max (DP, greedy), exists (DFS/BFS, DP), kth or top k (heap, quickselect), shortest (BFS, Dijkstra), all combinations (backtracking).",
+     "Check **constraints** to confirm (n ≤ 20: bitmask or backtracking; n ≤ 10⁵: O(n log n)).",
+     "Keep a **signal table** (below) and practice mapping each solved problem to its pattern.",
+     "When two patterns fit, compare complexities and simplicity; mention the alternative.",
+     "Beware false signals: \"subarray with sum K\" with negatives is prefix sums + hash map, not a sliding window."
+    ],
+    "questions": [
+     {
+      "q": "How do you recognize which technique a problem needs?",
+      "a": "Look at the input's structure (sorted, contiguous ranges, graphs, intervals, trees), the kind of answer requested (count, optimum, existence, kth element, shortest path), and the constraints, then match these signals to known patterns and confirm the complexity fits."
+     },
+     {
+      "q": "What does \"contiguous subarray\" usually suggest, and what is a common trap?",
+      "a": "A sliding window or prefix sums. The trap is using a sliding window when values can be negative: then the window's validity isn't monotone, and prefix sums with a hash map are needed instead."
+     },
+     {
+      "q": "Which signals suggest dynamic programming?",
+      "a": "Questions asking for the number of ways, the minimum or maximum cost, or whether something is achievable, where each step makes a choice and the same subproblems repeat. Constraints that allow O(n²) or O(n · target) support it."
+     },
+     {
+      "q": "How do constraints help confirm a pattern?",
+      "a": "They bound the feasible complexity. With n ≤ 20, exponential enumeration or bitmask DP is fine; with n ≤ 10^5, you need O(n log n) or O(n), which rules out quadratic DP and brute force."
+     },
+     {
+      "q": "What should you do when two patterns seem to fit?",
+      "a": "Compare their complexities and preconditions for this input, pick the simpler one that fits the constraints, and mention the alternative to the interviewer, since showing you considered options is valuable."
+     }
+    ],
+    "deep": "#### Intuition\n\nPatterns are reusable solution shapes. Each has recognizable fingerprints in the problem statement, the input structure and the constraints. Mapping signals to candidate patterns turns a blank page into a short list of approaches to test.\n\n#### A signal table\n\n| Signal in the problem | Candidate techniques |\n|---|---|\n| sorted array, find a pair or position | two pointers, binary search |\n| contiguous subarray or substring with a condition | sliding window (non-negative), prefix sums + hash map |\n| \"k-th\", \"top k\", running median | heap, quickselect, two heaps |\n| next greater or smaller, spans | monotonic stack |\n| intervals, meetings, overlaps | sort + sweep, merge intervals, heap of end times |\n| dependencies, ordering | topological sort |\n| connectivity, groups | DFS/BFS, union-find |\n| shortest path, unweighted | BFS (multi-source if many starts) |\n| shortest path, weighted | Dijkstra (non-negative), Bellman-Ford (negative) |\n| all subsets, permutations, combinations | backtracking, bitmasks |\n| count ways, min or max cost with choices | dynamic programming |\n| minimize the maximum or maximize the minimum | binary search on the answer |\n| prefix lookups, many words | trie |\n| appears twice except one, bit-level | XOR, bit manipulation |\n| range queries with updates | Fenwick tree, segment tree |\n\n#### Worked example\n\n\"Given daily temperatures, for each day find how many days until a warmer day.\"\n\n- Structure: array, \"until a warmer day\" = next greater element.\n- Pattern: monotonic stack, $O(n)$.\n- Brute force for comparison: scan ahead from each day, $O(n^2)$; with $n = 10^5$, too slow.\n\n\"Given course prerequisites, can you finish all courses?\"\n\n- Structure: dependencies, possible cycles.\n- Pattern: topological sort (Kahn) or three-color DFS; $O(V + E)$.\n\n#### Code: a tiny self-quiz helper\n\n```cpp\n// Map a few keywords to candidate patterns (a study aid, not an oracle).\nvector<string> candidatePatterns(const string& statement) {\n    vector<pair<string, string>> rules = {\n        {\"subarray\", \"sliding window / prefix sums\"},\n        {\"k-th\", \"heap / quickselect\"},\n        {\"next greater\", \"monotonic stack\"},\n        {\"prerequisite\", \"topological sort\"},\n        {\"shortest\", \"BFS / Dijkstra\"},\n        {\"number of ways\", \"dynamic programming\"},\n        {\"all combinations\", \"backtracking\"},\n    };\n    vector<string> out;\n    for (auto& [key, pattern] : rules)\n        if (statement.find(key) != string::npos) out.push_back(pattern);\n    return out;\n}\n```\n\n```python\nSIGNALS = {\n    \"sorted\": [\"two pointers\", \"binary search\"],\n    \"subarray\": [\"sliding window\", \"prefix sums\"],\n    \"intervals\": [\"sort and sweep\", \"merge intervals\"],\n    \"dependencies\": [\"topological sort\"],\n    \"number of ways\": [\"dynamic programming\"],\n    \"minimize the maximum\": [\"binary search on the answer\"],\n}\n\ndef suggest(statement):\n    text = statement.lower()\n    return sorted({p for key, patterns in SIGNALS.items() if key in text for p in patterns})\n```\n\n#### Pitfalls\n\n- Pattern-matching on one keyword and ignoring constraints that rule the pattern out.\n- Forcing a favorite pattern; if the complexity doesn't fit, look again.\n- Not verifying the pattern's precondition (sliding window needs monotonicity; greedy needs a proof).\n\nConnects to: from brute force to optimal, constraints to complexity, every pattern concept on the map (their signals sections)."
    }
   },
   {
@@ -15667,9 +15969,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Dry running means walking through your code by hand with a small input, writing down how each variable changes, like following a recipe step by step on paper before cooking. It catches mistakes before the code ever runs. Testing then checks the normal case plus the awkward ones: empty input, a single item, duplicates and extremes.",
+    "interview": [
+     "After coding, trace a **small, representative** input line by line, tracking variables in a table. Speak while you trace.",
+     "Then test **edge cases**: empty, single element, all equal, sorted and reverse sorted, negatives, maximum values (overflow), no valid answer.",
+     "Check **loop boundaries** (first and last iterations) and **off-by-one** indices explicitly.",
+     "When you find a bug, fix it calmly, then re-run the trace that exposed it.",
+     "Outside interviews: write a **brute force** and compare on random small inputs (stress testing).",
+     "Mention what you would unit test if this were production code."
+    ],
+    "questions": [
+     {
+      "q": "What is a dry run, and why do interviewers value it?",
+      "a": "Executing your code by hand on a small input, tracking every variable's value step by step. It catches bugs before running the code and shows the interviewer that you verify your own work instead of relying on them to find errors."
+     },
+     {
+      "q": "How do you choose inputs for a dry run?",
+      "a": "Use the given example to confirm the main logic, then the smallest non-trivial input to exercise the boundaries, then one or two edge cases such as an empty input or all equal values. Keep them small enough to trace in a minute."
+     },
+     {
+      "q": "What is stress testing?",
+      "a": "Writing a simple, obviously correct brute-force solution and comparing it with the optimized solution on many random small inputs. The first input where they disagree is a failing test case you can trace by hand."
+     },
+     {
+      "q": "Which parts of a loop deserve the closest attention when tracing?",
+      "a": "The first and last iterations, where off-by-one errors live, and the loop condition itself: whether it runs once too many or too few times, especially with < versus <= and index ranges like n − 1."
+     },
+     {
+      "q": "What should you do after finding a bug during a dry run?",
+      "a": "Fix it deliberately, explain the fix, and re-run the trace that exposed it, plus any related case. Avoid patching blindly, which often introduces a new bug."
+     }
+    ],
+    "deep": "#### Intuition\n\nCode is usually right in the middle and wrong at the edges. A trace forces you to execute the boundary iterations, where off-by-one errors, uninitialized variables and wrong conditions live. Interviewers watch this step closely because it shows you can find your own bugs.\n\n#### Worked example: tracing a binary search\n\nCode under test (looking for 7 in `1 3 5 7`):\n\n```\nlo = 0, hi = 3\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    if a[mid] < target: lo = mid + 1\n    else: hi = mid\nreturn lo if a[lo] == target else -1\n```\n\n| iteration | lo | hi | mid | a[mid] | action |\n|---|---|---|---|---|---|\n| 1 | 0 | 3 | 1 | 3 | 3 < 7: lo = 2 |\n| 2 | 2 | 3 | 2 | 5 | 5 < 7: lo = 3 |\n| end | 3 | 3 | | | a[3] = 7: return 3 |\n\nNow the edge case: empty array. `hi = -1`, the loop doesn't run, and `a[lo]` reads `a[0]`: a crash. The trace found a bug: add `if not a: return -1`.\n\n#### Code: a stress test harness\n\n```cpp\n// Compare a fast solution with a brute force on random small inputs.\nint fastMaxSubarray(const vector<int>& a) {\n    int cur = a[0], best = a[0];\n    for (int i = 1; i < (int)a.size(); i++) { cur = max(a[i], cur + a[i]); best = max(best, cur); }\n    return best;\n}\n\nint bruteMaxSubarray(const vector<int>& a) {\n    int best = INT_MIN;\n    for (int i = 0; i < (int)a.size(); i++) {\n        int s = 0;\n        for (int j = i; j < (int)a.size(); j++) best = max(best, s += a[j]);\n    }\n    return best;\n}\n\nbool stressTest(int rounds) {\n    mt19937 rng(7);\n    for (int r = 0; r < rounds; r++) {\n        int n = 1 + rng() % 8;\n        vector<int> a(n);\n        for (int& x : a) x = (int)(rng() % 21) - 10;       // small values, both signs\n        if (fastMaxSubarray(a) != bruteMaxSubarray(a)) return false;   // print a here to debug\n    }\n    return true;\n}\n```\n\n```python\nimport random\n\ndef stress(fast, brute, gen, rounds=1000, seed=1):\n    \"\"\"Return the first input where fast and brute disagree, or None.\"\"\"\n    rng = random.Random(seed)\n    for _ in range(rounds):\n        case = gen(rng)\n        if fast(case) != brute(case):\n            return case\n    return None\n\n# stress(lambda a: sorted(a), lambda a: sorted(a, reverse=True)[::-1],\n#        lambda rng: [rng.randint(-5, 5) for _ in range(rng.randint(0, 6))])\n```\n\n#### What to trace\n\n1. The given example (confirms the main logic).\n2. The smallest non-trivial input (one or two elements).\n3. One edge case from the checklist that your code handles specially.\n\nKeep traces short: three to six steps is usually enough to expose boundary bugs.\n\n#### Choosing test inputs\nPick inputs for what they can break, not at random. Start with the given example, then the smallest valid input (one element, an empty string if allowed), all values equal, already sorted and reverse sorted, the answer at the first or last position, and the case with no answer at all. Each of these exercises a different boundary: loop bounds, tie handling, and what you return when nothing matches.\n\n#### When the stress test finds a mismatch\nShrink the failing input before you read it. Lower the maximum length and the value range in the generator until the smallest failing case is only a few elements long, then trace that case by hand. A five-element counterexample usually points straight at the wrong comparison or the wrong loop bound, while a fifty-element one hides it.\n\n#### Pitfalls\n\n- \"Tracing\" by reading the code and assuming it works, instead of tracking actual values.\n- Choosing a large example that takes too long to trace.\n- Testing only inputs where the answer exists.\n\nConnects to: edge case checklist, debugging under pressure, communicating in interviews."
    }
   },
   {
@@ -15689,9 +16020,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Edge cases are the unusual inputs where code tends to break: nothing at all, just one item, all items equal, or numbers so big they overflow. A short checklist you run through every time, like a pilot's preflight checklist, catches most of these before the interviewer does. Handling them explicitly also shows care and experience.",
+    "interview": [
+     "**Size**: empty, one element, two elements, maximum size (performance).",
+     "**Values**: zero, negatives, duplicates, all equal, extreme values (`INT_MIN`, `INT_MAX`, 10⁹ sums overflowing 32 bits).",
+     "**Order**: already sorted, reverse sorted, alternating.",
+     "**Answer**: no valid answer, multiple valid answers, answer at the first or last position.",
+     "**Strings**: empty string, single character, all same character, case and non-letters, Unicode if relevant.",
+     "**Graphs and trees**: empty tree, single node, skewed tree (deep recursion), disconnected graph, self-loops, cycles."
+    ],
+    "questions": [
+     {
+      "q": "What edge cases should you check for an array problem?",
+      "a": "Empty and single-element arrays, two elements, all elements equal, duplicates, negatives and zeros, very large values that can overflow, already sorted and reverse sorted input, and the case where no valid answer exists."
+     },
+     {
+      "q": "Why is size() − 1 dangerous in C++?",
+      "a": "size() returns an unsigned type, so when the container is empty, size() − 1 wraps around to a huge number instead of −1. Loops like for (i = 0; i < v.size() − 1; i++) then read far out of bounds. Cast to int first or restructure the loop."
+     },
+     {
+      "q": "How can a sorted input become an edge case for performance?",
+      "a": "Some algorithms have worst cases on sorted data: quicksort with a first or last element pivot degrades to O(n²), and a plain BST built from sorted keys becomes a linked list with O(n) operations."
+     },
+     {
+      "q": "How do you avoid special-casing many edge cases?",
+      "a": "Choose representations whose boundaries handle them naturally: dummy heads in linked lists, prefix arrays with an extra leading zero, sentinel values at the ends of arrays, and initial values taken from the first element rather than 0."
+     },
+     {
+      "q": "What overflow risks are common in interview problems?",
+      "a": "Summing many large values in 32-bit integers, computing (lo + hi) / 2, multiplying two values near 10^9, and taking abs() or negating INT_MIN. Use 64-bit types and safe formulas."
+     }
+    ],
+    "deep": "#### Intuition\n\nAlgorithms are designed around typical inputs; edge cases sit at the boundaries of loops, data structures and number ranges, where assumptions like \"there is a previous element\" or \"the sum fits in an int\" break. A fixed checklist turns remembering them into a habit.\n\n#### The checklist in action: \"maximum sum of any subarray\"\n\n| edge case | what can go wrong | fix |\n|---|---|---|\n| empty array | reading `a[0]` | clarify: return 0 or error |\n| one element | loop starting at 1 never runs | initialize with `a[0]` |\n| all negative | initializing best to 0 returns 0 | initialize best with `a[0]` |\n| large values (10⁵ × 10⁹) | 32-bit overflow | use 64-bit sums |\n| all equal | none (sanity check) | |\n\n#### Worked example: overflow in averages and midpoints\n\n```cpp\nint midpointBad(int lo, int hi) { return (lo + hi) / 2; }           // overflows near INT_MAX\nint midpointGood(int lo, int hi) { return lo + (hi - lo) / 2; }     // safe for lo <= hi\n\nlong long sumSafe(const vector<int>& a) {\n    long long s = 0;                        // 1e5 values of 1e9 need 64 bits\n    for (int x : a) s += x;\n    return s;\n}\n\nint absSafe(int x) {                        // abs(INT_MIN) overflows; decide what to return\n    return x == INT_MIN ? INT_MAX : abs(x);\n}\n```\n\n```python\ndef edge_cases_for_array(max_value=10**9):\n    \"\"\"A reusable list of array inputs to try on any array function.\"\"\"\n    return [\n        [],                      # empty\n        [5],                     # single element\n        [2, 2, 2],               # all equal\n        [-3, -1, -2],            # all negative\n        [1, 2, 3, 4],            # sorted\n        [4, 3, 2, 1],            # reverse sorted\n        [max_value, max_value],  # large values (overflow in fixed-width languages)\n        [0, 0, 1],               # zeros\n    ]\n```\n\nPython integers don't overflow, but the same inputs still expose logic errors and matter when you write C++ or Java.\n\n#### Where each category bites\n\n- **Empty and single**: loops with `i + 1`, `a[0]` reads, `n - 1` on unsigned sizes in C++ (`size() - 1` wraps to a huge number when empty).\n- **Duplicates**: two pointers skipping, binary search returning any match, sets dropping repeats.\n- **Negatives**: sliding windows, modulo results, `abs` of the minimum int.\n- **Sorted inputs**: quicksort without randomization becomes $O(n^2)$; unbalanced BSTs become chains.\n- **Deep inputs**: recursion depth on skewed trees and long lists.\n\n#### Turning the checklist into tests\nEdge cases are only useful if they reach the code. After you list them, write each one as a concrete input with its expected output before you run anything, for example `[]` gives `0`, `[5]` gives `5`, `[-3, -1]` gives `-1`. Saying the expected answers out loud also shows the interviewer that you know what correct looks like, and it catches misreadings: if you can't say what an empty input should return, ask. When time is short, pick the two cases most likely to break your specific code (for a sliding window, a window that never becomes valid; for binary search, a target smaller than every element) rather than the whole list.\n\n#### Pitfalls\n\n- Handling edge cases with special-case code everywhere instead of choosing boundaries (dummy nodes, sentinels, `n + 1` sized arrays) that make the general code work.\n- Forgetting to mention edge cases you decided to ignore (say so explicitly).\n\nConnects to: dry running and testing, reading the problem, constraints to complexity."
    }
   },
   {
@@ -15716,9 +16076,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "In a coding interview, how you explain your thinking matters almost as much as the final code. Talk through your ideas as you go, like a guide narrating a hike, so the interviewer can follow and help if you drift. Agree on the approach before writing code, and finish by stating how fast it runs and how you tested it.",
+    "interview": [
+     "Structure: **clarify → examples → brute force → optimize → agree → code → test → complexity**.",
+     "**Think aloud**: say what you're considering and why you're rejecting options; silence hides good reasoning.",
+     "**Confirm before coding**: \"I'll use a hash map for O(n) time and O(n) space; does that sound good?\"",
+     "**State complexity** (time and space, with the variables' meanings) and trade-offs (for example, sorting in place versus copying).",
+     "Treat **hints** as collaboration: acknowledge, incorporate, and continue.",
+     "Write readable code: meaningful names, small helpers, consistent style; explain non-obvious lines briefly."
+    ],
+    "questions": [
+     {
+      "q": "Why should you think aloud during a coding interview?",
+      "a": "The interviewer evaluates your reasoning, not just the final code. Explaining what you're considering lets them credit good ideas, spot misunderstandings early, and give useful hints; silence gives them nothing to evaluate until the end."
+     },
+     {
+      "q": "What should you do before writing code?",
+      "a": "Summarize the approach, its time and space complexity, and any assumptions, then ask the interviewer whether they're happy for you to code it. Agreement prevents spending the interview implementing something they wanted done differently."
+     },
+     {
+      "q": "How should you respond to a hint?",
+      "a": "Acknowledge it, think about how it changes your approach, and say how you'll use it. Hints are part of the collaboration being evaluated; taking them well is a positive signal."
+     },
+     {
+      "q": "How should you present complexity?",
+      "a": "Give both time and space in Big-O, say what the variables mean (for example n is the number of nodes and m the number of edges), and mention the dominant step, such as sorting. Note trade-offs, like using extra memory to avoid a second pass."
+     },
+     {
+      "q": "What makes code easy to follow in an interview?",
+      "a": "Meaningful variable names, small helper functions for sub-steps, consistent structure, and a brief comment or remark for any non-obvious line. It helps the interviewer read along and helps you debug."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe interviewer is evaluating problem solving, communication and code quality, not just whether the final program is right. Narrating lets them give credit for sound reasoning, notice misunderstandings early, and steer you with a hint instead of watching you head the wrong way for twenty minutes.\n\n#### A 45-minute shape\n\n| minutes | phase | what to say |\n|---|---|---|\n| 0 to 5 | clarify | restate, ask 2 to 4 questions, work an example |\n| 5 to 12 | approach | brute force with complexity, then the optimization and why |\n| 12 to 15 | agree | \"Here's the plan: …; shall I code it?\" |\n| 15 to 32 | code | narrate the structure; name helper functions |\n| 32 to 40 | test | dry run the example and one or two edge cases |\n| 40 to 45 | wrap up | complexity, trade-offs, possible extensions |\n\n#### Worked example: phrases that help\n\n- Clarifying: \"Can the array contain negative numbers? That changes whether a sliding window works.\"\n- Brute force: \"A straightforward way is to check every pair, O(n²). With n up to 10⁵ that's too slow, so let's find the repeated work.\"\n- Optimization: \"For each element I only need to know whether its complement was seen, so a hash set gets this to O(n).\"\n- Agreement: \"I'll go with the hash map: O(n) time and O(n) space. Any concerns before I code?\"\n- Testing: \"Let me trace the example… now an empty input… and duplicates.\"\n- Complexity: \"Time is O(n log n) for sorting plus O(n) for the scan; space is O(1) extra if sorting in place is allowed.\"\n\n#### Code that communicates\n\n```cpp\n// Readable structure: a named helper and clear variable names make narration easy.\nbool isValidWindow(const array<int, 26>& need, const array<int, 26>& have) {\n    for (int c = 0; c < 26; c++)\n        if (have[c] < need[c]) return false;\n    return true;\n}\n\nint shortestWindowContaining(const string& s, const string& t) {\n    if (t.empty()) return 0;                          // the empty window already contains it\n    array<int, 26> need{}, have{};\n    for (char c : t) need[c - 'a']++;\n    int best = INT_MAX, left = 0;\n    for (int right = 0; right < (int)s.size(); right++) {\n        have[s[right] - 'a']++;\n        while (isValidWindow(need, have)) {           // O(26) check, fine for lowercase input\n            best = min(best, right - left + 1);\n            have[s[left++] - 'a']--;\n        }\n    }\n    return best == INT_MAX ? -1 : best;\n}\n```\n\n```python\ndef explain_complexity(time, space, notes=\"\"):\n    \"\"\"A habit: always pair the algorithm with its costs and what n means.\"\"\"\n    return f\"Time {time}, space {space}. {notes}\".strip()\n\n# explain_complexity(\"O(n)\", \"O(k)\", \"n is the length of s, k the alphabet size\")\n```\n\n#### Pitfalls\n\n- Coding in silence, then presenting a finished (possibly wrong) solution.\n- Arguing with hints instead of using them.\n- Stating complexity without saying what n is (length of the string? number of edges?).\n- Over-talking: narrate decisions, not every keystroke.\n\nConnects to: reading the problem, from brute force to optimal, dry running and testing, time management."
    }
   },
   {
@@ -15738,9 +16127,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Interviews and online assessments are timed, so managing the clock is part of the skill. Getting a working, slower solution first is usually worth more than an unfinished perfect one, like handing in a complete essay instead of a brilliant half. In online tests, solve the easy problems quickly and don't sink all your time into one stubborn question.",
+    "interview": [
+     "**Live interviews**: aim to have a working solution by about two thirds of the time; leave time to test and discuss.",
+     "If the optimal idea isn't coming after about 5 to 10 minutes, **code the brute force** (with the interviewer's agreement) and optimize afterwards.",
+     "**Online assessments** (OAs): skim all problems first; do them easiest first; budget time per problem.",
+     "Hidden test cases often give **partial credit**: a correct brute force passing small tests beats no submission.",
+     "Watch for time-limit traps: use fast I/O in C++ (`ios::sync_with_stdio(false)`), avoid O(n²) on 10⁵.",
+     "Keep a short personal template (fast I/O, common helpers) ready if the platform allows it."
+    ],
+    "questions": [
+     {
+      "q": "What should you do if you can't find the optimal solution in a live interview?",
+      "a": "Say so, explain the brute force and its complexity, and ask whether to code it first. A correct simpler solution, followed by discussion of how to improve it, usually scores better than an unfinished optimal attempt."
+     },
+     {
+      "q": "How should you allocate time in an online assessment with several problems?",
+      "a": "Read every problem briefly, solve the easiest ones first to secure points, and set a time budget per problem. If you're stuck past the budget, submit what you have (even a brute force for partial credit) and move on."
+     },
+     {
+      "q": "Why can a brute force still earn points in an OA?",
+      "a": "Many assessments score each hidden test case separately, and small cases pass even with slow algorithms. A correct brute force can earn a meaningful share of the points while an unfinished optimal solution earns none."
+     },
+     {
+      "q": "How do you avoid losing time to slow input and output in C++?",
+      "a": "Turn off synchronization with C streams (ios::sync_with_stdio(false); cin.tie(nullptr)) and prefer '\\n' over endl, which flushes. For very large inputs these changes can make the difference between passing and timing out."
+     }
+    ]
    }
   },
   {
@@ -15762,9 +16175,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "When code fails in an interview, the goal is to find the bug calmly and systematically rather than by guessing. Shrink the problem to the smallest input that still fails, then check what the code does step by step against what you expect, like a mechanic listening to one part of an engine at a time. The first point where expectation and reality differ is where the bug is.",
+    "interview": [
+     "**Reproduce and shrink**: find the smallest input that fails (remove elements until it passes, then step back).",
+     "**Form a hypothesis** from the symptom (wrong by one, crash on empty, wrong only with duplicates) and test it.",
+     "**Print debugging** where available: print state at key points (loop start, after updates); compare with a hand trace.",
+     "Check the usual suspects: off-by-one bounds, uninitialized or reused variables, integer overflow, wrong comparison (`<` vs `<=`), mutation of shared state, missing reset between test cases.",
+     "Change **one thing at a time** and re-run; revert experiments that didn't help.",
+     "Narrate: \"The output is one too large; I suspect the loop includes the last index twice.\""
+    ],
+    "questions": [
+     {
+      "q": "What is the first step when a solution fails a test?",
+      "a": "Reproduce the failure and shrink it to the smallest input that still fails. A tiny failing case can be traced by hand, and the difference between expected and actual behavior usually points straight at the bug."
+     },
+     {
+      "q": "What are the most common bugs to check first?",
+      "a": "Off-by-one errors in loop bounds and indices, wrong comparison operators, integer overflow, variables not initialized or not reset between test cases, and shared state being modified by recursion or aliasing."
+     },
+     {
+      "q": "How do you use print debugging effectively?",
+      "a": "Print the key variables at a few chosen points, such as the start of each loop iteration or after each update, for the small failing input. Compare the printed values with a hand trace to find the first step where they diverge."
+     },
+     {
+      "q": "Why change only one thing at a time when debugging?",
+      "a": "If you change several things and the result changes, you won't know which change mattered, and you may introduce new bugs. One change per run keeps cause and effect clear, and failed experiments can be reverted cleanly."
+     }
+    ]
    }
   },
   {
