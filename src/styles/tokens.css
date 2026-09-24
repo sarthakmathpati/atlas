@@ -17,13 +17,54 @@
   --grid-line: rgb(211 222 232 / 0.75);
   --text: #0e2233;
   --text-muted: #4e6477;
-  --text-faint: #5f7487;
+  --text-faint: #5a6f82;
   --accent: #1f6fb2;
   --accent-hover: #185c95;
   --accent-soft: rgb(31 111 178 / 0.1);
   --on-accent: #ffffff;
   --focus-ring: #1f6fb2;
   --shadow-float: 0 1px 2px rgb(14 34 51 / 0.08), 0 8px 24px rgb(14 34 51 / 0.12);
+
+  /* Feedback and overlays */
+  --overlay: rgb(14 34 51 / 0.34);
+  --danger: #b23a2c;
+  --danger-hover: #962f23;
+  --danger-soft: rgb(178 58 44 / 0.1);
+  --on-danger: #ffffff;
+  --success: #1f7a4d;
+  --warning: #8a5d00;
+  --warning-soft: rgb(240 180 66 / 0.18);
+  --info-soft: rgb(31 111 178 / 0.08);
+
+  /* Code (CodeMirror and static highlighting share these) */
+  --code-bg: #f6f8fb;
+  --code-gutter: #667a8c;
+  --code-selection: rgb(31 111 178 / 0.16);
+  --code-active-line: rgb(31 111 178 / 0.05);
+  --code-keyword: #7b3fb0;
+  --code-string: #17735a;
+  --code-number: #9a4d00;
+  --code-comment: #5a6f82;
+  --code-function: #1560a0;
+  --code-type: #8a3a8a;
+  --code-meta: #9a4d00;
+  --code-operator: #33495c;
+  --code-invalid: #b23a2c;
+
+  /* Diff view */
+  --diff-add-bg: rgb(87 194 143 / 0.16);
+  --diff-add-mark: rgb(87 194 143 / 0.42);
+  --diff-del-bg: rgb(240 138 126 / 0.16);
+  --diff-del-mark: rgb(240 138 126 / 0.45);
+
+  /* Charts: an ordinal blue ramp for ordered series (easy, medium, hard), validated so the
+     lightest step still clears 2:1 on the surface; one blue for single-series charts. */
+  --chart-1: #86b6ef;
+  --chart-2: #2a78d6;
+  --chart-3: #104281;
+  --chart-series: #2a78d6;
+  --chart-grid: #e2e9f0;
+  --chart-axis: #4e6477;
 
   /* Status glyphs (section 12.3): fill and stroke per status */
   --status-not-started-fill: transparent;
@@ -83,13 +124,53 @@
     --grid-line: rgb(37 68 94 / 0.35);
     --text: #e6eef5;
     --text-muted: #93a9bd;
-    --text-faint: #7d94a8;
+    --text-faint: #8aa1b5;
     --accent: #6cc3f0;
     --accent-hover: #8fd2f4;
     --accent-soft: rgb(108 195 240 / 0.14);
     --on-accent: #0e2233;
     --focus-ring: #6cc3f0;
     --shadow-float: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px rgb(0 0 0 / 0.4);
+
+    /* Feedback and overlays */
+    --overlay: rgb(3 10 16 / 0.6);
+    --danger: #f47c6d;
+    --danger-hover: #f38a7d;
+    --danger-soft: rgb(239 107 91 / 0.14);
+    --on-danger: #0e2233;
+    --success: #4cc38a;
+    --warning: #f0b442;
+    --warning-soft: rgb(240 180 66 / 0.14);
+    --info-soft: rgb(108 195 240 / 0.08);
+
+    /* Code */
+    --code-bg: #10273a;
+    --code-gutter: #6f879c;
+    --code-selection: rgb(108 195 240 / 0.22);
+    --code-active-line: rgb(108 195 240 / 0.05);
+    --code-keyword: #c9a8f7;
+    --code-string: #86d9ae;
+    --code-number: #f5c07a;
+    --code-comment: #8299ad;
+    --code-function: #7fd0f7;
+    --code-type: #e3b5f5;
+    --code-meta: #f5c07a;
+    --code-operator: #b8c9d8;
+    --code-invalid: #ef6b5b;
+
+    /* Diff view */
+    --diff-add-bg: rgb(76 195 138 / 0.13);
+    --diff-add-mark: rgb(76 195 138 / 0.34);
+    --diff-del-bg: rgb(239 107 91 / 0.13);
+    --diff-del-mark: rgb(239 107 91 / 0.36);
+
+    /* Charts: in the dark the ramp flips, so the most salient step is the lightest */
+    --chart-1: #2a78d6;
+    --chart-2: #5598e7;
+    --chart-3: #9ec5f4;
+    --chart-series: #5598e7;
+    --chart-grid: #1e3a52;
+    --chart-axis: #93a9bd;
 
     --status-not-started-fill: transparent;
     --status-not-started-stroke: #93a9bd;
@@ -123,13 +204,53 @@
   --grid-line: rgb(37 68 94 / 0.35);
   --text: #e6eef5;
   --text-muted: #93a9bd;
-  --text-faint: #7d94a8;
+  --text-faint: #8aa1b5;
   --accent: #6cc3f0;
   --accent-hover: #8fd2f4;
   --accent-soft: rgb(108 195 240 / 0.14);
   --on-accent: #0e2233;
   --focus-ring: #6cc3f0;
   --shadow-float: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px rgb(0 0 0 / 0.4);
+
+  /* Feedback and overlays */
+  --overlay: rgb(3 10 16 / 0.6);
+  --danger: #f47c6d;
+  --danger-hover: #f38a7d;
+  --danger-soft: rgb(239 107 91 / 0.14);
+  --on-danger: #0e2233;
+  --success: #4cc38a;
+  --warning: #f0b442;
+  --warning-soft: rgb(240 180 66 / 0.14);
+  --info-soft: rgb(108 195 240 / 0.08);
+
+  /* Code */
+  --code-bg: #10273a;
+  --code-gutter: #6f879c;
+  --code-selection: rgb(108 195 240 / 0.22);
+  --code-active-line: rgb(108 195 240 / 0.05);
+  --code-keyword: #c9a8f7;
+  --code-string: #86d9ae;
+  --code-number: #f5c07a;
+  --code-comment: #8299ad;
+  --code-function: #7fd0f7;
+  --code-type: #e3b5f5;
+  --code-meta: #f5c07a;
+  --code-operator: #b8c9d8;
+  --code-invalid: #ef6b5b;
+
+  /* Diff view */
+  --diff-add-bg: rgb(76 195 138 / 0.13);
+  --diff-add-mark: rgb(76 195 138 / 0.34);
+  --diff-del-bg: rgb(239 107 91 / 0.13);
+  --diff-del-mark: rgb(239 107 91 / 0.36);
+
+  /* Charts: in the dark the ramp flips, so the most salient step is the lightest */
+  --chart-1: #2a78d6;
+  --chart-2: #5598e7;
+  --chart-3: #9ec5f4;
+  --chart-series: #5598e7;
+  --chart-grid: #1e3a52;
+  --chart-axis: #93a9bd;
 
   --status-not-started-fill: transparent;
   --status-not-started-stroke: #93a9bd;
