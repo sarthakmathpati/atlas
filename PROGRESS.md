@@ -23,7 +23,7 @@ the Learn tab and the hint ladder pick the content up automatically.
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | Not started | Split across sessions, one or two subjects each, never in parallel. |
+| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5 (in progress): DSA, 141 of 249 concepts written so far (topics complexity to tries), every code block compiled and run against worked examples. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -74,7 +74,7 @@ deep for every must-know concept; signals and template for every pattern.
 | Subject | Concepts with core content | Must-know with deep | Patterns with signals and template |
 |---|---|---|---|
 | lang | 0 / 46 | 0 / 22 | – |
-| dsa | 0 / 249 | 0 / 115 | 0 / 90 |
+| dsa | 141 / 249 | 72 / 115 | 62 / 90 |
 | oop | 0 / 53 | 0 / 24 | – |
 | lld | 0 / 32 | 0 / 11 | – |
 | os | 0 / 65 | 0 / 29 | – |
