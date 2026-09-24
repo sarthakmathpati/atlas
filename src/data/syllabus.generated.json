@@ -4950,9 +4950,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A fixed-size window looks at k consecutive items at a time and slides one step at a time. It is like a train window showing exactly three fields: as the train moves, one new field appears on the right and one disappears on the left. You update your summary with just those two changes instead of recounting everything.",
+    "interview": [
+     "Keep a running summary (sum, counts) of `a[i-k+1..i]`. Each step adds `a[i]` and removes `a[i - k]`: **O(n)** total instead of **O(nk)**.",
+     "Build the first window, then slide; or use one loop that adds, removes when `i >= k`, and records when `i >= k - 1`.",
+     "Uses: maximum sum or average of k consecutive values, count of windows meeting a threshold, **anagram occurrences** (compare letter counts of the window with the pattern's).",
+     "For anagram checks, track how many of the 26 counts currently match to compare in O(1) per step.",
+     "Window **max or min** needs a monotonic deque, not a running sum (removing the maximum can't be undone with subtraction)."
+    ],
+    "questions": [
+     {
+      "q": "How do you compute the sum of every window of size k in O(n)?",
+      "a": "Sum the first k elements, then slide: for each new index i, add a[i] and subtract a[i − k]. Each element is added once and removed once, so the whole pass is O(n) instead of O(n·k)."
+     },
+     {
+      "q": "How do you find all anagrams of a pattern inside a longer string?",
+      "a": "Slide a window of the pattern's length over the string, maintaining letter counts for the window. The window is an anagram when its counts equal the pattern's counts. Comparing 26 counts per step is O(26n); tracking how many letters currently match makes it O(n)."
+     },
+     {
+      "q": "Why doesn't a running value work for the maximum of each window?",
+      "a": "When the maximum leaves the window, you can't recover the next largest value from the old maximum alone. Use a monotonic deque that keeps candidates in decreasing order, which gives O(n) overall."
+     },
+     {
+      "q": "What are the common off-by-one issues in fixed windows?",
+      "a": "Removing a[i − k] only once i ≥ k, and recording results only once i ≥ k − 1, when the first full window exists. Also handle k > n, where there is no window at all."
+     }
+    ],
+    "deep": "#### Intuition\n\nAdjacent windows of length $k$ share $k - 1$ elements. Recomputing each window from scratch wastes that overlap. Instead, keep a summary of the current window and update it with the element entering on the right and the one leaving on the left. The summary must support removal: sums and counts do; maximums don't.\n\n#### Worked example: maximum sum of 3 consecutive values\n\nArray `2 1 5 1 3 2`, $k = 3$.\n\n| i | add | remove | window | sum | best |\n|---|---|---|---|---|---|\n| 0 | 2 | | 2 | 2 | |\n| 1 | 1 | | 2 1 | 3 | |\n| 2 | 5 | | 2 1 5 | 8 | 8 |\n| 3 | 1 | 2 | 1 5 1 | 7 | 8 |\n| 4 | 3 | 1 | 5 1 3 | 9 | 9 |\n| 5 | 2 | 5 | 1 3 2 | 6 | 9 |\n\n#### Code\n\n```cpp\nlong long maxWindowSum(const vector<int>& a, int k) {\n    long long sum = 0, best = LLONG_MIN;\n    for (int i = 0; i < (int)a.size(); i++) {\n        sum += a[i];                          // element entering\n        if (i >= k) sum -= a[i - k];          // element leaving\n        if (i >= k - 1) best = max(best, sum);\n    }\n    return best;\n}\n\n// Start indices of every anagram of p inside s (lowercase letters).\nvector<int> findAnagrams(const string& s, const string& p) {\n    vector<int> out;\n    int k = p.size();\n    if ((int)s.size() < k) return out;\n    array<int, 26> need{}, have{};\n    for (char c : p) need[c - 'a']++;\n    for (int i = 0; i < (int)s.size(); i++) {\n        have[s[i] - 'a']++;\n        if (i >= k) have[s[i - k] - 'a']--;\n        if (i >= k - 1 && have == need) out.push_back(i - k + 1);  // 26 comparisons\n    }\n    return out;\n}\n```\n\n```python\ndef find_anagrams(s, p):\n    k, out = len(p), []\n    need, have = [0] * 26, [0] * 26\n    for c in p:\n        need[ord(c) - 97] += 1\n    matches = sum(need[x] == have[x] for x in range(26))  # letters whose counts agree\n\n    def update(idx, delta):\n        nonlocal matches\n        matches -= have[idx] == need[idx]\n        have[idx] += delta\n        matches += have[idx] == need[idx]\n\n    for i, c in enumerate(s):\n        update(ord(c) - 97, 1)\n        if i >= k:\n            update(ord(s[i - k]) - 97, -1)\n        if i >= k - 1 and matches == 26:\n            out.append(i - k + 1)\n    return out\n```\n\nThe Python version keeps a `matches` counter (how many of the 26 letters currently agree), so each step is $O(1)$ rather than $O(26)$.\n\n#### Complexity\n\n$O(n)$ time: each element enters and leaves once. Space $O(1)$ for sums, $O(\\sigma)$ for an alphabet of size $\\sigma$.\n\n#### Edge cases and bugs\n\n- $k > n$: no window exists; return early.\n- Recording the answer before the first window is full.\n- Initializing `best` to 0 when all sums can be negative.\n- Averages: compare sums instead of dividing, to avoid floating-point noise; divide once at the end.\n\n#### Variants\n\n- Count windows whose average is at least a threshold (compare `sum >= threshold * k`).\n- Maximum number of vowels in a window of length k.\n- Permutation in string (does any anagram exist?): return on the first match.\n- Distinct elements in every window: a hash map of counts, adding and removing keys.\n- Windows over a circular array: iterate `i` up to `n + k - 1` with indices mod n.\n\nConnects to: variable-size window, window with counts, prefix sums (another way to get window sums), monotonic deque (window maximum).",
+    "signals": [
+     "a window of exactly k consecutive elements or characters",
+     "\"every subarray of length k\" or \"every substring of length k\"",
+     "average, sum or count over consecutive blocks of a fixed size",
+     "anagram or permutation of a pattern occurring inside a longer string"
+    ],
+    "template": "```cpp\n// Fixed-size window: add the entering element, remove the leaving one, record full windows.\ntemplate <class Add, class Remove, class Record>\nvoid fixedWindow(int n, int k, Add add, Remove remove, Record record) {\n    for (int i = 0; i < n; i++) {\n        add(i);                      // a[i] enters the window\n        if (i >= k) remove(i - k);   // a[i - k] leaves the window\n        if (i >= k - 1) record(i);   // window a[i-k+1..i] is complete\n    }\n}\n```"
    }
   },
   {
@@ -4979,9 +5010,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A variable-size window stretches and shrinks as it moves along the array. It is like a caterpillar crawling forward: the front grows until the body breaks a rule, then the back pulls in until the rule holds again. Each end only moves forward, so the whole walk takes one pass.",
+    "interview": [
+     "Expand `r` one step at a time; while the window is **invalid**, shrink from `l`. Record the answer when the window is valid.",
+     "**Longest valid window**: record after shrinking (`r - l + 1`). **Shortest window meeting a goal**: record inside the shrink loop while the goal still holds.",
+     "Correctness needs **monotonicity**: if a window is invalid, every larger window containing it is invalid too (for longest), or shrinking only helps.",
+     "With non-negative numbers: \"sum at most S\" (longest) and \"sum at least S\" (shortest) both work. With negatives it breaks: use prefix sums.",
+     "**O(n)** time: each index enters and leaves at most once."
+    ],
+    "questions": [
+     {
+      "q": "Describe the variable-size sliding window template.",
+      "a": "Move the right end forward one element at a time, updating the window's summary. While the window breaks the condition, remove elements from the left. Record the answer at the point where the window is valid: after shrinking for longest problems, inside the shrink loop for shortest problems."
+     },
+     {
+      "q": "Why is the sliding window O(n) even with a while loop inside the for loop?",
+      "a": "The left pointer only moves forward and never passes the end of the array, so across the whole run it moves at most n times. Together with the n moves of the right pointer, the total work is O(n)."
+     },
+     {
+      "q": "Why does the sliding window fail for \"subarray with sum at least K\" when values can be negative?",
+      "a": "The method assumes that shrinking a window never helps an invalid window and that growing never hurts a valid one. Negative numbers break that: adding an element can lower the sum. Use prefix sums with a monotonic deque instead."
+     },
+     {
+      "q": "How do you count subarrays whose product is less than k (positive values)?",
+      "a": "Slide a window keeping the product below k, shrinking from the left while it is at least k. For each right end r, every subarray ending at r and starting in [l, r] qualifies, so add r − l + 1."
+     },
+     {
+      "q": "What is the difference between tracking the longest and the shortest window?",
+      "a": "For the longest valid window, shrink until the window is valid again, then record its length. For the shortest window that meets a goal, record inside the shrink loop while it still meets the goal, because each shrink step can only make it shorter."
+     }
+    ],
+    "deep": "#### Intuition\n\nFor a brute force you would try every start and extend to every end: $O(n^2)$. The sliding window notices that when you move the start forward, the best end for the new start is never earlier than the best end for the old one. So both pointers only ever move right, and the total work is linear.\n\n#### Worked example: shortest subarray with sum at least 7\n\nArray `2 3 1 2 4 3` (non-negative).\n\n| r | a[r] | sum after adding | shrink steps (record, then remove a[l]) | best |\n|---|---|---|---|---|\n| 0 | 2 | 2 | | ∞ |\n| 1 | 3 | 5 | | ∞ |\n| 2 | 1 | 6 | | ∞ |\n| 3 | 2 | 8 | record 4 (l=0..3), remove 2 → 6 | 4 |\n| 4 | 4 | 10 | record 4 (1..4), remove 3 → 7; record 3 (2..4), remove 1 → 6 | 3 |\n| 5 | 3 | 9 | record 3 (3..5), remove 2 → 7; record 2 (4..5), remove 4 → 3 | 2 |\n\nAnswer: 2 (`4 3`).\n\n#### Code\n\n```cpp\n// Shortest subarray with sum >= target (all values non-negative); 0 if none.\nint minSubarrayLen(int target, const vector<int>& a) {\n    int l = 0, best = INT_MAX;\n    long long sum = 0;\n    for (int r = 0; r < (int)a.size(); r++) {\n        sum += a[r];                          // expand\n        while (sum >= target) {               // valid: try to shrink\n            best = min(best, r - l + 1);\n            sum -= a[l++];\n        }\n    }\n    return best == INT_MAX ? 0 : best;\n}\n\n// Longest subarray with sum <= limit (non-negative values).\nint longestWithSumAtMost(const vector<int>& a, long long limit) {\n    int l = 0, best = 0;\n    long long sum = 0;\n    for (int r = 0; r < (int)a.size(); r++) {\n        sum += a[r];\n        while (sum > limit) sum -= a[l++];    // shrink until valid again\n        best = max(best, r - l + 1);          // window is valid here\n    }\n    return best;\n}\n```\n\n```python\ndef min_subarray_len(target, a):\n    l, total, best = 0, 0, float(\"inf\")\n    for r, x in enumerate(a):\n        total += x\n        while total >= target:\n            best = min(best, r - l + 1)\n            total -= a[l]\n            l += 1\n    return 0 if best == float(\"inf\") else best\n\ndef longest_ones_with_k_flips(bits, k):\n    l = zeros = best = 0\n    for r, b in enumerate(bits):\n        zeros += b == 0\n        while zeros > k:                    # too many zeros to flip\n            zeros -= bits[l] == 0\n            l += 1\n        best = max(best, r - l + 1)\n    return best\n```\n\n#### Complexity\n\n`r` moves $n$ times and `l` moves at most $n$ times in total: $O(n)$ time. Space is $O(1)$ beyond whatever the window summary needs.\n\n#### When it doesn't apply\n\nThe method relies on a monotone validity condition. With negative numbers, \"sum at least S\" is not monotone (adding an element can decrease the sum), so the shrink step can throw away a window that would have become valid. Use prefix sums with a monotonic deque (shortest subarray with sum at least K) or a prefix-sum hash map (exact sums).\n\n#### Edge cases and bugs\n\n- Recording \"longest\" inside the shrink loop (the window is invalid there).\n- Recording \"shortest\" after the loop (the window has just become invalid).\n- Returning `INT_MAX` when no window qualifies.\n- Forgetting that `l` can pass `r` in some shrink conditions (an empty window); guard with `l <= r` when needed.\n\n#### Variants\n\n- Longest subarray of 1s after flipping at most k zeros (count zeros in the window).\n- Fruits into baskets, longest substring with at most k distinct characters (window with counts).\n- Count subarrays with product less than k: every valid window ending at `r` adds `r - l + 1` subarrays.\n- Maximum points from cards taken from both ends: the complement is a fixed window in the middle.\n\nConnects to: fixed-size window, window with counts, exactly K via at most K, prefix sum with hash map.",
+    "signals": [
+     "longest or shortest contiguous subarray or substring satisfying a condition",
+     "\"at most K\" of something inside a contiguous range",
+     "non-negative numbers with a sum limit or sum target bound",
+     "flip or replace at most K elements to make a run",
+     "count subarrays where a monotone condition holds (add r − l + 1)"
+    ],
+    "template": "```cpp\n// Variable-size window: expand right, shrink left while invalid.\ntemplate <class Add, class Remove, class Invalid>\nint longestValidWindow(int n, Add add, Remove remove, Invalid invalid) {\n    int best = 0;\n    for (int l = 0, r = 0; r < n; r++) {\n        add(r);                          // 1. a[r] enters the window state\n        while (invalid()) remove(l++);   // 2. shrink from the left until valid again\n        best = max(best, r - l + 1);     // 3. longest: record after shrinking\n    }\n    // Shortest window meeting a goal: while (meetsGoal()) { record r - l + 1; remove(l++); }\n    return best;\n}\n```"
    }
   },
   {
@@ -5004,9 +5071,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some windows need to know what is inside them, not just a total. You keep a small tally of each character in the window, like a cashier counting how many of each coin is in the drawer. The tally tells you when the window has too many distinct values or too many repeats, so you know when to shrink it.",
+    "interview": [
+     "Maintain a count map (or a 26 or 128 int array) for the window; also track a derived number such as `distinct` (keys with count > 0).",
+     "**Longest substring without repeating characters**: shrink while the new character's count is above 1. Or store last seen index and jump `l` to `last[c] + 1` (never move `l` backwards).",
+     "**At most K distinct**: shrink while `distinct > K`; decrement `distinct` when a count drops to 0.",
+     "**Character replacement** (make the window one letter with at most k changes): valid while `windowLength - maxCount <= k`. `maxCount` may be left stale (never decreased) without breaking the answer.",
+     "All **O(n)** time, **O(σ)** space for alphabet size σ."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the longest substring without repeating characters?",
+      "a": "Slide a window with a count per character. After adding s[r], shrink from the left while s[r] appears more than once; the window is then duplicate-free, so record its length. Each character enters and leaves once, so it is O(n)."
+     },
+     {
+      "q": "How do you keep track of the number of distinct values in a window?",
+      "a": "Keep counts per value. Increase the distinct counter when a count goes from 0 to 1, and decrease it when a count drops from 1 to 0 (or erase zero entries from a hash map and use its size)."
+     },
+     {
+      "q": "In \"longest repeating character replacement\", when is a window valid?",
+      "a": "When its length minus the count of its most frequent letter is at most k, because those other letters are the ones you would replace. Shrink from the left while that number exceeds k."
+     },
+     {
+      "q": "Why can you avoid decreasing maxCount in the character replacement problem?",
+      "a": "A stale maxCount is at least as large as the true one, so it never rejects a truly valid window. The answer only increases when a longer window has a truly higher count, so the final result is still correct."
+     }
+    ],
+    "deep": "#### Intuition\n\nA variable window needs a validity test that can be updated in $O(1)$ as elements enter and leave. Counts per value make that possible: the number of distinct values changes only when a count goes from 0 to 1 or from 1 to 0, and \"has a duplicate\" is just \"some count exceeds 1\", which can only be caused by the element that just entered.\n\n#### Worked example: longest substring without repeats\n\n`s = \"abcabcbb\"`\n\n| r | char | counts after add | shrink | window | best |\n|---|---|---|---|---|---|\n| 0 | a | a1 | | a | 1 |\n| 1 | b | a1 b1 | | ab | 2 |\n| 2 | c | a1 b1 c1 | | abc | 3 |\n| 3 | a | a2 b1 c1 | drop a | bca | 3 |\n| 4 | b | b2 c1 a1 | drop b | cab | 3 |\n| 5 | c | c2 a1 b1 | drop c | abc | 3 |\n| 6 | b | a1 b2 c1 | drop a, drop b | cb | 3 |\n| 7 | b | c1 b2 | drop c, drop b | b | 3 |\n\nAnswer: 3.\n\n#### Code\n\n```cpp\nint lengthOfLongestSubstring(const string& s) {\n    array<int, 128> count{};                     // ASCII\n    int l = 0, best = 0;\n    for (int r = 0; r < (int)s.size(); r++) {\n        count[(unsigned char)s[r]]++;\n        while (count[(unsigned char)s[r]] > 1)   // only s[r] can be duplicated\n            count[(unsigned char)s[l++]]--;\n        best = max(best, r - l + 1);\n    }\n    return best;\n}\n\nint longestWithAtMostKDistinct(const string& s, int k) {\n    unordered_map<char, int> count;\n    int l = 0, best = 0;\n    for (int r = 0; r < (int)s.size(); r++) {\n        count[s[r]]++;\n        while ((int)count.size() > k) {\n            if (--count[s[l]] == 0) count.erase(s[l]);  // keep size() == distinct\n            l++;\n        }\n        best = max(best, r - l + 1);\n    }\n    return best;\n}\n```\n\n```python\ndef character_replacement(s, k):\n    count = [0] * 26\n    l = max_count = best = 0\n    for r, c in enumerate(s):\n        count[ord(c) - 65] += 1                # uppercase letters\n        max_count = max(max_count, count[ord(c) - 65])\n        while (r - l + 1) - max_count > k:     # more than k letters to replace\n            count[ord(s[l]) - 65] -= 1\n            l += 1\n        best = max(best, r - l + 1)\n    return best\n```\n\n#### Why a stale `max_count` is fine\n\nIn character replacement, `max_count` is never decreased when the window shrinks. It can overstate the true maximum, which can only make the window look valid when it isn't. But the answer only grows when a window of a new, larger length is valid with a genuinely larger `max_count`, so the recorded best is still correct. Recomputing the maximum over 26 counts each step also works and is still $O(26n)$.\n\n#### Complexity\n\n$O(n)$ time: each character enters and leaves once, and each count update is $O(1)$. Space $O(\\sigma)$.\n\n#### Edge cases and bugs\n\n- Leaving zero counts in a hash map makes `size()` overcount distinct values; erase them.\n- With the last-index jump version, `l = max(l, last[c] + 1)`: without `max`, `l` can move backwards.\n- `char` can be negative in C++ for non-ASCII bytes; cast to `unsigned char` before indexing.\n\n#### Variants\n\n- Longest substring with at most two distinct characters, fruits into baskets (k = 2).\n- Longest subarray where each value appears at most k times.\n- Longest substring with each character appearing at least k times: not directly monotone; iterate over the number of distinct characters allowed (1 to 26) and run a window for each.\n- Count substrings containing all three characters (shortest-window counting: add `l` after shrinking).\n\nConnects to: frequency counting, variable-size window, exactly K via at most K, minimum window substring.",
+    "signals": [
+     "longest substring with no repeated characters",
+     "at most K distinct values or characters in a contiguous range",
+     "replace at most K characters to make a run of the same letter",
+     "each value may appear at most some number of times inside the window"
+    ],
+    "template": "```cpp\n// Window with counts: counts[] per value plus a derived measure (distinct, max, dups).\nint longestWithCounts(const string& s, int k) {\n    unordered_map<char, int> count;\n    int l = 0, best = 0, distinct = 0;\n    for (int r = 0; r < (int)s.size(); r++) {\n        if (count[s[r]]++ == 0) distinct++;      // add s[r]\n        while (distinct > k) {                   // invalid: shrink\n            if (--count[s[l]] == 0) distinct--;  // remove s[l]\n            l++;\n        }\n        best = max(best, r - l + 1);\n    }\n    return best;\n}\n```"
    }
   },
   {
@@ -5028,9 +5126,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Counting windows with exactly K of something is awkward, but counting windows with at most K is easy with a sliding window. So you count \"at most K\" and subtract \"at most K − 1\", like finding how many people are exactly 30 by counting everyone 30 or younger and removing everyone 29 or younger. What is left is exactly the group you want.",
+    "interview": [
+     "`exactly(K) = atMost(K) − atMost(K − 1)`, valid whenever the property is monotone (more elements never reduce the measured quantity).",
+     "`atMost(K)`: standard window; for each `r`, after shrinking, **add `r − l + 1`** (the number of valid subarrays ending at `r`).",
+     "Examples: subarrays with exactly K distinct integers, binary subarrays with sum exactly S (non-negative), number of \"nice\" subarrays with exactly K odd numbers.",
+     "Each `atMost` call is O(n), so the total is **O(n)**.",
+     "Guard `atMost(-1) = 0` (for K = 0)."
+    ],
+    "questions": [
+     {
+      "q": "How do you count subarrays with exactly K distinct integers?",
+      "a": "Count subarrays with at most K distinct values and subtract those with at most K − 1. Each count uses a sliding window that, for each right end r, adds r − l + 1 after shrinking until the window has at most the allowed number of distinct values."
+     },
+     {
+      "q": "Why is counting \"exactly K\" directly with one window hard?",
+      "a": "For a fixed right end, the valid starts for \"exactly K\" form a band that ends before r, not a range ending at r, and both ends of the band move. \"At most K\" has valid starts forming the full range [l, r], which one pointer can track."
+     },
+     {
+      "q": "Why do you add r − l + 1 in the at-most count?",
+      "a": "After shrinking, a[l..r] is the longest valid window ending at r, and every shorter window ending at r is valid too, because removing elements can't increase the measured quantity. There are r − l + 1 such windows."
+     },
+     {
+      "q": "When does exactly(K) = atMost(K) − atMost(K − 1) not work with a sliding window?",
+      "a": "When the measured quantity isn't monotone, such as sums with negative numbers, because the at-most window can't be maintained by shrinking from the left. In that case count exact sums with a prefix-sum hash map."
+     }
+    ],
+    "deep": "#### Intuition\n\nFor a window condition like \"at most K distinct values\", the set of valid start positions for a fixed end `r` is a contiguous range `[l, r]`, so counting them is one subtraction. \"Exactly K\" doesn't have that shape: the valid starts form a band in the middle, whose ends are hard to track with one left pointer. Subtracting two \"at most\" counts isolates the band.\n\n#### Worked example: subarrays with exactly 2 distinct values\n\nArray `1 2 1 2 3`. Count subarrays with at most 2 distinct, and with at most 1.\n\nAt most 2 (add `r − l + 1` after shrinking):\n\n| r | a[r] | window | l | added | total |\n|---|---|---|---|---|---|\n| 0 | 1 | 1 | 0 | 1 | 1 |\n| 1 | 2 | 1 2 | 0 | 2 | 3 |\n| 2 | 1 | 1 2 1 | 0 | 3 | 6 |\n| 3 | 2 | 1 2 1 2 | 0 | 4 | 10 |\n| 4 | 3 | shrink to 2 3 | 3 | 2 | 12 |\n\nAt most 1: every single element (5), and no longer runs of equal values, total 5.\n\nExactly 2 = 12 − 5 = **7**: `[1,2]`, `[2,1]`, `[1,2]`, `[2,3]`, `[1,2,1]`, `[2,1,2]`, `[1,2,1,2]`.\n\n#### Code\n\n```cpp\nlong long atMostKDistinct(const vector<int>& a, int k) {\n    if (k < 0) return 0;\n    unordered_map<int, int> count;\n    long long total = 0;\n    int l = 0;\n    for (int r = 0; r < (int)a.size(); r++) {\n        count[a[r]]++;\n        while ((int)count.size() > k) {\n            if (--count[a[l]] == 0) count.erase(a[l]);\n            l++;\n        }\n        total += r - l + 1;               // subarrays a[l..r], a[l+1..r], ..., a[r..r]\n    }\n    return total;\n}\n\nlong long exactlyKDistinct(const vector<int>& a, int k) {\n    return atMostKDistinct(a, k) - atMostKDistinct(a, k - 1);\n}\n```\n\n```python\ndef at_most_sum(bits, s):\n    \"\"\"Subarrays of a 0/1 (or non-negative) array with sum at most s.\"\"\"\n    if s < 0:\n        return 0\n    l = total = window = 0\n    for r, x in enumerate(bits):\n        window += x\n        while window > s:\n            window -= bits[l]\n            l += 1\n        total += r - l + 1\n    return total\n\ndef exactly_sum(bits, s):\n    return at_most_sum(bits, s) - at_most_sum(bits, s - 1)\n```\n\n#### Complexity\n\nTwo linear passes: $O(n)$ time, $O(\\text{distinct})$ space.\n\n#### When the trick is valid\n\nThe subtraction needs the counted quantity to be monotone in the window: extending a window never decreases the number of distinct values, or the sum of non-negative numbers, or the count of odd numbers. For sums with negative numbers it fails; use the prefix-sum hash map instead (which counts exact sums directly).\n\n#### Edge cases and bugs\n\n- `atMost(K − 1)` with K = 0 must return 0, not run with a negative bound.\n- Adding `r − l + 1` before shrinking counts invalid subarrays.\n- Overflow: the count of subarrays is up to $n(n+1)/2$, about $5 \\cdot 10^9$ for $n = 10^5$.\n\n#### Variants\n\n- Count \"nice\" subarrays: exactly K odd numbers (map each value to `x % 2`, then exact sum).\n- Binary subarrays with sum S.\n- A one-pass alternative keeps two left pointers (the leftmost and rightmost valid starts) and adds their gap.\n\nConnects to: window with counts, variable-size window, prefix sum with hash map.",
+    "signals": [
+     "count subarrays with exactly K distinct values",
+     "count subarrays with exactly K odd numbers or exactly sum S in a 0/1 array",
+     "\"exactly\" counts where the \"at most\" version is a simple window",
+     "the number of subarrays (not the longest one) under a monotone condition"
+    ],
+    "template": "```cpp\n// exactly(K) = atMost(K) - atMost(K - 1), for a monotone window measure.\ntemplate <class AtMost>\nlong long exactly(int k, AtMost atMost) {\n    return atMost(k) - (k > 0 ? atMost(k - 1) : 0);\n}\n\nlong long atMostCount(const vector<int>& a, int k) {    // example measure: sum of 0/1 values\n    long long total = 0, window = 0;\n    for (int l = 0, r = 0; r < (int)a.size(); r++) {\n        window += a[r];                                // add a[r]\n        while (window > k) window -= a[l++];           // shrink while invalid\n        total += r - l + 1;                            // valid subarrays ending at r\n    }\n    return total;\n}\n```"
    }
   },
   {
@@ -5052,9 +5181,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Minimum window substring finds the shortest stretch of a text that contains every letter you need, with repeats. Imagine walking down a market street with a shopping list: you walk forward until your basket holds everything, then you drop items from the start of your route while the list is still covered. The shortest route that still covers the list is the answer.",
+    "interview": [
+     "`need[c]` = required count of each character; `missing` (or `formed`) tracks how many requirements are not yet met.",
+     "Expand `r`: decrement `need[s[r]]`; if it was positive, one requirement got satisfied (`missing--`).",
+     "While `missing == 0`: record the window if shorter, then remove `s[l]`: increment `need[s[l]]`; if it becomes positive, a requirement broke (`missing++`); `l++`.",
+     "**O(|s| + |t|)** time, **O(σ)** space. Store the best start and length, build the substring once at the end.",
+     "Same shape: smallest subarray containing all K distinct values, shortest range covering all categories."
+    ],
+    "questions": [
+     {
+      "q": "How do you check in O(1) whether the current window contains all of t's characters?",
+      "a": "Keep need counts for t's characters and a single counter missing, the number of required characters still absent. When a needed character enters with a positive need, missing drops by one; when one leaves and its need becomes positive, missing rises. The window is valid exactly when missing is 0."
+     },
+     {
+      "q": "Why can one table hold both the needs and the window counts?",
+      "a": "Store need − have in one array. Characters not in t start at 0 and go negative when they enter, which never changes missing. Only transitions across zero for required characters matter."
+     },
+     {
+      "q": "What is the complexity of minimum window substring?",
+      "a": "O(|s| + |t|) time, because each character of s enters and leaves the window at most once and t is scanned once to build the table. Space is O(alphabet size)."
+     },
+     {
+      "q": "How does the approach change if t can contain repeated characters?",
+      "a": "It doesn't: need[c] holds the required multiplicity, and missing starts at the length of t. A window is valid only when every character appears at least as many times as in t."
+     }
+    ],
+    "deep": "#### Intuition\n\nThis is a shortest-valid-window problem where \"valid\" means \"covers every required character with multiplicity\". The trick is making the validity check $O(1)$: rather than comparing two count tables each step, keep one number, `missing`, the total count of required characters not yet in the window. It changes only when a needed character enters or leaves.\n\n#### Worked example\n\n`s = \"ADOBECODEBANC\"`, `t = \"ABC\"`. Need A1 B1 C1, `missing = 3`.\n\n| r | char | missing after adding | what happens |\n|---|---|---|---|\n| 0 | A | 2 | |\n| 3 | B | 1 | |\n| 5 | C | 0 | valid: record \"ADOBEC\" (6); dropping the A at index 0 breaks it |\n| 9 | B | 1 | B was already covered, so nothing changes |\n| 10 | A | 0 | valid from index 1: shrinking drops D, O, B, E (the B at 9 still covers), then the C at index 5 breaks it; nothing shorter than 6 |\n| 12 | C | 0 | valid from index 6: shrinking records \"EBANC\" (5), then \"BANC\" (4); dropping the B at 9 breaks it |\n\nAnswer: **\"BANC\"**.\n\n#### Code\n\n```cpp\nstring minWindow(const string& s, const string& t) {\n    array<int, 128> need{};\n    for (char c : t) need[(unsigned char)c]++;\n    int missing = t.size(), l = 0, bestStart = 0, bestLen = INT_MAX;\n    for (int r = 0; r < (int)s.size(); r++) {\n        if (need[(unsigned char)s[r]]-- > 0) missing--;  // s[r] satisfied a requirement\n        while (missing == 0) {\n            if (r - l + 1 < bestLen) { bestLen = r - l + 1; bestStart = l; }\n            if (++need[(unsigned char)s[l]] > 0) missing++;  // s[l] was required\n            l++;\n        }\n    }\n    return bestLen == INT_MAX ? \"\" : s.substr(bestStart, bestLen);\n}\n```\n\n```python\nfrom collections import Counter\n\ndef min_window(s, t):\n    need = Counter(t)\n    missing = len(t)\n    l, best = 0, (float(\"inf\"), 0)\n    for r, c in enumerate(s):\n        if need[c] > 0:\n            missing -= 1\n        need[c] -= 1\n        while missing == 0:\n            best = min(best, (r - l + 1, l))\n            need[s[l]] += 1\n            if need[s[l]] > 0:\n                missing += 1\n            l += 1\n    length, start = best\n    return \"\" if length == float(\"inf\") else s[start:start + length]\n```\n\nCharacters not in `t` go negative in `need` and never affect `missing`, which is why a single table suffices.\n\n#### Complexity\n\nEach index enters and leaves the window once: $O(|s| + |t|)$ time. Space $O(\\sigma)$.\n\n#### Edge cases and bugs\n\n- `t` longer than `s`: no window; the loop finds none and returns \"\".\n- Duplicates in `t` (\"AABC\") must be counted, not just checked for presence.\n- Building substrings inside the loop turns $O(n)$ into $O(n^2)$; store indices.\n- Case sensitivity and non-letter characters: size the table for the full character set.\n\n#### Variants\n\n- Smallest subarray containing every distinct value of the array (need = all distinct values once).\n- Smallest range covering elements from k lists: flatten to (value, list) pairs, sort, and run this window over list ids.\n- Minimum window subsequence (order matters) is different: DP or two-pointer backtracking.\n\nConnects to: window with counts, variable-size window, frequency counting, k-way merge (smallest range).",
+    "signals": [
+     "the smallest substring or subarray that contains all required items (with counts)",
+     "\"covers every character of t\" or \"contains all K categories\"",
+     "shortest range that includes at least one of each kind",
+     "a shopping-list style requirement checked over a contiguous stretch"
+    ],
+    "template": "```cpp\n// Shortest window covering all requirements: need[] and a single \"missing\" counter.\npair<int, int> shortestCovering(const string& s, const string& t) {\n    array<int, 128> need{};\n    for (char c : t) need[(unsigned char)c]++;\n    int missing = t.size(), l = 0, bestL = -1, bestLen = INT_MAX;\n    for (int r = 0; r < (int)s.size(); r++) {\n        if (need[(unsigned char)s[r]]-- > 0) missing--;      // a requirement got met\n        while (missing == 0) {                              // valid: record, then shrink\n            if (r - l + 1 < bestLen) bestLen = r - l + 1, bestL = l;\n            if (++need[(unsigned char)s[l++]] > 0) missing++;  // a requirement broke\n        }\n    }\n    return {bestL, bestLen};                                 // bestL == -1: no window\n}\n```"
    }
   },
   {
@@ -5076,9 +5236,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "To find the largest value in every window of size k, you keep a short line of candidates in decreasing order. A new value knocks out every smaller candidate behind it, because those can never be the maximum again, like a taller person joining a queue and hiding everyone shorter behind them. The front of the line is always the current maximum.",
+    "interview": [
+     "Deque of **indices** whose values are strictly decreasing from front to back.",
+     "For each `i`: pop from the back while `a[back] <= a[i]`; push `i`; pop the front if it is outside the window (`front <= i - k`); once `i >= k - 1`, the answer is `a[front]`.",
+     "Each index is pushed and popped at most once: **O(n)** time, **O(k)** space.",
+     "Alternatives: max-heap with lazy deletion (O(n log n)), balanced BST or multiset (O(n log k)), block prefix/suffix maxima (O(n), no deque).",
+     "Store indices, not values, so you can tell when the front has left the window."
+    ],
+    "questions": [
+     {
+      "q": "Why does the monotonic deque give the sliding window maximum in O(n)?",
+      "a": "Every index is pushed once and popped at most once, from either end. A smaller value that arrives before a larger one can never be a maximum again once the larger one is in the window, so removing it loses nothing, and the front always holds the current maximum."
+     },
+     {
+      "q": "Why store indices instead of values in the deque?",
+      "a": "You must know when the front element falls out of the window, which requires its position. Indices also give the values through a lookup, so nothing is lost."
+     },
+     {
+      "q": "What are the alternatives to the deque, and their costs?",
+      "a": "A max-heap of (value, index) with lazy removal of expired entries is O(n log n). A multiset with insert and erase per step is O(n log k). Splitting the array into blocks of size k and combining suffix maxima of one block with prefix maxima of the next is O(n) without a deque."
+     },
+     {
+      "q": "Should the pop condition be a[back] <= a[i] or a[back] < a[i]?",
+      "a": "Either gives correct maxima. Using <= removes equal older values, which keeps the deque smaller; using < keeps duplicates, which is needed if you must report which index holds the maximum under a tie rule."
+     }
+    ]
    }
   },
   {
@@ -5103,9 +5286,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Binary search finds a value in a sorted list by checking the middle and throwing away the half that cannot contain it. It is how you look up a word in a paper dictionary: open near the middle, see whether your word comes before or after, and repeat on the right half. Each check halves what is left, so even a million items need only about 20 checks.",
+    "interview": [
+     "Requires a **sorted** array (or any monotonic condition). **O(log n)** time, **O(1)** space iteratively.",
+     "Closed interval: `lo = 0, hi = n - 1, while (lo <= hi)`; on a miss, `lo = mid + 1` or `hi = mid - 1`.",
+     "Safe midpoint: `mid = lo + (hi - lo) / 2` avoids overflow of `lo + hi` in fixed-width integers.",
+     "State the **invariant**: \"if the target exists, it is in `[lo, hi]`\". Every update must preserve it and shrink the range.",
+     "Most bugs are infinite loops (the range doesn't shrink) or off-by-one ends; test with 0, 1 and 2 elements.",
+     "Library: C++ `binary_search`, `lower_bound`; Java `Arrays.binarySearch`; Python `bisect`."
+    ],
+    "questions": [
+     {
+      "q": "Why is binary search O(log n)?",
+      "a": "Each comparison with the middle element eliminates half of the remaining range. Starting from n elements, after k steps n / 2^k remain, which reaches 1 when k = log₂ n."
+     },
+     {
+      "q": "Why write mid = lo + (hi − lo) / 2 instead of (lo + hi) / 2?",
+      "a": "lo + hi can exceed the largest int and overflow when both are large, giving a negative mid. lo + (hi − lo) / 2 computes the same value without ever exceeding hi."
+     },
+     {
+      "q": "How do you choose between while (lo <= hi) and while (lo < hi)?",
+      "a": "It depends on the interval you maintain. A closed interval [lo, hi] is empty only when lo > hi, so loop while lo <= hi and move to mid ± 1. A half-open [lo, hi) is empty when lo == hi, so loop while lo < hi and set hi = mid."
+     },
+     {
+      "q": "What causes infinite loops in binary search, and how do you prevent them?",
+      "a": "An update that doesn't shrink the range, typically lo = mid when mid rounds down to lo. Either always move past mid (mid + 1 or mid − 1) or round mid up when you assign lo = mid. Tracing a two-element range catches it."
+     },
+     {
+      "q": "Where does lo end up after an unsuccessful closed-interval search?",
+      "a": "At the first index whose value is greater than the target, which is where the target would be inserted to keep the array sorted. hi ends at lo − 1."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn a sorted array, comparing the target with the middle element tells you which half it must be in. Discarding the other half each time means the range goes $n, n/2, n/4, \\dots, 1$: about $\\log_2 n$ steps. For $n = 10^9$ that is 30 comparisons.\n\n#### The invariant\n\nWrite down what the pointers mean and keep it true.\n\n- **Closed** `[lo, hi]`: the target, if present, is between `lo` and `hi` inclusive. The range is empty when `lo > hi`, so loop while `lo <= hi`. Updates: `hi = mid - 1` or `lo = mid + 1` (mid is ruled out).\n- **Half-open** `[lo, hi)`: loop while `lo < hi`; updates `hi = mid` or `lo = mid + 1`. This is the natural form for lower bound.\n\nMixing the two styles (closed loop condition with a half-open update) is the usual cause of infinite loops.\n\n#### Worked example\n\nFind 23 in `2 5 8 12 16 23 38 56 72 91` (indices 0 to 9).\n\n| lo | hi | mid | a[mid] | action |\n|---|---|---|---|---|\n| 0 | 9 | 4 | 16 | 16 < 23: lo = 5 |\n| 5 | 9 | 7 | 56 | 56 > 23: hi = 6 |\n| 5 | 6 | 5 | 23 | found at 5 |\n\n#### Code\n\n```cpp\nint binarySearch(const vector<int>& a, int target) {\n    int lo = 0, hi = (int)a.size() - 1;           // target is in [lo, hi] if present\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;             // no overflow\n        if (a[mid] == target) return mid;\n        if (a[mid] < target) lo = mid + 1;        // target is right of mid\n        else hi = mid - 1;                        // target is left of mid\n    }\n    return -1;                                    // lo is now the insertion point\n}\n```\n\n```python\ndef binary_search(a, target):\n    lo, hi = 0, len(a) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2          # Python ints don't overflow\n        if a[mid] == target:\n            return mid\n        if a[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n```\n\nTime $O(\\log n)$, space $O(1)$ (a recursive version uses $O(\\log n)$ stack).\n\n#### The overflow detail\n\nWith 32-bit ints, `(lo + hi) / 2` overflows when `lo + hi > 2^{31} - 1`, which happens for arrays over about a billion elements, and more often when searching over a value range. `lo + (hi - lo) / 2` never overflows. In Java, `(lo + hi) >>> 1` also works.\n\n#### Edge cases and bugs\n\n- Empty array: `hi = -1`, loop doesn't run.\n- `while (lo < hi)` with closed updates misses the last candidate.\n- `lo = mid` in a `lo < hi` loop with `mid` rounded down can loop forever when `hi = lo + 1`; round up (`mid = lo + (hi - lo + 1) / 2`) when you update with `lo = mid`.\n- After a failed search in the closed form, `lo` is where the target would be inserted.\n\n#### Variants\n\n- Duplicates: which occurrence? Use lower and upper bound.\n- Search on a condition instead of equality: binary search on the answer.\n- Unknown length (infinite stream): double `hi` until it passes the target (exponential search), then search: $O(\\log p)$ for position $p$.\n- Search in a rotated array, peak finding, searching a matrix: the array isn't fully sorted, but one comparison still rules out half.\n\nConnects to: lower and upper bound, binary search on the answer, BST search, bisection on real numbers.",
+    "signals": [
+     "a sorted array and a lookup that must beat O(n)",
+     "\"O(log n)\" required in the problem statement",
+     "find a value or its position in sorted data",
+     "repeated membership tests on data that is sorted once"
+    ],
+    "template": "```cpp\n// Closed-interval binary search. Invariant: the answer, if any, lies in [lo, hi].\nint search(const vector<int>& a, int target) {\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo <= hi) {                      // non-empty range\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] == target) return mid;   // found\n        if (a[mid] < target) lo = mid + 1;  // discard the left half, mid included\n        else hi = mid - 1;                  // discard the right half, mid included\n    }\n    return -1;                              // lo = insertion point\n}\n```"
    }
   },
   {
@@ -5127,9 +5346,46 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Lower bound finds the first position whose value is at least your target, and upper bound finds the first position whose value is greater than it. Picture a bookshelf sorted by year: lower bound is where the first 2020 book starts, upper bound is where the 2020 books end. The gap between them is how many 2020 books there are.",
+    "interview": [
+     "`lower_bound(x)`: first index `i` with `a[i] >= x` (or `n`). `upper_bound(x)`: first index with `a[i] > x`.",
+     "First occurrence of `x`: `lower_bound(x)` if it is in range and equals `x`. Last occurrence: `upper_bound(x) - 1`. Count of `x`: `upper_bound(x) - lower_bound(x)`.",
+     "Insert position that keeps the array sorted: `lower_bound(x)`.",
+     "Half-open search: `lo = 0, hi = n, while (lo < hi)`; `if (a[mid] < x) lo = mid + 1; else hi = mid;` (use `<=` for upper bound).",
+     "Library: C++ `lower_bound`/`upper_bound` (return iterators), Python `bisect_left`/`bisect_right`, Java has no direct equivalent for arrays (write it, or use `TreeMap.ceilingKey`).",
+     "General idea: find the **first index where a monotone condition becomes true**."
+    ],
+    "questions": [
+     {
+      "q": "What do lower_bound and upper_bound return?",
+      "a": "lower_bound(x) is the first position whose value is at least x, and upper_bound(x) is the first position whose value is greater than x. Both return the end position when no such element exists. The elements equal to x are exactly those between them."
+     },
+     {
+      "q": "How do you find the first and last positions of a value in a sorted array in O(log n)?",
+      "a": "The first position is lower_bound(x), if it is in range and holds x. The last position is upper_bound(x) − 1. That is two binary searches, O(log n) in total."
+     },
+     {
+      "q": "How do you count occurrences of x in a sorted array?",
+      "a": "upper_bound(x) − lower_bound(x). This works even when x is absent, where both return the same index and the count is 0."
+     },
+     {
+      "q": "Why is the half-open form with hi = n convenient for lower bound?",
+      "a": "The answer can be n, meaning every element is smaller than x. Starting with hi = n makes that a valid result, and the loop while lo < hi with hi = mid never skips the candidate at mid."
+     },
+     {
+      "q": "How do you find the floor of x (the largest element at most x)?",
+      "a": "Compute i = upper_bound(x). If i is 0, no element is at most x; otherwise the floor is a[i − 1]."
+     }
+    ],
+    "deep": "#### Intuition\n\nThink of a Boolean array `a[i] >= x`. On sorted data it looks like `F F F T T T`: once true, it stays true. Lower bound is the position of the first `T`. Every \"find the first/last\" binary search is this same question with a different condition, which is why lower bound is the most reusable form.\n\n#### Worked example\n\n`a = 1 2 2 2 5 7`, `x = 2`.\n\nLower bound (first `a[i] >= 2`), half-open `[0, 6)`:\n\n| lo | hi | mid | a[mid] | a[mid] < 2? | update |\n|---|---|---|---|---|---|\n| 0 | 6 | 3 | 2 | no | hi = 3 |\n| 0 | 3 | 1 | 2 | no | hi = 1 |\n| 0 | 1 | 0 | 1 | yes | lo = 1 |\n\nResult 1. Upper bound (first `a[i] > 2`) gives 4. Count of 2s: 4 − 1 = 3. Last occurrence: 3.\n\n#### Code\n\n```cpp\nint lowerBound(const vector<int>& a, int x) {   // first i with a[i] >= x\n    int lo = 0, hi = a.size();                   // answer in [lo, hi]; hi = n means none\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] < x) lo = mid + 1;            // a[mid] is too small: answer is right\n        else hi = mid;                           // a[mid] qualifies: answer is mid or left\n    }\n    return lo;\n}\n\nint upperBound(const vector<int>& a, int x) {   // first i with a[i] > x\n    int lo = 0, hi = a.size();\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] <= x) lo = mid + 1;\n        else hi = mid;\n    }\n    return lo;\n}\n\npair<int, int> firstAndLast(const vector<int>& a, int x) {\n    int first = lowerBound(a, x);\n    if (first == (int)a.size() || a[first] != x) return {-1, -1};\n    return {first, upperBound(a, x) - 1};\n}\n```\n\n```python\nfrom bisect import bisect_left, bisect_right\n\ndef first_and_last(a, x):\n    i = bisect_left(a, x)\n    if i == len(a) or a[i] != x:\n        return [-1, -1]\n    return [i, bisect_right(a, x) - 1]\n\ndef first_true(lo, hi, pred):\n    \"\"\"Smallest i in [lo, hi) with pred(i) true, or hi if none (pred must be monotone).\"\"\"\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if pred(mid):\n            hi = mid\n        else:\n            lo = mid + 1\n    return lo\n```\n\nEach search is $O(\\log n)$; the count of a value takes two searches.\n\n#### Floor and ceiling of a value\n\n- Ceiling (smallest element ≥ x): `a[lower_bound(x)]` if it exists.\n- Floor (largest element ≤ x): `a[upper_bound(x) - 1]` if `upper_bound(x) > 0`.\n- Strictly smaller: `a[lower_bound(x) - 1]`; strictly larger: `a[upper_bound(x)]`.\n\n#### Edge cases and bugs\n\n- `hi = n` (not `n - 1`): the answer can be \"past the end\".\n- Dereferencing the result without checking `== n`.\n- Using `lo <= hi` with `hi = mid` loops forever.\n- For descending arrays, flip the comparison or search the negated values.\n\n#### Variants\n\n- Search insert position, count occurrences, closest element to x (compare the neighbors around lower bound).\n- Find the k closest elements: lower bound, then expand two pointers, or binary search the left edge of the window.\n- H-index on a sorted array: the first index where `a[i] >= n - i`.\n- Any \"first position where a condition flips\" (first bad version).\n\nConnects to: classic binary search, binary search on the answer, ordered maps (floor and ceiling), BST floor and ceiling.",
+    "signals": [
+     "first or last occurrence of a value in sorted data with duplicates",
+     "insert position that keeps an array sorted",
+     "count how many elements are below, at most, or equal to a value",
+     "the first index where a monotone condition becomes true (\"first bad version\")",
+     "closest value, floor or ceiling in a sorted array"
+    ],
+    "template": "```cpp\n// First index in [lo, hi) where pred(i) is true; pred must be F...F T...T. Returns hi if none.\ntemplate <class Pred>\nint firstTrue(int lo, int hi, Pred pred) {\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (pred(mid)) hi = mid;   // mid qualifies: the answer is mid or to its left\n        else lo = mid + 1;         // mid fails: the answer is to its right\n    }\n    return lo;\n}\n// lower_bound: firstTrue(0, n, [&](int i) { return a[i] >= x; })\n// upper_bound: firstTrue(0, n, [&](int i) { return a[i] > x; })\n```"
    }
   },
   {
@@ -5151,9 +5407,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A rotated sorted array is a sorted list that was cut once and had its two pieces swapped, like a clock face read starting from 4 o'clock. It is no longer fully sorted, but if you split it anywhere, at least one half is still in order. Binary search works by checking which half is in order and whether your target fits inside it.",
+    "interview": [
+     "In a rotated array (distinct values), for any `mid`, one of `[lo, mid]` and `[mid, hi]` is sorted.",
+     "**Search**: if `a[lo] <= a[mid]` the left half is sorted; go left if `a[lo] <= target < a[mid]`, else right. Otherwise the right half is sorted; go right if `a[mid] < target <= a[hi]`, else left.",
+     "**Find minimum**: compare `a[mid]` with `a[hi]`: if `a[mid] > a[hi]`, the minimum is right of `mid` (`lo = mid + 1`); else it is at `mid` or left (`hi = mid`).",
+     "The index of the minimum is the rotation count.",
+     "**Duplicates**: when `a[mid] == a[hi]` you can't tell which side is sorted; shrink with `hi--`. Worst case becomes **O(n)** (for example all equal except one).",
+     "Distinct values: **O(log n)** time, **O(1)** space."
+    ],
+    "questions": [
+     {
+      "q": "How do you search for a target in a rotated sorted array in O(log n)?",
+      "a": "At each step, one half around mid is sorted: the left half if a[lo] <= a[mid], otherwise the right half. If the target lies within the sorted half's range, search there; otherwise search the other half."
+     },
+     {
+      "q": "How do you find the minimum of a rotated sorted array?",
+      "a": "Compare a[mid] with a[hi]. If a[mid] > a[hi], the drop, and so the minimum, is to the right of mid; otherwise the minimum is at mid or to its left. Loop while lo < hi and return a[lo]."
+     },
+     {
+      "q": "Why do duplicates make the problem O(n) in the worst case?",
+      "a": "When a[lo], a[mid] and a[hi] are all equal, the comparison gives no information about which side holds the drop, so you can only discard one element (hi−−). An array of all equal values except one hidden smaller value forces examining nearly every element."
+     },
+     {
+      "q": "How do you find how many times a sorted array was rotated?",
+      "a": "The rotation count equals the index of the minimum element, which you find with the a[mid] versus a[hi] binary search."
+     },
+     {
+      "q": "Why compare a[mid] with a[hi] rather than a[lo] when looking for the minimum?",
+      "a": "Comparing with a[hi] correctly handles the unrotated case, where the minimum is at index 0. With a[lo], an unrotated array looks like \"left half sorted, go right\", which moves away from the minimum."
+     }
+    ],
+    "deep": "#### Intuition\n\nRotation creates one \"drop\" where a large value is followed by a small one. Any interval that doesn't contain the drop is sorted. Since the drop is in at most one of the two halves around `mid`, the other half is sorted, and for a sorted range you can test \"is the target inside?\" by comparing with its ends.\n\n#### Worked example: search for 0\n\n`a = 4 5 6 7 0 1 2`\n\n| lo | hi | mid | a[mid] | sorted half | target inside? | update |\n|---|---|---|---|---|---|---|\n| 0 | 6 | 3 | 7 | left (4..7) | 4 <= 0 < 7? no | lo = 4 |\n| 4 | 6 | 5 | 1 | left (0..1) | 0 <= 0 < 1? yes | hi = 4 |\n| 4 | 4 | 4 | 0 | found | | return 4 |\n\n#### Code\n\n```cpp\nint searchRotated(const vector<int>& a, int target) {\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] == target) return mid;\n        if (a[lo] <= a[mid]) {                          // left half [lo, mid] is sorted\n            if (a[lo] <= target && target < a[mid]) hi = mid - 1;\n            else lo = mid + 1;\n        } else {                                        // right half [mid, hi] is sorted\n            if (a[mid] < target && target <= a[hi]) lo = mid + 1;\n            else hi = mid - 1;\n        }\n    }\n    return -1;\n}\n\nint findMin(const vector<int>& a) {                     // works with duplicates too\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] > a[hi]) lo = mid + 1;               // the drop is right of mid\n        else if (a[mid] < a[hi]) hi = mid;              // mid..hi is sorted: min at mid or left\n        else hi--;                                      // equal: can't tell, discard hi safely\n    }\n    return a[lo];\n}\n```\n\n```python\ndef search_rotated(a, target):\n    lo, hi = 0, len(a) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if a[mid] == target:\n            return mid\n        if a[lo] <= a[mid]:\n            if a[lo] <= target < a[mid]:\n                hi = mid - 1\n            else:\n                lo = mid + 1\n        else:\n            if a[mid] < target <= a[hi]:\n                lo = mid + 1\n            else:\n                hi = mid - 1\n    return -1\n\ndef find_min(a):\n    lo, hi = 0, len(a) - 1\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if a[mid] > a[hi]:\n            lo = mid + 1\n        elif a[mid] < a[hi]:\n            hi = mid\n        else:\n            hi -= 1\n    return a[lo]\n```\n\n#### Why compare with `a[hi]` for the minimum\n\nComparing with `a[hi]` works for every rotation, including zero rotation. Comparing with `a[lo]` fails on an unrotated array: `a[mid] >= a[lo]` would push the search right, away from the minimum at index 0.\n\n#### The duplicates case\n\nWith `a = 1 1 1 0 1`, `a[lo] = a[mid] = a[hi] = 1`: the drop could be on either side. Dropping `hi` is safe because `a[mid]` equals it, so the minimum value survives. But in the worst case this removes one element per step: $O(n)$. No algorithm can do better in the worst case, since finding the single 0 among 1s requires looking at every position.\n\n#### Edge cases and bugs\n\n- `a[lo] <= a[mid]` must be `<=`, not `<`: when `lo == mid`, the one-element left half is sorted.\n- The strict and non-strict comparisons in the \"target inside?\" tests must match the half's inclusive ends.\n- Arrays of length 1 and 2, and unrotated arrays, are the tests to run.\n\n#### Variants\n\n- Search with duplicates: when `a[lo] == a[mid] == a[hi]`, shrink both ends; otherwise as above.\n- Find the rotation count: the index of the minimum.\n- Search after finding the pivot: binary search one of the two sorted pieces.\n\nConnects to: classic binary search, peak finding (another \"partially sorted\" search).",
+    "signals": [
+     "a sorted array that has been rotated or shifted by an unknown amount",
+     "find the minimum, maximum or the pivot of a rotated sequence",
+     "search in a \"circularly sorted\" list in O(log n)",
+     "a sorted log that wrapped around at some point"
+    ],
+    "template": "```cpp\n// Rotated search: decide which half is sorted, then test whether the target fits in it.\nint rotatedSearch(const vector<int>& a, int target) {\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] == target) return mid;\n        if (a[lo] <= a[mid]) {                                 // [lo, mid] sorted\n            if (a[lo] <= target && target < a[mid]) hi = mid - 1;\n            else lo = mid + 1;\n        } else {                                               // [mid, hi] sorted\n            if (a[mid] < target && target <= a[hi]) lo = mid + 1;\n            else hi = mid - 1;\n        }\n    }\n    return -1;\n}\n```"
    }
   },
   {
@@ -5175,9 +5467,46 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Sometimes the thing to search for is the answer itself, not a position in an array. If you can quickly check \"is speed 5 fast enough?\", and every faster speed is also fast enough, you can binary search on the speed. It is like tuning an oven: try the middle temperature, and you know which half of the dial to keep.",
+    "interview": [
+     "Define a **monotone predicate** `ok(x)`: once true, true for all larger x (or all smaller). Binary search the smallest (or largest) x where it holds.",
+     "Pick bounds: `lo` = smallest possible answer, `hi` = one that is surely feasible (for example the max element, the total sum, 10⁹).",
+     "Total cost: **O(log(range) × cost of ok)**, typically O(n log(sum)).",
+     "**Minimize the maximum** (split array so the largest part sum is smallest, ship within D days) and **maximize the minimum** (place k items as far apart as possible) are the classic shapes.",
+     "Write `ok` as a greedy check: \"with capacity x, how many groups do I need?\"",
+     "Watch overflow in `ok` (sums) and in `mid` over large ranges."
+    ],
+    "questions": [
+     {
+      "q": "What makes a problem suitable for binary search on the answer?",
+      "a": "You can check a candidate answer quickly, and the check is monotone: if x works, every larger x works too (or every smaller one). Then feasible answers form a contiguous range, and binary search finds its boundary."
+     },
+     {
+      "q": "How do you pick the search bounds?",
+      "a": "lo is the smallest value that could possibly be the answer (for example the largest single item), and hi is a value that surely works (for example the total sum or the maximum possible). Wrong bounds either miss the answer or make the check meaningless."
+     },
+     {
+      "q": "What is the complexity of binary search on the answer?",
+      "a": "O(log R × C), where R is the size of the answer range and C is the cost of one feasibility check. With an O(n) greedy check and R up to 10^9, it is about 30n operations."
+     },
+     {
+      "q": "How do \"minimize the maximum\" and \"maximize the minimum\" problems map to this pattern?",
+      "a": "For minimize-the-maximum, ask \"can every part stay at most x?\", which is monotone upward, and find the smallest x that works. For maximize-the-minimum, ask \"can every gap be at least x?\", which is monotone downward, and find the largest x that works."
+     },
+     {
+      "q": "Why do you round mid up when searching for the largest feasible value?",
+      "a": "The update on success is lo = mid. With mid rounded down and hi = lo + 1, mid equals lo and the range never shrinks. Rounding up makes mid = hi in that case, so either branch shrinks the range."
+     }
+    ],
+    "deep": "#### Intuition\n\nMany optimization problems are hard to solve directly but easy to **check**: \"can the packages be shipped in D days if the ship holds at most C?\" is a greedy pass. If the check is monotone in C (a bigger ship never hurts), the answers look like `F F F T T T` over C, and the optimum is the first `T`. Binary search finds it with $\\log(\\text{range})$ checks.\n\n#### Worked example: ship within D days\n\nWeights `3 2 2 4 1 4` in order, D = 3 days. Capacity must be at least the heaviest package (4) and at most the total (16).\n\nCheck for capacity C: fill a day greedily; start a new day when the next package doesn't fit.\n\n| lo | hi | mid | days needed with mid | ok? | update |\n|---|---|---|---|---|---|\n| 4 | 16 | 10 | [3,2,2] [4,1,4]: 2 | yes | hi = 10 |\n| 4 | 10 | 7 | [3,2,2] [4,1] [4]: 3 | yes | hi = 7 |\n| 4 | 7 | 5 | [3,2] [2] [4,1] [4]: 4 | no | lo = 6 |\n| 6 | 7 | 6 | [3,2] [2,4] [1,4]: 3 | yes | hi = 6 |\n\n`lo == hi == 6`: the smallest capacity is **6**.\n\n#### Code\n\n```cpp\n// Smallest capacity that ships all packages, in order, within `days` days.\nint shipWithinDays(const vector<int>& w, int days) {\n    auto daysNeeded = [&](long long cap) {\n        int d = 1;\n        long long load = 0;\n        for (int x : w) {\n            if (load + x > cap) { d++; load = 0; }  // start a new day\n            load += x;\n        }\n        return d;\n    };\n    long long lo = *max_element(w.begin(), w.end());\n    long long hi = accumulate(w.begin(), w.end(), 0LL);\n    while (lo < hi) {                               // first capacity that is ok\n        long long mid = lo + (hi - lo) / 2;\n        if (daysNeeded(mid) <= days) hi = mid;\n        else lo = mid + 1;\n    }\n    return (int)lo;\n}\n\n// Maximize the minimum gap when placing k items at sorted positions.\nint maxMinDistance(vector<int> pos, int k) {\n    sort(pos.begin(), pos.end());\n    auto canPlace = [&](int gap) {\n        int placed = 1, last = pos[0];\n        for (int p : pos)\n            if (p - last >= gap) { placed++; last = p; }\n        return placed >= k;\n    };\n    int lo = 0, hi = pos.back() - pos[0];\n    while (lo < hi) {                               // last gap that is ok: round mid up\n        int mid = lo + (hi - lo + 1) / 2;\n        if (canPlace(mid)) lo = mid;\n        else hi = mid - 1;\n    }\n    return lo;\n}\n```\n\n```python\ndef ship_within_days(w, days):\n    def days_needed(cap):\n        d, load = 1, 0\n        for x in w:\n            if load + x > cap:\n                d, load = d + 1, 0\n            load += x\n        return d\n\n    lo, hi = max(w), sum(w)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if days_needed(mid) <= days:\n            hi = mid\n        else:\n            lo = mid + 1\n    return lo\n\ndef max_min_distance(pos, k):\n    pos = sorted(pos)\n    def can_place(gap):\n        placed, last = 1, pos[0]\n        for p in pos:\n            if p - last >= gap:\n                placed, last = placed + 1, p\n        return placed >= k\n\n    lo, hi = 0, pos[-1] - pos[0]\n    while lo < hi:\n        mid = (lo + hi + 1) // 2      # round up because we assign lo = mid\n        if can_place(mid):\n            lo = mid\n        else:\n            hi = mid - 1\n    return lo\n```\n\n#### Complexity\n\nWith $n$ items and an answer range of size $R$: $O(n \\log R)$ time, $O(1)$ extra space. For $R = 10^{9}$ that is 30 checks.\n\n#### Proving the predicate is monotone\n\nState it in the interview: \"If capacity C works, any capacity above C works, because every day's load that fit still fits.\" And for maximize-the-minimum: \"If gap g is achievable, any smaller gap is achievable with the same placement.\" Without monotonicity, binary search on the answer is wrong.\n\n#### Edge cases and bugs\n\n- `lo` too low: capacity below the heaviest package makes the greedy check loop or lie. Set `lo = max(w)`.\n- Rounding: for \"largest x that is ok\" with `lo = mid`, round `mid` up.\n- The greedy check must be correct in its own right; test it separately on a small case.\n\n#### Variants\n\n- Eating speed to finish piles within H hours (`sum(ceil(p / k))`).\n- Split array largest sum (same check as shipping).\n- Minimum days to make m bouquets (feasible by day d?).\n- Kth smallest in a sorted matrix or of pair distances (count elements ≤ x).\n- Real-valued answers: bisection with a fixed iteration count.\n\nConnects to: lower and upper bound (first true), greedy algorithms (the check), kth smallest by counting.",
+    "signals": [
+     "minimize the maximum or maximize the minimum",
+     "\"the smallest capacity, speed or size such that it finishes in time\"",
+     "a yes/no check that is easy for a guessed value and monotone in it",
+     "answers in a huge numeric range (up to 10^9) with a greedy feasibility test",
+     "kth smallest value where counting how many are at most x is easy"
+    ],
+    "template": "```cpp\n// Binary search on the answer: smallest x in [lo, hi] with ok(x), where ok is F...F T...T.\ntemplate <class Ok>\nlong long smallestOk(long long lo, long long hi, Ok ok) {\n    while (lo < hi) {\n        long long mid = lo + (hi - lo) / 2;\n        if (ok(mid)) hi = mid;        // mid works: try smaller\n        else lo = mid + 1;            // mid fails: need larger\n    }\n    return lo;                        // assumes ok(hi) is true\n}\n\n// Largest x with ok(x), where ok is T...T F...F: round mid up.\ntemplate <class Ok>\nlong long largestOk(long long lo, long long hi, Ok ok) {\n    while (lo < hi) {\n        long long mid = lo + (hi - lo + 1) / 2;\n        if (ok(mid)) lo = mid;\n        else hi = mid - 1;\n    }\n    return lo;                        // assumes ok(lo) is true\n}\n```"
    }
   },
   {
@@ -5199,9 +5528,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A peak is a value bigger than its neighbors, like a hilltop on a walking trail. If the trail goes uphill where you stand, a hilltop must lie ahead, because the trail can't climb forever. So you can binary search by looking at the slope at the middle and walking uphill.",
+    "interview": [
+     "Peak: `a[i] > a[i-1]` and `a[i] > a[i+1]`, with `a[-1] = a[n] = -∞`. Adjacent elements differ (or define ties).",
+     "If `a[mid] < a[mid + 1]` (rising), a peak exists in `(mid, hi]`: `lo = mid + 1`. Otherwise one exists in `[lo, mid]`: `hi = mid`. **O(log n)**.",
+     "The array isn't sorted; binary search works because the slope tells you which side is guaranteed to contain a peak.",
+     "**Mountain array** (strictly up then down): the same search finds its single peak; then binary search each side to find a target.",
+     "**2D peak**: take the middle column, find its maximum, compare with left and right neighbors, and move toward the larger one: **O(R log C)**."
+    ],
+    "questions": [
+     {
+      "q": "How can binary search find a peak in an unsorted array?",
+      "a": "Compare a[mid] with a[mid + 1]. If the next element is larger, the values rise to the right, and because they must stop rising by the end of the array, a peak exists on the right; otherwise one exists at mid or to its left. Each step halves the range."
+     },
+     {
+      "q": "Does the algorithm find the global maximum?",
+      "a": "No, it finds some local peak. Finding the global maximum of an unsorted array needs O(n), because any element could be the largest."
+     },
+     {
+      "q": "How do you find a peak in a 2D grid efficiently?",
+      "a": "Binary search over columns. In the middle column find the maximum cell, then compare it with its left and right neighbors and move to the half with the larger neighbor. That takes O(R log C)."
+     },
+     {
+      "q": "How do you search for a target in a mountain array?",
+      "a": "Find the peak with the slope binary search, then binary search the increasing part and, if not found, the decreasing part with reversed comparisons. That is O(log n) overall."
+     }
+    ],
+    "deep": "#### Intuition\n\nStand at `mid`. If the next element is larger, walk right: values can't rise forever because `a[n] = -∞`, so somewhere to the right the sequence stops rising, and that point is a peak. The same argument works leftward. Each comparison discards half, even though the array is unsorted.\n\n#### Worked example\n\n`a = 1 2 1 3 5 6 4`\n\n| lo | hi | mid | a[mid] vs a[mid+1] | update |\n|---|---|---|---|---|\n| 0 | 6 | 3 | 3 < 5 rising | lo = 4 |\n| 4 | 6 | 5 | 6 > 4 falling | hi = 5 |\n| 4 | 5 | 4 | 5 < 6 rising | lo = 5 |\n\nPeak at index 5 (value 6). Index 1 (value 2) is also a peak; the search returns any one.\n\n#### Code\n\n```cpp\nint findPeak(const vector<int>& a) {\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;          // mid + 1 <= hi, always valid\n        if (a[mid] < a[mid + 1]) lo = mid + 1; // rising: a peak is to the right\n        else hi = mid;                         // falling: mid or something left is a peak\n    }\n    return lo;\n}\n\n// 2D: some cell larger than its four neighbors, in O(R log C).\npair<int, int> findPeak2D(const vector<vector<int>>& m) {\n    int R = m.size(), lo = 0, hi = (int)m[0].size() - 1;\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2, best = 0;\n        for (int r = 1; r < R; r++) if (m[r][mid] > m[best][mid]) best = r;  // column max\n        if (m[best][mid] < m[best][mid + 1]) lo = mid + 1;   // climb toward the larger side\n        else hi = mid;\n    }\n    int best = 0;\n    for (int r = 1; r < R; r++) if (m[r][lo] > m[best][lo]) best = r;\n    return {best, lo};\n}\n```\n\n```python\ndef find_peak(a):\n    lo, hi = 0, len(a) - 1\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if a[mid] < a[mid + 1]:\n            lo = mid + 1\n        else:\n            hi = mid\n    return lo\n```\n\n#### Why the 2D version works\n\nThe maximum of the middle column beats everything else in its column. If its right neighbor is larger, the maximum of the right half is larger than every value in the middle column, so climbing from there can never cross back into the middle column: a peak exists in the right half. Each step halves the columns and scans one column: $O(R \\log C)$.\n\n#### Complexity\n\n1D: $O(\\log n)$ time, $O(1)$ space. 2D: $O(R \\log C)$ (choose columns or rows so the log is over the larger side).\n\n#### Edge cases and bugs\n\n- One element: it is a peak.\n- `lo <= hi` with `hi = mid` loops forever.\n- With equal neighbors (plateaus), the \"a peak exists on the rising side\" guarantee fails; a strict inequality in the definition is required.\n\n#### Variants\n\n- Peak index in a mountain array; search in a mountain array (find peak, then two binary searches, one ascending and one descending).\n- Minimum of a \"valley\" array: flip the comparison.\n- Ternary search on a unimodal function over reals or integers: similar idea, compares two interior points.\n\nConnects to: classic binary search, rotated sorted arrays, ternary search.",
+    "signals": [
+     "find any element larger than its neighbors",
+     "a \"mountain\" or bitonic sequence that rises then falls",
+     "O(log n) required on an array that isn't sorted",
+     "local maximum or minimum in a grid"
+    ],
+    "template": "```cpp\n// Slope binary search: move toward the rising neighbor; a peak must exist there.\nint peakIndex(const vector<int>& a) {\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] < a[mid + 1]) lo = mid + 1;  // uphill to the right\n        else hi = mid;                          // downhill: peak at mid or to the left\n    }\n    return lo;\n}\n```"
    }
   },
   {
@@ -5223,9 +5583,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "How you search a grid of numbers depends on how it is sorted. If the rows continue one after another like lines of a book, treat the whole grid as one long sorted list and binary search it. If rows and columns are each sorted on their own, start at the top-right corner and step left or down, like walking down a staircase.",
+    "interview": [
+     "**Fully sorted** (each row starts after the previous row ends): binary search on `0..R*C-1`, mapping `idx` to `(idx / C, idx % C)`. **O(log(RC))**.",
+     "**Rows and columns sorted independently**: start at the **top-right**. If the value is too big, move left (the column below is even bigger); if too small, move down. **O(R + C)**.",
+     "The bottom-left corner works too; the top-left and bottom-right do not (both moves go the same direction).",
+     "Counting elements ≤ x in a row-and-column-sorted matrix uses the same staircase in O(R + C), which powers \"kth smallest in a sorted matrix\".",
+     "Binary searching every row gives O(R log C), better only when R is much smaller than C."
+    ],
+    "questions": [
+     {
+      "q": "How do you search a matrix where each row is sorted and each row's first element is larger than the previous row's last?",
+      "a": "Treat it as one sorted array of R·C elements and binary search index idx in [0, R·C − 1], reading m[idx / C][idx % C]. That is O(log(R·C))."
+     },
+     {
+      "q": "How do you search a matrix whose rows and columns are each sorted?",
+      "a": "Start at the top-right corner. If the value there is larger than the target, move left, because everything below it in that column is even larger; if smaller, move down, because everything to its left is even smaller. Each step discards a row or a column, so it is O(R + C)."
+     },
+     {
+      "q": "Why can't you start the staircase search at the top-left corner?",
+      "a": "From the top-left, both moving right and moving down increase the value, so when the current value is too small you can't tell which way to go. The top-right and bottom-left corners have one direction that increases and one that decreases."
+     },
+     {
+      "q": "How do you count the elements at most x in a row-and-column-sorted matrix quickly?",
+      "a": "Walk a staircase from the bottom-left: while the value is at most x, all elements above it in that column count, so add row + 1 and move right; otherwise move up. That is O(R + C) and is the counting step for finding the kth smallest element."
+     }
+    ]
    }
   },
   {
@@ -5252,9 +5635,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Binary search also works on a continuous range of numbers, such as finding a square root to many decimal places. You keep halving the interval where the answer must be, like narrowing down a temperature with a thermometer that only says \"too hot\" or \"too cold\". Because the range never becomes a single integer, you stop after a set number of halvings.",
+    "interview": [
+     "Keep `lo` and `hi` as doubles; set one of them to `mid` (not `mid ± 1`).",
+     "Stop after a **fixed number of iterations** (60 to 100 halvings is plenty for doubles) rather than `while (hi - lo > eps)`, which can loop forever when floating-point rounding stops progress.",
+     "100 iterations shrink the range by 2¹⁰⁰; precision is then limited by doubles, not the loop.",
+     "Uses: square or cube roots, the minimum time or maximum average (maximum average subarray with length ≥ k), geometry (position where two conditions balance).",
+     "For unimodal functions (one peak), use **ternary search** or binary search on the derivative's sign."
+    ],
+    "questions": [
+     {
+      "q": "Why use a fixed number of iterations instead of a precision check when bisecting doubles?",
+      "a": "A condition like hi − lo > 1e−9 may never become false for large values, because the gap between adjacent doubles near 10^9 is larger than 1e−9, so mid equals lo or hi and nothing changes. A fixed count, such as 100 halvings, always terminates and reaches full double precision."
+     },
+     {
+      "q": "How do you compute the square root of x to high precision with binary search?",
+      "a": "Search over [0, max(1, x)]: if mid² < x set lo = mid, else hi = mid. After about 100 iterations lo and hi agree to double precision. Newton's method converges faster, but bisection is simpler and safe."
+     },
+     {
+      "q": "How can binary search find the maximum average of a subarray of length at least k?",
+      "a": "Guess an average m and subtract m from every element; a subarray with average at least m exists exactly when some subarray of length at least k has a non-negative sum, which a prefix-minimum pass checks in O(n). Bisection on m gives O(n log(range / precision))."
+     },
+     {
+      "q": "When would you use ternary search instead?",
+      "a": "When you want the maximum or minimum of a unimodal function rather than the point where a monotone condition flips. Ternary search compares f at two interior points and discards a third of the range each time."
+     }
+    ]
    }
   },
   {
@@ -5274,9 +5680,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "To find the median of two sorted lists without merging them, you cut both lists so that the left pieces together hold half the items. The cut is correct when everything on the left side is no bigger than everything on the right side. You binary search where to cut the shorter list, and the other cut follows automatically.",
+    "interview": [
+     "Binary search a cut `i` in the smaller array A (0..m); the cut in B is `j = (m + n + 1) / 2 - i`, so the left side has half the elements.",
+     "Valid when `A[i-1] <= B[j]` and `B[j-1] <= A[i]` (use -∞/+∞ past the ends).",
+     "If `A[i-1] > B[j]`, move the cut left (`hi = i - 1`); else move it right.",
+     "Median: odd total → `max(A[i-1], B[j-1])`; even → average of that and `min(A[i], B[j])`.",
+     "**O(log(min(m, n)))** time, **O(1)** space. A merge gives O(m + n); the k-th element recursion gives O(log(m + n))."
+    ],
+    "questions": [
+     {
+      "q": "What condition makes a partition of the two arrays correct for the median?",
+      "a": "The left parts together must contain half of all elements, and every left element must be at most every right element. Since each array is sorted, that reduces to two checks: A[i − 1] <= B[j] and B[j − 1] <= A[i]."
+     },
+     {
+      "q": "Why binary search on the smaller array?",
+      "a": "The search range is 0 to m, and j = (m + n + 1)/2 − i must stay between 0 and n. Choosing the smaller array keeps j valid for every i and makes the running time O(log(min(m, n)))."
+     },
+     {
+      "q": "How do you compute the median once the partition is found?",
+      "a": "If the total length is odd, the median is the largest left element, max(A[i − 1], B[j − 1]). If even, average that with the smallest right element, min(A[i], B[j]). Treat missing neighbors past the ends as −∞ or +∞."
+     },
+     {
+      "q": "What is a simpler O(m + n) approach, and when is it enough?",
+      "a": "Merge the arrays with two pointers until you reach the middle position, without storing the merged array. It is fine when the arrays are small or the O(log) bound isn't required."
+     }
+    ]
    }
   },
   {
@@ -5298,9 +5727,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Instead of sorting everything to find the kth smallest value, you guess a value and count how many items are at most that guess. If fewer than k are, the guess is too small; otherwise it may be too big. Binary searching the guess finds the smallest value with at least k items at or below it, which is the answer.",
+    "interview": [
+     "Answer = smallest `x` with `count(≤ x) >= k`; `count` is monotone in `x`, so binary search on the value range.",
+     "**Kth smallest in a row-and-column-sorted matrix**: count with a staircase in O(n): total **O(n log(max − min))**.",
+     "**Kth smallest pair distance**: sort, then count pairs with distance ≤ d using two pointers in O(n): total **O(n log n + n log W)**.",
+     "Also: kth smallest in a multiplication table, kth smallest fraction (count with two pointers).",
+     "The found value is guaranteed to exist in the data: the smallest x with count ≥ k is always an actual element value."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the kth smallest element in a matrix whose rows and columns are sorted?",
+      "a": "Binary search on the value range [m[0][0], m[n−1][n−1]]. For a guess x, count elements at most x with a staircase walk from the bottom-left in O(n). The smallest x with count at least k is the answer, for O(n log(range)) in total."
+     },
+     {
+      "q": "Why is the result of the counting binary search always a value that appears in the data?",
+      "a": "count(≤ x) only increases at values present in the data. The smallest x where the count reaches k must therefore be a value where the count just jumped, which is an actual element."
+     },
+     {
+      "q": "How do you count pairs with distance at most d in O(n)?",
+      "a": "Sort the array, then for each right index r move a left pointer forward while a[r] − a[l] > d. All indices from l to r − 1 pair with r, so add r − l. Both pointers only move forward."
+     },
+     {
+      "q": "When is a heap a better choice than counting?",
+      "a": "When k is small: a min-heap seeded with the first element of each row pops k times in O(k log n). Counting wins when k is large or the value range is small relative to the data."
+     }
+    ]
    }
   },
   {
@@ -5320,9 +5772,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Elementary sorts are the simple, slow sorting methods you could do by hand. Insertion sort is how most people sort playing cards: pick up one card at a time and slide it left into its place among the cards already held. They take quadratic time in general, but insertion sort is very fast when the cards are already almost in order.",
+    "interview": [
+     "**Bubble sort**: swap adjacent out-of-order pairs, repeat passes; stable; O(n²), O(n) best with an early exit when a pass makes no swaps.",
+     "**Selection sort**: repeatedly select the minimum of the unsorted part and swap it into place; always O(n²) comparisons, only n − 1 swaps; not stable.",
+     "**Insertion sort**: grow a sorted prefix by inserting each element into place; stable, in place, **O(n + inversions)**: O(n) on nearly sorted input, O(n²) worst.",
+     "Insertion sort wins on **small** arrays (tens of elements) and **nearly sorted** data, which is why Timsort and introsort use it for small pieces.",
+     "All three use O(1) extra space."
+    ],
+    "questions": [
+     {
+      "q": "Why does insertion sort run fast on nearly sorted input?",
+      "a": "Each element shifts left once for every larger element before it, so the total work is O(n + number of inversions). A nearly sorted array has few inversions, making the sort close to O(n)."
+     },
+     {
+      "q": "Which elementary sort does the fewest swaps, and when does that matter?",
+      "a": "Selection sort, with at most n − 1 swaps, because each pass places one element with a single swap. It matters when writing is expensive compared to reading, such as with some flash storage."
+     },
+     {
+      "q": "Why do fast library sorts still use insertion sort?",
+      "a": "On small arrays, insertion sort's low overhead beats the recursion and bookkeeping of O(n log n) sorts. Introsort and Timsort switch to insertion sort for small pieces, typically below 16 to 32 elements."
+     },
+     {
+      "q": "Is selection sort stable?",
+      "a": "Not in its usual form. Swapping the minimum into position can jump an element over an equal one, reversing their order. A version that shifts elements instead of swapping is stable but does more writes."
+     }
+    ],
+    "deep": "#### Intuition\n\nAll three sorts grow a sorted region one element at a time, but they differ in where the work goes:\n\n- **Selection** finds the right element for the next position (scans the unsorted part).\n- **Insertion** finds the right position for the next element (scans the sorted part, from the right).\n- **Bubble** lets large elements drift right through repeated adjacent swaps.\n\n#### Worked example: insertion sort\n\n`5 2 4 6 1 3`\n\n| step | insert | sorted prefix after |\n|---|---|---|\n| 1 | 2 | 2 5 |\n| 2 | 4 | 2 4 5 |\n| 3 | 6 | 2 4 5 6 |\n| 4 | 1 | 1 2 4 5 6 |\n| 5 | 3 | 1 2 3 4 5 6 |\n\nEach insertion shifts larger elements one step right. The number of shifts equals the number of **inversions** (pairs out of order), which is why nearly sorted input is fast.\n\n#### Code\n\n```cpp\nvoid insertionSort(vector<int>& a) {\n    for (int i = 1; i < (int)a.size(); i++) {\n        int x = a[i], j = i - 1;\n        while (j >= 0 && a[j] > x) {   // strict > keeps equal elements in order (stable)\n            a[j + 1] = a[j];\n            j--;\n        }\n        a[j + 1] = x;\n    }\n}\n\nvoid selectionSort(vector<int>& a) {\n    for (int i = 0; i + 1 < (int)a.size(); i++) {\n        int m = i;\n        for (int j = i + 1; j < (int)a.size(); j++)\n            if (a[j] < a[m]) m = j;\n        swap(a[i], a[m]);              // this long-distance swap breaks stability\n    }\n}\n```\n\n```python\ndef bubble_sort(a):\n    n = len(a)\n    for end in range(n - 1, 0, -1):\n        swapped = False\n        for i in range(end):\n            if a[i] > a[i + 1]:\n                a[i], a[i + 1] = a[i + 1], a[i]\n                swapped = True\n        if not swapped:                # already sorted: O(n) best case\n            break\n\ndef insertion_sort(a):\n    for i in range(1, len(a)):\n        x, j = a[i], i - 1\n        while j >= 0 and a[j] > x:\n            a[j + 1] = a[j]\n            j -= 1\n        a[j + 1] = x\n```\n\n#### Comparison\n\n| Sort | Best | Average | Worst | Stable | Swaps or writes |\n|---|---|---|---|---|---|\n| Bubble (early exit) | $O(n)$ | $O(n^2)$ | $O(n^2)$ | yes | up to $O(n^2)$ |\n| Selection | $O(n^2)$ | $O(n^2)$ | $O(n^2)$ | no | $n - 1$ swaps |\n| Insertion | $O(n)$ | $O(n^2)$ | $O(n^2)$ | yes | one shift per inversion |\n\n#### When each is useful\n\n- **Insertion sort**: small subarrays inside faster sorts (below about 16 to 32 elements), nearly sorted data, and online sorting (elements arriving one by one).\n- **Selection sort**: when writes are very expensive (flash memory), because it does at most $n - 1$ swaps.\n- **Bubble sort**: teaching; its adjacent-swap structure also counts inversions and underlies odd-even sorting networks.\n\n#### Edge cases and bugs\n\n- Using `>=` in insertion sort's inner loop moves equal elements past each other and loses stability.\n- Reading `a[j]` before checking `j >= 0`.\n\nConnects to: merge sort, quick sort, inversions (merge-sort counting), Timsort and introsort."
    }
   },
   {
@@ -5347,9 +5823,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Merge sort splits a list in half, sorts each half, and then merges the two sorted halves into one. It is like two people each sorting half a pile of exam papers, then combining their piles by always taking the paper with the lower roll number from the top of either pile. Splitting continues until the piles have one paper each, which are sorted by definition.",
+    "interview": [
+     "Divide into halves, sort each recursively, **merge** in O(n). Recurrence T(n) = 2T(n/2) + O(n) = **O(n log n)** in every case.",
+     "**Stable** (take from the left half on ties); needs **O(n)** extra space for arrays (O(log n) stack).",
+     "Great for **linked lists** (merging needs no extra array; O(1) extra besides recursion) and **external sorting** (merging sorted runs from disk).",
+     "Predictable: no bad inputs, unlike quicksort; but slower in practice on arrays due to copying.",
+     "The merge step enables counting problems: inversions, reverse pairs, smaller numbers after self.",
+     "Bottom-up (iterative) version merges runs of size 1, 2, 4, … with no recursion."
+    ],
+    "questions": [
+     {
+      "q": "What is the time complexity of merge sort, and why is it the same in every case?",
+      "a": "O(n log n). The split always halves the array regardless of the values, giving log n levels, and merging at each level touches every element once. No input can unbalance the recursion."
+     },
+     {
+      "q": "Why is merge sort stable, and why does that matter?",
+      "a": "When the two heads are equal, the merge takes the one from the left half first, so equal elements keep their original order. Stability matters when sorting records by one key after another, for example by date and then by name."
+     },
+     {
+      "q": "What extra space does merge sort need?",
+      "a": "O(n) for the merge buffer when sorting arrays, plus O(log n) for the recursion stack. On linked lists merging only relinks nodes, so the extra space is just the stack (or O(1) for the bottom-up version)."
+     },
+     {
+      "q": "When would you choose merge sort over quicksort?",
+      "a": "When you need stability, a guaranteed O(n log n) worst case, when sorting linked lists, or when data doesn't fit in memory and must be merged from sorted runs. Quicksort is usually faster on arrays in memory because it is in place and cache-friendly."
+     },
+     {
+      "q": "How does external sorting use merge sort?",
+      "a": "Read chunks that fit in memory, sort each and write it back as a sorted run. Then merge all runs with a k-way merge using a min-heap of the runs' current heads, reading and writing sequentially."
+     }
+    ],
+    "deep": "#### Intuition\n\nMerging two sorted lists is easy and linear. So if you can get two sorted halves, one merge finishes the job. Getting sorted halves is the same problem at half the size, which you solve the same way until pieces have one element.\n\n#### Worked example\n\n`38 27 43 3 9 82 10`\n\n```\nsplit:  [38 27 43 3]          [9 82 10]\nsplit:  [38 27] [43 3]        [9 82] [10]\nsplit:  [38][27] [43][3]      [9][82] [10]\nmerge:  [27 38] [3 43]        [9 82] [10]\nmerge:  [3 27 38 43]          [9 10 82]\nmerge:  [3 9 10 27 38 43 82]\n```\n\nThere are $\\lceil \\log_2 7 \\rceil = 3$ merge levels, each touching all 7 elements.\n\n#### Code\n\n```cpp\nvoid mergeSort(vector<int>& a, vector<int>& buf, int lo, int hi) {  // sorts a[lo..hi)\n    if (hi - lo <= 1) return;\n    int mid = lo + (hi - lo) / 2;\n    mergeSort(a, buf, lo, mid);\n    mergeSort(a, buf, mid, hi);\n    int i = lo, j = mid, k = lo;\n    while (i < mid && j < hi) buf[k++] = (a[i] <= a[j]) ? a[i++] : a[j++];  // <= : stable\n    while (i < mid) buf[k++] = a[i++];\n    while (j < hi) buf[k++] = a[j++];\n    copy(buf.begin() + lo, buf.begin() + hi, a.begin() + lo);\n}\n\nvoid mergeSort(vector<int>& a) {\n    vector<int> buf(a.size());      // one buffer, reused by every merge\n    mergeSort(a, buf, 0, a.size());\n}\n```\n\n```python\ndef merge_sort(a):\n    if len(a) <= 1:\n        return a\n    mid = len(a) // 2\n    left, right = merge_sort(a[:mid]), merge_sort(a[mid:])\n    out, i, j = [], 0, 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            out.append(left[i])\n            i += 1\n        else:\n            out.append(right[j])\n            j += 1\n    out.extend(left[i:])\n    out.extend(right[j:])\n    return out\n```\n\n#### Complexity\n\nEach level of recursion merges $n$ elements in total, and there are $\\log_2 n$ levels: $O(n \\log n)$ time for best, average and worst case. Space: $O(n)$ for the buffer plus $O(\\log n)$ recursion stack. The Python version above allocates new lists at every level (still $O(n \\log n)$ time, $O(n)$ live memory at a time).\n\n#### Merge sort on linked lists\n\nFind the middle with fast and slow pointers, cut, sort both halves, and merge by relinking nodes. No buffer is needed, and there is no random access that would favor quicksort, so merge sort is the standard choice for lists (`std::list::sort` uses it).\n\n#### Edge cases and bugs\n\n- `mid = (lo + hi) / 2` can overflow on huge ranges; use `lo + (hi - lo) / 2`.\n- Using `<` in the merge makes the sort unstable.\n- Allocating a new buffer in every call is correct but slow; allocate once.\n- Off-by-one in half-open `[lo, hi)` vs closed ranges: pick one convention.\n\n#### Variants\n\n- **Bottom-up merge sort**: iterative, merges widths 1, 2, 4, …; good for linked lists and avoids recursion.\n- **Natural merge sort / Timsort**: detect existing sorted runs and merge them; $O(n)$ on sorted input. Python's `sorted` and Java's object sort use Timsort.\n- **External merge sort**: sort chunks that fit in memory, write them to disk, then k-way merge with a heap.\n- **Counting during merge**: inversions and related counts.\n\nConnects to: divide and conquer, merging sorted sequences, merge-sort counting, k-way merge, recursion complexity."
    }
   },
   {
@@ -5369,9 +5874,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Quick sort picks one item as a pivot and splits the rest into items smaller and larger than it. It is like sorting a class by height: pick one student, send shorter students to the left and taller ones to the right, then repeat within each group. The pivot is already in its final place after the split.",
+    "interview": [
+     "**Partition** around a pivot, then recurse on both sides. Average **O(n log n)**, worst **O(n²)** when pivots are repeatedly the smallest or largest (sorted input with a first or last pivot).",
+     "**Randomized pivot** (or median of three) makes the worst case extremely unlikely: expected O(n log n) for every input.",
+     "**In place**, O(log n) expected stack (recurse into the smaller side first to guarantee it). **Not stable**.",
+     "**Lomuto**: pivot at the end, one scan, simple; more swaps; degrades with many equal keys.",
+     "**Hoare**: two pointers from the ends, fewer swaps; returns a split point, the pivot isn't necessarily in its final place.",
+     "Many duplicates: use **three-way partitioning** (Dutch national flag). `std::sort` is introsort: quicksort that switches to heap sort if recursion gets too deep."
+    ],
+    "questions": [
+     {
+      "q": "What is quicksort's worst case, and what input triggers it?",
+      "a": "O(n²), when each partition splits off only the pivot, for example a sorted array with the first or last element as the pivot. The recursion then has n levels of O(n) work."
+     },
+     {
+      "q": "How does a random pivot help?",
+      "a": "No fixed input can reliably produce bad splits, so the expected running time is O(n log n) for every input. A bad run needs many unlucky pivot choices in a row, which is extremely unlikely."
+     },
+     {
+      "q": "Compare the Lomuto and Hoare partition schemes.",
+      "a": "Lomuto scans once with the pivot at the end and places the pivot at its final index; it is simple but does more swaps and degrades with many equal keys. Hoare moves two pointers toward each other and swaps misplaced pairs; it does about three times fewer swaps on average, but it only returns a split point and the pivot may not end in its final place."
+     },
+     {
+      "q": "Why is quicksort not stable?",
+      "a": "Partitioning swaps elements across long distances, which can reorder equal keys. Making it stable needs extra space, which removes its main advantage."
+     },
+     {
+      "q": "How do you keep quicksort's stack depth at O(log n)?",
+      "a": "Recurse into the smaller side and handle the larger side with a loop (tail-call elimination). The smaller side is at most half the size, so the recursion depth is at most log₂ n."
+     }
+    ],
+    "deep": "#### Intuition\n\nAfter one partition, the pivot sits exactly where it will be in the sorted array, with smaller elements on its left and larger on its right. Nothing ever needs to cross the pivot again, so the two sides can be sorted independently. If pivots split the array roughly in half, there are $\\log n$ levels of $O(n)$ partitioning.\n\n#### Lomuto partition, traced\n\nPivot = last element. `i` marks the end of the \"smaller than pivot\" region.\n\n`a = 7 2 1 6 8 5 3 4`, pivot 4.\n\n| j | a[j] | a[j] < 4? | array after | i |\n|---|---|---|---|---|\n| 0 | 7 | no | 7 2 1 6 8 5 3 4 | 0 |\n| 1 | 2 | yes, swap a[0], a[1] | 2 7 1 6 8 5 3 4 | 1 |\n| 2 | 1 | yes, swap a[1], a[2] | 2 1 7 6 8 5 3 4 | 2 |\n| 3 | 6 | no | | 2 |\n| 4 | 8 | no | | 2 |\n| 5 | 5 | no | | 2 |\n| 6 | 3 | yes, swap a[2], a[6] | 2 1 3 6 8 5 7 4 | 3 |\n\nFinally swap the pivot into `a[3]`: `2 1 3 4 8 5 7 6`. The 4 is in its final place.\n\n#### Code\n\n```cpp\nint lomuto(vector<int>& a, int lo, int hi) {          // partitions a[lo..hi], pivot a[hi]\n    int pivot = a[hi], i = lo;\n    for (int j = lo; j < hi; j++)\n        if (a[j] < pivot) swap(a[i++], a[j]);\n    swap(a[i], a[hi]);\n    return i;                                          // pivot's final index\n}\n\nint hoare(vector<int>& a, int lo, int hi) {           // returns p: a[lo..p] <= a[p+1..hi]\n    int pivot = a[lo + (hi - lo) / 2], i = lo - 1, j = hi + 1;\n    while (true) {\n        do i++; while (a[i] < pivot);\n        do j--; while (a[j] > pivot);\n        if (i >= j) return j;\n        swap(a[i], a[j]);\n    }\n}\n\nvoid quickSort(vector<int>& a, int lo, int hi, mt19937& rng) {\n    while (lo < hi) {\n        swap(a[lo + (int)(rng() % (hi - lo + 1))], a[hi]);   // random pivot to the end\n        int p = lomuto(a, lo, hi);\n        if (p - lo < hi - p) {                  // recurse on the smaller side,\n            quickSort(a, lo, p - 1, rng);       // loop on the larger: O(log n) stack\n            lo = p + 1;\n        } else {\n            quickSort(a, p + 1, hi, rng);\n            hi = p - 1;\n        }\n    }\n}\n```\n\n```python\nimport random\n\ndef quick_sort(a, lo=0, hi=None):\n    if hi is None:\n        hi = len(a) - 1\n    if lo >= hi:\n        return\n    k = random.randint(lo, hi)\n    a[k], a[hi] = a[hi], a[k]\n    pivot, i = a[hi], lo\n    for j in range(lo, hi):\n        if a[j] < pivot:\n            a[i], a[j] = a[j], a[i]\n            i += 1\n    a[i], a[hi] = a[hi], a[i]\n    quick_sort(a, lo, i - 1)\n    quick_sort(a, i + 1, hi)\n```\n\nWith Hoare's scheme, recurse on `[lo, p]` and `[p + 1, hi]` (the pivot is included in the left side).\n\n#### Complexity\n\n- Best and average: $O(n \\log n)$; the expected number of comparisons with random pivots is about $1.39 \\, n \\log_2 n$.\n- Worst: $O(n^2)$: $T(n) = T(n-1) + O(n)$.\n- Space: $O(\\log n)$ stack when recursing on the smaller side first; otherwise $O(n)$ in the worst case.\n\n#### Why quicksort is fast in practice\n\nIt partitions in place with sequential scans (cache-friendly), does few writes compared with merge sort's copying, and has a small inner loop. That is why it is the default for primitive arrays in many libraries (Java uses dual-pivot quicksort for primitives; C++ uses introsort).\n\n#### Edge cases and bugs\n\n- All equal elements: Lomuto puts everything on one side, $O(n^2)$. Hoare handles it better; three-way partitioning is best.\n- Sorted input with a fixed first or last pivot: $O(n^2)$. Randomize.\n- Hoare with `lo` as pivot and recursion on `[lo, p - 1]` loses elements; use `[lo, p]`.\n- Deep recursion on adversarial input can overflow the stack.\n\n#### Variants\n\n- Three-way quicksort for many duplicates.\n- Quickselect: recurse into one side only, average $O(n)$.\n- Introsort: quicksort plus a depth limit of about $2 \\log n$, then heap sort, then insertion sort for small pieces.\n\nConnects to: Dutch national flag, quickselect, divide and conquer, heap sort."
    }
   },
   {
@@ -5393,9 +5927,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Heap sort first arranges the array into a heap, a tree where every parent is at least as large as its children, so the largest item sits at the top. Then it repeatedly swaps the top item to the end of the array and repairs the heap. It is like a tournament where the winner leaves each round and the remaining players rerun just the part of the bracket they need.",
+    "interview": [
+     "Build a **max-heap** in place in **O(n)** (sift down from the last parent to the root).",
+     "Repeat n − 1 times: swap the root with the last heap element, shrink the heap, sift the new root down: **O(log n)** each.",
+     "**O(n log n)** in every case, **O(1)** extra space, **not stable**.",
+     "Slower than quicksort in practice (jumps around memory, poor cache locality), but has no bad inputs; introsort uses it as a fallback.",
+     "Array layout: children of `i` are `2i + 1` and `2i + 2`; parent is `(i - 1) / 2`."
+    ],
+    "questions": [
+     {
+      "q": "How does heap sort work?",
+      "a": "Turn the array into a max-heap in place, so the maximum is at index 0. Swap it with the last element, shrink the heap by one, and sift the new root down to restore the heap. Repeating this places elements from largest to smallest at the end of the array."
+     },
+     {
+      "q": "Why is building the heap O(n) rather than O(n log n)?",
+      "a": "Sifting down costs time proportional to a node's height, and most nodes are near the bottom: half the nodes are leaves with height 0, a quarter have height 1, and so on. Summing heights over all nodes gives O(n)."
+     },
+     {
+      "q": "Why is heap sort rarely the fastest choice in practice?",
+      "a": "Sifting jumps between index i and 2i + 1, which touches distant memory and causes cache misses, and each step does more comparisons than quicksort's tight partition loop. Its value is the guaranteed O(n log n) with O(1) extra space."
+     },
+     {
+      "q": "Is heap sort stable?",
+      "a": "No. Swapping the root with the last element moves elements across long distances, so equal keys can change order."
+     }
+    ]
    }
   },
   {
@@ -5415,9 +5972,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "These sorts beat the usual speed limit by never comparing two items; instead they use the values themselves as positions. Counting sort is like sorting exam papers by score using one tray per possible score. Radix sort sorts by one digit at a time, and bucket sort drops values into ranges and sorts each small range.",
+    "interview": [
+     "**Counting sort**: count each value in `[0, k]`, take prefix sums to get positions, place elements (backwards for stability). **O(n + k)** time and space; only for small integer ranges.",
+     "**Radix sort**: stable counting sort by each digit, least significant first. **O(d · (n + b))** for d digits in base b; good for fixed-width integers and strings of equal length.",
+     "**Bucket sort**: split the range into n buckets, sort each, concatenate. **O(n)** average for uniformly distributed data; O(n²) worst if everything lands in one bucket.",
+     "They escape the Ω(n log n) bound because they don't sort by comparisons.",
+     "Interview uses: sort by frequency with buckets, top k frequent, maximum gap (buckets by pigeonhole), sorting ages or grades, H-index."
+    ],
+    "questions": [
+     {
+      "q": "How can counting sort be faster than O(n log n)?",
+      "a": "It doesn't compare elements; it counts how many times each value occurs and computes positions from the counts. That takes O(n + k) for values in a range of size k, which is linear when k is O(n). The comparison lower bound doesn't apply."
+     },
+     {
+      "q": "Why must the per-digit sort inside radix sort be stable?",
+      "a": "Radix sort processes digits from least to most significant. After sorting by a higher digit, elements with equal higher digits must stay in the order established by the lower digits, which only a stable sort guarantees."
+     },
+     {
+      "q": "When does bucket sort degrade, and to what?",
+      "a": "When the input isn't spread evenly and many elements fall into the same bucket. Sorting that bucket then dominates: O(n²) with insertion sort inside, or O(n log n) with a comparison sort."
+     },
+     {
+      "q": "How do buckets solve the maximum gap problem in linear time?",
+      "a": "With n numbers between min and max, the largest gap is at least (max − min)/(n − 1). Make buckets of that width: the maximum gap can't be inside one bucket, so it is between the maximum of one non-empty bucket and the minimum of the next. Tracking only each bucket's min and max gives O(n)."
+     }
+    ]
    }
   },
   {
@@ -5437,9 +6017,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A stable sort keeps items with equal keys in the order they started in. If you sort a class list by grade with a stable sort, students with the same grade stay in alphabetical order from before. A comparator is the rule you give the sort to decide which of two items comes first.",
+    "interview": [
+     "**Stable**: merge sort, insertion sort, Timsort (Python `sort`, Java object sort), C++ `std::stable_sort`. **Not stable**: quicksort, heap sort, selection sort, C++ `std::sort`, Java primitive sort.",
+     "**Multiple keys**: compare the primary key, and only on a tie compare the next key. Or stable-sort by the least important key first, then by more important keys.",
+     "C++ comparators must be a **strict weak ordering**: `comp(a, a)` is false; never use `<=` (undefined behavior, crashes are possible).",
+     "Java `compare` returns negative, zero, positive; avoid `a - b` (overflow), use `Integer.compare`.",
+     "Python: `key=` functions with tuples, `-x` for descending numbers, `reverse=True`, or `functools.cmp_to_key`.",
+     "Custom orders: \"largest number\" (compare `a + b` vs `b + a`), sort by frequency then value, sort points by distance."
+    ],
+    "questions": [
+     {
+      "q": "What does it mean for a sort to be stable, and name stable and unstable examples?",
+      "a": "A stable sort keeps elements with equal keys in their original relative order. Merge sort, insertion sort and Timsort (Python's sort, Java's object sort, C++ stable_sort) are stable; quicksort, heap sort and C++ std::sort are not."
+     },
+     {
+      "q": "How do you sort by two keys?",
+      "a": "Compare by the primary key and use the secondary key only to break ties, for example with a tuple comparison. Alternatively, stable-sort by the secondary key first and then by the primary key."
+     },
+     {
+      "q": "Why is using <= in a C++ sort comparator a bug?",
+      "a": "std::sort requires a strict weak ordering, where comp(a, a) must be false. With <=, equal elements compare as \"less than\" each other, which is undefined behavior and can make the sort read past the array's end."
+     },
+     {
+      "q": "How do you sort numbers to form the largest possible concatenated number?",
+      "a": "Sort the numbers as strings with the rule that a comes before b when a + b > b + a. This ordering is transitive, so the sorted concatenation is the largest; return \"0\" if the first string is \"0\"."
+     },
+     {
+      "q": "Why avoid return a − b in a Java comparator?",
+      "a": "The subtraction can overflow for values of large magnitude with opposite signs, flipping the sign of the result and corrupting the sort. Integer.compare(a, b) gives the correct sign without overflow."
+     }
+    ],
+    "deep": "#### Intuition\n\nSorting libraries don't know what \"smaller\" means for your data, so you tell them with a comparator (or a key function). The comparator must behave like a consistent \"less than\", or the sort may produce garbage or crash. Stability is the other half: when two items compare equal, does their original order survive?\n\n#### Sorting by several keys\n\nSort people by age ascending, then name ascending:\n\n| original | after sort |\n|---|---|\n| (Ria, 25) | (Ana, 22) |\n| (Ana, 22) | (Dev, 25) |\n| (Dev, 25) | (Ria, 25) |\n\nTwo equivalent approaches:\n\n1. One comparator: compare ages; if equal, compare names. (Tuples compare this way automatically.)\n2. Two stable sorts: first by name, then by age. Because the second sort is stable, equal ages keep the name order from the first sort.\n\n#### Code\n\n```cpp\nstruct Person { string name; int age; };\n\nvoid sortPeople(vector<Person>& people) {\n    sort(people.begin(), people.end(), [](const Person& a, const Person& b) {\n        if (a.age != b.age) return a.age < b.age;   // primary key\n        return a.name < b.name;                     // tie-breaker\n        // Equivalent: return tie(a.age, a.name) < tie(b.age, b.name);\n    });\n}\n\n// Custom order: arrange numbers to form the largest concatenation.\nstring largestNumber(vector<int> nums) {\n    vector<string> s;\n    for (int x : nums) s.push_back(to_string(x));\n    sort(s.begin(), s.end(), [](const string& a, const string& b) {\n        return a + b > b + a;                       // strict: false when equal\n    });\n    if (s[0] == \"0\") return \"0\";\n    string out;\n    for (auto& x : s) out += x;\n    return out;\n}\n```\n\n```python\nfrom functools import cmp_to_key\n\ndef sort_people(people):\n    # people: list of (name, age); age ascending, then name ascending\n    return sorted(people, key=lambda p: (p[1], p[0]))\n\ndef sort_by_frequency_desc_then_value(nums):\n    from collections import Counter\n    freq = Counter(nums)\n    return sorted(nums, key=lambda x: (-freq[x], x))\n\ndef largest_number(nums):\n    s = list(map(str, nums))\n    s.sort(key=cmp_to_key(lambda a, b: -1 if a + b > b + a else (1 if a + b < b + a else 0)))\n    return \"0\" if s[0] == \"0\" else \"\".join(s)\n```\n\n#### Comparator rules (strict weak ordering)\n\nA C++ comparator `comp` must satisfy:\n\n1. **Irreflexive**: `comp(a, a)` is false. This is why `<=` is illegal.\n2. **Asymmetric**: if `comp(a, b)` then not `comp(b, a)`.\n3. **Transitive**: `comp(a, b)` and `comp(b, c)` imply `comp(a, c)`.\n4. **Transitive equivalence**: if `a` ties with `b` and `b` ties with `c`, then `a` ties with `c`.\n\nBreaking them is undefined behavior: `std::sort` may read out of bounds. Java's Timsort may throw \"Comparison method violates its general contract\". A common culprit is comparing floating-point values that include NaN, or a comparator that depends on mutable state.\n\n#### Pitfalls\n\n- Java `(a, b) -> a - b` overflows for large magnitudes (`Integer.MIN_VALUE - 1`); use `Integer.compare(a, b)`.\n- Sorting an array of indices by values: capture the values by reference and compare `v[i] < v[j]`, tie-breaking by index for determinism.\n- Descending order on strings in Python can't use `-s`; use `reverse=True` or a second stable pass.\n- Sorting objects by a key that is expensive to compute: compute once (decorate-sort-undecorate, which Python's `key=` does automatically).\n\n#### Complexity\n\nComparator sorts are $O(n \\log n)$ comparisons; if each comparison costs $O(L)$ (strings of length $L$), the total is $O(n L \\log n)$.\n\nConnects to: merge sort (stable), quick sort (unstable), intervals (sort by start or end), greedy with sorting."
    }
   },
   {
@@ -5461,9 +6070,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Quickselect finds the kth smallest item without sorting everything. It partitions around a pivot like quicksort, then continues only into the side that contains position k, ignoring the other side. It is like finding the fifth tallest student by splitting the class around one student and only re-checking the group that must contain the answer.",
+    "interview": [
+     "Partition around a random pivot; if the pivot lands at index `k`, done; else recurse (or loop) into one side only.",
+     "**Average O(n)** (n + n/2 + n/4 + … ≈ 2n), **worst O(n²)**; random pivots make the worst case unlikely. Median of medians guarantees O(n) but is slower in practice.",
+     "In place, O(1) extra with the iterative version; reorders the array.",
+     "Kth largest = index `n - k` in ascending order.",
+     "C++ `std::nth_element` does this. Alternative: a min-heap of size k in **O(n log k)** without modifying the input, good for streams.",
+     "After quickselect, the k smallest elements are all in `a[0..k-1]` (unsorted), which solves \"k closest points\"."
+    ],
+    "questions": [
+     {
+      "q": "Why does quickselect run in O(n) on average while quicksort takes O(n log n)?",
+      "a": "After partitioning, quickselect continues into only one side, the side containing position k. With balanced pivots the sizes shrink geometrically, n + n/2 + n/4 + …, which sums to about 2n. Quicksort recurses into both sides, so every level does O(n) work across log n levels."
+     },
+     {
+      "q": "What is quickselect's worst case, and how do you avoid it?",
+      "a": "O(n²), when pivots are always extreme and each step removes only one element. A random pivot makes this very unlikely; median of medians guarantees O(n) worst case but is slower in practice."
+     },
+     {
+      "q": "How do you find the kth largest element with quickselect?",
+      "a": "The kth largest is the element at index n − k in ascending order, so run quickselect for index n − k. Alternatively, reverse the partition comparison."
+     },
+     {
+      "q": "When would you prefer a heap over quickselect for top k?",
+      "a": "When the data arrives as a stream, when the input must not be modified, or when k is small compared with n. A min-heap of size k gives O(n log k) time and O(k) space."
+     },
+     {
+      "q": "After quickselect for index k, what else do you know about the array?",
+      "a": "Every element before index k is at most a[k] and every element after is at least a[k]. So the first k elements are the k smallest, in no particular order, which answers \"k closest\" style questions directly."
+     }
+    ],
+    "deep": "#### Intuition\n\nQuicksort recurses into both sides of every partition. But to find the element that belongs at index $k$, only the side containing $k$ matters. With good pivots the problem size halves each time, and the total work is a geometric series:\n\n$$n + \\frac{n}{2} + \\frac{n}{4} + \\dots < 2n = O(n)$$\n\n#### Worked example: 3rd smallest (k = 2, zero-based)\n\n`a = 7 10 4 3 20 15`\n\n1. Pivot 15 (say). Lomuto puts smaller elements first: `7 10 4 3 15 20`, pivot at index 4. `k = 2 < 4`: continue in `[0, 3]`.\n2. Pivot 3: `3 10 4 7`, pivot at index 0. `k = 2 > 0`: continue in `[1, 3]`.\n3. Pivot 7: `4 7 10` in positions 1 to 3, pivot at index 2 = k. Answer **7**.\n\nCheck: sorted is `3 4 7 10 15 20`; index 2 holds 7.\n\n#### Code\n\n```cpp\nint quickselect(vector<int> a, int k) {            // k-th smallest, 0-based\n    mt19937 rng(12345);\n    int lo = 0, hi = (int)a.size() - 1;\n    while (true) {\n        swap(a[lo + (int)(rng() % (hi - lo + 1))], a[hi]);  // random pivot to the end\n        int pivot = a[hi], i = lo;\n        for (int j = lo; j < hi; j++)\n            if (a[j] < pivot) swap(a[i++], a[j]);\n        swap(a[i], a[hi]);                                   // pivot now at its final index i\n        if (i == k) return a[i];\n        if (i < k) lo = i + 1;                               // answer is right of the pivot\n        else hi = i - 1;                                     // answer is left of the pivot\n    }\n}\n\nint kthLargest(const vector<int>& a, int k) {       // k-th largest, 1-based\n    return quickselect(a, (int)a.size() - k);\n}\n```\n\n```python\nimport random\n\ndef quickselect(a, k):\n    \"\"\"k-th smallest (0-based); works on a copy with three-way partitioning.\"\"\"\n    a = list(a)\n    while True:\n        pivot = random.choice(a)\n        less = [x for x in a if x < pivot]\n        equal = [x for x in a if x == pivot]\n        if k < len(less):\n            a = less\n        elif k < len(less) + len(equal):\n            return pivot\n        else:\n            k -= len(less) + len(equal)\n            a = [x for x in a if x > pivot]\n```\n\nThe Python version trades the in-place partition for clarity: still $O(n)$ expected, but with $O(n)$ extra memory. The three-way split also handles many duplicates gracefully.\n\n#### Complexity\n\nExpected $O(n)$ time with random pivots; worst case $O(n^2)$. Median of medians (groups of five) picks a pivot guaranteed to be between the 30th and 70th percentile, giving $T(n) \\le T(n/5) + T(7n/10) + O(n) = O(n)$ worst case, with a large constant.\n\n#### Quickselect or heap?\n\n| | Quickselect | Min-heap of size k |\n|---|---|---|\n| Time | $O(n)$ average | $O(n \\log k)$ |\n| Extra space | $O(1)$ (in place) | $O(k)$ |\n| Modifies input | yes | no |\n| Works on a stream | no | yes |\n\n#### Edge cases and bugs\n\n- Off by one between \"k-th largest\" (1-based) and index `n - k`.\n- Many duplicates with a two-way partition: use three-way partitioning or `<=` handling carefully.\n- Forgetting to randomize: sorted input gives $O(n^2)$.\n\n#### Variants\n\n- K closest points to the origin: quickselect on distances, return the first k.\n- Median of an unsorted array: `k = n / 2` (and `n / 2 - 1` for even n).\n- Wiggle sort II: median by quickselect, then three-way partition with index mapping.\n- Top k frequent: quickselect on (frequency) values.\n\nConnects to: quick sort, top K elements with heaps, Dutch national flag, median.",
+    "signals": [
+     "kth smallest or kth largest element in an unsorted array",
+     "median of unsorted data without sorting",
+     "\"the k closest\", \"the k smallest\" where their order doesn't matter",
+     "expected O(n) required, and modifying the array is allowed"
+    ],
+    "template": "```cpp\n// Quickselect (iterative, random pivot): returns the element that belongs at index k.\nint selectKth(vector<int>& a, int k) {\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo < hi) {\n        swap(a[lo + rand() % (hi - lo + 1)], a[hi]);      // random pivot\n        int pivot = a[hi], i = lo;\n        for (int j = lo; j < hi; j++)                     // Lomuto partition\n            if (a[j] < pivot) swap(a[i++], a[j]);\n        swap(a[i], a[hi]);\n        if (i == k) break;\n        if (i < k) lo = i + 1;                            // keep only the side with k\n        else hi = i - 1;\n    }\n    return a[k];                                          // a[0..k-1] <= a[k] <= a[k+1..]\n}\n```"
    }
   },
   {
@@ -5485,9 +6130,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Merge sort can count pairs of items that are out of order while it sorts. When merging two sorted halves, if an item from the right half is placed before items remaining in the left half, it was out of order with all of them. It is like two sorted queues merging at a gate: every time someone from the second queue goes first, you know how many people they overtook.",
+    "interview": [
+     "An **inversion** is a pair `i < j` with `a[i] > a[j]`. Brute force O(n²); merge sort counting **O(n log n)**.",
+     "During the merge, when `right[j] < left[i]`, the right element forms an inversion with **all remaining left elements**: add `mid - i`.",
+     "**Reverse pairs** (`a[i] > 2·a[j]`): before merging, count with a separate two-pointer pass over the sorted halves, then merge normally.",
+     "**Count of smaller numbers after self**: sort indices instead of values; when a left element is placed, add the number of right elements already placed.",
+     "Alternative: a Fenwick tree over compressed values, scanning from the right.",
+     "Inversion count = the number of adjacent swaps bubble sort would make."
+    ],
+    "questions": [
+     {
+      "q": "How do you count inversions in O(n log n)?",
+      "a": "Run merge sort and count during each merge. When the right half's head is smaller than the left half's head, it is smaller than every remaining left element, so add the number of remaining left elements. Every inversion is counted exactly once, at the merge where its two elements are separated."
+     },
+     {
+      "q": "Why must you use <= when taking from the left half?",
+      "a": "Equal elements are not inversions. Taking the left element first on ties means a right element is only counted against left elements strictly greater than it."
+     },
+     {
+      "q": "How do you count reverse pairs, where a[i] > 2·a[j]?",
+      "a": "Before merging two sorted halves, run a separate two-pointer pass: for each left element, advance a pointer in the right half while a[i] > 2·a[j] and add how far it has moved. Then merge normally. The condition differs from the merge order, so it can't be counted inside the merge."
+     },
+     {
+      "q": "How do you compute, for each element, how many smaller elements come after it?",
+      "a": "Merge sort an array of indices by value. When an element from the left half is placed, the right-half elements already placed are exactly the smaller ones that come after it, so add that count to its answer. A Fenwick tree over compressed values scanning from the right also works."
+     }
+    ],
+    "deep": "#### Intuition\n\nEvery pair $(i, j)$ with $i < j$ is split at exactly one level of merge sort: the level where $i$ lands in the left half and $j$ in the right half. At that merge, both halves are sorted, so the pairs across the halves can be counted in bulk. When the right head is smaller than the left head, it is smaller than every remaining left element too.\n\n#### Worked example: counting inversions\n\n`2 4 1 3 5`: inversions are (2,1), (4,1), (4,3) = 3.\n\nMerge `[2 4]` with `[1 3 5]` (both already sorted at this level; the halves themselves contain no inversions here):\n\n| left remaining | right head | take | added |\n|---|---|---|---|\n| 2 4 | 1 | 1 (from right) | 2 (both 2 and 4) |\n| 2 4 | 3 | 2 (from left) | 0 |\n| 4 | 3 | 3 (from right) | 1 (the 4) |\n| 4 | 5 | 4 | 0 |\n| | 5 | 5 | 0 |\n\nTotal 3.\n\n#### Code\n\n```cpp\nlong long sortCount(vector<int>& a, vector<int>& buf, int lo, int hi) {  // a[lo..hi)\n    if (hi - lo <= 1) return 0;\n    int mid = lo + (hi - lo) / 2;\n    long long count = sortCount(a, buf, lo, mid) + sortCount(a, buf, mid, hi);\n    int i = lo, j = mid, k = lo;\n    while (i < mid && j < hi) {\n        if (a[i] <= a[j]) buf[k++] = a[i++];\n        else {\n            count += mid - i;                 // a[j] is smaller than all of a[i..mid)\n            buf[k++] = a[j++];\n        }\n    }\n    while (i < mid) buf[k++] = a[i++];\n    while (j < hi) buf[k++] = a[j++];\n    copy(buf.begin() + lo, buf.begin() + hi, a.begin() + lo);\n    return count;\n}\n\nlong long countInversions(vector<int> a) {\n    vector<int> buf(a.size());\n    return sortCount(a, buf, 0, a.size());\n}\n```\n\n```python\ndef count_smaller_after_self(nums):\n    \"\"\"result[i] = number of j > i with nums[j] < nums[i].\"\"\"\n    n = len(nums)\n    result = [0] * n\n    idx = list(range(n))\n\n    def sort(lo, hi):                       # sorts idx[lo:hi] by value\n        if hi - lo <= 1:\n            return\n        mid = (lo + hi) // 2\n        sort(lo, mid)\n        sort(mid, hi)\n        merged, j = [], mid\n        for i in range(lo, mid):\n            while j < hi and nums[idx[j]] < nums[idx[i]]:\n                merged.append(idx[j])\n                j += 1\n            result[idx[i]] += j - mid       # right elements already placed are smaller\n            merged.append(idx[i])\n        merged.extend(idx[j:hi])\n        idx[lo:hi] = merged\n\n    sort(0, n)\n    return result\n```\n\n#### Reverse pairs\n\nFor `a[i] > 2 * a[j]`, the counting condition differs from the merge order, so count in a separate pass before merging: for each `i` in the sorted left half, advance `j` in the sorted right half while `a[i] > 2 * a[j]` (use 64-bit), and add `j - mid`. Both pointers only move forward, so the pass is linear and the total stays $O(n \\log n)$.\n\n#### Complexity\n\n$O(n \\log n)$ time (merge sort plus a linear pass per merge), $O(n)$ extra space.\n\n#### Edge cases and bugs\n\n- Use `<=` when taking from the left, so equal values are not counted as inversions.\n- The count can reach $n(n-1)/2 \\approx 5 \\cdot 10^9$ for $n = 10^5$: use 64-bit.\n- Sorting the values loses their original positions; sort indices when per-element answers are needed.\n\n#### Variants\n\n- Count of range sum: prefix sums, then count pairs with `lower <= P[j] - P[i] <= upper` during the merge.\n- Global versus local inversions, and minimum adjacent swaps to sort (equals the inversion count).\n- Fenwick tree version: coordinate-compress, scan from the right, query how many smaller values were seen.\n\nConnects to: merge sort, Fenwick tree, coordinate compression, elementary sorts (bubble sort swaps).",
+    "signals": [
+     "count pairs (i < j) where the earlier element is larger than the later one",
+     "\"number of smaller elements to the right\" for every position",
+     "count pairs satisfying an inequality between an earlier and a later element",
+     "minimum adjacent swaps to sort, or how far an array is from sorted"
+    ],
+    "template": "```cpp\n// Merge sort that counts cross pairs (i in left, j in right) before merging.\nlong long countCross(vector<long long>& a, vector<long long>& buf, int lo, int hi) {\n    if (hi - lo <= 1) return 0;\n    int mid = lo + (hi - lo) / 2;\n    long long cnt = countCross(a, buf, lo, mid) + countCross(a, buf, mid, hi);\n    for (int i = lo, j = mid; i < mid; i++) {      // both halves sorted: two pointers\n        while (j < hi && a[i] > a[j]) j++;         // condition, e.g. a[i] > 2 * a[j]\n        cnt += j - mid;                            // right elements paired with a[i]\n    }\n    merge(a.begin() + lo, a.begin() + mid, a.begin() + mid, a.begin() + hi, buf.begin() + lo);\n    copy(buf.begin() + lo, buf.begin() + hi, a.begin() + lo);\n    return cnt;\n}\n```"
    }
   },
   {
@@ -5507,9 +6184,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Any sort that only learns about the data by comparing pairs of items needs about n log n comparisons in the worst case. Think of a game of twenty questions where each yes-or-no answer can at best halve the possible orderings. Since there are n! possible orderings, you need about log₂(n!) questions, which grows like n log n.",
+    "interview": [
+     "Model a comparison sort as a **decision tree**: each internal node is a comparison, each leaf an output order.",
+     "It must distinguish all **n!** permutations, so it needs at least n! leaves; a binary tree of height h has at most 2ʰ leaves.",
+     "So h ≥ log₂(n!) = **Θ(n log n)** (by Stirling, log₂ n! ≈ n log₂ n − 1.44n).",
+     "Merge sort and heap sort are therefore asymptotically optimal among comparison sorts.",
+     "Counting, radix and bucket sorts escape the bound because they use values as indices, not just comparisons.",
+     "The same argument gives Ω(log n) for searching a sorted array and Ω(n log n) for element distinctness in the comparison model."
+    ],
+    "questions": [
+     {
+      "q": "Why can't a comparison-based sort beat Ω(n log n) in the worst case?",
+      "a": "Each comparison has two outcomes, so after h comparisons the algorithm can distinguish at most 2^h cases. It must distinguish all n! orderings of the input, so 2^h ≥ n!, giving h ≥ log₂(n!) = Θ(n log n)."
+     },
+     {
+      "q": "How is log₂(n!) related to n log n?",
+      "a": "n! is at least (n/2)^(n/2), because its top half of factors are each at least n/2, so log₂(n!) ≥ (n/2) log₂(n/2) = Ω(n log n). It is also at most n log₂ n, so log₂(n!) = Θ(n log n)."
+     },
+     {
+      "q": "How do counting sort and radix sort get around the lower bound?",
+      "a": "They never compare two elements; they use the values directly as array indices or digits. The decision-tree argument only covers algorithms whose only access to the data is pairwise comparisons."
+     },
+     {
+      "q": "Does the lower bound hold for the average case too?",
+      "a": "Yes. The average depth of the leaves in a binary tree with n! leaves is also at least log₂(n!), so even the average number of comparisons over all input orders is Ω(n log n)."
+     }
+    ]
    }
   },
   {
@@ -5529,9 +6230,37 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A string is an array of characters, and each character is stored as a number. In Java and Python strings can't be changed once made, so \"changing\" one quietly builds a whole new copy, like rewriting a page instead of fixing one word. Knowing this helps you avoid slow code that copies the same text over and over.",
+    "interview": [
+     "Characters are numbers: `'a'` is 97, `'A'` is 65, `'0'` is 48. `c - 'a'` gives a letter's index 0 to 25; `c - '0'` gives a digit's value.",
+     "**Immutable** in Java, Python, JavaScript: `s += c` in a loop copies the string every time, **O(n²)** total. Use `StringBuilder`, a list plus `''.join(...)`, or C++ `std::string` (mutable, `push_back` amortized O(1)).",
+     "Comparing, hashing and slicing a string cost **O(length)**, not O(1); `substr` and slices copy.",
+     "ASCII has 128 characters (7 bits). **Unicode** assigns code points; UTF-8 encodes them in 1 to 4 bytes, so byte length can differ from character count. Java `char` is a UTF-16 unit; some emoji take two.",
+     "Ask about the character set: lowercase only (array of 26), ASCII (128 or 256), or full Unicode (hash map)."
+    ],
+    "questions": [
+     {
+      "q": "Why is building a string with s += c in a loop slow in Java or Python?",
+      "a": "Strings are immutable there, so each concatenation allocates a new string and copies the old contents. Over n appends that copies 1 + 2 + … + n characters, which is O(n²). A StringBuilder or a list joined at the end is O(n)."
+     },
+     {
+      "q": "How do you convert a lowercase letter to an index from 0 to 25 and back?",
+      "a": "Subtract the code of 'a': c − 'a' in C++ or Java, ord(c) − ord('a') in Python. To go back, add the index to 'a' and convert to a character."
+     },
+     {
+      "q": "What is the cost of comparing two strings or using them as hash map keys?",
+      "a": "O(L) for strings of length L, because every character may need to be read. Hash map operations with string keys are O(L) on average, not O(1), which matters for long keys."
+     },
+     {
+      "q": "What is the difference between ASCII, Unicode and UTF-8?",
+      "a": "ASCII is a 128-character set using 7 bits. Unicode assigns a code point to every character in every script. UTF-8 is an encoding of Unicode that uses 1 byte for ASCII characters and 2 to 4 bytes for others, so the byte length may exceed the character count."
+     },
+     {
+      "q": "Why should you cast char to unsigned char before indexing an array in C++?",
+      "a": "char may be signed, so bytes above 127 become negative numbers and would index before the array's start. Casting to unsigned char maps them to 128 to 255."
+     }
+    ],
+    "deep": "#### Intuition\n\nA string behaves like an array of small integers with extra rules. Most string problems reduce to array techniques (two pointers, sliding windows, counting), so the new things to master are the costs hidden in string operations and the character arithmetic that turns letters into indices.\n\n#### Character arithmetic\n\n| Expression (C++/Java) | Meaning | Python |\n|---|---|---|\n| `c - 'a'` | index 0 to 25 of a lowercase letter | `ord(c) - ord('a')` |\n| `(char)('a' + i)` | the i-th lowercase letter | `chr(ord('a') + i)` |\n| `c - '0'` | digit value | `int(c)` or `ord(c) - 48` |\n| `c ^ 32` | toggles ASCII letter case | |\n| `isalnum`, `isdigit`, `tolower` | classification | `c.isalnum()`, `c.lower()` |\n\n#### Building strings efficiently\n\n```cpp\n// C++ strings are mutable: += and push_back are amortized O(1).\nstring buildCsv(const vector<int>& values) {\n    string out;\n    for (int i = 0; i < (int)values.size(); i++) {\n        if (i) out += ',';\n        out += to_string(values[i]);\n    }\n    return out;\n}\n\n// Caesar shift using character arithmetic (lowercase letters only).\nstring shift(const string& s, int k) {\n    string out = s;\n    for (char& c : out) c = 'a' + (c - 'a' + k % 26 + 26) % 26;\n    return out;\n}\n```\n\n```python\ndef build_csv(values):\n    return \",\".join(str(v) for v in values)   # one pass, no repeated copying\n\ndef slow_concat(n):\n    s = \"\"\n    for i in range(n):\n        s = s + str(i % 10)    # creates a new string each time: O(n^2) in the worst case\n    return s\n```\n\nIn Java, use `StringBuilder sb = new StringBuilder(); sb.append(x);` then `sb.toString()`. (CPython sometimes optimizes `s += c` in place, but don't rely on it.)\n\n#### Hidden costs\n\n| Operation | Cost |\n|---|---|\n| `s[i]` | $O(1)$ (bytes or code units) |\n| `s == t`, `hash(s)` | $O(L)$ (Java caches a string's hash after the first call) |\n| `s.substr(i, k)`, `s[i:j]` | $O(k)$: it copies |\n| `s + t` | $O(|s| + |t|)$ |\n| `s.find(t)` | typically $O(|s| \\cdot |t|)$ worst case |\n| sorting $n$ strings | $O(n \\log n)$ comparisons, each up to $O(L)$ |\n\nA hash map keyed by strings of length $L$ therefore costs $O(L)$ per operation, not $O(1)$; say so when the strings are long.\n\n#### Unicode in a sentence or two\n\nCode points go up to U+10FFFF. UTF-8 stores ASCII in one byte and other characters in 2 to 4 bytes; UTF-16 (Java, JavaScript) stores most characters in one 16-bit unit and the rest (many emoji) as surrogate pairs. So `length()` in Java counts units, not characters, and reversing a string unit by unit can break emoji. In interviews, ask whether input is ASCII; usually it is.\n\n#### Edge cases and bugs\n\n- Empty strings and single characters.\n- Mixed case and non-letters when a problem says \"ignore case and punctuation\".\n- In C++, `char` may be signed: cast to `unsigned char` before using it as an index or calling `isalpha`.\n- `s.size() - 1` is a huge unsigned number when `s` is empty in C++.\n\n#### Variants\n\nString problems usually reuse: two pointers (palindromes, reversal), counting (anagrams), sliding windows (substrings with constraints), hashing (grouping), stacks (brackets, decoding), DP (edit distance, LCS), and tries (prefix queries).\n\nConnects to: arrays, anagrams and character counts, parsing strings, rolling hash."
    }
   },
   {
@@ -5553,9 +6282,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A palindrome reads the same forwards and backwards, like \"level\" or \"racecar\". To check one, put a finger on each end and move them toward the middle, comparing as you go. To find palindromes inside a longer text, start from each middle point and spread outward while both sides still match.",
+    "interview": [
+     "**Check**: two pointers from both ends, **O(n)** time, O(1) space; skip non-alphanumerics and compare lowercase if asked.",
+     "**Expand around center**: every palindrome has a center, either a character (odd length) or a gap between two (even length): **2n − 1 centers**.",
+     "Longest palindromic substring: expand from each center, **O(n²)** time, O(1) space. Manacher's algorithm is O(n).",
+     "Count palindromic substrings: sum the number of successful expansions over all centers, O(n²).",
+     "Valid palindrome with at most one deletion: on the first mismatch, try skipping the left or the right character.",
+     "Palindromic **subsequences** (not contiguous) need DP instead."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the longest palindromic substring without extra space?",
+      "a": "Treat each character and each gap between characters as a center, and expand outward while the two sides match. There are 2n − 1 centers and each expansion is at most O(n), giving O(n²) time and O(1) space."
+     },
+     {
+      "q": "Why must you expand from gaps as well as characters?",
+      "a": "Even-length palindromes such as \"abba\" are centered between two characters. Expanding only from characters finds odd-length palindromes and misses them."
+     },
+     {
+      "q": "How do you count all palindromic substrings?",
+      "a": "Expand around each of the 2n − 1 centers and add one for every successful expansion step, since each step reveals a new palindrome with that center. That is O(n²) time and O(1) space."
+     },
+     {
+      "q": "How do you check whether a string can be a palindrome after deleting at most one character?",
+      "a": "Move two pointers inward while the characters match. At the first mismatch, check whether skipping the left character or skipping the right one leaves a palindrome. It is O(n), since the extra check runs only once."
+     },
+     {
+      "q": "When is a palindrome problem a DP problem instead?",
+      "a": "When it asks about subsequences (characters not necessarily adjacent), such as the longest palindromic subsequence or minimum insertions to make a palindrome. Those need a table over ranges i..j."
+     }
+    ],
+    "deep": "#### Intuition\n\nA palindrome is symmetric around its center. If `s[l..r]` is a palindrome and `s[l-1] == s[r+1]`, then `s[l-1..r+1]` is one too. So starting from a center and expanding outward finds every palindrome with that center, stopping at the first mismatch. Trying all centers finds all palindromic substrings.\n\n#### Worked example: longest palindromic substring of \"babad\"\n\n| center | type | expansion | longest found |\n|---|---|---|---|\n| 0 (b) | odd | \"b\" | b |\n| gap 0-1 | even | b ≠ a | |\n| 1 (a) | odd | \"a\" → \"bab\" → stop (edge) | bab |\n| gap 1-2 | even | a ≠ b | |\n| 2 (b) | odd | \"b\" → \"aba\" → b ≠ d | aba (same length) |\n| 3 (a) | odd | \"a\" → b ≠ d | |\n| 4 (d) | odd | \"d\" | |\n\nAnswer: \"bab\" (or \"aba\", also length 3).\n\n#### Code\n\n```cpp\n// Returns {start, length} of the longest palindromic substring.\npair<int, int> longestPalindrome(const string& s) {\n    int n = s.size(), bestStart = 0, bestLen = n ? 1 : 0;\n    auto expand = [&](int l, int r) {\n        while (l >= 0 && r < n && s[l] == s[r]) { l--; r++; }\n        int len = r - l - 1;                    // the loop overshoots by one on each side\n        if (len > bestLen) { bestLen = len; bestStart = l + 1; }\n    };\n    for (int c = 0; c < n; c++) {\n        expand(c, c);                           // odd length, center at c\n        expand(c, c + 1);                       // even length, center between c and c + 1\n    }\n    return {bestStart, bestLen};\n}\n\nbool isPalindromeIgnoringCase(const string& s) {\n    int l = 0, r = (int)s.size() - 1;\n    while (l < r) {\n        if (!isalnum((unsigned char)s[l])) l++;\n        else if (!isalnum((unsigned char)s[r])) r--;\n        else if (tolower((unsigned char)s[l++]) != tolower((unsigned char)s[r--])) return false;\n    }\n    return true;\n}\n```\n\n```python\ndef count_palindromic_substrings(s):\n    n, count = len(s), 0\n    for center in range(2 * n - 1):\n        l, r = center // 2, center // 2 + center % 2   # odd centers, then gaps\n        while l >= 0 and r < n and s[l] == s[r]:\n            count += 1\n            l, r = l - 1, r + 1\n    return count\n\ndef valid_palindrome_one_deletion(s):\n    def is_pal(l, r):\n        while l < r:\n            if s[l] != s[r]:\n                return False\n            l, r = l + 1, r - 1\n        return True\n\n    l, r = 0, len(s) - 1\n    while l < r:\n        if s[l] != s[r]:\n            return is_pal(l + 1, r) or is_pal(l, r - 1)\n        l, r = l + 1, r - 1\n    return True\n```\n\n#### Complexity\n\nChecking: $O(n)$. Expanding from $2n - 1$ centers: each expansion is at most $O(n)$, so $O(n^2)$ worst case (a string of one repeated letter), $O(1)$ extra space. That beats the $O(n^2)$ time and space of the DP table `isPal[i][j]`.\n\n#### Edge cases and bugs\n\n- Forgetting even-length palindromes (\"abba\" has no single middle character).\n- The length after expansion is `r - l - 1`, because both pointers stepped one past the palindrome.\n- Empty string: return \"\" and avoid `bestLen = 1`.\n\n#### Variants\n\n- Palindrome partitioning (backtracking with a palindrome check or precomputed table).\n- Shortest palindrome by adding characters in front: KMP prefix function on `s + '#' + reverse(s)`.\n- Palindrome pairs among a list of words: hash map of reversed words plus prefix and suffix checks.\n- Longest palindromic subsequence: interval DP, $O(n^2)$.\n- Palindrome number without converting to a string: reverse half the digits.\n\nConnects to: opposite-ends pointers, Manacher's algorithm, palindromic DP, KMP.",
+    "signals": [
+     "a substring or word that reads the same forwards and backwards",
+     "longest or count of palindromic substrings (contiguous)",
+     "\"at most one deletion\" or \"ignore non-alphanumeric characters\" palindrome checks",
+     "symmetry around a center in a string or a number"
+    ],
+    "template": "```cpp\n// Expand around every center (2n - 1 of them); visit each palindrome [l, r] found.\ntemplate <class Visit>\nvoid forEachPalindrome(const string& s, Visit visit) {\n    int n = s.size();\n    for (int center = 0; center < 2 * n - 1; center++) {\n        int l = center / 2, r = l + center % 2;     // odd centers, then gaps\n        while (l >= 0 && r < n && s[l] == s[r]) {\n            visit(l, r);                            // s[l..r] is a palindrome\n            l--;\n            r++;\n        }\n    }\n}\n```"
    }
   },
   {
@@ -5577,9 +6342,34 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Two words are anagrams when they use exactly the same letters the same number of times, like \"listen\" and \"silent\". A fixed-size count array is a row of 26 tally boxes, one per letter. Filling the boxes for each word and comparing them answers many letter questions in one pass.",
+    "interview": [
+     "For lowercase letters, `int count[26]`; ASCII uses 128 or 256. Faster and smaller than a hash map, and comparing two arrays is O(26), effectively O(1).",
+     "Anagram check: increment for one string, decrement for the other, all zero at the end (and equal lengths). **O(n)** time, **O(1)** space.",
+     "The count array (or a string made from it) is a **canonical key** for grouping anagrams in O(L) per word.",
+     "Can `a` be built from the letters of `b` (ransom note)? Count `b`, spend on `a`, fail on a negative.",
+     "Sliding version: keep a count array for a window to find anagram occurrences in O(n).",
+     "For Unicode or unknown alphabets, fall back to a hash map."
+    ],
+    "questions": [
+     {
+      "q": "How do you check whether two lowercase strings are anagrams in O(n) time and O(1) space?",
+      "a": "If the lengths differ, they aren't. Otherwise use an array of 26 counters: add one for each letter of the first string and subtract one for each letter of the second. They are anagrams exactly when every counter ends at zero."
+     },
+     {
+      "q": "Why is a 26-element array considered O(1) space?",
+      "a": "Its size is fixed by the alphabet, not by the input length. Whether the strings have 10 or 10 million characters, the array stays at 26 integers."
+     },
+     {
+      "q": "How can you tell whether one string can be built from the letters of another?",
+      "a": "Count the letters of the source string, then walk the target and decrement each letter's count. If any count goes negative, a letter ran out and the answer is no."
+     },
+     {
+      "q": "What key would you use to group anagrams, and what does it cost?",
+      "a": "A tuple or string of the 26 letter counts, which takes O(L) to build for a word of length L. Sorting the letters also works as a key but costs O(L log L)."
+     }
+    ],
+    "deep": "#### Intuition\n\nAnagram questions ignore order and care only about how many of each character there are, which is exactly what a count array records. Because the alphabet is small and fixed, the array has constant size, so all these checks cost linear time and constant space.\n\n#### Worked example: is \"anagram\" an anagram of \"nagaram\"?\n\n| letter | +1 for \"anagram\" | −1 for \"nagaram\" | final |\n|---|---|---|---|\n| a | 3 | 3 | 0 |\n| g | 1 | 1 | 0 |\n| m | 1 | 1 | 0 |\n| n | 1 | 1 | 0 |\n| r | 1 | 1 | 0 |\n\nAll zero: they are anagrams.\n\n#### Code\n\n```cpp\nbool isAnagram(const string& s, const string& t) {\n    if (s.size() != t.size()) return false;\n    int count[26] = {};\n    for (int i = 0; i < (int)s.size(); i++) {\n        count[s[i] - 'a']++;\n        count[t[i] - 'a']--;\n    }\n    for (int c : count) if (c != 0) return false;\n    return true;\n}\n\nbool canConstruct(const string& note, const string& magazine) {\n    int count[26] = {};\n    for (char c : magazine) count[c - 'a']++;\n    for (char c : note) if (--count[c - 'a'] < 0) return false;  // letter ran out\n    return true;\n}\n\n// Minimum steps to make t an anagram of s (same length): letters t must change.\nint minStepsToAnagram(const string& s, const string& t) {\n    int count[26] = {}, steps = 0;\n    for (char c : s) count[c - 'a']++;\n    for (char c : t) count[c - 'a']--;\n    for (int c : count) if (c > 0) steps += c;               // letters s has and t lacks\n    return steps;\n}\n```\n\n```python\ndef group_anagrams(words):\n    groups = {}\n    for w in words:\n        key = [0] * 26\n        for c in w:\n            key[ord(c) - 97] += 1\n        groups.setdefault(tuple(key), []).append(w)\n    return list(groups.values())\n\ndef can_construct(note, magazine):\n    count = [0] * 26\n    for c in magazine:\n        count[ord(c) - 97] += 1\n    for c in note:\n        count[ord(c) - 97] -= 1\n        if count[ord(c) - 97] < 0:\n            return False\n    return True\n```\n\n#### Complexity\n\n$O(n)$ time for strings of length $n$, $O(\\sigma)$ space for an alphabet of size $\\sigma$ (26, so $O(1)$). Sorting both strings and comparing also works in $O(n \\log n)$.\n\n#### Array or hash map?\n\n| | `int[26]` | hash map |\n|---|---|---|\n| Speed | direct indexing | hashing per character |\n| Space | fixed | grows with distinct characters |\n| Input | known small alphabet | any characters |\n| Comparing two tallies | 26 steps | O(distinct) plus hashing |\n\n#### Edge cases and bugs\n\n- Different lengths can't be anagrams; check first.\n- Uppercase, spaces or punctuation: normalize or widen the array.\n- Indexing with `c - 'a'` on a character outside `a` to `z` writes out of bounds.\n\n#### Variants\n\n- Find all anagram start positions in a text (fixed window with counts).\n- Group anagrams, group shifted strings (key = differences between consecutive letters).\n- Check whether two strings are \"close\" (same set of letters and the same multiset of counts).\n- Minimum deletions to make character frequencies unique (count, then greedily lower duplicates).\n\nConnects to: frequency counting, fixed-size window, string basics."
    }
   },
   {
@@ -5601,9 +6391,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Parsing means reading text one character at a time and turning it into meaningful pieces, such as words or numbers. It is like reading a handwritten receipt: skip the spaces, notice a minus sign, then collect digits until something that isn't a digit appears. Careful rules for each step keep odd inputs from breaking your code.",
+    "interview": [
+     "Walk with an index `i` and a small set of states: skip whitespace, read an optional sign, read digits, stop at anything else.",
+     "**String to integer (atoi)** rules: skip leading spaces, optional `+`/`-`, digits until a non-digit, and clamp to the 32-bit range. Check overflow **before** multiplying: `val > (INT_MAX - d) / 10`.",
+     "Tokenizing: C++ `stringstream >> word` splits on whitespace; Python `s.split()` drops empty pieces while `s.split(' ')` keeps them.",
+     "Parse numbers digit by digit: `val = val * 10 + (c - '0')`.",
+     "Validating a number (decimal points, exponents) is a small state machine; list the valid transitions first.",
+     "Always test: empty string, only spaces, lone sign, leading zeros, overflow, trailing junk."
+    ],
+    "questions": [
+     {
+      "q": "What rules does a typical atoi implementation follow?",
+      "a": "Skip leading whitespace, read one optional sign, then read consecutive digits and stop at the first non-digit. If no digits were read, return 0. If the value exceeds the 32-bit range, clamp it to INT_MAX or INT_MIN."
+     },
+     {
+      "q": "How do you detect integer overflow while parsing digits?",
+      "a": "Before computing val · 10 + d, check whether val > (INT_MAX − d) / 10; if so, the result would overflow, so clamp. Alternatively accumulate in a 64-bit integer and stop once it passes the 32-bit limit."
+     },
+     {
+      "q": "How do you split a string into words when there may be several spaces between them?",
+      "a": "Skip spaces, then collect characters until the next space, and repeat; or use a tokenizer that ignores empty tokens, such as stringstream in C++ or split() with no argument in Python. Splitting on a single space character produces empty strings for repeated spaces."
+     },
+     {
+      "q": "How would you validate whether a string is a valid decimal number?",
+      "a": "Write a small state machine or ordered checks: optional sign, digits with at most one decimal point (at least one digit overall), then optionally e or E followed by an optional sign and at least one digit, and nothing else. Test edge cases such as \".\", \"1.\", \".5\", \"e5\" and \"1e\"."
+     }
+    ]
    }
   },
   {
@@ -5623,9 +6437,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A handful of string tasks appear again and again in interviews, and each has a neat trick. Reversing the words of a sentence, finding the start shared by several words, checking whether two words follow the same letter pattern, and converting Roman numerals all come down to careful loops. Knowing the tricks lets you spend interview time on edge cases instead.",
+    "interview": [
+     "**Reverse words**: split, reverse, join (O(n)); in place: reverse the whole string, then reverse each word, then clean up extra spaces.",
+     "**Longest common prefix**: compare column by column across all strings until a mismatch or the shortest ends, O(total characters). Or sort and compare only the first and last strings.",
+     "**Isomorphic strings**: a one-to-one mapping in **both** directions (two maps, or map each string to its \"first occurrence\" pattern).",
+     "**Roman to integer**: add each value, but subtract it when it is smaller than the next symbol (IV, IX, XL, XC, CD, CM).",
+     "**Integer to Roman**: greedy over the 13 values from 1000 down to 1 (including 900, 400, 90, 40, 9, 4).",
+     "Also common: string compression (run-length encoding), zigzag conversion, count and say."
+    ],
+    "questions": [
+     {
+      "q": "How do you reverse the order of words in a string in place?",
+      "a": "Reverse the entire string, then reverse each word individually, which restores each word's letters while keeping the new word order. Finally remove extra spaces with a write pointer. It is O(n) time and O(1) extra space where strings are mutable."
+     },
+     {
+      "q": "How do you find the longest common prefix of a list of strings?",
+      "a": "Compare the strings character by character at each position, stopping at the first position where any string differs or ends. An alternative is to sort the list and compare only the first and last strings, since they differ the most."
+     },
+     {
+      "q": "Why do isomorphic strings need two maps?",
+      "a": "Each character in s must map to exactly one character in t, and no two characters in s may map to the same character in t. With one map, \"ab\" and \"cc\" would pass, because a→c and b→c are consistent in one direction but not one-to-one."
+     },
+     {
+      "q": "How do you convert a Roman numeral to an integer?",
+      "a": "Scan from left to right, adding each symbol's value, except when a symbol is smaller than the one after it, in which case subtract it. For example, in XIV the I precedes V, so the total is 10 − 1 + 5 = 14."
+     }
+    ]
    }
   },
   {
@@ -5645,9 +6483,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "When numbers are too big for any integer type, you can store them as strings of digits and do arithmetic the way you learned in school. Addition walks from the rightmost digits, adding and carrying. Multiplication multiplies each pair of digits and adds each product into the right column.",
+    "interview": [
+     "**Add strings**: pointers at both ends, `sum = d1 + d2 + carry`, append `sum % 10`, carry `sum / 10`; continue while either pointer or the carry remains; reverse at the end. **O(max(n, m))**.",
+     "**Multiply strings**: result array of size `n + m`; digit `i` of a times digit `j` of b adds to position `i + j + 1`, carrying into `i + j`. **O(n · m)**. Strip leading zeros; return \"0\" for zero.",
+     "Same idea: add binary strings (base 2), add linked-list numbers, plus one on a digit array.",
+     "Keep digits reversed while computing, reverse once at the end.",
+     "Faster multiplication exists (Karatsuba O(n^1.585), FFT O(n log n)) but is rarely expected."
+    ],
+    "questions": [
+     {
+      "q": "How do you add two non-negative numbers given as strings?",
+      "a": "Walk both strings from the end with a carry. At each step add the two digits (0 if a string has run out) and the carry, append the last digit of the sum, and keep the tens digit as the carry. When both strings and the carry are exhausted, reverse the collected digits."
+     },
+     {
+      "q": "In string multiplication, where does the product of a[i] and b[j] go?",
+      "a": "Into position i + j + 1 of a result array of length n + m, with its carry going to position i + j. The array holds every possible column, since the product of an n-digit and an m-digit number has at most n + m digits."
+     },
+     {
+      "q": "What edge cases matter for multiply strings?",
+      "a": "A zero operand, which must give \"0\" rather than a string of zeros, and leading zeros in the result array, which must be stripped. Also make sure carries propagate fully."
+     },
+     {
+      "q": "How does \"add binary\" differ from adding decimal strings?",
+      "a": "Only the base changes: digits are 0 or 1, the sum is at most 3, the output digit is sum % 2 and the carry is sum / 2. The loop is otherwise identical."
+     }
+    ]
    }
   },
   {
@@ -5667,9 +6528,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "KMP searches for a pattern in a text without ever moving backwards in the text. When a match fails partway, it uses what it already matched to jump ahead, like a reader who knows that a failed \"abab…\" still ends in \"ab\", which could be the start of a new match. A small table computed from the pattern, the prefix function, records those safe jumps.",
+    "interview": [
+     "**Prefix function** `pi[i]`: the length of the longest **proper** prefix of `s[0..i]` that is also a suffix of it. Computed in **O(m)**.",
+     "Matching: on a mismatch after `j` matched characters, fall back to `j = pi[j - 1]` instead of restarting; the text pointer never moves back. **O(n + m)** total.",
+     "Simple trick: compute `pi` of `pattern + '#' + text`; every position with `pi == m` ends a match.",
+     "Other uses: the shortest period of a string (`m - pi[m-1]` if it divides m), repeated substring pattern, shortest palindrome (`s + '#' + reverse(s)`), counting prefix occurrences.",
+     "Compared with naive search, O(n · m) worst case (for example \"aaaa…ab\"), KMP is linear."
+    ],
+    "questions": [
+     {
+      "q": "What does the prefix function store?",
+      "a": "pi[i] is the length of the longest proper prefix of s[0..i] that is also a suffix of s[0..i]. For \"abab\" the values are 0, 0, 1, 2."
+     },
+     {
+      "q": "Why is KMP O(n + m) even though it has a nested while loop?",
+      "a": "The matched length j grows by at most one per text character, and every fallback step shrinks it. Across the whole search, the total shrinking can't exceed the total growth, so the fallbacks add at most O(n) work, plus O(m) to build the table."
+     },
+     {
+      "q": "How do you use the prefix function to find all occurrences of a pattern?",
+      "a": "Compute the prefix function of pattern + separator + text. Every index where the value equals the pattern's length marks the end of an occurrence in the text. The separator stops borders from extending across the boundary."
+     },
+     {
+      "q": "How can the prefix function tell whether a string is a repetition of a smaller substring?",
+      "a": "Let p = m − pi[m − 1]. If p < m and m is divisible by p, the string is its first p characters repeated m / p times; otherwise it isn't a repetition."
+     },
+     {
+      "q": "What input makes naive string search slow?",
+      "a": "A text of many repeated characters and a pattern that almost matches, such as text \"aaaa…a\" and pattern \"aaa…ab\". Each alignment compares nearly the whole pattern before failing, giving O(n · m)."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn naive search, after a mismatch you shift the pattern by one and re-compare characters you already saw. KMP asks: of the part that matched, what is the longest piece at its end that is also a start of the pattern? The pattern can be shifted so that piece lines up, and comparison resumes from there. That longest border is exactly the prefix function value.\n\n#### Worked example: prefix function of \"aabaaab\"\n\n| i | s[0..i] | longest proper prefix = suffix | pi[i] |\n|---|---|---|---|\n| 0 | a | (none) | 0 |\n| 1 | aa | a | 1 |\n| 2 | aab | (none) | 0 |\n| 3 | aaba | a | 1 |\n| 4 | aabaa | aa | 2 |\n| 5 | aabaaa | aa | 2 |\n| 6 | aabaaab | aab | 3 |\n\nAt i = 5 the previous border \"aa\" can't extend (s[2] = b ≠ a), so fall back to pi[1] = 1: border \"a\", and s[1] = a matches, giving 2.\n\n#### Code\n\n```cpp\nvector<int> prefixFunction(const string& s) {\n    int m = s.size();\n    vector<int> pi(m, 0);\n    for (int i = 1; i < m; i++) {\n        int j = pi[i - 1];                         // length of the current border\n        while (j > 0 && s[i] != s[j]) j = pi[j - 1];  // fall back to shorter borders\n        if (s[i] == s[j]) j++;\n        pi[i] = j;\n    }\n    return pi;\n}\n\nvector<int> kmpSearch(const string& text, const string& pat) {  // start indices of matches\n    vector<int> pi = prefixFunction(pat), out;\n    int m = pat.size();\n    if (m == 0) return out;\n    for (int i = 0, j = 0; i < (int)text.size(); i++) {\n        while (j > 0 && text[i] != pat[j]) j = pi[j - 1];\n        if (text[i] == pat[j]) j++;\n        if (j == m) {\n            out.push_back(i - m + 1);\n            j = pi[j - 1];                         // keep going for overlapping matches\n        }\n    }\n    return out;\n}\n```\n\n```python\ndef prefix_function(s):\n    pi = [0] * len(s)\n    for i in range(1, len(s)):\n        j = pi[i - 1]\n        while j > 0 and s[i] != s[j]:\n            j = pi[j - 1]\n        if s[i] == s[j]:\n            j += 1\n        pi[i] = j\n    return pi\n\ndef kmp_search(text, pat):\n    if not pat:\n        return []\n    pi = prefix_function(pat + \"\\0\" + text)   # separator that occurs in neither string\n    m = len(pat)\n    return [i - 2 * m for i in range(len(pi)) if pi[i] == m]\n```\n\n#### Complexity\n\n$O(n + m)$ time. The inner `while` looks quadratic, but `j` increases by at most one per step and every fallback decreases it, so total fallbacks are bounded by total increases (amortized). Space $O(m)$ for `pi`.\n\n#### Edge cases and bugs\n\n- \"Proper\" prefix: `pi[i]` never equals `i + 1`, which is why the loop starts at `i = 1`.\n- After a full match, continue from `pi[m - 1]` to find overlapping matches (\"aa\" in \"aaaa\" matches at 0, 1, 2).\n- The separator in the concatenation trick must not appear in either string.\n\n#### Variants\n\n- Repeated substring pattern: `s` is a repetition iff `p = m - pi[m-1]` satisfies `p < m` and `m % p == 0`.\n- Shortest palindrome by prepending: `pi` of `s + '#' + reverse(s)` gives the longest palindromic prefix.\n- Automaton version: precompute transitions for each state and character (useful in DP over strings).\n- The Z-algorithm solves the same matching problems with a different array.\n\nConnects to: rolling hash, Z-algorithm, palindromes, amortized analysis.",
+    "signals": [
+     "find every occurrence of a pattern in a long text in linear time",
+     "borders: a prefix of a string that is also its suffix",
+     "is the string built by repeating a smaller piece",
+     "shortest palindrome by adding characters in front",
+     "overlapping matches where naive search would be O(n · m)"
+    ],
+    "template": "```cpp\n// Prefix function + KMP scan. pi[i] = longest proper border of pat[0..i].\nvector<int> findAll(const string& text, const string& pat) {\n    int m = pat.size();\n    vector<int> pi(m, 0), hits;\n    for (int i = 1, j = 0; i < m; i++) {               // build pi\n        while (j > 0 && pat[i] != pat[j]) j = pi[j - 1];\n        if (pat[i] == pat[j]) j++;\n        pi[i] = j;\n    }\n    for (int i = 0, j = 0; i < (int)text.size() && m; i++) {  // scan the text\n        while (j > 0 && text[i] != pat[j]) j = pi[j - 1];  // fall back, never move i back\n        if (text[i] == pat[j]) j++;\n        if (j == m) { hits.push_back(i - m + 1); j = pi[j - 1]; }\n    }\n    return hits;\n}\n```"
    }
   },
   {
@@ -5689,9 +6586,46 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A rolling hash turns each window of text into a number that can be updated in one step as the window slides, like updating a running total by dropping the leftmost digit and adding a new rightmost digit. Rabin-Karp compares these numbers instead of whole substrings, so most windows are rejected instantly. When two numbers match, a quick direct check guards against rare coincidences.",
+    "interview": [
+     "Polynomial hash: `h(s) = (s[0]·B^(k-1) + s[1]·B^(k-2) + … + s[k-1]) mod M`, with base B (such as 131 or random) and a large prime M (such as 10⁹ + 7).",
+     "Slide: `h = (h − s[i−k]·B^(k−1))·B + s[i]`, all mod M. **O(1)** per step after precomputing `B^(k−1)`.",
+     "Prefix hashes let you get the hash of **any** substring in O(1): `H(l, r) = pre[r] − pre[l]·B^(r−l)`.",
+     "**Collisions** are possible: verify matches directly, or use **double hashing** (two moduli) or a 64-bit modulus like 2⁶¹ − 1 to make them negligible. Random bases defeat adversarial inputs.",
+     "Uses: pattern matching in expected O(n + m), repeated DNA sequences, longest duplicate substring (binary search on length + hashing), comparing substrings quickly.",
+     "Normalize negative values after subtraction: `((x % M) + M) % M`."
+    ],
+    "questions": [
+     {
+      "q": "How does a rolling hash update in O(1) when the window slides?",
+      "a": "Treat the window as a number in base B modulo M. Subtract the leaving character times B^(k−1), multiply by B to shift, and add the entering character, all modulo M. With B^(k−1) precomputed, that is a few arithmetic operations."
+     },
+     {
+      "q": "Why must Rabin-Karp verify a hash match?",
+      "a": "Different strings can share a hash (a collision), because many strings map into a limited range of values. Comparing characters on a match makes the result exact; with a good modulus, false matches are rare, so verification adds little time."
+     },
+     {
+      "q": "What is double hashing and why use it?",
+      "a": "Computing two hashes with different moduli (or bases) and treating the pair as the fingerprint. A false match then requires colliding in both at once, which is far less likely, so you can often skip verification safely."
+     },
+     {
+      "q": "How do you get the hash of any substring in O(1)?",
+      "a": "Precompute prefix hashes pre[i] and powers B^i. The hash of s[l..r) is pre[r] − pre[l] · B^(r−l), taken modulo M. This lets you compare arbitrary substrings in constant time."
+     },
+     {
+      "q": "How do you find the longest substring that occurs at least twice?",
+      "a": "Binary search on the length L: if a repeated substring of length L exists, one of every smaller length does too. For each L, hash every window of length L into a set and check for a repeat. Total expected time is O(n log n)."
+     }
+    ],
+    "deep": "#### Intuition\n\nComparing a window of length $k$ with the pattern costs $O(k)$. If each window had a fingerprint that could be updated in $O(1)$, you could compare fingerprints first and only compare characters when fingerprints agree. Treat a string as a number in base $B$: sliding the window removes the leading digit and appends a new trailing digit, just like moving along a long decimal number.\n\n#### Worked example (small numbers)\n\nBase 10, modulus 13, digits as characters. Text \"31415\", window length 3.\n\n| window | value | value mod 13 |\n|---|---|---|\n| 314 | 314 | 2 |\n| 141 | (314 − 3·100)·10 + 1 = 141 | 11 |\n| 415 | (141 − 1·100)·10 + 5 = 415 | 12 |\n\nPattern \"141\" has hash 11, which matches only the second window, and a direct comparison confirms it.\n\n#### Code\n\n```cpp\n// Prefix hashes with modulus 2^61 - 1 (very low collision probability).\nstruct RollingHash {\n    static constexpr unsigned long long MOD = (1ULL << 61) - 1;\n    vector<unsigned long long> pre, pw;\n    static unsigned long long mul(unsigned long long a, unsigned long long b) {\n        __uint128_t p = (__uint128_t)a * b;\n        unsigned long long lo = (unsigned long long)(p & MOD), hi = (unsigned long long)(p >> 61);\n        unsigned long long r = lo + hi;\n        return r >= MOD ? r - MOD : r;\n    }\n    RollingHash(const string& s, unsigned long long base) : pre(s.size() + 1, 0), pw(s.size() + 1, 1) {\n        for (size_t i = 0; i < s.size(); i++) {\n            pre[i + 1] = (mul(pre[i], base) + (unsigned char)s[i]) % MOD;\n            pw[i + 1] = mul(pw[i], base);\n        }\n    }\n    unsigned long long get(int l, int r) const {       // hash of s[l..r)\n        return (pre[r] + MOD - mul(pre[l], pw[r - l])) % MOD;\n    }\n};\n\nvector<int> rabinKarp(const string& text, const string& pat) {\n    vector<int> out;\n    int n = text.size(), m = pat.size();\n    if (m == 0 || m > n) return out;\n    unsigned long long base = 911382323;               // pick randomly to resist attacks\n    RollingHash ht(text, base), hp(pat, base);\n    for (int i = 0; i + m <= n; i++)\n        if (ht.get(i, i + m) == hp.get(0, m) && text.compare(i, m, pat) == 0)\n            out.push_back(i);                          // verify to rule out collisions\n    return out;\n}\n```\n\n```python\ndef rabin_karp(text, pat, base=131, mod=(1 << 61) - 1):\n    n, m = len(text), len(pat)\n    if m == 0 or m > n:\n        return []\n    high = pow(base, m - 1, mod)\n    hp = ht = 0\n    for i in range(m):\n        hp = (hp * base + ord(pat[i])) % mod\n        ht = (ht * base + ord(text[i])) % mod\n    out = []\n    for i in range(n - m + 1):\n        if ht == hp and text[i:i + m] == pat:\n            out.append(i)\n        if i + m < n:\n            ht = ((ht - ord(text[i]) * high) * base + ord(text[i + m])) % mod\n    return out\n```\n\n#### Complexity\n\nExpected $O(n + m)$ with verification (few false alarms); worst case $O(n \\cdot m)$ if many windows collide or truly match. Prefix hashes take $O(n)$ time and space and answer any substring hash in $O(1)$.\n\n#### Collisions\n\nWith modulus $M$, two different strings collide with probability about $1/M$ for a random base. Comparing $n$ windows gives about $n/M$ expected false matches: negligible for $M \\approx 2^{61}$, but with $M = 10^9 + 7$ and $10^5$ strings compared all-pairs (birthday bound) collisions become likely. Double hashing (two independent moduli) multiplies the protection.\n\n#### Edge cases and bugs\n\n- Subtraction under a modulus can go negative in signed arithmetic; add $M$ before taking `%`.\n- Overflow in `a * b` with 64-bit moduli: use 128-bit multiplication or a smaller modulus.\n- Using a character value of 0 (for example `c - 'a'` for 'a') makes \"a\" and \"aa\" hash equally at the prefix level; use `c - 'a' + 1` or the raw code.\n\n#### Variants\n\n- Longest duplicate substring: binary search the length $L$; for each $L$, hash all windows and look for a repeat: $O(n \\log n)$ expected.\n- Repeated DNA sequences: hash every 10-letter window (or pack 2 bits per letter into an int).\n- Check whether two substrings are equal in $O(1)$, and compare substrings lexicographically with binary search on the common prefix length.\n- 2D rolling hash for matching a small grid inside a large grid.\n\nConnects to: KMP, sliding window, hashing, binary search on the answer, suffix arrays.",
+    "signals": [
+     "compare many substrings or windows of the same length quickly",
+     "find repeated substrings or the longest duplicate substring",
+     "pattern matching where hashing is simpler than KMP",
+     "check whether two substrings are equal in O(1) after preprocessing",
+     "deduplicate substrings (count distinct substrings of a length)"
+    ],
+    "template": "```cpp\n// Rolling hash over fixed-length windows: base B, prime modulus M.\nvector<long long> windowHashes(const string& s, int k, long long B = 131, long long M = 1000000007) {\n    vector<long long> out;\n    if (k <= 0 || k > (int)s.size()) return out;\n    long long high = 1, h = 0;\n    for (int i = 0; i < k - 1; i++) high = high * B % M;        // B^(k-1)\n    for (int i = 0; i < (int)s.size(); i++) {\n        if (i >= k) h = ((h - s[i - k] * high) % M + M) % M;  // drop the leaving char\n        h = (h * B + s[i]) % M;                                // shift and add the new char\n        if (i >= k - 1) out.push_back(h);                      // hash of s[i-k+1..i]\n    }\n    return out;  // equal hashes: probably equal strings (verify, or double hash)\n}\n```"
    }
   },
   {
@@ -5713,9 +6647,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The Z-algorithm measures, for every position in a string, how long the text starting there matches the start of the string. It is like laying a copy of the string's opening under each position and seeing how far they agree. It reuses earlier results, so the whole array takes linear time.",
+    "interview": [
+     "`z[i]` = length of the longest substring starting at `i` that equals a prefix of `s` (`z[0]` is usually set to 0 or n).",
+     "Maintains a window `[l, r)`, the rightmost segment known to match a prefix; inside it, start from `min(r - i, z[i - l])` instead of 0, then extend.",
+     "**O(n)** time: `r` only moves forward.",
+     "Pattern matching: compute Z of `pattern + '$' + text`; positions with `z[i] == m` are matches.",
+     "Also: string periods, counting distinct substrings incrementally, and comparisons against the prefix. Equivalent in power to the prefix function (each can be converted into the other)."
+    ],
+    "questions": [
+     {
+      "q": "What does z[i] represent?",
+      "a": "The length of the longest substring starting at position i that matches the beginning of the string. For \"aabxaab\", z[4] is 3 because \"aab\" at position 4 matches the prefix \"aab\"."
+     },
+     {
+      "q": "How does the Z-algorithm achieve linear time?",
+      "a": "It keeps the rightmost interval [l, r) that matches a prefix. For a position inside it, z[i − l] gives a known lower bound, so comparison starts at min(r − i, z[i − l]) and only extends beyond r. Since r never moves left, total extension work is O(n)."
+     },
+     {
+      "q": "How do you find all occurrences of a pattern with the Z-array?",
+      "a": "Build the string pattern + separator + text, where the separator appears in neither, and compute its Z-array. Every position in the text part whose z-value equals the pattern's length is the start of a match."
+     },
+     {
+      "q": "When would you choose the Z-algorithm over KMP?",
+      "a": "They solve the same matching problems in O(n + m). The Z-array is often easier to reason about for \"how much of the prefix matches here\" questions, while the prefix function is natural for streaming text and border-based problems."
+     }
+    ]
    }
   },
   {
@@ -5737,9 +6694,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Manacher's algorithm finds the longest palindrome in a string in linear time. It uses the fact that palindromes are mirror images: inside a big palindrome, the right half repeats what the left half already showed. So it copies known answers from the mirror side instead of expanding from scratch every time.",
+    "interview": [
+     "Transform the string to handle even lengths uniformly: insert separators, `\"abba\" → \"#a#b#b#a#\"`; every palindrome now has odd length in the new string.",
+     "`p[i]` = radius of the longest palindrome centered at `i` in the transformed string (equals its length in the original).",
+     "Keep the palindrome `[c − p[c], c + p[c]]` reaching farthest right. For `i` inside it, start with `min(p[2c − i], right − i)` (the mirror's answer), then expand.",
+     "**O(n)** time because the right edge only moves forward; O(n) space.",
+     "Gives the longest palindromic substring and the count of palindromic substrings (sum of `(p[i] + 1) / 2`).",
+     "Expand-around-center (O(n²)) is usually acceptable in interviews; Manacher is the follow-up answer."
+    ],
+    "questions": [
+     {
+      "q": "Why does Manacher's algorithm insert separators between characters?",
+      "a": "So that every palindrome in the transformed string has odd length with a single center character. Even-length palindromes in the original, such as \"abba\", are centered on a separator, which lets one loop handle both cases."
+     },
+     {
+      "q": "How does the mirror property save work?",
+      "a": "If position i lies inside a palindrome centered at c, its mirror 2c − i has a known radius. Within the big palindrome, the part around i is a mirror image of the part around the mirror, so i's radius is at least min(mirror's radius, distance to the right edge), and expansion only continues past the edge."
+     },
+     {
+      "q": "Why is Manacher's algorithm O(n)?",
+      "a": "Each expansion step that succeeds pushes the rightmost known palindrome edge further right, and that edge never moves left. Across the whole run there are at most O(n) successful expansions, plus O(1) other work per position."
+     },
+     {
+      "q": "How do you read the longest palindrome from the radii?",
+      "a": "Find the index i with the largest p[i] in the transformed string. The palindrome has length p[i] in the original string and starts at original index (i − p[i]) / 2."
+     }
+    ]
    }
   },
   {
@@ -5759,9 +6740,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A suffix array lists every ending piece of a string in dictionary order, stored as starting positions. It is like cutting a sentence at every letter, keeping the tail pieces, and alphabetizing them. Neighbors in that sorted list share long beginnings, which reveals repeated substrings.",
+    "interview": [
+     "Suffix array `sa`: starting indices of all suffixes, sorted lexicographically. For \"banana\": `5 (a), 3 (ana), 1 (anana), 0 (banana), 4 (na), 2 (nana)`.",
+     "**LCP array**: `lcp[i]` = longest common prefix of suffixes `sa[i]` and `sa[i-1]`; built in O(n) with **Kasai's algorithm**.",
+     "Construction: prefix doubling in O(n log² n) or O(n log n) with radix sort; SA-IS in O(n). A naive sort of suffixes is O(n² log n).",
+     "Solves: pattern search in O(m log n) by binary search, **longest repeated substring** (max LCP), number of **distinct substrings** (n(n+1)/2 − sum of LCP), longest common substring of two strings (concatenate with a separator).",
+     "Suffix automata and suffix trees solve similar problems; suffix arrays are simpler and use less memory."
+    ],
+    "questions": [
+     {
+      "q": "What is a suffix array?",
+      "a": "The array of starting positions of all suffixes of a string, ordered so that the suffixes are in lexicographic order. It is a compact alternative to a suffix tree for many substring problems."
+     },
+     {
+      "q": "How do you find the longest repeated substring with a suffix array?",
+      "a": "Build the suffix array and its LCP array. Any repeated substring is a common prefix of two suffixes, and the longest common prefixes occur between neighbors in sorted order, so the answer is the maximum LCP value."
+     },
+     {
+      "q": "How do you count the distinct substrings of a string?",
+      "a": "Every substring is a prefix of some suffix. Summing the lengths of all suffixes gives n(n + 1)/2 prefixes, and the prefixes shared with the previous suffix in sorted order are duplicates, so subtract the sum of the LCP array."
+     },
+     {
+      "q": "How do you search for a pattern using a suffix array?",
+      "a": "The suffixes starting with the pattern form a contiguous block in the sorted order. Binary search for the block's ends, comparing up to m characters per step, which takes O(m log n)."
+     }
+    ]
    }
   },
   {
