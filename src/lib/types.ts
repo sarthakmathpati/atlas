@@ -372,6 +372,9 @@ export interface ActivityDay {
   attempts?: number;
   checks?: number;
   planItemsDone?: number;
+  /** Concepts whose status changed to strong or fading that day (F4 "status changes are logged"). */
+  turnedStrong?: number;
+  turnedFading?: number;
 }
 
 export interface ActivityMonth {
