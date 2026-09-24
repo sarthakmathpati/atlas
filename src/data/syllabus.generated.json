@@ -13321,9 +13321,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The longest increasing subsequence is the longest list of numbers you can pick from a sequence, keeping their order, where each is bigger than the one before. For each number you ask: what is the longest rising chain that ends here? A faster method deals the numbers into piles like a card game of patience, and the number of piles is the answer.",
+    "interview": [
+     "**O(n²) DP**: `dp[i]` = length of the longest increasing subsequence **ending at i** = 1 + max `dp[j]` over j < i with `a[j] < a[i]`; answer = max over i.",
+     "**O(n log n)**: keep `tails[k]` = the smallest possible last value of an increasing subsequence of length k + 1. For each x, replace the first tail ≥ x (`lower_bound`) or append. Answer = `tails.size()`.",
+     "`tails` is sorted but is **not** itself a valid subsequence; to rebuild the actual LIS, store for each element the index it extends (parent pointers).",
+     "Non-decreasing (allow equal): use `upper_bound` instead.",
+     "Subsequence (any positions, order kept) versus subarray (contiguous): LIS is about subsequences.",
+     "Variants: number of LIS, Russian doll envelopes, longest chain, minimum deletions to make an array sorted (n − LIS)."
+    ],
+    "questions": [
+     {
+      "q": "What is the O(n²) DP for longest increasing subsequence?",
+      "a": "Let dp[i] be the length of the longest increasing subsequence ending at index i. It equals 1 plus the maximum dp[j] over earlier indices j with a[j] < a[i] (or 1 if there are none). The answer is the maximum dp[i] over all i."
+     },
+     {
+      "q": "How does the O(n log n) algorithm work?",
+      "a": "Maintain tails, where tails[k] is the smallest possible last element of an increasing subsequence of length k + 1. For each element, binary search for the first tail at least as large and replace it, or append if none is. The length of tails is the LIS length."
+     },
+     {
+      "q": "Why is the tails array sorted, and why is it safe to overwrite an entry?",
+      "a": "A longer increasing subsequence must end with a larger value than the best end of a shorter one, so tails is increasing. Replacing tails[k] with a smaller value keeps a length-(k + 1) subsequence available with an easier-to-extend end, which never hurts future extensions."
+     },
+     {
+      "q": "Is the final tails array a valid longest increasing subsequence?",
+      "a": "Not necessarily. Its entries can come from different subsequences, for example tails can end up as values whose positions aren't in increasing order. To recover an actual LIS, store for each element the index of the element it extended, then follow those links back."
+     },
+     {
+      "q": "How do you handle a non-decreasing subsequence (equal values allowed)?",
+      "a": "Use upper_bound (first element strictly greater) instead of lower_bound when placing each value, so equal values can extend a subsequence rather than replace its end."
+     }
+    ],
+    "deep": "#### Intuition\n\nFor the quadratic DP, an increasing subsequence ending at i extends one ending at some earlier, smaller element. For the fast method: among all increasing subsequences of the same length, the one with the smallest last element is the most useful, because it's easiest to extend. `tails` stores exactly those best last elements for each length, and it's always sorted, so binary search finds where each new element fits.\n\n#### Worked example: `10 9 2 5 3 7 101 18`\n\nQuadratic DP:\n\n| i | a[i] | dp[i] |\n|---|---|---|\n| 0 | 10 | 1 |\n| 1 | 9 | 1 |\n| 2 | 2 | 1 |\n| 3 | 5 | 2 (2, 5) |\n| 4 | 3 | 2 (2, 3) |\n| 5 | 7 | 3 (2, 5, 7) |\n| 6 | 101 | 4 (2, 5, 7, 101) |\n| 7 | 18 | 4 (2, 5, 7, 18) |\n\nPatience method:\n\n| x | tails after |\n|---|---|\n| 10 | 10 |\n| 9 | 9 |\n| 2 | 2 |\n| 5 | 2 5 |\n| 3 | 2 3 |\n| 7 | 2 3 7 |\n| 101 | 2 3 7 101 |\n| 18 | 2 3 7 18 |\n\nLength 4. Note `2 3 7 18` happens to be valid here, but in general `tails` mixes elements from different subsequences.\n\n#### Code\n\n```cpp\nint lengthOfLIS(const vector<int>& a) {\n    vector<int> tails;                               // tails[k]: smallest end of a length-(k+1) LIS\n    for (int x : a) {\n        auto it = lower_bound(tails.begin(), tails.end(), x);   // strict: first tail >= x\n        if (it == tails.end()) tails.push_back(x);\n        else *it = x;                                // a better (smaller) end for that length\n    }\n    return tails.size();\n}\n\nvector<int> oneLIS(const vector<int>& a) {           // O(n log n) with reconstruction\n    vector<int> tailIdx, parent(a.size(), -1);\n    for (int i = 0; i < (int)a.size(); i++) {\n        int k = lower_bound(tailIdx.begin(), tailIdx.end(), i,\n                            [&](int j, int idx) { return a[j] < a[idx]; }) - tailIdx.begin();\n        if (k > 0) parent[i] = tailIdx[k - 1];       // extends the best subsequence of length k\n        if (k == (int)tailIdx.size()) tailIdx.push_back(i);\n        else tailIdx[k] = i;\n    }\n    vector<int> seq;\n    for (int i = tailIdx.empty() ? -1 : tailIdx.back(); i != -1; i = parent[i]) seq.push_back(a[i]);\n    reverse(seq.begin(), seq.end());\n    return seq;\n}\n```\n\n```python\nfrom bisect import bisect_left\n\ndef lis_quadratic(a):\n    dp = [1] * len(a)\n    for i in range(len(a)):\n        for j in range(i):\n            if a[j] < a[i]:\n                dp[i] = max(dp[i], dp[j] + 1)\n    return max(dp, default=0)\n\ndef lis_fast(a):\n    tails = []\n    for x in a:\n        k = bisect_left(tails, x)\n        if k == len(tails):\n            tails.append(x)\n        else:\n            tails[k] = x\n    return len(tails)\n```\n\n#### Complexity\n\nQuadratic DP: $O(n^2)$ time, $O(n)$ space. Patience sorting: $O(n \\log n)$ time, $O(n)$ space. With $n = 10^5$, only the second is fast enough.\n\n#### Edge cases and bugs\n\n- Strictly increasing versus non-decreasing: `lower_bound` versus `upper_bound`.\n- Returning `tails` as the subsequence (wrong in general).\n- Empty input: 0.\n\n#### Variants\n\n- Longest decreasing subsequence (negate values), longest bitonic subsequence (LIS from the left + LDS from the right − 1).\n- Minimum number of increasing subsequences to cover the array (Dilworth: equals the longest non-increasing subsequence).\n- Russian doll envelopes (sort by width ascending, height descending, then LIS on heights).\n- Number of LIS (keep counts with the quadratic DP).\n- Longest increasing path in a matrix (DAG DP on the grid).\n\nConnects to: designing DP states, binary search (lower bound), LIS variants, patience sorting.",
+    "signals": [
+     "the longest subsequence (not contiguous) that strictly increases",
+     "the minimum number of elements to remove so the rest is sorted",
+     "nesting items (envelopes, boxes) by two dimensions",
+     "chains where each element must beat the previous one"
+    ],
+    "template": "```cpp\n// Patience-sorting LIS: O(n log n). Use upper_bound for non-decreasing sequences.\nint lisLength(const vector<int>& a) {\n    vector<int> tails;\n    for (int x : a) {\n        auto it = lower_bound(tails.begin(), tails.end(), x);   // first tail >= x\n        if (it == tails.end()) tails.push_back(x);              // extends the longest\n        else *it = x;                                           // improves a tail\n    }\n    return tails.size();\n}\n```"
    }
   },
   {
@@ -13345,9 +13381,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Many problems are the longest increasing subsequence in disguise, with \"increasing\" replaced by another rule. A chain of words where each adds one letter, a set of numbers where each divides the next, or envelopes that fit inside each other all ask for the longest chain under some \"fits after\" rule. Sorting first and then running the LIS idea solves them.",
+    "interview": [
+     "**Number of LIS**: alongside `len[i]`, keep `cnt[i]` = number of LIS ending at i; when `len[j] + 1 > len[i]`, copy the count; when equal, add it. Sum counts with the maximum length. O(n²).",
+     "**Largest divisible subset**: sort; `dp[i]` = longest chain ending at i where each divides the next (`a[i] % a[j] == 0`); keep parents to output it. O(n²).",
+     "**Longest string chain**: sort words by length; `dp[w] = 1 + max dp[w with one letter removed]` using a hash map: O(n · L²).",
+     "**Russian doll envelopes**: sort by width ascending and, for equal widths, height **descending**; then LIS (strict) on heights: O(n log n). The descending tie-break stops two envelopes with the same width from nesting.",
+     "**Maximum height by stacking cuboids** / boxes: sort dimensions, then weighted LIS."
+    ],
+    "questions": [
+     {
+      "q": "How do you count the number of longest increasing subsequences?",
+      "a": "Keep two arrays: len[i], the LIS length ending at i, and cnt[i], how many such subsequences end at i. For each j < i with a[j] < a[i], if len[j] + 1 is greater than len[i], set len[i] = len[j] + 1 and cnt[i] = cnt[j]; if it's equal, add cnt[j] to cnt[i]. Sum cnt over indices with the maximum length."
+     },
+     {
+      "q": "Why sort envelopes by width ascending and height descending?",
+      "a": "After sorting by width, a strictly increasing subsequence of heights gives nested envelopes. Sorting equal widths by height descending ensures two envelopes of the same width can't both appear in an increasing run of heights, since they can't nest."
+     },
+     {
+      "q": "How do you find the largest subset where every pair divides one another?",
+      "a": "Sort the numbers. In a sorted chain where each element divides the next, every pair divides one another, so it's an LIS where \"increasing\" means \"a[j] divides a[i]\". Run the O(n²) DP with parent pointers and rebuild the chain."
+     },
+     {
+      "q": "How do you find the longest chain of words where each adds exactly one letter?",
+      "a": "Sort words by length. For each word, try deleting each letter; if the shorter word exists in a map of computed chain lengths, the chain ending at this word can be one longer. The answer is the maximum, in O(n · L²) for n words of length up to L."
+     }
+    ]
    }
   },
   {
@@ -13369,9 +13428,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Stock trading problems ask for the best profit from buying and selling a stock over several days under some rules. Each day you're in one of a few situations, such as holding a share or not, and you track the best profit for each situation. Moving from one day to the next is like following arrows between those situations: buy, sell, or wait.",
+    "interview": [
+     "States per day: `hold` (own a share) and `free` (don't). Transitions: `hold = max(hold, free - price)`, `free = max(free, hold + price)`.",
+     "**I** (one transaction): track the minimum price so far; profit = max(price − minPrice). O(n).",
+     "**II** (unlimited transactions): sum of all positive day-to-day increases, or the state machine above.",
+     "**III** (at most 2) and **IV** (at most k): states `buy[j]`, `sell[j]` for the j-th transaction: O(n · k). If k ≥ n/2, it's the unlimited case.",
+     "**Cooldown**: add a `cooldown` state (just sold; can't buy tomorrow). **Fee**: subtract the fee on each sale.",
+     "Update order within a day matters; compute from the previous day's values (or order the updates so it's equivalent)."
+    ],
+    "questions": [
+     {
+      "q": "How do you get the maximum profit with a single buy and sell?",
+      "a": "Scan the prices while tracking the lowest price seen so far; at each day, the best profit selling today is the price minus that minimum. Keep the maximum. It's O(n) time and O(1) space."
+     },
+     {
+      "q": "What is the profit with unlimited transactions, and why?",
+      "a": "The sum of all positive differences between consecutive days. Any profitable holding period can be split into daily gains, and taking every upward move is achievable by buying before each rise and selling after it."
+     },
+     {
+      "q": "How does the state machine handle a cooldown after selling?",
+      "a": "Add a state for \"just sold\". From it you can only move to \"resting\" the next day, and you can only buy from \"resting\". The transitions are hold = max(hold, rest − price), sold = hold + price, rest = max(rest, sold), all from the previous day's values."
+     },
+     {
+      "q": "How do you solve the problem with at most k transactions?",
+      "a": "Keep buy[j] and sell[j], the best profit after the j-th buy and the j-th sell. For each price, update sell[j] = max(sell[j], buy[j] + price) and buy[j] = max(buy[j], sell[j − 1] − price). That's O(n · k); if k is at least n/2, use the unlimited solution instead."
+     }
+    ],
+    "deep": "#### Intuition\n\nWhat matters for the future on any day is not the full trading history but a small state: whether you hold a share, how many transactions you have used, and whether you are in a cooldown. Each state has a best profit so far, and each day's price moves profit between states through buy, sell and rest actions. The answer is the best \"not holding\" state at the end.\n\n#### Worked example: unlimited transactions with cooldown\n\nPrices `1 2 3 0 2`. States: `hold`, `sold` (sold today, cooldown tomorrow), `rest` (not holding, free to buy).\n\n| day | price | hold = max(hold, rest − p) | sold = hold + p | rest = max(rest, sold) |\n|---|---|---|---|---|\n| 0 | 1 | −1 | −∞ | 0 |\n| 1 | 2 | max(−1, 0 − 2) = −1 | −1 + 2 = 1 | max(0, −∞) = 0 |\n| 2 | 3 | max(−1, 0 − 3) = −1 | −1 + 3 = 2 | max(0, 1) = 1 |\n| 3 | 0 | max(−1, 1 − 0) = 1 | −1 + 0 = −1 | max(1, 2) = 2 |\n| 4 | 2 | max(1, 2 − 2) = 1 | 1 + 2 = 3 | max(2, −1) = 2 |\n\nAnswer: max(sold, rest) = **3** (buy 1, sell 2, cool down, buy 0, sell 2). All updates on a day use the previous day's values.\n\n#### Code\n\n```cpp\nint maxProfitCooldown(const vector<int>& prices) {\n    long long hold = LLONG_MIN / 2, sold = LLONG_MIN / 2, rest = 0;\n    for (int p : prices) {\n        long long newHold = max(hold, rest - p);    // keep holding, or buy (only from rest)\n        long long newSold = hold + p;               // sell today\n        long long newRest = max(rest, sold);        // keep resting, or finish a cooldown\n        hold = newHold, sold = newSold, rest = newRest;\n    }\n    return (int)max(sold, rest);\n}\n\nint maxProfitK(int k, const vector<int>& prices) {\n    int n = prices.size();\n    if (k >= n / 2) {                               // effectively unlimited transactions\n        int total = 0;\n        for (int i = 1; i < n; i++) total += max(0, prices[i] - prices[i - 1]);\n        return total;\n    }\n    vector<long long> buy(k + 1, LLONG_MIN / 2), sell(k + 1, 0);\n    for (int p : prices)\n        for (int j = k; j >= 1; j--) {              // j-th transaction\n            sell[j] = max(sell[j], buy[j] + p);\n            buy[j] = max(buy[j], sell[j - 1] - p);\n        }\n    return (int)sell[k];\n}\n```\n\n```python\ndef max_profit_one(prices):\n    best, low = 0, float(\"inf\")\n    for p in prices:\n        low = min(low, p)\n        best = max(best, p - low)\n    return best\n\ndef max_profit_fee(prices, fee):\n    hold, free = float(\"-inf\"), 0\n    for p in prices:\n        hold, free = max(hold, free - p), max(free, hold + p - fee)\n    return free\n```\n\nIn `maxProfitK`, updating `sell[j]` before `buy[j]`, with j going downward, means every update reads values from the previous day: `sell[j]` reads yesterday's `buy[j]`, and `buy[j]` reads `sell[j - 1]`, which this day's loop hasn't reached yet.\n\n#### Complexity\n\n$O(n)$ for the fixed-state versions, $O(n \\cdot k)$ for at most $k$ transactions, $O(k)$ space.\n\n#### Edge cases and bugs\n\n- Using updated same-day values (buying and selling on the same day, or skipping the cooldown).\n- Initializing `hold` to 0 instead of −∞ (you can't hold a share for free).\n- k = 0 or fewer than 2 prices: profit 0.\n\n#### Variants\n\n- Best time with at most two transactions: two passes (best profit in the prefix and in the suffix) also work.\n- Stock with a transaction limit and cooldown combined: add both dimensions.\n- Maximize profit with job scheduling constraints: the same \"state machine over time\" idea applies to many scheduling DPs.\n\nConnects to: designing DP states, Kadane's algorithm (one transaction = max subarray of differences), space optimization.",
+    "signals": [
+     "buy and sell a stock over days to maximize profit",
+     "limits on the number of transactions, cooldowns or fees",
+     "each day you are in one of a few modes (holding, free, cooling down)",
+     "decisions over time where only a small state matters"
+    ],
+    "template": "```cpp\n// State-machine DP over days: best profit in each state, updated from yesterday's values.\nlong long stateMachine(const vector<int>& prices, int fee) {\n    long long hold = LLONG_MIN / 2;   // best profit while holding a share\n    long long free = 0;               // best profit while not holding\n    for (int p : prices) {\n        long long newHold = max(hold, free - p);        // rest, or buy today\n        long long newFree = max(free, hold + p - fee);  // rest, or sell today\n        hold = newHold;\n        free = newFree;                                 // add states: cooldown, j-th transaction...\n    }\n    return free;\n}\n```"
    }
   },
   {
@@ -13393,9 +13484,44 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The longest common subsequence of two strings is the longest sequence of characters that appears in both, in the same order but not necessarily side by side. For \"abcde\" and \"ace\" it is \"ace\". A table compares every prefix of one string with every prefix of the other, building each answer from smaller prefixes.",
+    "interview": [
+     "`dp[i][j]` = LCS length of `a[0..i)` and `b[0..j)`. If `a[i-1] == b[j-1]`: `dp[i-1][j-1] + 1`; else `max(dp[i-1][j], dp[i][j-1])`. Base: row 0 and column 0 are 0.",
+     "**O(n · m)** time, O(n · m) space (O(min(n, m)) for the length only).",
+     "**Reconstruction**: walk back from `dp[n][m]`: on a match go diagonally and record the character; otherwise move toward the larger neighbor.",
+     "Related: minimum deletions to make two strings equal = n + m − 2·LCS; shortest common supersequence length = n + m − LCS; LCS of s and reverse(s) = longest palindromic subsequence.",
+     "Subsequence (gaps allowed) vs substring (contiguous): longest common **substring** uses `dp = dp[i-1][j-1] + 1` on a match and **0** otherwise."
+    ],
+    "questions": [
+     {
+      "q": "What is the LCS recurrence?",
+      "a": "If the last characters of the two prefixes match, dp[i][j] = dp[i − 1][j − 1] + 1. Otherwise dp[i][j] = max(dp[i − 1][j], dp[i][j − 1]), dropping the last character of one string or the other. Row 0 and column 0 are 0."
+     },
+     {
+      "q": "How do you reconstruct the actual LCS?",
+      "a": "Start at dp[n][m]. If the current characters match, add the character and move diagonally; otherwise move to the neighbor (up or left) with the larger value. Stop at the table's edge and reverse the collected characters."
+     },
+     {
+      "q": "How is longest common substring different?",
+      "a": "A substring must be contiguous, so a mismatch resets the value to 0 instead of taking the max of neighbors, and the answer is the largest value anywhere in the table, not the last cell."
+     },
+     {
+      "q": "How can LCS answer \"minimum deletions to make two strings equal\"?",
+      "a": "Keep the LCS and delete everything else from both strings. The number of deletions is len(a) + len(b) − 2 · LCS."
+     },
+     {
+      "q": "What is the space-optimized complexity if you only need the length?",
+      "a": "O(n · m) time and O(min(n, m)) space, keeping only the previous and current rows of the shorter dimension."
+     }
+    ],
+    "deep": "#### Intuition\n\nCompare the last characters of the two prefixes. If they match, the best common subsequence can end with that character, and the rest is an LCS of the two shorter prefixes. If they don't match, at least one of the two last characters isn't in the LCS, so drop one or the other and take the better result.\n\n#### Worked example: `a = \"abcde\"`, `b = \"ace\"`\n\n| | \"\" | a | c | e |\n|---|---|---|---|---|\n| \"\" | 0 | 0 | 0 | 0 |\n| a | 0 | 1 | 1 | 1 |\n| b | 0 | 1 | 1 | 1 |\n| c | 0 | 1 | 2 | 2 |\n| d | 0 | 1 | 2 | 2 |\n| e | 0 | 1 | 2 | 3 |\n\nLCS length 3. Walking back from the bottom-right: e = e (diagonal), d ≠ c (move up, same value), c = c (diagonal), b ≠ a (up), a = a (diagonal): \"ace\".\n\n#### Code\n\n```cpp\nstring lcs(const string& a, const string& b) {\n    int n = a.size(), m = b.size();\n    vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));\n    for (int i = 1; i <= n; i++)\n        for (int j = 1; j <= m; j++)\n            dp[i][j] = a[i - 1] == b[j - 1] ? dp[i - 1][j - 1] + 1\n                                            : max(dp[i - 1][j], dp[i][j - 1]);\n    string out;                                           // walk back to rebuild one LCS\n    for (int i = n, j = m; i > 0 && j > 0;) {\n        if (a[i - 1] == b[j - 1]) { out += a[i - 1]; i--; j--; }\n        else if (dp[i - 1][j] >= dp[i][j - 1]) i--;\n        else j--;\n    }\n    reverse(out.begin(), out.end());\n    return out;\n}\n```\n\n```python\ndef lcs_length(a, b):\n    if len(a) < len(b):\n        a, b = b, a                               # keep the row as short as possible\n    prev = [0] * (len(b) + 1)\n    for ch in a:\n        cur = [0]\n        for j, bj in enumerate(b, 1):\n            cur.append(prev[j - 1] + 1 if ch == bj else max(prev[j], cur[j - 1]))\n        prev = cur\n    return prev[-1]\n\ndef longest_common_substring(a, b):\n    best, prev = 0, [0] * (len(b) + 1)\n    for ch in a:\n        cur = [0] * (len(b) + 1)\n        for j, bj in enumerate(b, 1):\n            if ch == bj:\n                cur[j] = prev[j - 1] + 1          # contiguous: extend the diagonal only\n                best = max(best, cur[j])\n        prev = cur\n    return best\n```\n\n#### Why \"drop one character\" covers every case\n\nWhen the last characters differ, an LCS can't use both of them as its final matched pair. So at least one of them is unused: either `a[i-1]` isn't in the LCS (the answer is the LCS of `a[0..i-1)` and `b`), or `b[j-1]` isn't (the LCS of `a` and `b[0..j-1)`). Taking the maximum of the two covers both possibilities, which is why no third option, such as dropping both, is needed: dropping both is already included in either of them.\n\n#### Complexity\n\n$O(n \\cdot m)$ time. Space $O(n \\cdot m)$ with reconstruction, $O(\\min(n, m))$ for the length alone.\n\n#### Edge cases and bugs\n\n- Off-by-one: `dp` has size `(n + 1) × (m + 1)` and compares `a[i-1]` with `b[j-1]`.\n- Confusing subsequence (gaps allowed) with substring (reset to 0 on mismatch).\n- Reconstruction tie-breaking can yield different but equally long answers.\n\n#### Variants\n\n- Shortest common supersequence (build it from the LCS table).\n- Minimum ASCII delete sum (weights instead of counts).\n- Uncrossed lines (it is LCS on arrays).\n- Longest palindromic subsequence (LCS of s and its reverse, or interval DP).\n\nConnects to: edit distance, designing DP states, reconstructing the answer, space optimization.",
+    "signals": [
+     "the longest sequence common to two strings or arrays, order kept, gaps allowed",
+     "minimum deletions or insertions to make two sequences equal",
+     "align two sequences to maximize matches (uncrossed lines)",
+     "compare every prefix of one sequence with every prefix of another"
+    ],
+    "template": "```cpp\n// Two-sequence DP over prefixes: dp[i][j] for a[0..i) and b[0..j).\nint twoSequenceDp(const string& a, const string& b) {\n    int n = a.size(), m = b.size();\n    vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));   // row 0 / column 0: empty prefix\n    for (int i = 1; i <= n; i++)\n        for (int j = 1; j <= m; j++) {\n            if (a[i - 1] == b[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;   // use both\n            else dp[i][j] = max(dp[i - 1][j], dp[i][j - 1]);            // drop one\n        }\n    return dp[n][m];\n}\n```"
    }
   },
   {
@@ -13418,9 +13544,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Edit distance counts the fewest single-character edits (insert, delete or replace) needed to turn one word into another. It is how a spell checker decides that \"horse\" is close to \"ros\". A table over prefixes of both words finds the answer by considering which edit fixes the last character.",
+    "interview": [
+     "`dp[i][j]` = edits to turn `a[0..i)` into `b[0..j)`. Base: `dp[i][0] = i` (delete all), `dp[0][j] = j` (insert all).",
+     "If `a[i-1] == b[j-1]`: `dp[i-1][j-1]`. Else `1 + min(dp[i-1][j] (delete), dp[i][j-1] (insert), dp[i-1][j-1] (replace))`.",
+     "**O(n · m)** time; O(min(n, m)) space with one row plus a saved diagonal.",
+     "Reconstruct the operations by walking back the table.",
+     "Variants: only insert and delete (answer n + m − 2·LCS), different costs per operation, one edit apart check in O(n) with two pointers.",
+     "Levenshtein distance is this; Damerau adds transpositions."
+    ],
+    "questions": [
+     {
+      "q": "What is the edit distance recurrence?",
+      "a": "If a[i − 1] equals b[j − 1], dp[i][j] = dp[i − 1][j − 1]. Otherwise dp[i][j] = 1 + min(dp[i − 1][j], dp[i][j − 1], dp[i − 1][j − 1]), for deleting from a, inserting into a, or replacing. The base cases are dp[i][0] = i and dp[0][j] = j."
+     },
+     {
+      "q": "What do the base cases mean?",
+      "a": "Turning a prefix of length i into the empty string takes i deletions, and turning the empty string into a prefix of length j takes j insertions."
+     },
+     {
+      "q": "How do you check whether two strings are exactly one edit apart without the full table?",
+      "a": "If their lengths differ by more than one, they aren't. Otherwise scan to the first mismatch: for equal lengths, the rest must match after skipping that character in both (a replace); for lengths differing by one, the rest of the shorter must equal the longer after skipping one character (an insert). It's O(n)."
+     },
+     {
+      "q": "How does edit distance relate to LCS when only insertions and deletions are allowed?",
+      "a": "Every character outside a longest common subsequence must be deleted from one string or inserted into the other, so the distance is len(a) + len(b) − 2 · LCS."
+     },
+     {
+      "q": "What is the space complexity if you only need the distance?",
+      "a": "O(min(n, m)), using one row plus a variable for the diagonal value from the previous row, because each cell only reads the cell above, the cell to the left and the upper-left cell."
+     }
+    ],
+    "deep": "#### Intuition\n\nLook at the last characters. If they match, no edit is needed for them. Otherwise one of three edits handles the last character of the target: replace `a`'s last character with it, insert it at the end of `a`, or delete `a`'s last character and match the rest. Each option leaves a smaller pair of prefixes.\n\n#### Worked example: `horse` → `ros`\n\n| | \"\" | r | o | s |\n|---|---|---|---|---|\n| \"\" | 0 | 1 | 2 | 3 |\n| h | 1 | 1 | 2 | 3 |\n| o | 2 | 2 | 1 | 2 |\n| r | 3 | 2 | 2 | 2 |\n| s | 4 | 3 | 3 | 2 |\n| e | 5 | 4 | 4 | 3 |\n\nDistance **3**: horse → rorse (replace h with r) → rose (delete r) → ros (delete e).\n\n#### Code\n\n```cpp\nint editDistance(const string& a, const string& b) {\n    int n = a.size(), m = b.size();\n    vector<vector<int>> dp(n + 1, vector<int>(m + 1));\n    for (int i = 0; i <= n; i++) dp[i][0] = i;            // delete everything\n    for (int j = 0; j <= m; j++) dp[0][j] = j;            // insert everything\n    for (int i = 1; i <= n; i++)\n        for (int j = 1; j <= m; j++)\n            dp[i][j] = a[i - 1] == b[j - 1]\n                ? dp[i - 1][j - 1]\n                : 1 + min({dp[i - 1][j],                  // delete a[i-1]\n                           dp[i][j - 1],                  // insert b[j-1]\n                           dp[i - 1][j - 1]});            // replace a[i-1] by b[j-1]\n    return dp[n][m];\n}\n```\n\n```python\ndef is_one_edit_apart(a, b):\n    \"\"\"True if exactly one insert, delete or replace turns a into b (O(n)).\"\"\"\n    if abs(len(a) - len(b)) > 1:\n        return False\n    if len(a) > len(b):\n        a, b = b, a\n    for i in range(len(a)):\n        if a[i] != b[i]:\n            if len(a) == len(b):\n                return a[i + 1:] == b[i + 1:]     # replace\n            return a[i:] == b[i + 1:]             # insert into a\n    return len(b) - len(a) == 1                   # extra last character\n```\n\n#### Reading the table\n\nEach move through the table is an operation: a diagonal step on equal characters is free, a diagonal step on different characters is a replacement, a step down (from `dp[i-1][j]`) deletes `a[i-1]`, and a step right (from `dp[i][j-1]`) inserts `b[j-1]`. Walking back from the bottom-right corner along any path that reproduces the values lists one optimal sequence of edits, which is how spell checkers and `diff` tools show changes.\n\n#### Complexity\n\n$O(n \\cdot m)$ time and space; $O(\\min(n, m))$ space for the distance alone.\n\n#### Edge cases and bugs\n\n- Empty strings: the distance is the other string's length (the base cases handle it).\n- Mixing up which neighbor means insert and which means delete doesn't change the distance, but it matters when reconstructing operations.\n- Replacing a character with itself should cost 0 (the match case).\n\n#### Variants\n\n- Weighted edits (different costs for insert, delete, replace).\n- Delete operation for two strings (only deletions: n + m − 2·LCS).\n- Minimum ASCII delete sum, one edit distance, spelling suggestions with a bounded distance (only fill a band of the table).\n\nConnects to: longest common subsequence, space optimization, reconstructing the answer.",
+    "signals": [
+     "minimum number of insertions, deletions and replacements to transform one string into another",
+     "how similar two words are (spell check, fuzzy matching)",
+     "aligning two sequences with a cost per mismatch or gap",
+     "\"one edit away\" checks"
+    ],
+    "template": "```cpp\n// Edit-distance style DP: base rows cost i and j; each cell takes the cheapest last operation.\nint transformCost(const string& a, const string& b, int ins = 1, int del = 1, int rep = 1) {\n    int n = a.size(), m = b.size();\n    vector<vector<int>> dp(n + 1, vector<int>(m + 1));\n    for (int i = 0; i <= n; i++) dp[i][0] = i * del;\n    for (int j = 0; j <= m; j++) dp[0][j] = j * ins;\n    for (int i = 1; i <= n; i++)\n        for (int j = 1; j <= m; j++) {\n            int keep = a[i - 1] == b[j - 1] ? dp[i - 1][j - 1] : INT_MAX / 2;\n            dp[i][j] = min({keep, dp[i - 1][j] + del, dp[i][j - 1] + ins, dp[i - 1][j - 1] + rep});\n        }\n    return dp[n][m];\n}\n```"
    }
   },
   {
@@ -13442,9 +13604,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Palindromic DP answers questions about palindromes hidden inside a string, such as the longest one you can form by deleting characters. It works on ranges: a range's answer comes from its two end characters and the range just inside them. If the ends match, they can wrap around the best palindrome inside; if not, one of them has to go.",
+    "interview": [
+     "**Longest palindromic subsequence**: `dp[l][r] = dp[l+1][r-1] + 2` if `s[l] == s[r]`, else `max(dp[l+1][r], dp[l][r-1])`; `dp[i][i] = 1`. Fill by increasing length (or l from n−1 down). O(n²). Also = LCS(s, reverse(s)).",
+     "**Minimum insertions to make a palindrome** = n − LPS (same for minimum deletions).",
+     "**isPal[l][r]** table: `s[l] == s[r] && (r - l < 2 || isPal[l+1][r-1])`: O(n²); used for counting palindromic substrings and palindrome partitioning.",
+     "**Count palindromic substrings**: sum of the isPal table, or expand around centers with O(1) space.",
+     "Longest palindromic **substring**: isPal table or expand around center (Manacher for O(n))."
+    ],
+    "questions": [
+     {
+      "q": "What is the recurrence for the longest palindromic subsequence?",
+      "a": "For the range l..r: if s[l] == s[r], the ends wrap the best palindrome inside, dp[l][r] = dp[l + 1][r − 1] + 2; otherwise drop one end, dp[l][r] = max(dp[l + 1][r], dp[l][r − 1]). Single characters have length 1. Fill ranges from short to long."
+     },
+     {
+      "q": "How do you find the minimum number of insertions to make a string a palindrome?",
+      "a": "Characters in a longest palindromic subsequence can stay paired; every other character needs a partner inserted on the opposite side. So the answer is n minus the length of the longest palindromic subsequence."
+     },
+     {
+      "q": "How is the longest palindromic subsequence related to LCS?",
+      "a": "It equals the LCS of the string and its reverse, since a palindromic subsequence reads the same forwards and backwards and so is common to both. That gives another O(n²) solution."
+     },
+     {
+      "q": "How do you build a table of which substrings are palindromes?",
+      "a": "s[l..r] is a palindrome if s[l] == s[r] and either the range has length at most 2 or s[l + 1..r − 1] is a palindrome. Fill l from n − 1 down to 0 so the inner range is ready. It takes O(n²) time and space."
+     }
+    ]
    }
   },
   {
@@ -13466,9 +13651,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Counting subsequences asks in how many different ways one word can be found inside another by picking letters in order. For each letter of the long word, you decide whether to use it to match the next letter of the short word or to skip it. A table over prefixes of both words adds up the ways.",
+    "interview": [
+     "**Distinct subsequences** (ways `t` appears as a subsequence of `s`): `dp[i][j] = dp[i-1][j] + (s[i-1] == t[j-1] ? dp[i-1][j-1] : 0)`; `dp[i][0] = 1`. O(n · m).",
+     "One row: loop j **downward** so `dp[j-1]` still refers to the previous i.",
+     "Counts can overflow; use a modulus or 64-bit (the problem usually bounds the answer).",
+     "**Count distinct subsequences of one string**: `dp[i] = 2·dp[i-1] − dp[last occurrence of s[i-1] − 1]` to remove duplicates.",
+     "Is t a subsequence of s (yes or no): two pointers, O(n + m); for many queries, index lists per letter plus binary search."
+    ],
+    "questions": [
+     {
+      "q": "How do you count the ways t appears as a subsequence of s?",
+      "a": "Let dp[i][j] be the number of ways the first j characters of t appear in the first i characters of s. Either s[i − 1] isn't used (dp[i − 1][j]) or, if it equals t[j − 1], it matches that character (dp[i − 1][j − 1]). dp[i][0] = 1, since the empty string appears once."
+     },
+     {
+      "q": "Why must the one-row version loop j downward?",
+      "a": "dp[j] needs dp[j − 1] from the previous row (before s[i − 1] was considered). Looping downward reads dp[j − 1] before it's updated for the current character, the same reason 0/1 knapsack loops capacities downward."
+     },
+     {
+      "q": "How do you count the distinct subsequences of a single string?",
+      "a": "Each new character doubles the count (every existing subsequence with or without it), but subsequences ending in the same character from its previous occurrence are counted twice. Subtract the count from just before that previous occurrence: dp[i] = 2 · dp[i − 1] − dp[last[c] − 1]."
+     },
+     {
+      "q": "How do you answer many \"is t a subsequence of s\" queries quickly?",
+      "a": "Precompute, for each letter, the sorted list of positions where it occurs in s. For each query, walk through t and binary search the next position of each letter after the current one. Each query costs O(|t| log |s|)."
+     }
+    ]
    }
   },
   {
@@ -13490,9 +13698,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Two strings are interleaved when their letters are merged into one string while each keeps its own order, like shuffling two decks of cards together without reordering within a deck. To check whether a third string is such a merge, decide at each step whether its next letter came from the first string or the second. A table over how much of each string has been used records which splits work.",
+    "interview": [
+     "`dp[i][j]` = can the first i chars of `s1` and first j chars of `s2` form the first i + j chars of `s3`.",
+     "Transition: `(dp[i-1][j] && s1[i-1] == s3[i+j-1]) || (dp[i][j-1] && s2[j-1] == s3[i+j-1])`; `dp[0][0] = true`.",
+     "Check `len(s1) + len(s2) == len(s3)` first.",
+     "**O(n · m)** time; O(m) space with one row.",
+     "A greedy two-pointer approach fails when both strings offer the same next character; the DP (or memoized DFS) handles the choice."
+    ],
+    "questions": [
+     {
+      "q": "What does dp[i][j] represent in the interleaving strings problem?",
+      "a": "Whether s3's first i + j characters can be formed by interleaving the first i characters of s1 and the first j characters of s2, preserving each string's order. The answer is dp[len(s1)][len(s2)]."
+     },
+     {
+      "q": "What is the transition?",
+      "a": "The last character of s3's prefix, s3[i + j − 1], came either from s1 (it equals s1[i − 1] and dp[i − 1][j] holds) or from s2 (it equals s2[j − 1] and dp[i][j − 1] holds). dp[i][j] is true if either case works."
+     },
+     {
+      "q": "Why doesn't a greedy two-pointer approach work?",
+      "a": "When the next character of s3 matches the next character of both s1 and s2, the right choice depends on characters much later. Greedy picks one and may fail, while the DP keeps both possibilities."
+     },
+     {
+      "q": "What must you check before running the DP?",
+      "a": "That len(s1) + len(s2) == len(s3). If not, the answer is false immediately, and the DP's indexing into s3 would also be off."
+     }
+    ]
    }
   },
   {
@@ -13514,9 +13745,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Pattern matching DP checks whether a whole string fits a pattern with special symbols, like \"?\" for any one letter or \"*\" for any run of letters. Because a star can stand for many different lengths, the table records which prefixes of the string match which prefixes of the pattern. Each star is handled by either using it for one more letter or letting it stand for nothing.",
+    "interview": [
+     "`dp[i][j]` = does `s[0..i)` match `p[0..j)`. Base `dp[0][0] = true`; `dp[0][j]` true only if the pattern prefix can match empty.",
+     "**Wildcard** (`?` any char, `*` any sequence): `*`: `dp[i][j] = dp[i][j-1] (empty) || dp[i-1][j] (one more char)`; `?` or equal char: `dp[i-1][j-1]`.",
+     "**Regex** (`.` any char, `x*` zero or more of the preceding element): `*`: `dp[i][j] = dp[i][j-2] (zero copies) || (matches(s[i-1], p[j-2]) && dp[i-1][j])`; otherwise `matches(s[i-1], p[j-1]) && dp[i-1][j-1]`.",
+     "**O(n · m)** time; top-down memoization is often simpler to write.",
+     "Wildcard also has a greedy two-pointer solution with backtracking to the last star (O(n · m) worst case, fast in practice)."
+    ],
+    "questions": [
+     {
+      "q": "How does the DP handle \"*\" in wildcard matching?",
+      "a": "A star can match an empty sequence, so dp[i][j] can come from dp[i][j − 1], or it can absorb one more character of the string, so dp[i][j] can come from dp[i − 1][j]. Either being true makes dp[i][j] true."
+     },
+     {
+      "q": "How is regex \"x*\" different from wildcard \"*\"?",
+      "a": "In regex, the star applies to the preceding element, meaning zero or more copies of x. So dp[i][j] is true if skipping \"x*\" entirely works (dp[i][j − 2]) or if s[i − 1] matches x and dp[i − 1][j] holds (one more copy)."
+     },
+     {
+      "q": "What are the base cases for regex matching?",
+      "a": "dp[0][0] is true. For the empty string, dp[0][j] is true only when the pattern prefix is made of \"x*\" pairs, so dp[0][j] = dp[0][j − 2] when p[j − 1] is '*'. dp[i][0] is false for i > 0."
+     },
+     {
+      "q": "What is the complexity of pattern matching DP?",
+      "a": "O(n · m) time and space for a string of length n and a pattern of length m, since each cell does O(1) work. The space can be reduced to two rows."
+     }
+    ]
    }
   },
   {
@@ -13538,9 +13792,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Interval DP solves a problem on a range of items by combining answers for smaller ranges inside it. Merging a row of piles into one, for example, always ends with a final merge of a left part and a right part, so you try every split point. Computing short ranges first means the answers for the pieces are always ready.",
+    "interview": [
+     "State `dp[l][r]` for the subarray or substring from l to r. Transition usually tries a **split point** k: `dp[l][r] = best over k of dp[l][k] ⊕ dp[k+1][r] ⊕ cost(l, r, k)`, or peels off the ends.",
+     "**Order**: iterate by increasing **length** (or l from n−1 down to 0 and r upward), so inner ranges are ready.",
+     "Typical cost: O(n²) states × O(n) splits = **O(n³)**; fine for n up to about 500.",
+     "Examples: merge adjacent piles, matrix chain multiplication, burst balloons, minimum cost to cut a stick, palindromic subsequences, optimal BST, polygon triangulation, stone games.",
+     "Prefix sums give range sums in O(1) inside the transition.",
+     "Ask: \"what is the first or last operation on this range?\" That choice defines the split."
+    ],
+    "questions": [
+     {
+      "q": "How are interval DP states defined and ordered?",
+      "a": "dp[l][r] holds the answer for the range l..r. Because a range depends on strictly smaller ranges inside it, fill the table by increasing range length, or with l decreasing and r increasing."
+     },
+     {
+      "q": "What is the typical complexity of interval DP, and why?",
+      "a": "O(n³): there are O(n²) ranges, and each tries O(n) split points or choices. It's practical for n up to a few hundred."
+     },
+     {
+      "q": "How do you find the split point in an interval DP problem?",
+      "a": "Ask what the first or last operation on the range is. If the last step joins two adjacent parts, try every boundary k between them. If the last step removes one element k, the two sides l..k − 1 and k + 1..r become independent."
+     },
+     {
+      "q": "Why do prefix sums often appear inside interval DP?",
+      "a": "Many transitions add a cost equal to the total of the range, such as the cost of merging piles. Prefix sums give any range total in O(1), keeping the transition cost at O(n) per state."
+     }
+    ],
+    "deep": "#### Intuition\n\nWhen the last operation on a range combines two adjacent sub-ranges (or acts on one element while the rest is already done), the optimal answer for the range is built from optimal answers for smaller ranges. There are only $O(n^2)$ ranges, so you can compute them all, shortest first.\n\n#### Worked example: merge adjacent piles\n\nPiles `3 4 2`; merging two adjacent piles costs their total size; merge everything into one pile at minimum total cost. `dp[l][r] = min over k of dp[l][k] + dp[k+1][r] + sum(l..r)`.\n\n| range | options | dp |\n|---|---|---|\n| [0,0], [1,1], [2,2] | single piles | 0 |\n| [0,1] = 3 4 | 0 + 0 + 7 | 7 |\n| [1,2] = 4 2 | 0 + 0 + 6 | 6 |\n| [0,2] = 3 4 2 | k=0: 0 + 6 + 9 = 15; k=1: 7 + 0 + 9 = 16 | 15 |\n\nBest: merge 4 and 2 first (cost 6), then with 3 (cost 9): **15**.\n\n#### Code\n\n```cpp\nlong long mergePiles(const vector<int>& a) {\n    int n = a.size();\n    vector<long long> pre(n + 1, 0);\n    for (int i = 0; i < n; i++) pre[i + 1] = pre[i] + a[i];\n    vector<vector<long long>> dp(n, vector<long long>(n, 0));\n    for (int len = 2; len <= n; len++)                    // shorter ranges first\n        for (int l = 0; l + len - 1 < n; l++) {\n            int r = l + len - 1;\n            dp[l][r] = LLONG_MAX;\n            for (int k = l; k < r; k++)                   // last merge joins [l,k] and [k+1,r]\n                dp[l][r] = min(dp[l][r], dp[l][k] + dp[k + 1][r]);\n            dp[l][r] += pre[r + 1] - pre[l];              // the final merge costs the range sum\n        }\n    return n ? dp[0][n - 1] : 0;\n}\n```\n\n```python\nfrom functools import lru_cache\n\ndef min_score_triangulation(values):\n    \"\"\"Polygon vertices in order; each triangle costs the product of its corners.\"\"\"\n    @lru_cache(maxsize=None)\n    def best(i, j):                      # polygon formed by vertices i..j\n        if j - i < 2:\n            return 0\n        return min(best(i, k) + best(k, j) + values[i] * values[k] * values[j]\n                   for k in range(i + 1, j))   # triangle (i, k, j) sits on edge i-j\n    return best(0, len(values) - 1)\n```\n\n#### Complexity\n\n$O(n^2)$ states, $O(n)$ transitions each: $O(n^3)$ time, $O(n^2)$ space. Some problems allow Knuth's optimization (restricting split points) down to $O(n^2)$.\n\n#### Edge cases and bugs\n\n- Loop order: iterating l upward and r upward without length ordering reads unfinished states.\n- Off-by-one in split ranges (`[l, k]` and `[k+1, r]` versus `[l, k-1]`, `[k+1, r]` when k itself is removed).\n- Overflow in costs; use 64-bit.\n\n#### Variants\n\n- Matrix chain multiplication, optimal binary search tree (weighted depths).\n- Burst balloons and cutting sticks (choose the **last** action in the range).\n- Remove boxes, strange printer (extra state beyond the range).\n- Game on a range (stone game): the state is the remaining range; the value is a score difference.\n\nConnects to: designing DP states, prefix sums, matrix chain multiplication, choosing the last action, game DP.",
+    "signals": [
+     "the answer for a range is built from answers for smaller sub-ranges",
+     "merging adjacent elements with a cost until one remains",
+     "choose the order of operations on a sequence (burst, cut, multiply)",
+     "n up to a few hundred with a cubic-time budget"
+    ],
+    "template": "```cpp\n// Interval DP by increasing length, trying every split point.\nlong long intervalDp(int n, function<long long(int, int, int)> joinCost) {\n    vector<vector<long long>> dp(n, vector<long long>(n, 0));    // length-1 ranges: base 0\n    for (int len = 2; len <= n; len++)\n        for (int l = 0; l + len - 1 < n; l++) {\n            int r = l + len - 1;\n            dp[l][r] = LLONG_MAX;\n            for (int k = l; k < r; k++)                           // [l, k] + [k + 1, r]\n                dp[l][r] = min(dp[l][r], dp[l][k] + dp[k + 1][r] + joinCost(l, k, r));\n        }\n    return dp[0][n - 1];\n}\n```"
    }
   },
   {
@@ -13562,9 +13848,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Multiplying a chain of matrices gives the same result no matter where you put the brackets, but the amount of work changes enormously. Matrix chain multiplication finds the cheapest bracketing. For every stretch of the chain, it tries each place for the last multiplication and keeps the cheapest.",
+    "interview": [
+     "Matrices `A_1..A_n` with dimensions `p[0] × p[1], p[1] × p[2], …, p[n-1] × p[n]`; multiplying an a×b by a b×c matrix costs a·b·c.",
+     "`dp[i][j]` = min cost to multiply `A_i..A_j`: `min over i ≤ k < j of dp[i][k] + dp[k+1][j] + p[i-1]·p[k]·p[j]`; `dp[i][i] = 0`.",
+     "**O(n³)** time, O(n²) space; store the best k to print the parenthesization.",
+     "Example: dimensions 10×30, 30×5, 5×60: (AB)C costs 1500 + 3000 = 4500; A(BC) costs 9000 + 18000 = 27000.",
+     "The template for many interval DPs (optimal BST, polygon triangulation)."
+    ],
+    "questions": [
+     {
+      "q": "What is the recurrence for matrix chain multiplication?",
+      "a": "dp[i][j] = min over k from i to j − 1 of dp[i][k] + dp[k + 1][j] + p[i − 1] · p[k] · p[j], where the last term is the cost of multiplying the two resulting matrices. dp[i][i] = 0, and ranges are filled by increasing length."
+     },
+     {
+      "q": "Why does the parenthesization matter?",
+      "a": "Matrix multiplication is associative, so the result is the same, but the number of scalar multiplications depends on the intermediate matrix sizes. For 10×30, 30×5 and 5×60 matrices, (AB)C costs 4,500 multiplications and A(BC) costs 27,000."
+     },
+     {
+      "q": "How do you output the optimal parenthesization, not just its cost?",
+      "a": "Store split[i][j], the k that achieved the minimum. Then recursively print: for i..j, print \"(\" + solution(i, k) + solution(k + 1, j) + \")\", with single matrices printed as their names."
+     },
+     {
+      "q": "What is the complexity of the DP?",
+      "a": "O(n³) time, from O(n²) ranges each trying O(n) split points, and O(n²) space for the table."
+     }
+    ]
    }
   },
   {
@@ -13586,9 +13895,31 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some interval problems become easy only if you think about which action happens last instead of first. When bursting balloons, the first balloon you pop changes everyone's neighbors, which is messy; but the last balloon popped in a range still has the range's fixed borders as neighbors. Choosing the last action splits the range into two independent halves.",
+    "interview": [
+     "**Burst balloons**: pad with 1 at both ends; `dp[l][r]` = best coins bursting everything strictly between l and r; last balloon k in (l, r): `dp[l][k] + dp[k][r] + a[l]·a[k]·a[r]`. O(n³).",
+     "Choosing the **first** balloon fails because its neighbors depend on later choices; choosing the **last** fixes its neighbors as the range boundaries.",
+     "**Minimum cost to cut a stick**: sort cuts, add 0 and n; `dp[i][j]` = min cost to make all cuts between cut i and cut j; the **first** cut k in the segment costs its length `c[j] - c[i]`: `dp[i][k] + dp[k][j] + (c[j] - c[i])`.",
+     "The trick generalizes: pick the action that makes the two sides independent."
+    ],
+    "questions": [
+     {
+      "q": "Why does burst balloons use the last balloon popped in a range as the split?",
+      "a": "When k is the last balloon popped strictly between l and r, all other balloons in the range are gone by then, so its neighbors are exactly l and r and it earns a[l] · a[k] · a[r]. The balloons on its left and right were popped independently, giving dp[l][k] + dp[k][r]."
+     },
+     {
+      "q": "Why doesn't choosing the first balloon work?",
+      "a": "After popping the first balloon, its neighbors become adjacent, and the coins earned later depend on the order of all remaining pops across both sides. The two sides aren't independent, so the problem doesn't split."
+     },
+     {
+      "q": "How do you solve minimum cost to cut a stick?",
+      "a": "Sort the cut positions and add the stick's ends. dp[i][j] is the minimum cost to make every cut strictly between positions c[i] and c[j]; the first cut k made in that segment costs its length c[j] − c[i], and then the two pieces are independent: dp[i][j] = min over k of dp[i][k] + dp[k][j] + c[j] − c[i]."
+     },
+     {
+      "q": "Why do we pad the balloon array with 1s?",
+      "a": "Balloons at the ends have a virtual neighbor worth 1 when popped. Adding 1 at both ends makes every balloon have two neighbors, so the same formula works everywhere and the whole problem is the range between the two padding balloons."
+     }
+    ]
    }
   },
   {
@@ -13610,9 +13941,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Minimum palindrome cuts asks for the fewest cuts that split a string into pieces that are all palindromes. First, a table records which substrings are palindromes. Then, for each prefix, you try every possible last palindrome piece and keep the split that uses the fewest cuts.",
+    "interview": [
+     "Precompute `isPal[l][r]` in O(n²) (or expand around centers).",
+     "`cuts[i]` = minimum cuts for `s[0..i]`: 0 if `s[0..i]` is a palindrome, else `min over j of cuts[j-1] + 1` for each j with `isPal[j][i]`. **O(n²)** total.",
+     "It's a segmentation DP (like word break with min), not a full O(n³) interval DP.",
+     "Expand-around-center variant: from each center, extend palindromes and update `cuts[r] = min(cuts[r], cuts[l-1] + 1)`: O(n²) time, **O(n)** space.",
+     "Listing all partitions (palindrome partitioning I) is backtracking, exponential in the worst case."
+    ],
+    "questions": [
+     {
+      "q": "How do you compute the minimum cuts for palindrome partitioning?",
+      "a": "Build a table of which substrings are palindromes. Then cuts[i] for the prefix ending at i is 0 if the whole prefix is a palindrome; otherwise it's the minimum over j where s[j..i] is a palindrome of cuts[j − 1] + 1. The answer is cuts[n − 1], in O(n²)."
+     },
+     {
+      "q": "Why isn't this an O(n³) interval DP?",
+      "a": "The only split that matters is where the last palindromic piece starts, so the state can be a prefix, not a range. With O(1) palindrome checks, each prefix tries O(n) starts, giving O(n²)."
+     },
+     {
+      "q": "How can you reduce the space to O(n)?",
+      "a": "Skip the palindrome table: expand around every center, and whenever s[l..r] is found to be a palindrome, update cuts[r] = min(cuts[r], cuts[l − 1] + 1) (or 0 if l = 0). Each center's expansion visits its palindromes in increasing length."
+     },
+     {
+      "q": "How does this relate to word break?",
+      "a": "Both are segmentation DPs over prefixes where the last piece must be valid. Word break checks dictionary membership and asks for feasibility; this checks palindromes and asks for the minimum number of pieces."
+     }
+    ]
    }
   },
   {
@@ -13639,9 +13993,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Game DP works out the best result for two players who both play perfectly. On your turn you pick the move that is best for you, knowing the opponent will then do what is best for them. Storing the score difference, your points minus theirs, for each remaining position turns this back-and-forth into one simple recurrence.",
+    "interview": [
+     "**Stone game** (take a pile from either end; maximize your total): `diff[l][r]` = best (current player's score − opponent's score) on piles l..r: `max(a[l] - diff[l+1][r], a[r] - diff[l][r-1])`. First player wins iff `diff[0][n-1] > 0`. O(n²).",
+     "The **score difference** trick avoids tracking whose turn it is: the opponent's best difference is subtracted.",
+     "**Minimax** in general: value(state) = max over moves of −value(next state) (negamax), for zero-sum games.",
+     "Win/lose games (take 1 to 3 stones, Nim-like): a state is winning if some move leads to a losing state.",
+     "Some games have closed forms (the classic even-piles stone game: the first player always wins by parity), but the DP is the general method."
+    ],
+    "questions": [
+     {
+      "q": "How do you decide who wins a game where players take stones from either end of a row?",
+      "a": "Let diff[l][r] be the best score difference the player to move can achieve on piles l..r. Taking the left pile gives a[l] − diff[l + 1][r], and the right pile gives a[r] − diff[l][r − 1], since the opponent then moves optimally. The first player wins if diff[0][n − 1] > 0."
+     },
+     {
+      "q": "Why store the score difference rather than each player's score?",
+      "a": "With the difference from the mover's point of view, the opponent's best play on the remaining range is just subtracted, so one table works for both players and you don't need to track whose turn it is."
+     },
+     {
+      "q": "How do you determine winning and losing positions in a simple take-away game?",
+      "a": "A position with no moves is losing for the player to move. A position is winning if at least one move leads to a losing position, and losing if every move leads to a winning position. Compute from small positions upward."
+     },
+     {
+      "q": "What is negamax?",
+      "a": "A formulation of minimax for two-player zero-sum games where a position's value for the player to move is the maximum over moves of the negated value of the resulting position. It's what the score-difference recurrence uses."
+     }
+    ]
    }
   },
   {
@@ -13664,9 +14041,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "DP on trees solves an optimization problem over a tree by having each node combine small summaries from its children. Often a single number isn't enough, so each node returns a few, such as \"best if I'm chosen\" and \"best if I'm not\". The parent picks the right combination, like a manager who needs two versions of each team's report to plan the department.",
+    "interview": [
+     "Postorder: compute each child's tuple of states, then combine them into the node's tuple. The answer is at the root (or a global maximum).",
+     "**Maximum independent set** (house robber III): `(take, skip)`: `take = val + Σ skip(child)`, `skip = Σ max(take, skip)(child)`.",
+     "**Minimum vertex cover**, **binary tree cameras**: a few states such as \"covered by child\", \"has camera\", \"needs cover\".",
+     "**Rerooting**: compute subtree answers downward first, then pass \"the rest of the tree\" contribution to children to get every node's answer as root in O(n) (sum of distances in a tree).",
+     "General trees: combine children in a loop; knapsack-like combinations across children (choose k nodes in subtrees) cost O(n²) with careful merging.",
+     "**O(n)** for constant-size states."
+    ],
+    "questions": [
+     {
+      "q": "Why do tree DP functions often return more than one value?",
+      "a": "The parent's options depend on facts about each child, such as whether the child was chosen or covered. Returning the best result for each possibility lets the parent pick compatible combinations without recomputing the child."
+     },
+     {
+      "q": "How do you find a maximum-weight set of tree nodes with no two adjacent?",
+      "a": "For each node, return (best with the node taken, best with it skipped). Taken equals the node's value plus each child's skipped value; skipped equals the sum over children of the better of their two values. The answer is the better value at the root."
+     },
+     {
+      "q": "What is rerooting, and when do you need it?",
+      "a": "A technique for computing an answer for every node as the root in O(n): one DFS computes subtree answers, and a second DFS moves the root from a node to each child, adjusting the answer with the parts that change. You need it for questions like \"the sum of distances from each node to all others\"."
+     },
+     {
+      "q": "How does the sum-of-distances rerooting formula work?",
+      "a": "When the root moves from u to its child v, the size[v] nodes in v's subtree get one step closer and the other n − size[v] nodes get one step farther, so ans[v] = ans[u] − size[v] + (n − size[v])."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn a rooted tree, a node's subtree is independent of the rest of the tree except through the node itself. So the best solution inside a subtree depends only on a few facts about the node (is it chosen, is it covered, how many nodes were picked). Returning the best value for each such fact lets the parent combine children without re-exploring them.\n\n#### Worked example: maximum independent set (no two adjacent nodes chosen)\n\n```\n        3\n       / \\\n      2   3\n       \\    \\\n        3    1\n```\n\n| node | take = val + skip(children) | skip = Σ max(take, skip)(children) |\n|---|---|---|\n| 3 (leaf under 2) | 3 | 0 |\n| 1 (leaf under right 3) | 1 | 0 |\n| 2 | 2 + 0 = 2 | max(3, 0) = 3 |\n| 3 (right) | 3 + 0 = 3 | max(1, 0) = 1 |\n| 3 (root) | 3 + 3 + 1 = 7 | max(2, 3) + max(3, 1) = 6 |\n\nAnswer: max(7, 6) = **7** (root 3, and the two bottom nodes 3 and 1).\n\n#### Code\n\n```cpp\npair<long long, long long> robTree(TreeNode* n) {       // {take, skip}\n    if (!n) return {0, 0};\n    auto [lt, ls] = robTree(n->left);\n    auto [rt, rs] = robTree(n->right);\n    long long take = n->val + ls + rs;                   // children must be skipped\n    long long skip = max(lt, ls) + max(rt, rs);          // children free to choose\n    return {take, skip};\n}\n\n// Sum of distances from every node to all others, by rerooting (general tree, n nodes).\nvector<long long> sumOfDistances(int n, const vector<vector<int>>& adj) {\n    vector<long long> down(n, 0), ans(n, 0), size(n, 1);\n    function<void(int, int)> dfs1 = [&](int u, int p) {   // subtree sizes and distances down\n        for (int v : adj[u]) if (v != p) {\n            dfs1(v, u);\n            size[u] += size[v];\n            down[u] += down[v] + size[v];\n        }\n    };\n    function<void(int, int)> dfs2 = [&](int u, int p) {   // move the root from u to each child\n        for (int v : adj[u]) if (v != p) {\n            ans[v] = ans[u] - size[v] + (n - size[v]);    // v's side gets closer, the rest farther\n            dfs2(v, u);\n        }\n    };\n    dfs1(0, -1);\n    ans[0] = down[0];\n    dfs2(0, -1);\n    return ans;\n}\n```\n\n```python\ndef min_cameras(root):\n    \"\"\"Minimum cameras so every node is watched (a camera covers itself, parent, children).\"\"\"\n    NEED, COVERED, CAMERA = 0, 1, 2\n    count = 0\n    def dfs(node):\n        nonlocal count\n        if node is None:\n            return COVERED                   # empty children need nothing\n        left, right = dfs(node.left), dfs(node.right)\n        if NEED in (left, right):\n            count += 1\n            return CAMERA                    # a child needs cover: put a camera here\n        if CAMERA in (left, right):\n            return COVERED\n        return NEED                          # leave it to the parent\n    if dfs(root) == NEED:\n        count += 1\n    return count\n```\n\n#### Complexity\n\nEach node is processed once with constant work per child: $O(n)$ time, $O(h)$ recursion stack. Rerooting is two passes: $O(n)$.\n\n#### Edge cases and bugs\n\n- Deep trees (a chain of $10^5$ nodes) overflow recursion; use an iterative postorder.\n- In rerooting, forgetting that the parent's side has `n - size[v]` nodes.\n- In general trees given as edges, skip the parent when iterating neighbors.\n\n#### Variants\n\n- Diameter, longest path with constraints (return the best downward path, update a global answer).\n- Count subtrees with a property, number of good leaf pairs (return distance counts).\n- Choose k nodes in a tree to maximize value (tree knapsack, merging children's arrays).\n\nConnects to: bottom-up tree recursion, tree DP on subtrees, take or skip DP, designing DP states.",
+    "signals": [
+     "optimize a choice over the nodes of a tree with constraints between parent and child",
+     "\"no two adjacent nodes\", \"every node covered\", \"minimum cameras or guards\"",
+     "an answer needed for every node as the root",
+     "subtree results combine at the parent"
+    ],
+    "template": "```cpp\n// Tree DP returning several states per node (postorder).\nstruct States { long long take, skip; };\n\nStates treeDp(TreeNode* n) {\n    if (!n) return {0, 0};                        // empty subtree\n    States L = treeDp(n->left), R = treeDp(n->right);\n    States cur;\n    cur.take = n->val + L.skip + R.skip;          // constraint: chosen parent, unchosen children\n    cur.skip = max(L.take, L.skip) + max(R.take, R.skip);\n    return cur;                                   // answer: max(root.take, root.skip)\n}\n```"
    }
   },
   {
@@ -13689,9 +14098,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Bitmask DP uses a row of on-off switches to remember which items have already been used, and makes that set part of the DP state. For a salesman visiting a few cities, the state is \"which cities I've visited and where I am now\". Because there are 2^n possible sets, it only works for small n, around 20 or fewer.",
+    "interview": [
+     "State `dp[mask]` or `dp[mask][i]`: the best result having used exactly the items in `mask` (and ending at i).",
+     "**Travelling salesman**: `dp[mask][i] = min over j in mask, j != i of dp[mask ^ (1 << i)][j] + dist[j][i]`: **O(2ⁿ · n²)** time, O(2ⁿ · n) space.",
+     "**Assignment** (n workers to n jobs): `dp[mask]` where the number of set bits tells which worker is next: O(2ⁿ · n).",
+     "**Partition into k equal-sum subsets**: `dp[mask]` = remainder of the current bucket (or −1 if unreachable), adding an unused element that fits: O(2ⁿ · n).",
+     "Iterate masks in increasing numeric order: every subset of a mask is numerically smaller, so dependencies are ready.",
+     "n ≤ 20 for O(2ⁿ · n); n ≤ 15 to 16 for O(2ⁿ · n²) or O(3ⁿ) (submask enumeration)."
+    ],
+    "questions": [
+     {
+      "q": "When is bitmask DP appropriate?",
+      "a": "When the state must record which subset of a small set of items has been used, because different subsets lead to different futures, and n is small enough (about 20 or fewer) for 2^n states to fit in time and memory."
+     },
+     {
+      "q": "What is the state and recurrence for the travelling salesman problem?",
+      "a": "dp[mask][i] is the minimum cost to start at city 0, visit exactly the cities in mask, and end at city i. Extend it to an unvisited city j: dp[mask | 1 << j][j] = min(…, dp[mask][i] + dist[i][j]). The answer adds the return edge to city 0. It's O(2^n · n²)."
+     },
+     {
+      "q": "Why can masks be processed in increasing numeric order?",
+      "a": "Adding an item to a set sets a bit, which makes the integer larger. So every state is only reached from numerically smaller masks, which are already final when processed in increasing order."
+     },
+     {
+      "q": "How does the assignment problem avoid a worker index in the state?",
+      "a": "Workers are assigned in a fixed order, so the number of jobs already used, popcount(mask), tells which worker comes next. The state is just the set of used jobs, giving O(2^n · n)."
+     },
+     {
+      "q": "How does bitmask DP check partitioning into k equal-sum subsets?",
+      "a": "Fill buckets one at a time. dp[mask] records the amount in the current, partially filled bucket after using the items in mask (or unreachable). Adding an unused item that fits updates the amount modulo the target, which starts a new bucket when one fills. The answer is whether the full mask ends at 0."
+     }
+    ],
+    "deep": "#### Intuition\n\nWhen the future depends on **which** items have been used (not just how many), the used set is part of the state. With $n$ items there are $2^n$ sets, encoded as integers whose bits mark used items. Removing or adding an item is a bit operation, and iterating masks in increasing order computes smaller sets first.\n\n#### Worked example: assignment\n\nCosts `cost[worker][job]`, 3 workers and 3 jobs:\n\n```\n      j0 j1 j2\nw0 [   9  2  7 ]\nw1 [   6  4  3 ]\nw2 [   5  8  1 ]\n```\n\n`dp[mask]` = min cost after assigning the first `popcount(mask)` workers to the jobs in mask.\n\n| mask (jobs used) | worker placed | dp |\n|---|---|---|\n| 000 | | 0 |\n| 001, 010, 100 | w0 | 9, 2, 7 |\n| 011 | w1 | min(dp[010] + 6, dp[001] + 4) = 8 |\n| 101 | w1 | min(dp[100] + 6, dp[001] + 3) = 12 |\n| 110 | w1 | min(dp[100] + 4, dp[010] + 3) = 5 |\n| 111 | w2 | min(dp[110] + 5, dp[101] + 8, dp[011] + 1) = 9 |\n\nMinimum total **9**: w0 → j1 (2), w1 → j0 (6), w2 → j2 (1).\n\n#### Code\n\n```cpp\nint assignment(const vector<vector<int>>& cost) {\n    int n = cost.size();\n    vector<int> dp(1 << n, INT_MAX);\n    dp[0] = 0;\n    for (int mask = 0; mask < (1 << n); mask++) {\n        if (dp[mask] == INT_MAX) continue;\n        int worker = __builtin_popcount(mask);            // next worker to place\n        if (worker == n) continue;\n        for (int job = 0; job < n; job++)\n            if (!(mask >> job & 1))\n                dp[mask | 1 << job] = min(dp[mask | 1 << job], dp[mask] + cost[worker][job]);\n    }\n    return dp[(1 << n) - 1];\n}\n\nint tsp(const vector<vector<int>>& d) {                   // start and end at city 0\n    int n = d.size(), FULL = 1 << n;\n    vector<vector<int>> dp(FULL, vector<int>(n, INT_MAX / 2));\n    dp[1][0] = 0;                                         // visited {0}, standing at 0\n    for (int mask = 1; mask < FULL; mask++)\n        for (int i = 0; i < n; i++) {\n            if (!(mask >> i & 1) || dp[mask][i] >= INT_MAX / 2) continue;\n            for (int j = 0; j < n; j++)\n                if (!(mask >> j & 1))\n                    dp[mask | 1 << j][j] = min(dp[mask | 1 << j][j], dp[mask][i] + d[i][j]);\n        }\n    int best = INT_MAX;\n    for (int i = 0; i < n; i++) best = min(best, dp[FULL - 1][i] + d[i][0]);\n    return best;\n}\n```\n\n```python\ndef can_partition_k_subsets(nums, k):\n    total = sum(nums)\n    if total % k:\n        return False\n    target, n = total // k, len(nums)\n    nums = sorted(nums)\n    if nums[-1] > target:\n        return False\n    fill = [-1] * (1 << n)            # fill[mask]: amount in the current bucket, -1 unreachable\n    fill[0] = 0\n    for mask in range(1 << n):\n        if fill[mask] < 0:\n            continue\n        for i in range(n):\n            if not mask >> i & 1 and fill[mask] + nums[i] <= target:\n                fill[mask | 1 << i] = (fill[mask] + nums[i]) % target\n            elif not mask >> i & 1:\n                break                  # sorted: larger numbers won't fit either\n    return fill[-1] == 0\n```\n\n#### Complexity\n\nAssignment: $O(2^n \\cdot n)$. TSP: $O(2^n \\cdot n^2)$ time, $O(2^n \\cdot n)$ memory (for $n = 16$: about 1 million states × 16). Partition into k subsets: $O(2^n \\cdot n)$.\n\n#### Edge cases and bugs\n\n- `1 << n` overflows `int` for n ≥ 31; use `1LL` when shifting large values.\n- Memory: `dp[1 << 20][20]` of ints is 80 MB; check limits.\n- Iterating masks in the wrong order (dependencies come from smaller masks).\n\n#### Variants\n\n- Shortest path visiting all nodes (BFS over (node, mask)).\n- Number of ways to wear different hats (mask over people, iterate hats).\n- Maximum compatibility score sum, minimum incompatibility (partition with constraints).\n- Sum over subsets (SOS DP): aggregate over all submasks in O(2ⁿ · n).\n\nConnects to: bitmask enumeration, designing DP states, shortest path with bitmask state, backtracking.",
+    "signals": [
+     "n up to about 20 and a need to remember which items were used",
+     "visit all cities or nodes exactly once with minimum cost",
+     "assign n people to n tasks with pairwise costs",
+     "partition a small set into groups with constraints"
+    ],
+    "template": "```cpp\n// Bitmask DP over subsets: dp[mask] from dp[mask without one item].\nlong long subsetDp(int n, function<long long(int, int)> addCost) {\n    vector<long long> dp(1 << n, LLONG_MAX / 2);\n    dp[0] = 0;                                              // empty set\n    for (int mask = 0; mask < (1 << n); mask++) {           // increasing: subsets first\n        if (dp[mask] >= LLONG_MAX / 2) continue;\n        for (int i = 0; i < n; i++)\n            if (!(mask >> i & 1)) {                         // item i not used yet\n                int next = mask | (1 << i);\n                dp[next] = min(dp[next], dp[mask] + addCost(mask, i));\n            }\n    }\n    return dp[(1 << n) - 1];\n}\n```"
    }
   },
   {
@@ -13711,9 +14156,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Digit DP counts numbers up to some limit whose digits follow a rule, such as \"no two equal digits in a row\" or \"digit sum equals 10\". Instead of checking every number, it builds numbers digit by digit from the left, remembering whether it is still exactly following the limit's digits. That flag decides whether the next digit can be anything or must stay at most the limit's digit.",
+    "interview": [
+     "Count numbers in `[0, N]` with a property; for `[L, R]` compute `f(R) − f(L − 1)`.",
+     "State: `(position, tight, extra)`. `tight` = the prefix equals N's prefix so far (next digit ≤ N's digit, else ≤ 9). `extra` = what the property needs (digit sum, last digit, used-digits mask, remainder mod m).",
+     "Often a `started` flag handles leading zeros (they shouldn't count as digits).",
+     "Memoize only non-tight states (tight states occur once per position).",
+     "Complexity: positions × states × 10: for 18 digits and small extras, tiny.",
+     "Examples: numbers with at most one 1 in binary, numbers with unique digits, count of digit 1 in all numbers up to N, numbers divisible by the sum of their digits."
+    ],
+    "questions": [
+     {
+      "q": "What does the \"tight\" flag represent in digit DP?",
+      "a": "Whether the digits chosen so far exactly equal the upper bound's prefix. If tight, the next digit can't exceed the bound's next digit; once a smaller digit is chosen, the number is already below the bound, and all later digits can be 0 to 9."
+     },
+     {
+      "q": "How do you count numbers in a range [L, R] with a digit property?",
+      "a": "Write a function f(N) that counts numbers from 0 to N with the property using digit DP, then compute f(R) − f(L − 1)."
+     },
+     {
+      "q": "Why is a \"started\" flag sometimes needed?",
+      "a": "Leading zeros aren't real digits. Properties like \"all digits are distinct\" or \"no digit 0\" would be violated by padding zeros, so the state tracks whether a non-zero digit has been placed yet and ignores zeros before it."
+     },
+     {
+      "q": "What is the typical complexity of digit DP?",
+      "a": "The number of digits (up to about 19 for 64-bit values) times the number of extra-state values times 2 for tight times 10 digit choices. With small extra states, that's a few thousand operations."
+     }
+    ]
    }
   },
   {
@@ -13735,9 +14204,31 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Sometimes a DP transition needs \"the last earlier item that is compatible with this one\", and binary search finds it quickly. In weighted job scheduling, jobs sorted by end time let you ask: if I take this job, which is the latest job that finishes before it starts? The answer for that job, plus this job's profit, competes with simply skipping this job.",
+    "interview": [
+     "**Weighted job scheduling**: sort jobs by end time; `dp[i] = max(dp[i-1], profit[i] + dp[p(i)])`, where `p(i)` = number of jobs ending at or before job i's start (binary search on end times). **O(n log n)**.",
+     "The structure is take-or-skip DP, with the \"previous compatible\" index found by `upper_bound`.",
+     "Also: maximum profit in events with k choices (add a count dimension), longest increasing subsequence (binary search on tails), minimum taps with sorted intervals.",
+     "Sorting by end time (not start) makes all compatible earlier jobs form a prefix."
+    ],
+    "questions": [
+     {
+      "q": "How do you solve weighted job scheduling?",
+      "a": "Sort jobs by end time. For each job i, the best total is either the best without it, dp[i − 1], or its profit plus the best total of jobs ending at or before its start. That index is found by binary search over the sorted end times, so the whole algorithm is O(n log n)."
+     },
+     {
+      "q": "Why sort by end time?",
+      "a": "With jobs sorted by end time, the jobs compatible with job i (those ending by its start) form a prefix of the sorted list, so a single index describes them and binary search finds it. Sorting by start time doesn't give that prefix property."
+     },
+     {
+      "q": "How does this relate to unweighted interval scheduling?",
+      "a": "With equal weights, the greedy \"earliest end first\" is optimal. With weights, a high-value job might overlap several low-value ones, so greedy fails, and the DP compares taking and skipping each job."
+     },
+     {
+      "q": "How would you extend it to pick at most k events?",
+      "a": "Add a count to the state: dp[i][j] is the best value using the first i events with at most j chosen, with the same binary search for the previous compatible event. That costs O(n · k + n log n)."
+     }
+    ]
    }
   },
   {
@@ -13757,9 +14248,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some DP solutions are correct but too slow because each state looks at many earlier states. Optimizations speed up that look-up without changing the answer, for example keeping a running sum instead of re-adding a range, or keeping the best recent value in a special queue. They turn a slow inner loop into constant or logarithmic work.",
+    "interview": [
+     "**Prefix sums in transitions**: `dp[i] = Σ dp[j]` over a window of j becomes O(1) with a running prefix sum of dp (for example, counting ways with a range of step sizes).",
+     "**Monotonic deque**: `dp[i] = best(dp[j]) + cost` for j in a sliding window: keep candidates in a deque: O(n) instead of O(n · k) (constrained subsequence sum, jump game VI).",
+     "**Binary search / data structures**: when the valid j form a sorted prefix (weighted scheduling), or with a segment tree or Fenwick tree for range maximums over values (LIS variants).",
+     "**Convex hull trick / Li Chao tree**: transitions `dp[i] = min_j (m_j · x_i + b_j)`: O(n log n) or O(n).",
+     "**Divide and conquer optimization**, **Knuth's optimization**: when the optimal split point is monotone: O(n² log n) or O(n²) instead of O(n³).",
+     "First find the O(n²) DP, then look at the shape of the inner loop."
+    ],
+    "questions": [
+     {
+      "q": "How can prefix sums speed up a DP transition?",
+      "a": "If dp[i] sums dp[j] over a contiguous range of earlier indices, maintain a prefix sum of the dp array. Each range sum then costs O(1), so an O(n · k) DP becomes O(n)."
+     },
+     {
+      "q": "When does a monotonic deque optimize a DP?",
+      "a": "When dp[i] needs the maximum (or minimum) of dp[j] over a sliding window of the previous k positions. The deque keeps candidates in decreasing order, dropping expired and dominated ones, giving O(n) total instead of O(n · k)."
+     },
+     {
+      "q": "What kind of transition does the convex hull trick handle?",
+      "a": "Transitions of the form dp[i] = min over j of (m_j · x_i + b_j), where each earlier state defines a line and each new state queries the lowest line at a point. Keeping the lines in a hull (or a Li Chao tree) answers each query in O(log n), or amortized O(1) when slopes and queries are monotone."
+     },
+     {
+      "q": "What is the general strategy for optimizing a DP in an interview?",
+      "a": "First write the correct, slower DP and state its complexity. Then examine the inner loop: is it a range sum (prefix sums), a sliding-window extreme (monotonic deque), a sorted prefix (binary search) or a range query (segment tree)? Choose the structure that answers it fastest."
+     }
+    ]
    }
   },
   {
