@@ -8769,9 +8769,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Merging intervals combines overlapping time ranges into single blocks, like turning a messy list of booked hours into a clean schedule of busy periods. Sort the ranges by their start time, then walk through them, stretching the current block whenever the next range begins before it ends. When a range starts after the block ends, close the block and begin a new one.",
+    "interview": [
+     "Sort by start: **O(n log n)**. Then one pass: if `start <= last.end`, set `last.end = max(last.end, end)`; else append a new interval.",
+     "Take the **max** of the ends: a later interval can be fully inside the current one.",
+     "Decide whether touching intervals (`[1,2]` and `[2,3]`) count as overlapping; the usual rule `start <= lastEnd` merges them.",
+     "Overlap test for two intervals: `a.start <= b.end && b.start <= a.end` (closed intervals).",
+     "Output is sorted and non-overlapping; O(n) extra space for the result.",
+     "Related: insert interval (no sort needed if the list is already sorted), employee free time (merge, then read the gaps)."
+    ],
+    "questions": [
+     {
+      "q": "How do you merge a list of overlapping intervals?",
+      "a": "Sort them by start. Walk through them keeping the last merged interval: if the next one starts at or before its end, extend the end to the larger of the two ends; otherwise add the next one as a new interval. It is O(n log n) because of the sort."
+     },
+     {
+      "q": "Why must you take the maximum of the two ends when merging?",
+      "a": "The next interval may lie entirely inside the current block, like [2, 3] inside [1, 10]. Setting the end to 3 would wrongly shrink the block and could split later overlaps."
+     },
+     {
+      "q": "Why does sorting by start make one pass enough?",
+      "a": "After sorting, if an interval doesn't overlap the current block, every later interval starts even later, so none of them can overlap the block either. The block is final as soon as a non-overlapping interval appears."
+     },
+     {
+      "q": "How do you check whether two closed intervals overlap?",
+      "a": "They overlap exactly when each starts no later than the other ends: a.start <= b.end and b.start <= a.end. Equivalently, they don't overlap when one ends before the other starts."
+     },
+     {
+      "q": "How would you find the free time common to several people's schedules?",
+      "a": "Put all busy intervals together, merge them, and report the gaps between consecutive merged intervals. With k people and n intervals, that is O(n log n), or O(n log k) with a heap if each person's list is already sorted."
+     }
+    ],
+    "deep": "#### Intuition\n\nAfter sorting by start, any interval that overlaps the current merged block must come right after it in the order: if interval $j$ doesn't overlap the block, no later interval (with an even later start) can overlap it either. So a single left-to-right pass decides everything.\n\n#### Worked example\n\n`[1,3] [8,10] [2,6] [15,18] [17,20]` → sorted by start: `[1,3] [2,6] [8,10] [15,18] [17,20]`.\n\n| next | current block | overlaps? | result so far |\n|---|---|---|---|\n| [1,3] | | first | [1,3] |\n| [2,6] | [1,3] | 2 ≤ 3: yes | [1,6] |\n| [8,10] | [1,6] | 8 > 6: no | [1,6] [8,10] |\n| [15,18] | [8,10] | no | … [15,18] |\n| [17,20] | [15,18] | 17 ≤ 18: yes | [1,6] [8,10] [15,20] |\n\n#### Code\n\n```cpp\nvector<vector<int>> mergeIntervals(vector<vector<int>> iv) {\n    sort(iv.begin(), iv.end());                          // by start (then end)\n    vector<vector<int>> out;\n    for (auto& cur : iv) {\n        if (!out.empty() && cur[0] <= out.back()[1])\n            out.back()[1] = max(out.back()[1], cur[1]);  // extend the current block\n        else\n            out.push_back(cur);                          // start a new block\n    }\n    return out;\n}\n```\n\n```python\ndef merge_intervals(intervals):\n    out = []\n    for start, end in sorted(intervals):\n        if out and start <= out[-1][1]:\n            out[-1][1] = max(out[-1][1], end)\n        else:\n            out.append([start, end])\n    return out\n\ndef free_time(schedules):\n    \"\"\"Common free gaps given everyone's busy intervals.\"\"\"\n    merged = merge_intervals([iv for person in schedules for iv in person])\n    return [[a[1], b[0]] for a, b in zip(merged, merged[1:])]\n```\n\n#### Complexity\n\nSorting dominates: $O(n \\log n)$ time. The merge pass is $O(n)$. Space $O(n)$ for the output ($O(\\log n)$ to $O(n)$ for the sort).\n\n#### Why sort by start, not by end\n\nSorting by end can put an early-starting long interval after short ones it covers. With `[2,3] [4,5] [1,10]` sorted by end, a single pass would close `[2,3]` and `[4,5]` before seeing `[1,10]`, which swallows both. Sorting by start guarantees that when an interval arrives, every interval that could overlap the current block from the left has already been seen. (Sorting by end is the right key for a different question: choosing the most non-overlapping intervals.)\n\n#### When the input is already sorted or streaming\n\nIf intervals arrive already sorted by start, skip the sort and the whole thing is $O(n)$. If they arrive one at a time in any order and you must keep a merged view, store the merged intervals in an ordered map keyed by start and merge each newcomer with its neighbors in $O(\\log n)$ plus the number of intervals it absorbs.\n\n#### Edge cases and bugs\n\n- Nested intervals: `[1,10]` then `[2,3]` must not shrink the block to 3; use `max`.\n- Touching endpoints: `[1,4]` and `[4,5]` merge with `<=`, stay separate with `<`. Read the problem.\n- Empty input: return an empty list.\n- Modifying the input while iterating over it (sort a copy if the caller needs the original).\n\n#### Variants\n\n- Insert interval, remove interval, interval list intersections.\n- Total covered length (merge, then sum lengths) and the gaps (employee free time).\n- Merge with extra data (combine labels while merging).\n- When intervals arrive online, keep them in an ordered map keyed by start.\n\nConnects to: sorting, insert interval, sweep line, interval scheduling.",
+    "signals": [
+     "overlapping ranges of time, numbers or positions to combine",
+     "\"merge\", \"union\" or total covered length of intervals",
+     "busy periods, free slots or gaps between bookings",
+     "a list of [start, end] pairs in no particular order"
+    ],
+    "template": "```cpp\n// Sort by start, then extend or close the current block.\nvector<pair<int, int>> mergeAll(vector<pair<int, int>> iv) {\n    sort(iv.begin(), iv.end());\n    vector<pair<int, int>> out;\n    for (auto [s, e] : iv) {\n        if (!out.empty() && s <= out.back().second)      // overlap (use < to keep touching apart)\n            out.back().second = max(out.back().second, e);\n        else\n            out.push_back({s, e});\n    }\n    return out;\n}\n```"
    }
   },
   {
@@ -8793,9 +8829,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Inserting a new interval into a sorted list of non-overlapping intervals is like adding a new appointment to a tidy calendar. Appointments that end before the new one starts stay as they are, appointments that overlap it get merged into one bigger block, and appointments that start after it ends stay as they are. Three simple phases, one pass.",
+    "interview": [
+     "Input is sorted and non-overlapping, so no sort is needed: **O(n)**.",
+     "Phase 1: copy intervals with `end < new.start` (entirely before).",
+     "Phase 2: while `start <= new.end`, merge: `new.start = min(...)`, `new.end = max(...)`. Then add the merged interval.",
+     "Phase 3: copy the rest (entirely after).",
+     "Alternatively, binary search the positions of the phases: O(log n) to find them, still O(n) to build the output.",
+     "Watch the boundary comparisons for touching intervals."
+    ],
+    "questions": [
+     {
+      "q": "How do you insert an interval into a sorted list of disjoint intervals?",
+      "a": "Copy all intervals that end before the new one starts. Then merge every interval that starts at or before the new interval's end, expanding the new interval's start and end. Add the merged interval, then copy the remaining intervals. It is O(n) with no sorting."
+     },
+     {
+      "q": "Why is no sort needed?",
+      "a": "The existing list is already sorted and disjoint, so the intervals that overlap the new one form one contiguous run, and the three phases (before, overlapping, after) can be read off in order."
+     },
+     {
+      "q": "Can binary search make insertion faster?",
+      "a": "It can find where the overlapping run starts and ends in O(log n), but building a new output array still takes O(n). To get O(log n) per insertion you need a structure like an ordered map of intervals that can be modified in place."
+     },
+     {
+      "q": "How do you handle an interval that touches an existing one at an endpoint?",
+      "a": "It depends on whether touching counts as overlap. With the conditions \"end < new start\" for before and \"start <= new end\" for overlap, touching intervals are merged; use strict comparisons if they must stay separate."
+     }
+    ],
+    "deep": "#### Intuition\n\nBecause the list is sorted and disjoint, the intervals affected by the new one form a contiguous run. Everything before the run ends before the new interval starts; everything after starts after it ends. So you only need to find the run and fold it into one merged interval.\n\n#### Worked example\n\nIntervals `[1,2] [3,5] [6,7] [8,10] [12,16]`, new `[4,8]`.\n\n| interval | phase | action | new interval |\n|---|---|---|---|\n| [1,2] | before (2 < 4) | copy | [4,8] |\n| [3,5] | overlap (3 ≤ 8) | merge | [3,8] |\n| [6,7] | overlap | merge | [3,8] |\n| [8,10] | overlap (8 ≤ 8) | merge | [3,10] |\n| [12,16] | after (12 > 10) | add merged, copy | |\n\nResult: `[1,2] [3,10] [12,16]`.\n\n#### Code\n\n```cpp\nvector<vector<int>> insertInterval(const vector<vector<int>>& iv, vector<int> nw) {\n    vector<vector<int>> out;\n    int i = 0, n = iv.size();\n    while (i < n && iv[i][1] < nw[0]) out.push_back(iv[i++]);   // entirely before\n    while (i < n && iv[i][0] <= nw[1]) {                        // overlapping: absorb\n        nw[0] = min(nw[0], iv[i][0]);\n        nw[1] = max(nw[1], iv[i][1]);\n        i++;\n    }\n    out.push_back(nw);\n    while (i < n) out.push_back(iv[i++]);                       // entirely after\n    return out;\n}\n```\n\n```python\ndef insert_interval(intervals, new):\n    out, i, n = [], 0, len(intervals)\n    s, e = new\n    while i < n and intervals[i][1] < s:\n        out.append(intervals[i])\n        i += 1\n    while i < n and intervals[i][0] <= e:\n        s, e = min(s, intervals[i][0]), max(e, intervals[i][1])\n        i += 1\n    out.append([s, e])\n    out.extend(intervals[i:])\n    return out\n\ndef remove_interval(intervals, to_remove):\n    \"\"\"Remove the part of each (sorted, disjoint) interval covered by to_remove.\"\"\"\n    rs, re = to_remove\n    out = []\n    for s, e in intervals:\n        if e <= rs or s >= re:          # no overlap (half-open semantics)\n            out.append([s, e])\n        else:\n            if s < rs:\n                out.append([s, rs])\n            if e > re:\n                out.append([re, e])\n    return out\n```\n\n#### Why three phases are enough\n\nEverything before the overlapping run ends before the new interval starts, and everything after it starts after the (possibly grown) new interval ends. The merged interval only grows while it absorbs the run, and the run is contiguous because the list is sorted and disjoint. So one forward scan sees each interval once and places it in exactly one phase.\n\n#### Complexity\n\n$O(n)$ time and $O(n)$ output space. With binary search the boundaries take $O(\\log n)$, but copying the output still costs $O(n)$; an ordered map of intervals allows $O(\\log n + k)$ insertion in place, where $k$ is the number of merged intervals.\n\n#### Edge cases and bugs\n\n- The new interval before all others, after all others, or covering all of them.\n- Empty list: the result is just the new interval.\n- Touching: `[1,2]` and new `[2,3]`: with `end < start` for \"before\" and `start <= end` for \"overlap\" they merge into `[1,3]`.\n- Mutating the input's inner arrays in Python when copying (use copies if the caller keeps the input).\n\n#### Variants\n\n- Remove interval (split the partly covered intervals).\n- Range module (add, remove, query ranges): an ordered map of disjoint intervals.\n- Summary ranges and data stream as disjoint intervals: insert single points and merge neighbors.\n\nConnects to: merge intervals, binary search, calendar booking designs.",
+    "signals": [
+     "add a new interval to a sorted, non-overlapping list",
+     "keep a calendar or a set of ranges merged after each addition",
+     "remove or split ranges covered by another range",
+     "intervals that are already sorted, so a full re-merge is wasteful"
+    ],
+    "template": "```cpp\n// Three phases over sorted, disjoint intervals: before, overlapping (absorb), after.\nvector<pair<int, int>> insertOne(const vector<pair<int, int>>& iv, pair<int, int> nw) {\n    vector<pair<int, int>> out;\n    size_t i = 0;\n    while (i < iv.size() && iv[i].second < nw.first) out.push_back(iv[i++]);\n    while (i < iv.size() && iv[i].first <= nw.second) {\n        nw.first = min(nw.first, iv[i].first);\n        nw.second = max(nw.second, iv[i].second);\n        i++;\n    }\n    out.push_back(nw);\n    while (i < iv.size()) out.push_back(iv[i++]);\n    return out;\n}\n```"
    }
   },
   {
@@ -8815,9 +8883,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Interval scheduling picks the largest number of events that don't clash, like fitting the most talks into one room. The winning strategy is to always pick the talk that finishes earliest, because it leaves the most time for everything after it. Sorting by end time turns this into one simple pass.",
+    "interview": [
+     "**Maximum set of non-overlapping intervals**: sort by **end**; keep an interval if its start ≥ the end of the last kept one. **O(n log n)**.",
+     "**Minimum removals** to make intervals non-overlapping = n − (maximum kept).",
+     "**Minimum arrows** to burst balloons (points hitting intervals): sort by end, shoot at the first end, skip every balloon whose start ≤ that point; each new arrow is at the next unburst balloon's end. Same greedy (touching counts as hit).",
+     "Sorting by **start** is the classic mistake: a long early interval can block many short ones.",
+     "Proof: exchange argument. The earliest-ending interval can replace the first interval of any optimal solution without creating overlaps.",
+     "Weighted version (each interval has a value) needs DP with binary search, not greedy."
+    ],
+    "questions": [
+     {
+      "q": "How do you select the maximum number of non-overlapping intervals?",
+      "a": "Sort by end time and scan, keeping an interval whenever it starts at or after the end of the last kept interval. Choosing the interval that ends earliest always leaves the most room for the rest. O(n log n)."
+     },
+     {
+      "q": "Why not sort by start time or by length?",
+      "a": "By start, a long interval that starts early can block many short ones. By length, a short interval in the middle can conflict with two intervals that would both fit otherwise. Only the earliest end time has the exchange-argument guarantee."
+     },
+     {
+      "q": "How is \"minimum number of intervals to remove\" related?",
+      "a": "The fewest removals equals the total minus the maximum number of intervals you can keep without overlap, so it is the same greedy."
+     },
+     {
+      "q": "How do you find the minimum number of arrows to burst all balloons?",
+      "a": "Sort balloons by end. Shoot the first arrow at the first balloon's end, which bursts every balloon starting at or before that point. When a balloon starts after the last arrow, shoot a new arrow at its end. The count of arrows is minimal by the same exchange argument."
+     },
+     {
+      "q": "When does interval scheduling need DP instead of greedy?",
+      "a": "When intervals have weights (values) and you maximize total weight. Then the earliest-ending interval might be worth little, so you sort by end and use dp[i] = max(dp[i − 1], w[i] + dp[last compatible interval]), finding that interval by binary search."
+     }
+    ],
+    "deep": "#### Intuition\n\nYou want to leave as much room as possible for future intervals. Whatever you choose first, the room left afterwards starts at its end time. So among all intervals you could choose first, the one that ends earliest is never worse. Repeating the argument gives the greedy: sort by end, take whatever fits.\n\n#### Worked example: minimum removals\n\n`[1,2] [2,3] [3,4] [1,3]` → sorted by end: `[1,2] [2,3] [1,3] [3,4]`.\n\n| interval | last kept end | start ≥ last end? | kept |\n|---|---|---|---|\n| [1,2] | −∞ | yes | [1,2] |\n| [2,3] | 2 | 2 ≥ 2: yes | [2,3] |\n| [1,3] | 3 | 1 < 3: no | removed |\n| [3,4] | 3 | yes | [3,4] |\n\nKept 3, so removals = 4 − 3 = **1**.\n\n#### Code\n\n```cpp\nint eraseOverlapIntervals(vector<vector<int>> iv) {\n    sort(iv.begin(), iv.end(), [](const vector<int>& a, const vector<int>& b) {\n        return a[1] < b[1];                           // by end time\n    });\n    int kept = 0;\n    long long lastEnd = LLONG_MIN;\n    for (auto& x : iv) {\n        if (x[0] >= lastEnd) { kept++; lastEnd = x[1]; }   // touching is allowed\n    }\n    return (int)iv.size() - kept;\n}\n\nint minArrows(vector<vector<int>> balloons) {\n    if (balloons.empty()) return 0;\n    sort(balloons.begin(), balloons.end(), [](const vector<int>& a, const vector<int>& b) {\n        return a[1] < b[1];\n    });\n    int arrows = 1;\n    long long shot = balloons[0][1];                  // shoot at the first end\n    for (auto& b : balloons)\n        if (b[0] > shot) { arrows++; shot = b[1]; }   // not hit: needs a new arrow\n    return arrows;\n}\n```\n\n```python\ndef max_non_overlapping(intervals):\n    kept, last_end = [], float(\"-inf\")\n    for s, e in sorted(intervals, key=lambda iv: iv[1]):\n        if s >= last_end:\n            kept.append([s, e])\n            last_end = e\n    return kept\n\ndef min_arrows(balloons):\n    arrows, shot = 0, float(\"-inf\")\n    for s, e in sorted(balloons, key=lambda b: b[1]):\n        if s > shot:\n            arrows += 1\n            shot = e\n    return arrows\n```\n\n#### Why sorting by end is correct (exchange argument)\n\nLet $g$ be the interval with the earliest end, and let $O$ be any optimal selection, with $o_1$ its earliest-ending interval. Replace $o_1$ by $g$: since $g$ ends no later than $o_1$, it overlaps nothing that $o_1$ didn't, so the new selection is still valid and has the same size. Hence some optimal solution starts with $g$; remove everything overlapping $g$ and repeat on the rest.\n\n#### Complexity\n\n$O(n \\log n)$ for the sort, $O(n)$ for the pass, $O(1)$ extra beyond sorting.\n\n#### Edge cases and bugs\n\n- Sorting by start: `[1,100] [2,3] [4,5]` would keep only the first.\n- Touching rules differ: meetings `[1,2]` and `[2,3]` don't conflict; balloons `[1,2]` and `[2,3]` are both hit by an arrow at 2. Hence `>=` in one problem and `>` in the other.\n- Overflow when comparing with sentinel values: use a wide type or a flag for \"nothing kept yet\".\n\n#### Variants\n\n- Activity selection (the textbook name), maximum number of events you can attend (with a heap by end day).\n- Weighted interval scheduling: sort by end, DP with binary search for the last compatible interval.\n- Interval partitioning (minimum rooms): a different greedy, sorted by start with a heap of end times.\n\nConnects to: exchange argument, greedy fundamentals, scheduling with heaps, DP with binary search.",
+    "signals": [
+     "the maximum number of non-overlapping meetings, talks or tasks",
+     "the minimum number of intervals to remove so the rest don't overlap",
+     "the minimum number of points that hit (stab) every interval",
+     "choose events greedily to leave the most time afterwards"
+    ],
+    "template": "```cpp\n// Greedy by earliest end: count intervals kept without overlap.\nint maxCompatible(vector<pair<int, int>> iv) {          // {start, end}\n    sort(iv.begin(), iv.end(), [](auto& a, auto& b) { return a.second < b.second; });\n    int kept = 0;\n    long long lastEnd = LLONG_MIN;\n    for (auto [s, e] : iv) {\n        if (s >= lastEnd) {                              // fits after the last kept one\n            kept++;\n            lastEnd = e;                                 // (for stabbing points use s > lastEnd)\n        }\n    }\n    return kept;                                         // removals = n - kept\n}\n```"
    }
   },
   {
@@ -8842,9 +8946,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A sweep line turns intervals into events, \"something starts here\" and \"something ends here\", and processes them in time order. Imagine walking along a timeline with a counter: add one when a meeting starts and subtract one when it ends. The highest the counter ever reaches is the most meetings happening at once.",
+    "interview": [
+     "Create events `(time, +1)` for starts and `(time, −1)` for ends; sort by time; sweep with a running count. **O(n log n)**.",
+     "**Tie-breaking** decides touching intervals: process ends before starts at the same time if `[1,2]` and `[2,3]` shouldn't overlap (sort `-1` before `+1`).",
+     "Answers: maximum overlap (meeting rooms), total covered length, points covered by at least k intervals, the skyline (with a max-heap of active heights).",
+     "With small integer coordinates, a **difference array** does the same in O(n + range).",
+     "Alternative for meeting rooms: two sorted arrays of starts and ends with two pointers."
+    ],
+    "questions": [
+     {
+      "q": "How does a sweep line count the maximum number of overlapping intervals?",
+      "a": "Turn each interval into a +1 event at its start and a −1 event at its end, sort the events by time, and walk through them with a running sum. The largest value the sum reaches is the maximum overlap. Sorting makes it O(n log n)."
+     },
+     {
+      "q": "Why does the tie order of events at the same time matter?",
+      "a": "It decides whether intervals that touch at a point overlap. Processing ends before starts treats [1, 2] and [2, 3] as non-overlapping, which matches meetings; processing starts first counts them as overlapping."
+     },
+     {
+      "q": "How do you compute the total length covered by a set of intervals with a sweep?",
+      "a": "Sort all start and end events. Between consecutive events the number of active intervals is constant, so add the gap length whenever the active count is positive before the event."
+     },
+     {
+      "q": "When is a difference array better than a sweep line?",
+      "a": "When coordinates are small integers in a bounded range. Then you can add +1 and −1 into an array and take a prefix sum in O(n + range), with no sorting."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe number of intervals covering a point only changes at start and end points. Sorting those events and walking through them in order lets you see every change once. Between consecutive events the count is constant, which also gives lengths of covered regions.\n\n#### Worked example: meetings `[0,30] [5,10] [15,20]`\n\nEvents sorted (ends before starts at equal times): `(0,+1) (5,+1) (10,−1) (15,+1) (20,−1) (30,−1)`.\n\n| event | count after | max |\n|---|---|---|\n| 0 start | 1 | 1 |\n| 5 start | 2 | 2 |\n| 10 end | 1 | 2 |\n| 15 start | 2 | 2 |\n| 20 end | 1 | 2 |\n| 30 end | 0 | 2 |\n\nTwo rooms are needed.\n\n#### Code\n\n```cpp\nint maxOverlap(const vector<pair<int, int>>& iv) {         // half-open [start, end)\n    vector<pair<int, int>> events;\n    for (auto [s, e] : iv) { events.push_back({s, +1}); events.push_back({e, -1}); }\n    sort(events.begin(), events.end());                    // at equal times, -1 sorts first\n    int cur = 0, best = 0;\n    for (auto [t, d] : events) best = max(best, cur += d);\n    return best;\n}\n\n// Total length covered by at least one interval.\nlong long coveredLength(const vector<pair<long long, long long>>& iv) {\n    vector<pair<long long, int>> events;\n    for (auto [s, e] : iv) { events.push_back({s, +1}); events.push_back({e, -1}); }\n    sort(events.begin(), events.end());\n    long long total = 0, prev = 0;\n    int active = 0;\n    for (auto [t, d] : events) {\n        if (active > 0) total += t - prev;                 // the region since the last event\n        active += d;\n        prev = t;\n    }\n    return total;\n}\n```\n\n```python\nimport heapq\n\ndef skyline(buildings):\n    \"\"\"buildings: [left, right, height]; returns key points [x, height].\"\"\"\n    events = sorted([(l, -h, r) for l, r, h in buildings] + [(r, 0, 0) for _, r, _ in buildings])\n    result, live = [], [(0, float(\"inf\"))]          # max-heap of (-height, right edge)\n    for x, neg_h, r in events:\n        while live[0][1] <= x:                      # drop buildings that have ended\n            heapq.heappop(live)\n        if neg_h:\n            heapq.heappush(live, (neg_h, r))\n        height = -live[0][0]\n        if not result or result[-1][1] != height:\n            result.append([x, height])\n    return result\n```\n\n#### Complexity\n\n$O(n \\log n)$ for sorting $2n$ events; the sweep is $O(n)$. The skyline adds heap operations: $O(n \\log n)$.\n\n#### Edge cases and bugs\n\n- Tie order: with closed intervals where touching counts as overlap, starts must come before ends at equal times.\n- Using the count before versus after applying the event when recording answers.\n- Coordinates up to $10^9$: use sorting, not arrays.\n\n#### Variants\n\n- Meeting rooms II, car pooling, my calendar III (max overlap after each booking with an ordered map of deltas).\n- Rectangle area union: sweep x with a segment tree over y.\n- Count points covered by intervals, or the number of intervals covering each query point (sort queries too).\n\nConnects to: difference arrays, scheduling with heaps, calendar booking designs, segment tree.",
+    "signals": [
+     "the maximum number of intervals active at the same time",
+     "events with start and end times, capacity over time",
+     "total covered length or points covered by at least k intervals",
+     "a skyline or outline built from overlapping shapes"
+    ],
+    "template": "```cpp\n// Sweep line: sort +1/-1 events and track the running count.\ntemplate <class OnChange>\nvoid sweep(const vector<pair<long long, long long>>& iv, OnChange onChange) {\n    vector<pair<long long, int>> ev;\n    for (auto [s, e] : iv) { ev.push_back({s, +1}); ev.push_back({e, -1}); }\n    sort(ev.begin(), ev.end());                // ties: -1 (end) before +1 (start)\n    int active = 0;\n    for (auto [t, d] : ev) {\n        active += d;\n        onChange(t, active);                   // e.g. track the max, or covered length\n    }\n}\n```"
    }
   },
   {
@@ -8866,9 +9001,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Given two people's sorted lists of free time, the times when both are free are the intersections. Walk through both lists together with one finger on each, like comparing two calendars page by page. Whichever interval ends first can't overlap anything later in the other list, so you move past it.",
+    "interview": [
+     "Two pointers `i`, `j` over the two sorted, disjoint lists.",
+     "Intersection of `A[i]` and `B[j]`: `lo = max(starts)`, `hi = min(ends)`; if `lo <= hi`, record `[lo, hi]`.",
+     "Advance the pointer whose interval **ends first** (it can't intersect anything further in the other list).",
+     "**O(n + m)** time, output size at most n + m.",
+     "Same technique: meeting scheduler (first common slot of at least a given duration), merging two sorted interval lists."
+    ],
+    "questions": [
+     {
+      "q": "How do you find all intersections of two sorted lists of disjoint intervals?",
+      "a": "Use two pointers. For the current pair, the intersection is [max of the starts, min of the ends], recorded if the start is at most the end. Then advance whichever interval ends first. It runs in O(n + m)."
+     },
+     {
+      "q": "Why advance the interval that ends first?",
+      "a": "The interval that ends earlier can't overlap any later interval in the other list, because those start after the current one there, which already starts before this interval's end. The one ending later might still overlap the next interval, so it stays."
+     },
+     {
+      "q": "How do you find the earliest time slot of at least d minutes that works for two people?",
+      "a": "Sort both lists of free slots, then walk them with two pointers, computing each intersection. Return the first intersection whose length is at least d, as [start, start + d], and advance the slot that ends first otherwise."
+     },
+     {
+      "q": "What is the maximum number of intersection intervals?",
+      "a": "At most n + m − 1, because each step either records an intersection or not and always advances one of the two pointers, and there are at most n + m steps."
+     }
+    ]
    }
   },
   {
@@ -8890,9 +9048,31 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A booking system must answer, for each new request, whether it clashes with bookings already made. Keeping bookings sorted by start time lets you check only the neighbors of the new one, like looking at the appointments just before and just after a slot in a paper diary. For counting how many bookings overlap, keep a timeline of +1 and −1 changes.",
+    "interview": [
+     "**No double booking**: ordered map `start → end`. For `[s, e)`, find the first booking with start ≥ s (it must start at or after e) and the previous booking (it must end at or before s). **O(log n)** per booking.",
+     "**Allow double but not triple booking**: keep a list of single bookings and a list of double-booked overlaps; reject if the new interval hits any overlap. O(n) per booking.",
+     "**Maximum overlap after each booking** (k-booking): ordered map of time → delta (+1 at start, −1 at end); sweep the map: O(n) per booking. A segment tree with lazy propagation over compressed or dynamic coordinates gives O(log C).",
+     "Half-open intervals `[start, end)` make back-to-back bookings legal."
+    ],
+    "questions": [
+     {
+      "q": "How do you check a new booking for conflicts in O(log n)?",
+      "a": "Store bookings in an ordered map keyed by start. Look up the first booking starting at or after the new start: it must start no earlier than the new end. Look at the booking just before it: it must end no later than the new start. If both hold, insert."
+     },
+     {
+      "q": "How do you report the maximum number of simultaneous bookings after each new booking?",
+      "a": "Keep an ordered map of time to change: +1 at each start and −1 at each end. After adding a booking, sweep the map in order with a running sum and take the maximum. That's O(n) per booking; a segment tree with range add and range max makes it O(log n)."
+     },
+     {
+      "q": "Why use half-open intervals [start, end) for bookings?",
+      "a": "So that a booking ending at 10 and one starting at 10 don't conflict, which matches how calendars work. It also makes lengths equal to end − start without off-by-one adjustments."
+     },
+     {
+      "q": "When would a segment tree be preferable to the ordered map sweep?",
+      "a": "When there are many bookings and queries, because the sweep costs O(n) each time. A segment tree over the time range (compressed or created dynamically) supports adding 1 to a range and reading the maximum in O(log C)."
+     }
+    ]
    }
   },
   {
@@ -8912,9 +9092,37 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A greedy algorithm makes the choice that looks best right now and never takes it back. Making change with the largest coins first is greedy, and with everyday coins it gives the fewest coins. But with odd coin values it can fail, so the real skill is knowing when \"best right now\" is also best overall.",
+    "interview": [
+     "Greedy works when the problem has the **greedy choice property** (some optimal solution starts with the locally best choice) and **optimal substructure** (after the choice, what remains is a smaller instance of the same problem).",
+     "Typical shape: sort by a key, then one pass making irreversible decisions. Usually **O(n log n)**.",
+     "Prove it (exchange argument or \"stays ahead\"), or at least test it against a brute force on small cases.",
+     "Counterexample habit: before committing, try to break your greedy with 2 or 3 elements. Coins {1, 3, 4} for amount 6: greedy gives 4 + 1 + 1, optimal is 3 + 3.",
+     "When greedy fails, the fallback is usually **DP** (it considers all choices)."
+    ],
+    "questions": [
+     {
+      "q": "What two properties must a problem have for a greedy algorithm to be optimal?",
+      "a": "The greedy choice property, meaning some optimal solution includes the locally best choice, and optimal substructure, meaning the rest of the solution is an optimal solution to the remaining subproblem. Together they justify making one choice and never revisiting it."
+     },
+     {
+      "q": "Give an example where a greedy strategy fails.",
+      "a": "Coin change with coins {1, 3, 4} and amount 6: taking the largest coin first gives 4 + 1 + 1, three coins, but 3 + 3 uses two. Dynamic programming over amounts finds the optimum."
+     },
+     {
+      "q": "How do you convince yourself or an interviewer that a greedy is correct?",
+      "a": "Give an exchange argument (any optimal solution can be changed to include the greedy choice without getting worse) or a \"greedy stays ahead\" argument (after each step the greedy is at least as good as any other solution). In practice, also test it against brute force on small inputs."
+     },
+     {
+      "q": "What is the usual time complexity of greedy solutions, and why?",
+      "a": "Often O(n log n), because most greedy algorithms sort by some key and then make one pass. When a heap chooses the next item, it's also O(n log n)."
+     },
+     {
+      "q": "When greedy doesn't work, what do you try next?",
+      "a": "Dynamic programming, which considers every choice at each step instead of committing to one. If the state space is too large, look for a different ordering or an additional constraint that makes a greedy valid."
+     }
+    ],
+    "deep": "#### Intuition\n\nDynamic programming considers every choice at every step and keeps the best. Greedy commits to one choice per step without looking back, which is much faster, but only correct if you can prove the committed choice never hurts. The proof is the heart of any greedy solution.\n\n#### The two properties\n\n1. **Greedy choice property**: there is an optimal solution that includes the greedy choice. (Proved by exchange: take any optimal solution and swap its first choice for the greedy one without making it worse.)\n2. **Optimal substructure**: after making the greedy choice, the rest of an optimal solution is an optimal solution to the remaining subproblem.\n\n#### Worked example: where greedy works and where it fails\n\nCoin change with coins {1, 5, 10, 25}, amount 63: greedy takes 25, 25, 10, 1, 1, 1 (6 coins), which is optimal for these \"canonical\" coin systems.\n\nCoins {1, 3, 4}, amount 6:\n\n| method | picks | coins |\n|---|---|---|\n| greedy (largest first) | 4, 1, 1 | 3 |\n| optimal | 3, 3 | 2 |\n\nThe greedy choice (4) isn't part of any optimal solution, so the greedy choice property fails. DP over amounts solves it.\n\n#### Code: greedy versus DP on the same problem\n\n```cpp\nint greedyCoins(vector<int> coins, int amount) {       // correct only for canonical systems\n    sort(coins.rbegin(), coins.rend());\n    int count = 0;\n    for (int c : coins) { count += amount / c; amount %= c; }\n    return amount == 0 ? count : -1;\n}\n\nint dpCoins(const vector<int>& coins, int amount) {    // always correct, O(amount * coins)\n    vector<int> dp(amount + 1, INT_MAX);\n    dp[0] = 0;\n    for (int a = 1; a <= amount; a++)\n        for (int c : coins)\n            if (c <= a && dp[a - c] != INT_MAX) dp[a] = min(dp[a], dp[a - c] + 1);\n    return dp[amount] == INT_MAX ? -1 : dp[amount];\n}\n```\n\n```python\nfrom itertools import combinations\n\ndef brute_force_check(greedy, exact, trials):\n    \"\"\"Compare a greedy against an exhaustive answer on small inputs; return a counterexample.\"\"\"\n    for case in trials:\n        if greedy(case) != exact(case):\n            return case\n    return None\n\ndef max_sum_of_k_distinct_greedy(nums, k):\n    return sum(sorted(nums, reverse=True)[:k])     # greedy: take the k largest\n\ndef max_sum_of_k_exact(nums, k):\n    return max(sum(c) for c in combinations(nums, k))\n```\n\nTesting a greedy against brute force on small random inputs is the fastest way to catch a wrong greedy before an interviewer does.\n\n#### Common greedy strategies\n\n| Strategy | Example |\n|---|---|\n| Earliest deadline or end first | interval scheduling |\n| Best ratio first | fractional knapsack |\n| Farthest reach so far | jump game |\n| Largest or smallest first | assign cookies, boats |\n| Combine the two smallest | Huffman coding, connect ropes |\n| Pay the debt at the right moment | gas station |\n\n#### Edge cases and bugs\n\n- Ties in the sort key can matter; decide a secondary key deliberately.\n- A greedy that is \"obviously right\" on the examples but wrong on a 3-element counterexample.\n- Greedy for 0/1 knapsack (by value per weight) fails; it only works for the fractional version.\n\n#### Variants\n\nGreedy with sorting, greedy with heaps, reachability greedy, and greedy on stacks (smallest number after removals).\n\nConnects to: exchange argument, dynamic programming, interval scheduling, coin change."
    }
   },
   {
@@ -8936,9 +9144,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "An exchange argument proves a greedy choice is safe by showing that any best solution can be changed to include it without getting worse. It is like proving that the earliest train is never a bad pick: if your best plan takes a later train, swapping in the earlier one still gets you everywhere on time. If the swap never hurts, the greedy choice belongs in some best solution.",
+    "interview": [
+     "Structure: (1) let O be an optimal solution that differs from the greedy G; (2) find the first place they differ; (3) swap O's choice for G's; (4) show the result is still valid and no worse; (5) repeat until O becomes G.",
+     "**Adjacent swap** version for orderings: if two neighbors are out of the greedy order, swapping them doesn't increase the cost, so the sorted order is optimal. Used to derive sorting keys (`a + b > b + a` for the largest number, scheduling by `t/w` ratios).",
+     "\"**Greedy stays ahead**\": show by induction that after each step the greedy's partial result is at least as good as any other solution's.",
+     "Saying the argument in two or three sentences is usually enough in an interview.",
+     "If the swap can make things worse in some case, you have likely found a counterexample."
+    ],
+    "questions": [
+     {
+      "q": "What is an exchange argument?",
+      "a": "A proof technique for greedy algorithms: take any optimal solution that differs from the greedy one, and show you can swap one of its choices for the greedy choice without making it worse. Repeating this turns the optimal solution into the greedy solution, so the greedy is optimal too."
+     },
+     {
+      "q": "How do you prove that shortest job first minimizes the total completion time?",
+      "a": "If a longer job runs immediately before a shorter one, swapping them leaves all other completion times unchanged and reduces the sum by the difference of their durations. So any order that isn't sorted by duration can be improved, and the sorted order is optimal."
+     },
+     {
+      "q": "How can an exchange argument tell you what key to sort by?",
+      "a": "Compare the cost of placing a before b with placing b before a, for two adjacent items. The condition under which a first is no worse becomes your comparator, as with a + b > b + a for the largest concatenated number or t_a · w_b < t_b · w_a for weighted scheduling."
+     },
+     {
+      "q": "What is the \"greedy stays ahead\" argument?",
+      "a": "Show by induction that after each step, the greedy's partial solution is at least as good as any other solution's at the same step, by some measure such as the end time of the k-th chosen interval. Then the greedy can't finish behind."
+     }
+    ],
+    "deep": "#### Intuition\n\nYou can't compare the greedy against all possible solutions directly. Instead, take an arbitrary optimal solution and transform it, one step at a time, into the greedy solution, never making it worse. At the end, the greedy solution is as good as the optimal one, so it is optimal.\n\n#### Worked example 1: minimize total completion time\n\nJobs with durations `3, 1, 2` run one after another; minimize the sum of completion times. Greedy: shortest job first.\n\n| order | completion times | sum |\n|---|---|---|\n| 3, 1, 2 | 3, 4, 6 | 13 |\n| 1, 2, 3 | 1, 3, 6 | 10 |\n\nExchange argument: suppose in some order a longer job $a$ runs right before a shorter job $b$ ($t_a > t_b$). Swapping them leaves every other job's completion time unchanged. Before the swap, the pair contributes $(T + t_a) + (T + t_a + t_b)$; after, $(T + t_b) + (T + t_b + t_a)$, where $T$ is the start time. The difference is $t_a - t_b > 0$, so swapping improves the sum. Any order with an \"inversion\" can be improved, hence sorted by duration is optimal.\n\n#### Worked example 2: deriving a comparator\n\nTo concatenate numbers into the largest string, compare two neighbors $a, b$: placing $a$ first is better exactly when $ab > ba$ as strings. Because swapping an out-of-order adjacent pair never makes the result smaller (and this comparison is transitive), sorting by it gives the optimum. The adjacent-swap argument tells you **what to sort by**.\n\n#### Code: checking an exchange-derived rule\n\n```cpp\n// Weighted completion time: minimize sum of w_i * C_i. Exchange argument gives the rule:\n// put a before b when t_a * w_b < t_b * w_a (Smith's ratio rule, compared without division).\nlong long minWeightedCompletion(vector<pair<long long, long long>> jobs) {  // {t, w}\n    sort(jobs.begin(), jobs.end(), [](auto& a, auto& b) {\n        return a.first * b.second < b.first * a.second;\n    });\n    long long time = 0, total = 0;\n    for (auto [t, w] : jobs) { time += t; total += w * time; }\n    return total;\n}\n```\n\n```python\nfrom itertools import permutations\n\ndef weighted_completion(order):\n    time = total = 0\n    for t, w in order:\n        time += t\n        total += w * time\n    return total\n\ndef smith_rule(jobs):\n    return weighted_completion(sorted(jobs, key=lambda j: j[0] / j[1]))\n\ndef brute_force(jobs):\n    return min(weighted_completion(p) for p in permutations(jobs))\n```\n\nFor small random inputs, `smith_rule(jobs) == brute_force(jobs)`, which is the empirical check of the proof.\n\n#### Greedy stays ahead\n\nFor interval scheduling by earliest end: after the greedy picks $k$ intervals, its $k$-th end time is no later than the $k$-th end time of any valid selection (induction on $k$). So whenever another solution can pick a $(k+1)$-th interval, the greedy can too, and the greedy picks at least as many.\n\n#### Pitfalls\n\n- Swapping may be valid but change other parts of the solution (feasibility breaks); check that nothing else is affected.\n- Ratio comparisons with division can suffer from rounding; cross-multiply.\n- The argument must work for **every** optimal solution you start from, not just a convenient one.\n\nConnects to: greedy fundamentals, interval scheduling, custom comparators, largest number."
    }
   },
   {
@@ -8960,9 +9192,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Reachability problems ask whether, or how cheaply, you can get from the start to the end when each position lets you move a certain distance. The greedy trick is to remember only the farthest point you can reach so far, like a hiker who keeps track of the farthest trail marker visible. If you ever stand beyond that point, you're stuck; if it covers the end, you're done.",
+    "interview": [
+     "**Jump game I** (can you reach the end?): keep `far = max(far, i + a[i])`; fail if `i > far`. O(n), O(1).",
+     "**Jump game II** (fewest jumps): BFS by levels without a queue. Track `curEnd` (end of the current jump's range) and `far`; when `i == curEnd`, take a jump and set `curEnd = far`. O(n).",
+     "**Gas station**: if total gas < total cost, impossible. Otherwise scan with a tank; whenever it goes negative at `i`, no start in `[start, i]` works, so set `start = i + 1` and reset the tank. O(n).",
+     "**Video stitching / minimum taps to water a garden**: same as jump game II after converting clips to \"max reach from each start\".",
+     "Proof ideas: reachable positions form a prefix (jump I); the jump II levels are BFS layers (a jump count can't be beaten)."
+    ],
+    "questions": [
+     {
+      "q": "How do you decide whether you can reach the last index in jump game I?",
+      "a": "Scan left to right, tracking the farthest index reachable so far, far = max(far, i + a[i]). If you ever reach an index greater than far, it's unreachable and so is the end. It's O(n) time and O(1) space."
+     },
+     {
+      "q": "How do you find the minimum number of jumps in O(n)?",
+      "a": "Treat it as BFS where each layer is an interval of indices. Track the end of the current layer and the farthest index reachable from it. When the scan reaches the end of the layer, count a jump and move the layer end to the farthest reach."
+     },
+     {
+      "q": "How does the gas station greedy find the starting station?",
+      "a": "If total gas is less than total cost, no start works. Otherwise keep a running tank from a candidate start; when it goes negative at station i, none of the stations from the start to i can work, so the next candidate is i + 1 and the tank resets."
+     },
+     {
+      "q": "Why is only one pass needed for the gas station problem?",
+      "a": "The reset argument rules out every skipped station, and when the total is non-negative, the deficit before the final candidate is covered by the surplus after it, so the final candidate completes the circle. No second lap is needed."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn jump game I, the set of reachable indices is always a prefix `[0, far]`: if you can reach `i`, you can reach every index before it. So a single number, `far`, describes everything you need. Jump game II asks for the minimum number of jumps, which is BFS on an implicit graph; because each jump's reachable set is again an interval, BFS layers can be tracked with two numbers instead of a queue.\n\n#### Worked example: jump game II on `2 3 1 1 4`\n\n| i | a[i] | far = max(far, i + a[i]) | i == curEnd? | jumps | curEnd |\n|---|---|---|---|---|---|\n| 0 | 2 | 2 | yes | 1 | 2 |\n| 1 | 3 | 4 | no | 1 | 2 |\n| 2 | 1 | 4 | yes | 2 | 4 |\n| 3 | 1 | 4 | stop (last index reached by curEnd) | 2 | |\n\nTwo jumps: 0 → 1 → 4.\n\n#### Code\n\n```cpp\nbool canJump(const vector<int>& a) {\n    int far = 0;\n    for (int i = 0; i < (int)a.size(); i++) {\n        if (i > far) return false;                 // i is unreachable\n        far = max(far, i + a[i]);\n    }\n    return true;\n}\n\nint minJumps(const vector<int>& a) {               // assumes the end is reachable\n    int jumps = 0, curEnd = 0, far = 0;\n    for (int i = 0; i + 1 < (int)a.size(); i++) {  // no jump needed from the last index\n        far = max(far, i + a[i]);\n        if (i == curEnd) {                         // the current layer is exhausted\n            jumps++;\n            curEnd = far;\n        }\n    }\n    return jumps;\n}\n\nint canCompleteCircuit(const vector<int>& gas, const vector<int>& cost) {\n    int total = 0, tank = 0, start = 0;\n    for (int i = 0; i < (int)gas.size(); i++) {\n        int diff = gas[i] - cost[i];\n        total += diff;\n        tank += diff;\n        if (tank < 0) {                            // can't get past i from `start`\n            start = i + 1;\n            tank = 0;\n        }\n    }\n    return total < 0 ? -1 : start;\n}\n```\n\n```python\ndef min_taps(n, ranges):\n    \"\"\"Minimum taps to water [0, n]; tap i covers [i - ranges[i], i + ranges[i]].\"\"\"\n    reach = [0] * (n + 1)                       # farthest right point starting from each left\n    for i, r in enumerate(ranges):\n        left, right = max(0, i - r), min(n, i + r)\n        reach[left] = max(reach[left], right)\n    taps = cur_end = far = 0\n    for i in range(n):\n        far = max(far, reach[i])\n        if i == cur_end:\n            if far <= i:\n                return -1                       # a gap nobody covers\n            taps += 1\n            cur_end = far\n    return taps\n```\n\n#### Why the gas station reset is correct\n\nIf the tank goes negative when arriving past station $i$ starting from `start`, then starting from any station $k$ between `start` and $i$ is also hopeless: you would arrive at $k$ from `start` with a non-negative tank, so starting fresh at $k$ (tank 0) is no better. So the next candidate is $i + 1$. And if the total is non-negative, the last candidate found works for the whole circle.\n\n#### Complexity\n\nAll three are $O(n)$ time and $O(1)$ space.\n\n#### Edge cases and bugs\n\n- Jump game II: looping to the last index and jumping from it adds one extra jump; stop at `n - 2`.\n- A zero at a position that is the farthest you can reach: jump I fails there.\n- Gas station with a single station: return 0 if gas ≥ cost.\n\n#### Variants\n\n- Jump game III and IV (BFS over indices with arbitrary moves).\n- Video stitching, minimum number of refueling stops (a heap version), and frog jumps with DP when costs vary.\n\nConnects to: BFS, greedy fundamentals, greedy with heaps (refueling stops).",
+    "signals": [
+     "can you reach the end when each position allows jumps up to some length",
+     "the fewest jumps, taps, clips or intervals to cover a range",
+     "a circular route with gains and costs at each stop",
+     "the farthest reachable point matters more than the exact path"
+    ],
+    "template": "```cpp\n// Fewest \"jumps\" to cover [0, n-1] when position i reaches up to reach(i): BFS layers as intervals.\ntemplate <class Reach>\nint fewestSteps(int n, Reach reach) {\n    int steps = 0, layerEnd = 0, far = 0;\n    for (int i = 0; i + 1 < n; i++) {\n        far = max(far, reach(i));          // best reach from the current layer\n        if (i == layerEnd) {               // leaving the current layer\n            if (far <= i) return -1;       // stuck: nothing reaches further\n            steps++;\n            layerEnd = far;\n        }\n    }\n    return steps;\n}\n// Jump game II: fewestSteps(n, [&](int i) { return i + a[i]; })\n```"
    }
   },
   {
@@ -8984,9 +9247,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Many greedy problems become obvious once the items are sorted the right way. To give cookies to children, match the smallest cookie that satisfies each child, starting with the least demanding child. The hard part is choosing the sort key, and the exchange argument tells you which key is safe.",
+    "interview": [
+     "**Assign cookies**: sort greed and cookie sizes; two pointers; give each child the smallest cookie that satisfies them. O(n log n).",
+     "**Boats to save people** (at most 2 per boat, weight limit): sort; pair the heaviest with the lightest if they fit, else the heaviest goes alone. Two pointers.",
+     "**Two city scheduling**: sort by `costA − costB`; the first half fly to A, the rest to B.",
+     "**Partition labels**: record each letter's last index; extend the current part's end to the max last index of its letters; cut when `i == end`. O(n).",
+     "**Minimum cost to connect sticks / ropes**: always combine the two smallest (a heap).",
+     "State the exchange argument for the key you sort by."
+    ],
+    "questions": [
+     {
+      "q": "How do you maximize the number of content children given cookie sizes?",
+      "a": "Sort both lists. Walk the cookies from smallest to largest and give a cookie to the least greedy unsatisfied child whenever it's big enough. Using the smallest sufficient cookie keeps bigger cookies for greedier children."
+     },
+     {
+      "q": "Why does pairing the heaviest person with the lightest work for boats?",
+      "a": "The heaviest person needs a boat either way. If the lightest person can't fit with them, nobody can, so the heaviest goes alone; if the lightest fits, pairing them uses the boat as fully as any other choice could. Either way the remaining problem is smaller and optimal choices remain."
+     },
+     {
+      "q": "How do you split a string into as many parts as possible so each letter appears in only one part?",
+      "a": "Record the last index of each letter. Scan while extending the current part's end to the last index of every letter seen; when the scan reaches that end, cut the part there. It's O(n)."
+     },
+     {
+      "q": "How do you minimize the cost of sending half the people to city A and half to city B?",
+      "a": "Sort people by cost to A minus cost to B. Send the first half, who save the most by going to A, to A, and the rest to B. This is optimal by an exchange argument on the differences."
+     }
+    ],
+    "deep": "#### Intuition\n\nSorting creates structure that makes local decisions safe. Once children and cookies are both sorted, a child who can't be satisfied by the current cookie can't be satisfied by any smaller cookie, and a cookie that is too small for the current child is too small for every greedier child. Each pointer only moves forward.\n\n#### Worked example: boats, limit 3\n\nPeople `3 2 2 1` → sorted `1 2 2 3`.\n\n| light | heavy | fit together? | boats |\n|---|---|---|---|\n| 1 | 3 | 1 + 3 = 4 > 3: heavy alone | 1 |\n| 1 | 2 | 1 + 2 = 3: together | 2 |\n| 2 | (same person) | alone | 3 |\n\nThree boats. Pairing the heaviest with the lightest is safe: if the heaviest can't go with the lightest, it can't go with anyone.\n\n#### Code\n\n```cpp\nint assignCookies(vector<int> greed, vector<int> sizes) {\n    sort(greed.begin(), greed.end());\n    sort(sizes.begin(), sizes.end());\n    int child = 0;\n    for (int s = 0; s < (int)sizes.size() && child < (int)greed.size(); s++)\n        if (sizes[s] >= greed[child]) child++;     // smallest cookie that satisfies this child\n    return child;\n}\n\nint numBoats(vector<int> people, int limit) {\n    sort(people.begin(), people.end());\n    int l = 0, r = (int)people.size() - 1, boats = 0;\n    while (l <= r) {\n        if (people[l] + people[r] <= limit) l++;   // lightest joins the heaviest\n        r--;                                       // heaviest always leaves\n        boats++;\n    }\n    return boats;\n}\n\nvector<int> partitionLabels(const string& s) {\n    int last[26] = {};\n    for (int i = 0; i < (int)s.size(); i++) last[s[i] - 'a'] = i;\n    vector<int> sizes;\n    int start = 0, end = 0;\n    for (int i = 0; i < (int)s.size(); i++) {\n        end = max(end, last[s[i] - 'a']);          // this part must reach every copy of s[i]\n        if (i == end) { sizes.push_back(end - start + 1); start = i + 1; }\n    }\n    return sizes;\n}\n```\n\n```python\ndef two_city_cost(costs):\n    \"\"\"costs[i] = [to A, to B]; exactly half go to each city.\"\"\"\n    costs = sorted(costs, key=lambda c: c[0] - c[1])   # most A-favored first\n    half = len(costs) // 2\n    return sum(c[0] for c in costs[:half]) + sum(c[1] for c in costs[half:])\n```\n\n#### Why two city scheduling sorts by the difference\n\nEveryone must go somewhere, so start from \"everyone flies to B\" and pay the extra `costA − costB` for each person moved to A. To minimize the total, move the half with the smallest (most negative) differences.\n\n#### Complexity\n\nSorting: $O(n \\log n)$; the passes are $O(n)$. Partition labels is $O(n)$ with a fixed alphabet.\n\n#### Edge cases and bugs\n\n- Boats: the loop condition `l <= r` so a single remaining person gets a boat.\n- Assign cookies: iterate over cookies and advance the child only when satisfied (or the reverse), not both unconditionally.\n- Partition labels: the part's end must be updated before checking `i == end`.\n\n#### Variants\n\n- Minimum number of platforms or rooms (sweep line), maximum units on a truck (sort by units per box), bag of tokens (two pointers after sorting), advantage shuffle (sort and match with a greedy \"just beat it\").\n\nConnects to: exchange argument, two pointers, interval scheduling, sorting.",
+    "signals": [
+     "match items to requests (sizes to needs, people to boats) with the fewest leftovers",
+     "split people or tasks between two options with costs",
+     "partition a sequence so each kind of item stays in one part",
+     "\"maximize the number satisfied\" after sorting both sides"
+    ],
+    "template": "```cpp\n// Sort both sides, then match greedily with two pointers.\nint greedyMatch(vector<int> need, vector<int> have) {\n    sort(need.begin(), need.end());\n    sort(have.begin(), have.end());\n    int i = 0, matched = 0;                     // i: smallest unmet need\n    for (int h : have) {\n        if (i < (int)need.size() && h >= need[i]) {  // h is the smallest resource that works\n            matched++;\n            i++;\n        }                                       // otherwise h is too small for everyone left\n    }\n    return matched;\n}\n```"
    }
   },
   {
@@ -9006,9 +9301,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some greedy choices depend on what is currently available, and that changes as you go. A heap keeps the best available option on top, so each greedy step is quick, like a chef always cooking the order with the most waiting customers among those ready to start. As new options become available, they join the heap.",
+    "interview": [
+     "**Reorganize string** (no two equal neighbors): max-heap by count; repeatedly take the most frequent letter different from the last one placed. Impossible iff the top count > `(n + 1) / 2`. O(n log σ).",
+     "**IPO** (maximize capital with k projects): sort projects by required capital; push affordable ones into a max-heap by profit; take the best k times.",
+     "**Minimum refueling stops**: drive past stations, pushing their fuel into a max-heap; when you'd run out, refuel from the largest fuel passed (retroactively). O(n log n).",
+     "**Connect ropes / sticks**: min-heap, always join the two smallest (Huffman-like).",
+     "**Course schedule III**: sort by deadline; keep a max-heap of durations; if over the deadline, drop the longest course taken.",
+     "Pattern: sort by when an option becomes available, and use a heap for \"the best available now\"."
+    ],
+    "questions": [
+     {
+      "q": "How do you rearrange a string so no two adjacent letters are equal?",
+      "a": "Count the letters and use a max-heap by count. Repeatedly take the two most frequent letters, append both, and push them back with decremented counts. It's impossible exactly when the most frequent letter appears more than (n + 1)/2 times."
+     },
+     {
+      "q": "How does the minimum refueling stops greedy work?",
+      "a": "Drive as far as the current fuel allows, pushing the fuel of every station passed into a max-heap. When you can't reach the target, pretend you stopped at the passed station with the most fuel. Each such stop adds the most distance possible, so the number of stops is minimal."
+     },
+     {
+      "q": "How do you maximize capital after at most k projects, each with a minimum capital and a profit?",
+      "a": "Sort projects by required capital. Each round, push every newly affordable project's profit into a max-heap, then take the most profitable one and add its profit to your capital. Repeat k times or until nothing is affordable."
+     },
+     {
+      "q": "Why is it fine to decide which stations to refuel at only after passing them?",
+      "a": "The total distance you can cover depends only on the set of stations you refueled at, not on when you decided. Choosing retroactively the largest fuel among reachable stations is therefore equivalent to having stopped there."
+     }
+    ],
+    "deep": "#### Intuition\n\nA static sort can't express choices whose candidates change over time: in the refueling problem, which stations you may use depends on how far you've driven. A heap gives the best candidate among those currently allowed, and \"retroactive\" decisions (pretending you stopped at the best station you passed) are safe because the order of refueling doesn't change how far you can go.\n\n#### Worked example: minimum refueling stops\n\nTarget 100, start fuel 10, stations (position, fuel): `(10, 60) (20, 30) (30, 30) (60, 40)`.\n\n| step | reach | passed stations pushed | refuel (pop max) | stops |\n|---|---|---|---|---|\n| start | 10 | (10, 60) | reach < 100: +60 → 70 | 1 |\n| | 70 | (20, 30), (30, 30), (60, 40) | reach < 100: +40 → 110 | 2 |\n| | 110 ≥ 100 | | done | 2 |\n\n#### Code\n\n```cpp\nint minRefuelStops(int target, int fuel, const vector<vector<int>>& stations) {\n    priority_queue<int> passed;                   // fuel amounts of stations we drove past\n    long long reach = fuel;\n    int stops = 0, i = 0, n = stations.size();\n    while (reach < target) {\n        while (i < n && stations[i][0] <= reach) passed.push(stations[i++][1]);\n        if (passed.empty()) return -1;            // can't reach the next station or target\n        reach += passed.top();                    // refuel at the best station behind us\n        passed.pop();\n        stops++;\n    }\n    return stops;\n}\n\nstring reorganizeString(const string& s) {\n    int count[26] = {};\n    for (char c : s) count[c - 'a']++;\n    priority_queue<pair<int, char>> heap;\n    for (int c = 0; c < 26; c++) if (count[c]) heap.push({count[c], char('a' + c)});\n    string out;\n    while (heap.size() >= 2) {                    // place the two most frequent, different letters\n        auto [c1, a] = heap.top(); heap.pop();\n        auto [c2, b] = heap.top(); heap.pop();\n        out += a;\n        out += b;\n        if (--c1) heap.push({c1, a});\n        if (--c2) heap.push({c2, b});\n    }\n    if (!heap.empty()) {\n        if (heap.top().first > 1) return \"\";      // one letter left more than once: impossible\n        out += heap.top().second;\n    }\n    return out;\n}\n```\n\n```python\nimport heapq\n\ndef schedule_courses(courses):\n    \"\"\"courses: [duration, deadline]; maximum number of courses you can finish.\"\"\"\n    taken, time = [], 0                       # max-heap of durations (negated)\n    for duration, deadline in sorted(courses, key=lambda c: c[1]):\n        heapq.heappush(taken, -duration)\n        time += duration\n        if time > deadline:\n            time += heapq.heappop(taken)      # drop the longest course so far\n    return len(taken)\n\ndef connect_ropes(lengths):\n    heap = list(lengths)\n    heapq.heapify(heap)\n    cost = 0\n    while len(heap) > 1:\n        a, b = heapq.heappop(heap), heapq.heappop(heap)\n        cost += a + b\n        heapq.heappush(heap, a + b)\n    return cost\n```\n\n#### Complexity\n\nEach item is pushed and popped at most once or twice: $O(n \\log n)$ time, $O(n)$ space. Reorganize string is $O(n \\log 26)$.\n\n#### Edge cases and bugs\n\n- Refueling: stations exactly at the current reach are reachable (`<=`).\n- Reorganize string: the impossibility condition is `maxCount > (n + 1) / 2`.\n- Course schedule III: sort by deadline first; the heap only corrects the choice of which courses to keep.\n\n#### Variants\n\n- Task scheduler (cooldowns), maximum performance of a team (sort by efficiency, min-heap of speeds), furthest building you can reach (use ladders on the largest climbs with a min-heap).\n\nConnects to: binary heap, scheduling with heaps, greedy fundamentals, Huffman coding.",
+    "signals": [
+     "repeatedly pick the best option among those currently available",
+     "options unlock over time (capital, distance, deadlines)",
+     "rearrange items so that equal items aren't adjacent",
+     "combine or drop items to optimize a running total (ropes, courses)"
+    ],
+    "template": "```cpp\n// Unlock options in sorted order; take the best available each round.\nlong long greedyUnlock(vector<pair<long long, long long>> items, long long budget, int rounds) {\n    sort(items.begin(), items.end());               // {requirement, gain}, by requirement\n    priority_queue<long long> available;            // gains of unlocked items\n    size_t i = 0;\n    while (rounds-- > 0) {\n        while (i < items.size() && items[i].first <= budget) available.push(items[i++].second);\n        if (available.empty()) break;               // nothing unlocked: stop\n        budget += available.top();                  // take the best one now\n        available.pop();\n    }\n    return budget;\n}\n```"
    }
   },
   {
@@ -9030,9 +9357,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A few greedy algorithms are textbook classics worth knowing by name. Activity selection picks the most non-clashing activities by earliest finish, fractional knapsack fills a bag with the most valuable-per-kilo items first, and Huffman coding builds short codes for common letters by repeatedly joining the two rarest ones. Each works because of a clean exchange argument.",
+    "interview": [
+     "**Activity selection**: sort by finish time, take each compatible activity. O(n log n). (Same as interval scheduling.)",
+     "**Fractional knapsack**: sort by value/weight descending, take whole items while they fit, then a fraction of the next. O(n log n). **0/1 knapsack is not greedy** (needs DP).",
+     "**Huffman coding**: min-heap of frequencies; repeatedly merge the two smallest into a node with their sum; codes come from the tree paths. O(n log n). Produces an optimal **prefix-free** code.",
+     "Also classic: Dijkstra, Prim and Kruskal (greedy on graphs), and coin change for canonical coin systems.",
+     "Know one line of proof for each: earliest finish leaves the most room; best ratio can replace any worse ratio unit for unit; the two rarest symbols can be siblings at the deepest level."
+    ],
+    "questions": [
+     {
+      "q": "Why does greedy work for fractional knapsack but not for 0/1 knapsack?",
+      "a": "In the fractional version, any weight spent on a lower value-per-weight item can be swapped for the same weight of a higher-ratio item without loss, so best ratio first is optimal. In 0/1 knapsack items can't be split, so a high-ratio item may leave capacity that a combination of other items would use better; DP is needed."
+     },
+     {
+      "q": "How does Huffman coding build its code?",
+      "a": "Put every symbol in a min-heap keyed by frequency. Repeatedly remove the two least frequent nodes, join them under a new node whose frequency is their sum, and push it back. When one node remains, the path from the root to each symbol (0 for left, 1 for right) is its code."
+     },
+     {
+      "q": "What is a prefix-free code and why does Huffman produce one?",
+      "a": "A code where no codeword is the beginning of another, so a bit string decodes without separators. Huffman codes are prefix-free because symbols are only at the leaves of the tree, and a leaf's path can't continue into another leaf's path."
+     },
+     {
+      "q": "What does activity selection optimize, and what is the greedy rule?",
+      "a": "It maximizes the number of mutually compatible activities in one resource. The rule is to sort by finishing time and pick every activity that starts after the last chosen one finishes."
+     }
+    ]
    }
   },
   {
@@ -9054,9 +9404,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some greedy problems need a clever twist, such as scanning twice or tracking exactly what range of sums you can already make. In the candy problem, each child must get more than a neighbor with a higher rating, so you fix left neighbors in one pass and right neighbors in a second pass. The skill is finding the invariant that makes each small step safe.",
+    "interview": [
+     "**Candy**: left pass `c[i] = c[i-1] + 1` if `r[i] > r[i-1]`; right pass `c[i] = max(c[i], c[i+1] + 1)` if `r[i] > r[i+1]`; sum. O(n) time, O(n) space (an O(1) slope-counting version exists).",
+     "**Patching array**: maintain `miss`, the smallest sum not yet formable (all of `[1, miss)` are formable). If the next number ≤ `miss`, use it (`miss += num`); else patch with `miss` itself (`miss *= 2`). O(n + log target).",
+     "**Minimum number of increments to make an array strictly increasing / unique**: sort and push each value above the previous.",
+     "**Queue reconstruction by height**: sort by height descending, then by k ascending, and insert each person at index k.",
+     "The common thread: find an invariant (a covered range, a lower bound per position) that each step can maintain cheaply."
+    ],
+    "questions": [
+     {
+      "q": "How do you distribute the minimum number of candies so higher-rated children get more than their neighbors?",
+      "a": "Give everyone 1. In a left-to-right pass, if a child's rating beats the left neighbor's, give them one more than that neighbor. In a right-to-left pass, if a child's rating beats the right neighbor's, raise them to at least one more than that neighbor. The sum is minimal because each count is the smallest that satisfies both sides."
+     },
+     {
+      "q": "How does the patching array greedy work?",
+      "a": "Keep miss, the smallest sum you can't yet form, knowing every sum in [1, miss) can be formed. If the next array number is at most miss, adding it extends the range to [1, miss + num). Otherwise, patching the number miss itself is the best choice, doubling the range. Count patches until miss exceeds the target."
+     },
+     {
+      "q": "Why is patching with miss the optimal choice?",
+      "a": "Any patch must be at most miss, or miss itself still can't be formed. Among those, the largest value, miss, extends the formable range the most, to [1, 2 · miss), so it's never worse than any other patch."
+     },
+     {
+      "q": "How do you reconstruct a queue from (height, number of taller-or-equal people in front) pairs?",
+      "a": "Sort by height descending and, for equal heights, by that count ascending. Insert each person at the index equal to their count. Taller people are already placed, and shorter ones inserted later don't affect the counts of taller people."
+     }
+    ]
    }
   },
   {
