@@ -32,5 +32,6 @@ export const PAGES: Record<RouteName, Page> = {
   revision: placeholder("RevisionPage"),
   settings: lazy(() => import("@/features/settings/SettingsPage")),
   kit: lazy(() => import("@/features/kit/KitPage")),
+  welcome: lazy(() => import("@/features/onboarding/OnboardingPage")),
   "not-found": placeholder("NotFoundPage"),
 };

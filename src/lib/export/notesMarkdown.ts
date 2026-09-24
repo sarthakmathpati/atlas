@@ -2,7 +2,8 @@
 // summary, my notes, latest approach), grouped by subject and topic in syllabus order.
 import { conceptById, subjects, topicById, topicsBySubject } from "@/data/syllabus";
 import { APP_NAME } from "@/lib/constants";
-import type { ConceptNote, ProblemState } from "@/lib/types";
+import type { Concept, ConceptNote, ProblemState } from "@/lib/types";
+import { isCustomConceptId } from "../concepts/custom";
 import { problemInfo, problemLabel, problemUrl } from "../problems/catalog";
 import { attemptsInOrder } from "../problems/progress";
 
@@ -37,6 +38,8 @@ export function buildNotesMarkdown(
   notes: readonly ConceptNote[],
   problems: readonly ProblemState[],
   now: Date = new Date(),
+  /** Finds any concept, the owner's own included (default: the syllabus only). */
+  lookup: (id: string) => Concept | undefined = (id) => conceptById.get(id),
 ): { markdown: string; count: number } {
   // topicId → entries
   const byTopic = new Map<string, Entry[]>();
@@ -48,10 +51,11 @@ export function buildNotesMarkdown(
   let count = 0;
 
   for (const note of notes) {
-    const concept = conceptById.get(note.conceptId);
+    const concept = lookup(note.conceptId);
     const hasNote = note.markdown.trim().length > 0;
     if (!hasNote && note.savedAnswers.length === 0) continue;
-    const parts = [`#### ${concept?.name ?? note.conceptId}`];
+    const own = isCustomConceptId(note.conceptId) ? " (your own concept)" : "";
+    const parts = [`#### ${concept?.name ?? note.conceptId}${own}`];
     if (hasNote) parts.push(nest(note.markdown, 4));
     for (const a of note.savedAnswers) {
       parts.push(`**Saved answer: ${a.question.trim()}**`, nest(a.answer, 4));

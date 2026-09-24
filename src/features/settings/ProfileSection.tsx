@@ -1,8 +1,8 @@
 // Settings → Profile (F24): name, track, interview date, languages, daily time, balance and
 // focus subjects. Every change saves at once (text fields after a short pause).
-import { X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
-import { IconButton } from "@/components/ui/Button";
+import { Button, IconButton } from "@/components/ui/Button";
 import { Input, Select, Slider, Switch } from "@/components/ui/Field";
 import { MultiCombobox } from "@/components/ui/MultiCombobox";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -257,6 +257,14 @@ export function ProfileSection({ profile }: { profile: Profile }) {
           placeholder="Search subjects"
           className="max-w-xl"
         />
+      </SettingsRow>
+      <SettingsRow
+        label="Welcome questions"
+        description="Answer the first-run questions again, including what you already know. Your answers there update the map."
+      >
+        <Button href="#/welcome" icon={Sparkles}>
+          Run the welcome again
+        </Button>
       </SettingsRow>
       <div className="px-4 py-4 sm:px-5">
         <Switch

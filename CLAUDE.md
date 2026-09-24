@@ -51,15 +51,27 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 - **Types**: `src/lib/types.ts` (section 4). zod schemas for every stored entity in
   `src/lib/storage/schemas.ts`; AI JSON schemas in `src/lib/ai/schemas.ts`.
 - **State**: Zustand, one store per domain in `src/stores/` (profile, activity, focus timer,
-  concept statuses and checks, problems, mistake tags, today's date, toasts, shell UI), loaded by
+  concept statuses and checks, concept notes, custom concepts, map positions, today's plan,
+  problems, mistake tags, today's date, toasts, shell UI, concept dialogs), loaded by
   `stores/hydrate.ts` (via `app/providers/StoreHydrator.tsx`) once storage is ready, reloaded after
   import/reset and on remote changes. Stores write through the Repository. Saving an attempt
   (`problemStore.saveAttempt`) reschedules, refreshes linked concept statuses, logs activity and
-  ticks a matching Today item.
+  ticks a matching Today item; `conceptStateStore.recordChecks` does the same for checks.
+  `findConcept(id)` (customConceptStore) finds any concept, seed or the owner's own.
 - **Algorithms** (section 11, pure, tested): `lib/srs/` (intervals, grace, problem and concept
-  scheduling), `lib/mastery/status.ts` (knowledge, practice, status rules, "what would turn it
-  green"), `lib/review/queue.ts`, `lib/mistakes/stats.ts`. Problem helpers in `lib/problems/`
-  (catalog of seed plus custom problems, filters, quick add, CSV, offline hints, progress labels).
+  scheduling), `lib/mastery/status.ts` (knowledge with its breakdown, practice, status rules,
+  "what would turn it green"), `lib/readiness/score.ts` (11.3), `lib/recommend/ready.ts` (11.5),
+  `lib/path/path.ts` (F25), `lib/review/` (queue, flashcards, offline self-check),
+  `lib/onboarding/selfAssess.ts` (F5), `lib/map/` (filters, label culling, placement, summaries),
+  `lib/concepts/` (scope: track, hidden, other languages; custom concepts),
+  `lib/mistakes/stats.ts`. Problem helpers in `lib/problems/` (catalog of seed plus custom
+  problems, filters, quick add, CSV, offline hints, progress labels, suggested next problem).
+- **Map** (`features/map/`): React Flow canvas (`canvas/MapCanvas.tsx`) with memoized bubbles
+  (`canvas/nodes.tsx`), everything under the bubbles in one SVG viewport portal
+  (`canvas/layers.tsx`), a custom minimap, the model hook (`canvas/useMapModel.ts`) and a small
+  view store (`canvas/viewStore.ts`). The concept panel lives in `features/concept/`; concept
+  activities (flashcards, explain it back, reviews, status, add a concept) in
+  `features/review/concepts/ConceptDialogs.tsx`, opened through `stores/conceptDialogStore.ts`.
 - **Routing**: hash routes (`#/map`, `#/problems/lc-1`) from a small router in `src/app/router.ts`;
   `src/app/routes.tsx` maps every route to a lazy page. Links are plain `<a href="#/…">`.
 - **Shell**: `src/app/shell/` (AppShell, Sidebar, TopBar, MobileNav, PageHeader, PageFrame,
@@ -186,7 +198,7 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 28. **Per-browser conveniences in localStorage** (never synced, always in try/catch):
     `atlas.theme`, `atlas.sidebar`, `atlas.recent` (palette), `atlas.setup.map|search` (Today
     checklist), `atlas.askWidth` (drawer width), `atlas.split` (workspace split), `atlas.template`
-    (start attempts from the starter template).
+    (start attempts from the starter template), `atlas.mapPanel` (map panel width).
 29. **Problem scheduling reading of 11.1**: "first ever attempt" means the problem has never been
     scheduled (`srs.dueAt` unset). Retirement needs a solo solve made *at* step 5 or higher (the
     60-day interval was reached) with `soloStreak ≥ 3` after it; a retired problem that is later
@@ -226,3 +238,58 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     last 90 days, topped up from all time; archived tags stay on attempts but leave the pickers.
 39. **Claude buttons before Phase 6** ("Review my code", "Dry run", "Suggest with Claude") open a
     short dialog saying what they will do (`LaterClaudeButton`); nothing pretends to work.
+40. **Map rendering**: React Flow (`@xyflow/react` 12, attribution hidden for this personal
+    project; its link strings are rewritten at build time like decision 22). Bubbles are React
+    Flow nodes (fixed `width`/`height`, `nodeOrigin` centered, `onlyRenderVisibleElements`, node
+    objects reused when unchanged); regions, lines, arrowheads, topic rings and middle-zoom dots
+    are a few SVG paths in a viewport portal, not React Flow edges. Labels keep a fixed screen
+    size through `--map-inv` (1 / zoom) and show from a precomputed zoom step
+    (`lib/map/labels.ts`, greedy by importance, never overlapping; density from Settings).
+41. **Semantic zoom**: far below 0.3 (subject cards on region circles, ring = share strong,
+    coral fading badge, cross-subject links bundled per pair), middle to 0.7 (topic cards with a
+    status bar, topic arrows, status dots), near above (concept bubbles). Near in, lines to
+    other subjects are drawn only for emphasised concepts (hover, focus mode, a path); otherwise
+    they would cross the whole map.
+42. **Map URL**: `focus` (selected concept; links fly there and pulse), `topic`, `subject`,
+    `path` (F25), `hops` (focus mode), `view=list`, and filters (`subjects`, `status`,
+    `importance`, `ready`, `due`, `advanced`, `track`, `hidden`). Scope filters (subjects,
+    track, advanced, hidden) remove bubbles; attribute filters (status, importance, ready, due)
+    dim them. The map's own URL changes never fly it. Search results for concepts open
+    `#/map?focus=…`.
+43. **Map interaction**: dragging only with a fine pointer (touch pans; long-press opens the
+    menu). The owner's concepts get a spot next to their topic the first time the map draws
+    them, saved as a MapOverride so later additions never move them; Reset layout re-places
+    them. Hover dims gently (0.4) and keeps the selection bright; focus mode and paths dim firmly.
+44. **Concept panel**: an in-flow, resizable side panel from 768 px (`atlas.mapPanel` width),
+    a bottom sheet below; back and forward through the last 30 concepts visited.
+    `#/concept/<id>` shows the same header and tabs as a page. "Why this color?" reads
+    `knowledgeDetails` and `computeStatus`, the same functions that set the color.
+45. **Checks**: `recordChecks` stores the check, moves the concept schedule (11.1; the first check
+    starts review; `session` makes an explicit review count before the due date), recomputes the
+    status, and logs checks, reviews and concepts touched. A manual "strong" also records a
+    manual check (score 1, worth 0.8), which starts its review so it can still fade. Status
+    changes to strong or fading are counted per day (`ActivityDay.turnedStrong/turnedFading`)
+    for the weekly review.
+46. **Offline checks**: flashcards use the seeded questions; until a concept's content exists
+    it gets one recall card (its name, answered by its scope and interview points). Again, Hard,
+    Good, Easy score 0, 0.4, 0.8, 1; one check per concept per session (the average); closing
+    part way keeps what was rated. Explain it back without Claude needs 40 words, then a
+    checklist of the interview points (or the scope's parts); score = ticked / total; the text is
+    kept in the check and listed in the Notes tab.
+47. **Onboarding** at `#/welcome`: the first visit to Today redirects there (once per load)
+    while `onboardingDone` is false; answers are saved at Finish; "Skip for now" keeps defaults.
+    Comfortable topics get reviews from tomorrow, at most 15 a day, must-know first (beyond a
+    week if needed). A re-run starts from the answers implied by stored `selfAssessed` values.
+48. **Path to a concept**: its prerequisites followed transitively, plus the must-know concepts
+    of its topic's prerequisite topics (and their prerequisites); a learning or strong concept
+    ends its branch; fading ones stay on the path (they need a review first, as in 11.5).
+49. **Pulled forward from Phase 7**: readiness (11.3, `lib/readiness`) to rank "ready to learn";
+    Today shows the top 5 ready concepts, the fading count, and plan items the owner adds from
+    the map or a path (`planStore`); the generated plan arrives with the planner.
+50. **Ink moment**: `refreshConcepts` notes concepts that newly turn strong (`inkStore`, fresh
+    for 60 s); a bubble on screen plays it once, after any modal dialog closes, then lines to
+    the concepts it made ready draw in.
+51. **Studied** is always explicit ("Mark as studied", also offered at the end of the Interview
+    level), never inferred from scrolling, so a status never changes without a visible reason.
+52. **`<main>` is `position: relative`**, so screen-reader-only text in long lists can't stretch
+    the page beyond the scroll area.

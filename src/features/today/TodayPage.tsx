@@ -1,6 +1,17 @@
 // Today (home, F16). The daily plan arrives with the planner in phase 7; until then this page greets
 // the owner, counts down to the interview, and offers a short setup checklist that reads real data.
-import { Check, Circle, RotateCcw, Search } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  Circle,
+  Code2,
+  Layers,
+  RotateCcw,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { routeHref } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
@@ -22,6 +33,16 @@ import { useToday } from "@/stores/clockStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
+import { IconButton } from "@/components/ui/Button";
+import { Callout } from "@/components/ui/Misc";
+import { StatusGlyph } from "@/components/ui/StatusGlyph";
+import { topicById } from "@/data/syllabus";
+import type { PlanItem } from "@/lib/types";
+import { openConceptReview } from "@/stores/conceptDialogStore";
+import { useConceptStatus } from "@/stores/conceptStateStore";
+import { removePlanItem, restorePlan, setPlanItemDone, usePlanStore } from "@/stores/planStore";
+import { toast } from "@/stores/toastStore";
+import { useReadyToLearn } from "./useReadyToLearn";
 import { useReviewQueue } from "../review/useReviewQueue";
 import { setupStepDone } from "./setupSteps";
 
@@ -55,6 +76,105 @@ function Countdown({ date }: { date: string }) {
   );
 }
 
+const PLAN_ICON: Partial<Record<PlanItem["kind"], typeof BookOpen>> = {
+  "learn-concept": BookOpen,
+  "review-concept": Layers,
+  resolve: RotateCcw,
+  "new-problem": Code2,
+};
+
+function PlanRow({ item, date }: { item: PlanItem; date: string }) {
+  const Icon = PLAN_ICON[item.kind] ?? Sparkles;
+  const start =
+    item.kind === "learn-concept" && item.refId ? (
+      <Button size="sm" href={routeHref("/map", undefined, { focus: item.refId })}>
+        Start
+      </Button>
+    ) : item.kind === "review-concept" && item.refId ? (
+      <Button size="sm" onClick={() => openConceptReview(item.refId!)}>
+        Start
+      </Button>
+    ) : (item.kind === "resolve" || item.kind === "new-problem") && item.refId ? (
+      <Button
+        size="sm"
+        href={routeHref(
+          "/problems",
+          item.refId,
+          item.kind === "resolve" ? { mode: "resolve" } : undefined,
+        )}
+      >
+        Start
+      </Button>
+    ) : null;
+  return (
+    <li className="flex items-center gap-3 px-3 py-2">
+      <input
+        type="checkbox"
+        aria-label={`Done: ${item.title}`}
+        checked={item.done}
+        onChange={(e) => setPlanItemDone(date, item.id, e.target.checked)}
+        className="size-4 shrink-0 accent-[var(--accent)]"
+      />
+      <Icon size={16} aria-hidden="true" className="shrink-0 text-muted" />
+      <span className="min-w-0 flex-1">
+        <span
+          className={cx(
+            "block truncate font-medium",
+            item.done ? "text-muted line-through" : "text-text",
+          )}
+        >
+          {item.title}
+        </span>
+        <span className="block truncate text-sm text-muted">{item.reason}</span>
+      </span>
+      <span className="shrink-0 text-sm text-muted tabular-nums">{item.estMinutes} min</span>
+      {!item.done && start}
+      <IconButton
+        icon={X}
+        size="sm"
+        label={`Remove ${item.title}`}
+        onClick={() => {
+          const before = removePlanItem(date, item.id);
+          if (before)
+            toast("Removed from today's plan.", {
+              action: { label: "Undo", onClick: () => restorePlan(before) },
+            });
+        }}
+      />
+    </li>
+  );
+}
+
+function ReadyRow({
+  id,
+  name,
+  topicId,
+  minutes,
+}: {
+  id: string;
+  name: string;
+  topicId: string;
+  minutes: number;
+}) {
+  const status = useConceptStatus(id);
+  return (
+    <li>
+      <a
+        href={routeHref("/map", undefined, { focus: id })}
+        className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-sunken"
+      >
+        <StatusGlyph status={status} size={14} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium text-text">{name}</span>
+          <span className="block truncate text-sm text-muted">{topicById.get(topicId)?.name}</span>
+        </span>
+        <span className="shrink-0 text-sm text-muted tabular-nums">{minutes} min</span>
+        <ArrowRight size={15} aria-hidden="true" className="shrink-0 text-faint" />
+      </a>
+    </li>
+  );
+}
+
 interface Step {
   id: string;
   done: boolean;
@@ -72,6 +192,8 @@ export default function TodayPage() {
   const hasAttempt = useProblemStore((s) =>
     Object.values(s.states).some((p) => p.attempts.length > 0),
   );
+  const plan = usePlanStore((s) => s.plans[today]);
+  const { ready, fading } = useReadyToLearn(5);
   const now = new Date();
   const name = profile?.name.trim();
   const dateLine = now.toLocaleDateString(undefined, {
@@ -84,12 +206,13 @@ export default function TodayPage() {
     ? [
         {
           id: "profile",
-          done: profile.name.trim().length > 0,
+          done: profile.onboardingDone,
           title: "Tell Atlas about you",
-          detail: "Your name, target track and daily time shape the plan and the readiness score.",
+          detail:
+            "Your track, daily time and what you already know shape the map, the plan and the readiness score.",
           action: (
-            <Button size="sm" href="#/settings?section=profile">
-              Open settings
+            <Button size="sm" href="#/welcome">
+              {profile.onboardingDone ? "Run it again" : "Start"}
             </Button>
           ),
         },
@@ -170,6 +293,21 @@ export default function TodayPage() {
         actions={profile?.interviewDate ? <Countdown date={profile.interviewDate} /> : undefined}
       />
 
+      {profile && !profile.onboardingDone && (
+        <Callout
+          className="mb-6"
+          icon={Sparkles}
+          title="Finish setting up"
+          actions={
+            <Button variant="primary" href="#/welcome">
+              Start
+            </Button>
+          }
+        >
+          Two minutes: your track, your time and what you already know, so the map starts where you
+          are.
+        </Callout>
+      )}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
         <div className="space-y-6">
           <section
@@ -189,6 +327,13 @@ export default function TodayPage() {
                 value={minutes / (profile?.dailyMinutes ?? 90)}
                 label="Minutes today against your daily time"
               />
+              {plan && plan.items.length > 0 && (
+                <ul className="mt-4 divide-y divide-rule rounded-control border border-rule">
+                  {plan.items.map((item) => (
+                    <PlanRow key={item.id} item={item} date={today} />
+                  ))}
+                </ul>
+              )}
               {queue.problems.length > 0 ? (
                 <div className="mt-4">
                   <p className="text-base text-text">
@@ -233,11 +378,58 @@ export default function TodayPage() {
                 </p>
               )}
               <p className="mt-3 text-sm text-muted">
-                Your full daily plan, sized to your time with a reason for each item, arrives in
-                phase 7. The focus timer in the top bar counts your minutes toward today and your
-                streak.
+                Add concepts from the map (right-click, long-press or the panel's menu) or a path to
+                a concept. The full daily plan, sized to your time with a reason for each item,
+                arrives in phase 7.
               </p>
             </div>
+          </section>
+
+          <section
+            aria-labelledby="ready-heading"
+            className="rounded-panel border border-rule bg-surface"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule px-4 py-3 sm:px-5">
+              <h2 id="ready-heading" className="text-md font-semibold text-text">
+                Ready to learn next
+              </h2>
+              <a
+                href={routeHref("/map", undefined, { ready: "1" })}
+                className="text-sm text-accent hover:underline"
+              >
+                See all on the map
+              </a>
+            </div>
+            {ready.length === 0 ? (
+              <p className="px-4 py-4 text-base text-muted sm:px-5">
+                Nothing is waiting: everything you can start is under way. Open the map to pick
+                something new.
+              </p>
+            ) : (
+              <ul className="divide-y divide-rule">
+                {ready.map((c) => (
+                  <ReadyRow
+                    key={c.id}
+                    id={c.id}
+                    name={c.name}
+                    topicId={c.topicId}
+                    minutes={c.estMinutes}
+                  />
+                ))}
+              </ul>
+            )}
+            {fading > 0 && (
+              <a
+                href={routeHref("/map", undefined, { status: "fading" })}
+                className="flex items-center gap-3 border-t border-rule px-4 py-2.5 text-base hover:bg-surface-sunken sm:px-5"
+              >
+                <StatusGlyph status="fading" size={14} />
+                <span className="flex-1 text-text">
+                  {fading} {fading === 1 ? "concept is" : "concepts are"} fading
+                </span>
+                <ArrowRight size={15} aria-hidden="true" className="text-faint" />
+              </a>
+            )}
           </section>
 
           <section

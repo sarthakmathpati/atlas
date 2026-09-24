@@ -107,6 +107,12 @@
     opacity: 0.22;
   }
 
+  [data-emphasis="hover"] > .map-line:not(.map-hot),
+  [data-emphasis="hover"] > .map-head:not(.map-hot),
+  [data-emphasis="hover"] > .map-cross:not(.map-hot) {
+    opacity: 0.45;
+  }
+
   .map-line.map-hot,
   .map-cross.map-hot {
     stroke: var(--accent);
@@ -168,6 +174,10 @@
 
   .map-node[data-faint] {
     opacity: 0.45;
+  }
+
+  .map-node[data-soft] {
+    opacity: 0.4;
   }
 
   .map-node[data-dim] {

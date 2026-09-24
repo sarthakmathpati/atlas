@@ -96,7 +96,7 @@ export function NotesTab({ concept, wide }: { concept: Concept; wide: boolean })
             <Preview markdown={markdown} />
           </div>
         )}
-        <p className="text-sm text-muted">Saved as you type, on this device and in your backups.</p>
+        <p className="text-sm text-muted">Saved as you type, and included in your backups.</p>
       </section>
 
       <section aria-labelledby={`${concept.id}-answers`}>

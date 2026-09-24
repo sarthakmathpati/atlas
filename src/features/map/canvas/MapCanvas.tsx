@@ -291,12 +291,15 @@ export function MapCanvas({
     return out;
   }, [level, model, dragged, finePointer, problemCounts]);
 
+  /** The latest position each drag reported (ahead of the re-render that shows it). */
+  const lastDrag = useRef(new Map<string, Point>());
   const onNodesChange = useCallback((changes: NodeChange<AnyNode>[]) => {
     const moves = changes.filter(
       (c): c is Extract<NodeChange<AnyNode>, { type: "position" }> =>
-        c.type === "position" && Boolean(c.dragging) && Boolean(c.position),
+        c.type === "position" && Boolean(c.position),
     );
     if (moves.length === 0) return;
+    for (const m of moves) lastDrag.current.set(m.id, m.position!);
     setDragged((prev) => {
       const next = new Map(prev);
       for (const m of moves) next.set(m.id, m.position!);
@@ -306,7 +309,8 @@ export function MapCanvas({
 
   const onNodeDragStop = useCallback((_: unknown, node: AnyNode) => {
     if (node.type !== "concept") return;
-    moveNode(node.id, node.position);
+    moveNode(node.id, lastDrag.current.get(node.id) ?? node.position);
+    lastDrag.current.delete(node.id);
     setDragged((prev) => {
       const next = new Map(prev);
       next.delete(node.id);
@@ -360,10 +364,19 @@ export function MapCanvas({
 
   useEffect(() => {
     let emphasis: Set<string> | null = null;
-    if (pathIds) emphasis = withParents(pathIds);
-    else if (hops > 0 && selected) emphasis = withParents(neighborhood(selected, hops));
-    else if (hovered && level === "near") emphasis = neighborhood(hovered, 1);
-    useMapView.setState({ emphasis });
+    let emphasisKind: "hover" | "focus" | "path" | null = null;
+    if (pathIds) {
+      emphasis = withParents(pathIds);
+      emphasisKind = "path";
+    } else if (hops > 0 && selected) {
+      emphasis = withParents(neighborhood(selected, hops));
+      emphasisKind = "focus";
+    } else if (hovered && level === "near") {
+      emphasis = neighborhood(hovered, 1);
+      if (selected) emphasis.add(selected);
+      emphasisKind = "hover";
+    }
+    useMapView.setState({ emphasis, emphasisKind });
   }, [pathIds, hops, selected, hovered, level]);
 
   // Keep the selected bubble in view when the panel opens or the window narrows.
@@ -515,9 +528,11 @@ export function MapCanvas({
               onClick={() => flyTo({ kind: "fit", key: `fit-${Date.now()}` })}
             />
           </Panel>
-          <Panel position="bottom-left" className="max-md:hidden">
-            <Minimap model={model} />
-          </Panel>
+          {!pathIds && (
+            <Panel position="bottom-left" className="max-md:hidden">
+              <Minimap model={model} />
+            </Panel>
+          )}
         </ReactFlow>
         {empty && (
           <div className="map-empty" role="status">

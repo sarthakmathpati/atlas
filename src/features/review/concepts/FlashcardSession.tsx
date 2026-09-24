@@ -257,10 +257,13 @@ export function FlashcardSession({ conceptIds, session, onSaved, onDone }: Flash
 
 export function FlashcardIntro({
   count,
+  covered,
   cards,
   onStart,
 }: {
   count: number;
+  /** How many of the concepts the deck reaches (it stops at 30 cards). */
+  covered: number;
   cards: number;
   onStart: () => void;
 }) {
@@ -270,7 +273,10 @@ export function FlashcardIntro({
         <Layers size={20} aria-hidden="true" />
       </span>
       <p className="text-base text-text">
-        {cards} {cards === 1 ? "card" : "cards"} from {count} {count === 1 ? "concept" : "concepts"}
+        {cards} {cards === 1 ? "card" : "cards"} from{" "}
+        {covered < count
+          ? `the first ${covered} of ${count} concepts (fading and learning ones come first)`
+          : `${count} ${count === 1 ? "concept" : "concepts"}`}
         . Answer in your head, reveal, then rate how well you knew it.
       </p>
       <Button variant="primary" trailingIcon={ArrowRight} onClick={onStart}>

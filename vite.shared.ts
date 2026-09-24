@@ -65,6 +65,10 @@ const LIBRARY_LINK_REWRITES: { module: RegExp; from: string; to: string }[] = [
     from: "https://redux.js.org/Errors?code=",
     to: "the Redux error list, code ",
   },
+  // React Flow's attribution link (hidden on the map) and its error-message help links.
+  { module: /[\\/]@xyflow[\\/]/, from: "https://reactflow.dev", to: "reactflow.dev" },
+  { module: /[\\/]@xyflow[\\/]/, from: "https://${lib}flow.dev", to: "${lib}flow.dev" },
+  { module: /[\\/]@xyflow[\\/]/, from: "https://${library}flow.dev", to: "${library}flow.dev" },
   {
     module: /[\\/]@reduxjs[\\/]toolkit[\\/]dist[\\/]/,
     from: "https://redux-toolkit.js.org/Errors?code=",

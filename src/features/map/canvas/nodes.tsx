@@ -233,14 +233,31 @@ export const ConceptNode = memo(function ConceptNode({ data }: NodeProps<Concept
     [actions, id],
   );
 
-  // The ink moment: once per change to strong, only while the bubble is on screen.
+  // The ink moment: once per change to strong, while the bubble is on screen. If the change came
+  // from a dialog on top of the map (flashcards, explain it back), it plays once that closes.
   useEffect(() => {
     const el = ref.current;
     if (status !== "strong" || !el || !takeInk(id) || prefersReducedMotion()) return;
-    el.dataset.ink = "";
-    useMapView.setState({ inkEdges: { from: id, to: [], key: Date.now() } });
-    const t = setTimeout(() => delete el.dataset.ink, 800);
-    return () => clearTimeout(t);
+    let done: ReturnType<typeof setTimeout> | undefined;
+    const play = () => {
+      el.dataset.ink = "";
+      useMapView.setState({ inkEdges: { from: id, to: [], key: Date.now() } });
+      done = setTimeout(() => delete el.dataset.ink, 800);
+    };
+    const covered = () => document.querySelector("dialog[open].atlas-modal") !== null;
+    if (!covered()) {
+      play();
+      return () => clearTimeout(done);
+    }
+    const wait = setInterval(() => {
+      if (covered()) return;
+      clearInterval(wait);
+      play();
+    }, 150);
+    return () => {
+      clearInterval(wait);
+      clearTimeout(done);
+    };
   }, [status, id]);
 
   const label = `${data.name}, ${STATUS_LABEL[status].toLowerCase()}${due ? ", due for review" : ""}${
@@ -257,6 +274,7 @@ export const ConceptNode = memo(function ConceptNode({ data }: NodeProps<Concept
       className="map-node map-concept"
       data-selected={selected || undefined}
       data-dim={!data.match || emphasis === "off" || undefined}
+      data-soft={emphasis === "soft" || undefined}
       data-faint={data.otherLanguage || undefined}
       data-emphasis={emphasis === "on" || undefined}
       style={{ "--r": data.r } as CSSProperties}

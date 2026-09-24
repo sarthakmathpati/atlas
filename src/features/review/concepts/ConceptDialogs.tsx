@@ -42,10 +42,11 @@ function FlashcardsDialog() {
   const request = useConceptDialogs((s) => s.flashcards);
   const [started, setStarted] = useState<string | null>(null);
   const key = request ? `${request.title}|${request.conceptIds.join(",")}` : null;
-  const cards = useMemo(() => {
-    if (!request) return 0;
+  const deck = useMemo(() => {
+    if (!request) return { cards: 0, covered: 0 };
     const list = request.conceptIds.map((id) => findConcept(id)).filter((c) => c !== undefined);
-    return buildDeck(list).length;
+    const cards = buildDeck(list);
+    return { cards: cards.length, covered: new Set(cards.map((c) => c.conceptId)).size };
   }, [request]);
   const close = () => {
     setStarted(null);
@@ -72,7 +73,8 @@ function FlashcardsDialog() {
         ) : (
           <FlashcardIntro
             count={request.conceptIds.length}
-            cards={cards}
+            covered={deck.covered}
+            cards={deck.cards}
             onStart={() => setStarted(key)}
           />
         ))}

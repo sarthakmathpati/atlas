@@ -69,6 +69,7 @@ interface LayersProps {
 export const MapLayers = memo(function MapLayers({ model, dragged, pathIds }: LayersProps) {
   const level = useMapView((s) => s.level);
   const emphasis = useMapView((s) => s.emphasis);
+  const emphasisKind = useMapView((s) => s.emphasisKind);
   const inkEdges = useMapView((s) => s.inkEdges);
   const [inkTargets, setInkTargets] = useState<{ from: string; to: string[]; key: number } | null>(
     null,
@@ -95,10 +96,12 @@ export const MapLayers = memo(function MapLayers({ model, dragged, pathIds }: La
         const region = layout.regions[s.id];
         if (!region) return null;
         const on = model.subjectIds.includes(s.id);
+        // Outlines light up only when zoomed out, where regions are what you see.
         const hot =
-          pathIds !== null
+          level === "far" &&
+          (pathIds !== null
             ? [...pathIds].some((id) => id.startsWith(`${s.id}.`))
-            : emphasis?.has(s.id);
+            : emphasis?.has(s.id));
         return (
           <path
             key={s.id}
@@ -154,12 +157,12 @@ export const MapLayers = memo(function MapLayers({ model, dragged, pathIds }: La
       const f = model.facts.get(c.id);
       if (!p || !f) continue;
       const d = `M${p.x - r},${p.y}a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0`;
-      if (f.match) groups[f.status] += d;
+      if (f.match && (!emphasis || emphasis.has(c.id))) groups[f.status] += d;
       else dim[f.status] += d;
     }
     return { groups, dim };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [middle, model.concepts, model.facts, model.positions, dragged]);
+  }, [middle, model.concepts, model.facts, model.positions, dragged, emphasis]);
 
   const conceptEdges = useMemo(() => {
     if (!near) return null;
@@ -284,7 +287,7 @@ export const MapLayers = memo(function MapLayers({ model, dragged, pathIds }: La
               })}
             </g>
             {topicArrows && (
-              <g className="map-topic-edges" data-emphasis={emphasis ? "" : undefined}>
+              <g className="map-topic-edges" data-emphasis={emphasisKind ?? undefined}>
                 <path d={topicArrows.lines} className="map-line" />
                 <path d={topicArrows.heads} className="map-head" />
               </g>
@@ -302,7 +305,7 @@ export const MapLayers = memo(function MapLayers({ model, dragged, pathIds }: La
           </>
         )}
         {conceptEdges && (
-          <g className="map-concept-edges" data-emphasis={emphasis ? "" : undefined}>
+          <g className="map-concept-edges" data-emphasis={emphasisKind ?? undefined}>
             <path d={conceptEdges.cross} className="map-cross" />
             <path d={conceptEdges.lines} className="map-line" />
             <path d={conceptEdges.heads} className="map-head" />

@@ -143,3 +143,21 @@ describe("status summaries", () => {
     expect(strongShare(countStatuses([], () => "strong"))).toBe(0);
   });
 });
+
+describe("placing the owner's own concept", () => {
+  it("puts it near its topic without overlapping anything, deterministically", async () => {
+    const { placeNearTopic } = await import("@/lib/map/place");
+    const topic = { x: 0, y: 0, r: 100 };
+    const occupied = [
+      { x: 0, y: 55, r: 18 },
+      { x: 40, y: 40, r: 18 },
+    ];
+    const p = placeNearTopic(topic, occupied, 14);
+    for (const o of occupied)
+      expect(Math.hypot(o.x - p.x, o.y - p.y)).toBeGreaterThanOrEqual(o.r + 14 + 26);
+    expect(Math.hypot(p.x, p.y)).toBeLessThan(topic.r + 200);
+    expect(placeNearTopic(topic, occupied, 14)).toEqual(p);
+    const second = placeNearTopic(topic, [...occupied, { ...p, r: 14 }], 14);
+    expect(second).not.toEqual(p);
+  });
+});

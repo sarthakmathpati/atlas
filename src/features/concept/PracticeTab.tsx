@@ -63,7 +63,11 @@ export function PracticeTab({ concept }: { concept: Concept }) {
               Start
             </Button>
           </div>
-          <p className="mt-1.5 text-sm text-muted">{RAMP_TEXT[ramp.target]}</p>
+          <p className="mt-1.5 text-sm text-muted">
+            {suggested.difficulty === ramp.target
+              ? RAMP_TEXT[ramp.target]
+              : `No ${ramp.target} problem is left to try here, so this ${suggested.difficulty} one is next.`}
+          </p>
         </section>
       )}
 

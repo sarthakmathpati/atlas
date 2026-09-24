@@ -74,12 +74,15 @@ export default function QuizPage() {
       list.push(...(conceptsByTopic.get(t) ?? []));
       list.push(...Object.values(custom).filter((c) => c.topicId === t));
     }
-    // Started concepts only, unless asked for everything: flashcards check what you've learned.
-    return list.filter(
-      (c) =>
-        inScope(c, scope) &&
-        (!started || (states[c.id]?.status ?? "not_started") !== "not_started"),
-    );
+    // Fading first, then learning, strong and not started (learning order within each), so a
+    // session that stops at 30 cards checks what matters most.
+    const rank = { fading: 0, learning: 1, strong: 2, not_started: 3 } as const;
+    const statusOf = (id: string) => states[id]?.status ?? "not_started";
+    return list
+      .filter((c) => inScope(c, scope) && (!started || statusOf(c.id) !== "not_started"))
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => rank[statusOf(a.c.id)] - rank[statusOf(b.c.id)] || a.i - b.i)
+      .map(({ c }) => c);
   }, [subjectId, topicId, custom, scope, started, states]);
 
   const dueIds = queue.concepts.map((c) => c.conceptId);

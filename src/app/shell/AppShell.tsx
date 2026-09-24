@@ -9,10 +9,11 @@ import { CsvImportDialog } from "@/features/problems/CsvImportDialog";
 import { QuickAddDialog } from "@/features/problems/QuickAddDialog";
 import { useReviewQueue } from "@/features/review/useReviewQueue";
 import { useConceptDialogs } from "@/stores/conceptDialogStore";
+import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { PAGES } from "../routes";
-import { useRoute } from "../router";
+import { navigate, parseHash, useRoute } from "../router";
 import { AskClaudePanel } from "./AskClaude";
 import { FocusTimerController } from "./FocusTimer";
 import { BottomTabs, MoreSheet } from "./MobileNav";
@@ -38,6 +39,20 @@ function ConceptDialogHost() {
       <ConceptDialogs />
     </Suspense>
   );
+}
+
+/** On the very first visit, Today hands over to the welcome questions (F5). */
+function useFirstRunWelcome() {
+  const loaded = useProfileStore((s) => s.profile !== null);
+  const done = useProfileStore((s) => s.profile?.onboardingDone ?? true);
+  const checked = useRef(false);
+  useEffect(() => {
+    if (!loaded || checked.current) return;
+    checked.current = true;
+    if (!done && parseHash(window.location.hash).name === "today") {
+      navigate("/welcome", { replace: true });
+    }
+  }, [loaded, done]);
 }
 
 type IdleWindow = Window & {
@@ -70,6 +85,7 @@ export function AppShell() {
 
   useGlobalShortcuts();
   usePrebuiltSearchIndex();
+  useFirstRunWelcome();
 
   // A new page starts at the top.
   useEffect(() => {
@@ -92,7 +108,7 @@ export function AppShell() {
           ref={mainRef}
           id="main"
           tabIndex={-1}
-          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
+          className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
         >
           <ShellNotices />
           <ErrorBoundary key={route.path} inline>

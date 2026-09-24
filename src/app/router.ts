@@ -26,6 +26,7 @@ export type RouteName =
   | "revision"
   | "settings"
   | "kit"
+  | "welcome"
   | "not-found";
 
 export interface Route {
@@ -60,6 +61,7 @@ const TABLE: [RouteName, RegExp][] = [
   ["revision", /^\/revision$/],
   ["settings", /^\/settings$/],
   ["kit", /^\/kit$/],
+  ["welcome", /^\/welcome$/],
 ];
 
 function safeDecode(value: string): string {

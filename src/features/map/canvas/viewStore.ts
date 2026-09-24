@@ -37,6 +37,8 @@ export interface MapViewState {
   selected: string | null;
   /** Ids shown at full strength (neighborhood, path); everything else is dimmed. */
   emphasis: ReadonlySet<string> | null;
+  /** Hover dims gently; focus mode and paths dim firmly. */
+  emphasisKind: "hover" | "focus" | "path" | null;
   /** A bubble that pulses once (after a search jump). */
   pulse: { id: string; key: number } | null;
   /** Lines from a concept that just turned strong to the concepts it made ready. */
@@ -52,6 +54,7 @@ export const useMapView = create<MapViewState>(() => ({
   hovered: null,
   selected: null,
   emphasis: null,
+  emphasisKind: null,
   pulse: null,
   inkEdges: null,
 }));
@@ -79,7 +82,9 @@ export function setViewZoom(zoom: number): void {
   }
 }
 
-/** "on" (emphasised), "off" (dimmed) or "none" (no emphasis active). */
-export function useEmphasis(id: string): "on" | "off" | "none" {
-  return useMapView((s) => (s.emphasis ? (s.emphasis.has(id) ? "on" : "off") : "none"));
+/** "on" (emphasised), "off" (dimmed), "soft" (dimmed a little, on hover) or "none". */
+export function useEmphasis(id: string): "on" | "off" | "soft" | "none" {
+  return useMapView((s) =>
+    s.emphasis ? (s.emphasis.has(id) ? "on" : s.emphasisKind === "hover" ? "soft" : "off") : "none",
+  );
 }
