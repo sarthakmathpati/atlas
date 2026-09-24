@@ -83,10 +83,13 @@ article), and headings inside code fences are ignored.
 - **signals** (patterns): 3 to 6 plain-text bullets. The first one is the hint ladder's clue, so it
   must not contain the pattern's name.
 - **template** (patterns): one fenced code block, C++ first.
-- **Code**: C++ (C++20) and Python. Every `cpp` and `python` block must compile or parse:
-  run `npm run check:content-code -- <subject>`. The checker provides `bits/stdc++.h`,
-  `using namespace std`, `ListNode` and `TreeNode`; start a block with `// sketch` (or `# sketch`)
-  when it is deliberately partial. Run the snippets against their worked examples before committing.
+- **Code**: C++ (C++20) and Python. Java where the idea is Java's own (interfaces with default
+  methods, `equals` and `hashCode`, checked exceptions). Every `cpp`, `python` and `java` block
+  must compile or parse: run `npm run check:content-code -- <subject>`. The checker provides
+  `bits/stdc++.h`, `using namespace std`, `ListNode` and `TreeNode` for C++, and the common
+  `java.util` imports for Java (a Java block holds types, or members that get wrapped in a class;
+  top-level `public` is fine). Start a block with `// sketch` (or `# sketch`) when it is
+  deliberately partial. Run the snippets against their worked examples before committing.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. If you must, add the old id to
