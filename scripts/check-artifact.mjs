@@ -37,11 +37,28 @@ const TEXT_LINKS = [
   { host: "leetcode.com", why: "LeetCode problem links for the owner to open" },
 ];
 
-/** Strings inside bundled libraries that look like URLs but are never requested. */
+/** Strings inside bundled libraries that look like URLs but are never requested. Each entry is
+ *  reviewed: prefer matching an exact URL over a whole host. */
 const LIBRARY_TEXT = [
-  { host: "www.w3.org", why: "XML/SVG/MathML namespace identifiers" },
-  { host: "react.dev", why: "React's error-decoder link inside error messages" },
-  { host: "tailwindcss.com", why: "Tailwind license comment" },
+  { test: (u) => u.hostname === "www.w3.org", why: "XML/SVG/MathML namespace identifiers" },
+  {
+    test: (u) => u.hostname === "react.dev",
+    why: "React's error-decoder link inside error messages",
+  },
+  { test: (u) => u.hostname === "tailwindcss.com", why: "Tailwind license comment" },
+  {
+    test: (u) => u.hostname === "json-schema.org" && u.pathname.startsWith("/draft"),
+    why: "zod's JSON Schema `$schema` identifiers",
+  },
+  {
+    test: (u) => u.href === "https://tinyurl.com/y2uuvskb" || u.href === "http://bit.ly/2kdckMn",
+    why: "documentation links inside Dexie error messages",
+  },
+];
+
+/** Code fragments that contain "http://" but are not URLs at all. */
+const CODE_FRAGMENTS = [
+  { text: "http://[${", why: "zod's IPv6 check builds a URL object locally; nothing is fetched" },
 ];
 
 function fmt(bytes) {
@@ -50,6 +67,8 @@ function fmt(bytes) {
 }
 
 function classify(url) {
+  const fragment = CODE_FRAGMENTS.find((f) => url.startsWith(f.text));
+  if (fragment) return { ok: true, reason: fragment.why };
   let parsed;
   try {
     parsed = new URL(url);
@@ -62,8 +81,11 @@ function classify(url) {
       return { ok: true, reason: "allowed network host" };
     }
   }
-  for (const rule of [...TEXT_LINKS, ...LIBRARY_TEXT]) {
+  for (const rule of TEXT_LINKS) {
     if (host === rule.host || host.endsWith(`.${rule.host}`)) return { ok: true, reason: rule.why };
+  }
+  for (const rule of LIBRARY_TEXT) {
+    if (rule.test(parsed)) return { ok: true, reason: rule.why };
   }
   return { ok: false, reason: `host "${host}" is not allowed` };
 }
@@ -96,11 +118,11 @@ function main() {
   for (const match of html.matchAll(urlPattern)) {
     const url = match[0].replace(/[.,;:]+$/, "");
     const verdict = classify(url);
-    let host = "?";
+    let host = "(code fragment)";
     try {
       host = new URL(url).hostname;
     } catch {
-      /* keep "?" */
+      /* keep the placeholder */
     }
     const entry = byHost.get(host) ?? { count: 0, verdict, example: url };
     entry.count += 1;

@@ -1,0 +1,47 @@
+# Runs every check on every push and pull request (BUILD_SPEC.md section 13, Phase 0).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build the web app (GitHub Pages)
+        run: npm run build
+
+      - name: Build and check the single-file artifact
+        run: npm run build:artifact
+
+      - name: Generated data is committed and up to date
+        run: git diff --exit-code -- src/data

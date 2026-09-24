@@ -103,10 +103,12 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
    unions saved answers, story practice and activity days, and never downgrades a problem's status.
    Attempts are capped at 30 (newest kept) and the summary reports how many were trimmed.
 10. **Artifact URL check**: besides the allowed CDN hosts, claude.ai and leetcode.com, the check
-    allows three reviewed text-only strings from bundled libraries: `www.w3.org` (XML namespaces),
-    `react.dev` (React's error-decoder link) and `tailwindcss.com` (license comment). Any new host
-    fails the build. API-key mode is standalone-only, so its code is excluded from the artifact
-    via the `__ARTIFACT__` build constant (Phase 6).
+    allows reviewed text-only strings from bundled libraries, matched as narrowly as possible:
+    `www.w3.org` (XML namespaces), `react.dev` (React error links), `tailwindcss.com` (license
+    comment), `json-schema.org/draft…` (zod identifiers), two exact Dexie doc links, and zod's local
+    `http://[${…}]` IPv6 check. Any new URL fails the build. `date-fns`'s `format` is avoided
+    (it embeds a GitHub link; `lib/time.ts` formats dates itself). API-key mode is standalone-only,
+    so its code is excluded from the artifact via the `__ARTIFACT__` build constant (Phase 6).
 11. **Type additions beyond section 4**: `Subject.mapTracks`, `SeedProblem.language` ("sql"),
     `ProblemState.urlOverride` (owner-corrected link), `Profile.backupReminderDismissedAt`,
     `MapOverride`, `GeneratedDrill`, `BehavioralQuestion`, `Syllabus`, `MapLayout`; `updatedAt` on
@@ -120,3 +122,13 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 14. **Default AI models** come from the spec (quick `claude-haiku-4-5-20251001`, default
     `claude-sonnet-5`, complex `claude-opus-5-5`); re-check the current list in Phase 6. They are
     editable in Settings.
+15. **Quant answers**: `src/lib/quant/answerCheck.ts` (built in Phase 1 so tests can verify every
+    seed answer) evaluates answers with a small recursive-descent parser, never `eval`: numbers,
+    fractions, `%`, `+ - * / ^`, `e`, `pi`, `sqrt`, implicit multiplication, variables such as `n`
+    (compared at n = 2, 3, 5, 10), and yes/no words. Tolerance 0.5% relative.
+16. **Preview page**: Phases 0 and 1 ship `src/features/preview/` as the live page. Phase 2
+    replaces it with the real shell. The ThemeToggle, TextFileDialog (the "downloads unavailable"
+    fallback from section 2.5) and ErrorBoundary are meant to be kept and moved into the shell.
+17. **GitHub Actions** use `actions/checkout@v5`, `setup-node@v5` (Node from `.nvmrc`),
+    `configure-pages@v5`, `upload-pages-artifact@v4`, `deploy-pages@v4`. CI also fails if the
+    committed generated data in `src/data` is stale.

@@ -1,6 +1,8 @@
 // Dates in Atlas use the owner's LOCAL time. "Day" boundaries are local midnight, and due dates
 // are stored as local dates (yyyy-mm-dd) so "due today" stays stable all day (BUILD_SPEC.md 11).
-import { addDays as addDaysFns, differenceInCalendarDays, format, parseISO } from "date-fns";
+import { addDays as addDaysFns, differenceInCalendarDays, parseISO } from "date-fns";
+
+const pad = (n: number) => String(n).padStart(2, "0");
 
 /** Current time as an ISO timestamp (UTC), used for createdAt / updatedAt. */
 export function nowIso(now: Date = new Date()): string {
@@ -9,12 +11,12 @@ export function nowIso(now: Date = new Date()): string {
 
 /** Local calendar date, yyyy-mm-dd. */
 export function localDate(date: Date = new Date()): string {
-  return format(date, "yyyy-MM-dd");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 /** Local calendar month, yyyy-mm. */
 export function localMonth(date: Date = new Date()): string {
-  return format(date, "yyyy-MM");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
 }
 
 /** Parses a yyyy-mm-dd string as a local date at midnight. */

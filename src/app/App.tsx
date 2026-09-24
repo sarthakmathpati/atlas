@@ -1,8 +1,13 @@
+import { FoundationPreview } from "@/features/preview/FoundationPreview";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { ServicesProvider } from "./providers/ServicesProvider";
+
 export function App() {
   return (
-    <main className="p-8">
-      <h1 className="text-2xl">Atlas</h1>
-      <p className="text-muted">Setting things up.</p>
-    </main>
+    <ServicesProvider>
+      <ErrorBoundary>
+        <FoundationPreview />
+      </ErrorBoundary>
+    </ServicesProvider>
   );
 }

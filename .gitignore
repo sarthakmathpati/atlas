@@ -9,6 +9,7 @@ coverage
 
 # local screenshots and scratch files
 screenshots
+shots
 .playwright
 *.local
 
