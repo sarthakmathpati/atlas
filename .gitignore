@@ -1,0 +1,19 @@
+# dependencies
+node_modules
+
+# build output (release/atlas-artifact.zip IS committed on purpose, see BUILD_SPEC.md 2.2)
+dist
+dist-artifact
+coverage
+*.tsbuildinfo
+
+# local screenshots and scratch files
+screenshots
+.playwright
+*.local
+
+# editors and OS
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
