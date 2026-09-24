@@ -8,9 +8,11 @@ import { Button, IconButton } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { Dialog } from "@/components/ui/Dialog";
 import { Skeleton } from "@/components/ui/Misc";
+import { conceptById } from "@/data/syllabus";
 import { editorialUrl, type ProblemInfo } from "@/lib/problems/catalog";
 import { buildOfflineHints, type HintLevelNumber } from "@/lib/problems/hints";
 import type { ProblemState } from "@/lib/types";
+import { useConceptContent } from "@/stores/contentStore";
 
 const MarkdownView = lazy(() => import("@/components/ui/MarkdownView"));
 
@@ -41,7 +43,11 @@ export function HintLadder({
   onClose,
   className,
 }: HintLadderProps) {
-  const levels = useMemo(() => buildOfflineHints(info), [info]);
+  // The ladder uses the first pattern's signals and template, which load with its subject's text.
+  const primary = info.conceptIds[0] ? conceptById.get(info.conceptIds[0]) : undefined;
+  const { value: content, failed } = useConceptContent(primary);
+  const ready = !primary || content !== undefined || failed;
+  const levels = useMemo(() => buildOfflineHints(info, content), [info, content]);
   const [warn, setWarn] = useState(false);
   const [confirmSolution, setConfirmSolution] = useState(false);
   const editorial = editorialUrl(info, state);
@@ -76,9 +82,13 @@ export function HintLadder({
             <p className="mb-1 text-sm font-medium text-muted">
               {l.level}. {l.title}
             </p>
-            <Suspense fallback={<Skeleton className="h-12 w-full" />}>
-              <MarkdownView compact>{l.markdown}</MarkdownView>
-            </Suspense>
+            {ready ? (
+              <Suspense fallback={<Skeleton className="h-12 w-full" />}>
+                <MarkdownView compact>{l.markdown}</MarkdownView>
+              </Suspense>
+            ) : (
+              <Skeleton className="h-12 w-full" />
+            )}
           </div>
         ))}
         {hasAnswer && sawSolution && (

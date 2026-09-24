@@ -7,8 +7,9 @@
 //       * a short, reviewed list of text-only strings that bundled libraries contain
 //         (XML namespace identifiers, React's error-decoder link, license comments). None of these
 //         are ever requested; they are listed here so any NEW host fails the check and gets reviewed.
-// It also prints the largest bundled modules and the syllabus JSON size so growth stays visible.
-import { readFileSync, statSync, existsSync } from "node:fs";
+// It also prints the largest bundled modules and the syllabus and concept text sizes so growth
+// stays visible.
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,6 +17,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const htmlPath = join(root, "dist-artifact", "index.html");
 const statsPath = join(root, "dist-artifact", "bundle-stats.json");
 const syllabusPath = join(root, "src", "data", "syllabus.generated.json");
+const contentDir = join(root, "src", "data", "content");
 
 const MB = 1024 * 1024;
 const HARD_LIMIT = 15 * MB;
@@ -161,7 +163,12 @@ function main() {
   }
 
   if (existsSync(syllabusPath)) {
-    console.log(`\nSyllabus JSON: ${fmt(statSync(syllabusPath).size)}`);
+    console.log(`\nSyllabus JSON: ${fmt(statSync(syllabusPath).size)} (structure)`);
+  }
+  if (existsSync(contentDir)) {
+    const files = readdirSync(contentDir).filter((f) => f.endsWith(".generated.json"));
+    const total = files.reduce((n, f) => n + statSync(join(contentDir, f)).size, 0);
+    console.log(`Concept text: ${fmt(total)} in ${files.length} subject files`);
   }
 
   if (problems.length > 0) {

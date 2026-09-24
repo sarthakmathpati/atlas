@@ -1,6 +1,7 @@
 // The Learn tab (F3): Simple | Interview | Deep, remembered per concept; connections (Learn first,
 // Unlocks, Connected ideas); interview questions with hidden answers; and the ways to check
 // yourself. A concept without written content shows what it covers and "Explain with Claude".
+// The text loads with its subject (data/content.ts); a skeleton shows meanwhile.
 import {
   BookmarkCheck,
   BookOpenText,
@@ -15,14 +16,16 @@ import { Callout, EmptyState, Skeleton } from "@/components/ui/Misc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { dependentsOf, hasCoreContent } from "@/data/syllabus";
 import { isCustomConceptId } from "@/lib/concepts/custom";
-import type { Concept, ConceptState } from "@/lib/types";
+import type { Concept, ConceptContent, ConceptState } from "@/lib/types";
 import { openExplainBack, openFlashcards } from "@/stores/conceptDialogStore";
 import { useConceptNoteStore } from "@/stores/conceptNoteStore";
 import { setLastLevel, useConceptState, useConceptStatus } from "@/stores/conceptStateStore";
+import { useConceptContent } from "@/stores/contentStore";
 import { useUiStore } from "@/stores/uiStore";
 import { LaterClaudeButton } from "../problems/parts";
 import { toggleStudied } from "./conceptActions";
 import { ConceptLink } from "./ConceptLink";
+import { ContentUnavailable } from "./ContentUnavailable";
 
 const MarkdownView = lazy(() => import("@/components/ui/MarkdownView"));
 
@@ -39,10 +42,9 @@ function Block({ title, children, id }: { title: string; children: ReactNode; id
   );
 }
 
-function Levels({ concept }: { concept: Concept }) {
+function Levels({ concept, content }: { concept: Concept; content: ConceptContent }) {
   const state = useConceptState(concept.id);
   const status = useConceptStatus(concept.id);
-  const { content } = concept;
   const initial: Level =
     state?.lastLevelOpened ?? (status === "not_started" ? "simple" : "interview");
   const [level, setLevel] = useState<Level>(
@@ -140,17 +142,25 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
   const state = useConceptState(concept.id);
   const setAskOpen = useUiStore((s) => s.setAskOpen);
   const unlocks = dependentsOf.get(concept.id) ?? [];
-  const { content } = concept;
+  const { value: content, failed, retry } = useConceptContent(concept);
+  const questions = content?.questions ?? [];
   return (
     <div className="space-y-5">
       <p className="max-w-[70ch] text-base text-muted">
         <span className="font-medium text-text">Covers: </span>
         {concept.scope}
       </p>
-      {hasCoreContent(concept) ? (
-        <Levels key={concept.id} concept={concept} />
-      ) : (
+      {!hasCoreContent(concept) ? (
         <MissingContent concept={concept} onWriteNotes={onWriteNotes} />
+      ) : content ? (
+        <Levels key={concept.id} concept={concept} content={content} />
+      ) : failed ? (
+        <ContentUnavailable onRetry={retry} />
+      ) : (
+        <div className="space-y-4" aria-busy="true">
+          <Skeleton className="h-9 w-64 max-w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -185,10 +195,10 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
         </Button>
       </div>
 
-      {content.questions.length > 0 && (
+      {questions.length > 0 && (
         <Block title="Interview questions" id={`${concept.id}-questions`}>
           <ul className="divide-y divide-rule rounded-control border border-rule">
-            {content.questions.map((qa, i) => (
+            {questions.map((qa, i) => (
               <li key={i}>
                 <details className="group px-3 py-2">
                   <summary className="cursor-pointer list-none py-0.5 font-medium text-text marker:hidden">
@@ -197,7 +207,7 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
                       Show answer
                     </span>
                   </summary>
-                  <p className="mt-1 text-base text-muted">{qa.a}</p>
+                  <p className="mt-1 max-w-[70ch] text-base text-muted">{qa.a}</p>
                 </details>
               </li>
             ))}

@@ -133,7 +133,7 @@ Q: How do you generate subsets when the input has duplicates, without repeating 
 A: Sort the input, then in the loop over choices skip an element equal to the previous one at the same level (j > start and a[j] == a[j − 1]). Equal elements can still be chosen together, but a subset is never generated twice.
 
 ### signals
-- "all subsets", "power set", or every combination of items being present or absent
+- every possible selection of the items is wanted, each item either in or out (the "power set")
 - n up to about 20 with a choice per element
 - try every selection of items and keep the ones satisfying a condition
 - sum or property over every possible group of elements

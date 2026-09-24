@@ -1,7 +1,15 @@
 // F14 flashcards and F13 offline self-check: decks, scores and checklists.
 import { describe, expect, it } from "vitest";
+import { EMPTY_CONTENT } from "@/data/content";
 import { conceptById } from "@/data/syllabus";
-import { buildDeck, cardsForConcept, RATING_SCORE, sessionResults } from "@/lib/review/flashcards";
+import {
+  buildDeck,
+  cardsForConcept,
+  deckSize,
+  RATING_SCORE,
+  sessionResults,
+  type DeckItem,
+} from "@/lib/review/flashcards";
 import {
   MIN_EXPLAIN_WORDS,
   plainText,
@@ -14,24 +22,22 @@ import type { Concept } from "@/lib/types";
 
 const bfs = conceptById.get("dsa.graph-basics.bfs")!;
 
-function withQuestions(c: Concept, n: number): Concept {
+function withQuestions(c: Concept, n: number): DeckItem {
   return {
-    ...c,
+    concept: { ...c, written: { core: n > 0, deep: false, questions: n, any: true } },
     content: {
-      ...c.content,
+      simple: "Like ripples in a pond.",
       interview: ["Explores level by level", "Uses a **queue**", "O(V + E) time"],
       questions: Array.from({ length: n }, (_, i) => ({ q: `Q${i}`, a: `A${i}` })),
     },
   };
 }
+const unwritten = { concept: bfs, content: EMPTY_CONTENT };
 
 describe("flashcards", () => {
   it("uses seeded questions, or one recall card until they are written", () => {
     expect(cardsForConcept(withQuestions(bfs, 3)).map((c) => c.front)).toEqual(["Q0", "Q1", "Q2"]);
-    const recall = cardsForConcept({
-      ...bfs,
-      content: { simple: "", interview: [], questions: [] },
-    });
+    const recall = cardsForConcept(unwritten);
     expect(recall).toHaveLength(1);
     expect(recall[0]!.kind).toBe("recall");
     expect(recall[0]!.front).toContain(bfs.name);
@@ -46,6 +52,22 @@ describe("flashcards", () => {
     expect(deck).toHaveLength(5);
     expect(deck.map((x) => x.conceptId)).toEqual(["a", "a", "b", "c", "c"]);
     expect(buildDeck([a, b, c], 2).map((x) => x.conceptId)).toEqual(["a", "b"]);
+  });
+
+  it("predicts the deck size from the written flags alone", () => {
+    const items = [
+      withQuestions({ ...bfs, id: "a" }, 5),
+      withQuestions({ ...bfs, id: "b" }, 0),
+      withQuestions({ ...bfs, id: "c" }, 3),
+    ];
+    const concepts = items.map((i) => i.concept);
+    for (const max of [1, 2, 5, 9, 30]) {
+      const deck = buildDeck(items, max);
+      expect(deckSize(concepts, max)).toEqual({
+        cards: deck.length,
+        covered: new Set(deck.map((c) => c.conceptId)).size,
+      });
+    }
   });
 
   it("scores Again, Hard, Good and Easy and averages per concept", () => {
@@ -74,7 +96,8 @@ describe("explain it back, offline", () => {
   });
 
   it("uses interview bullets as the checklist", () => {
-    const items = selfCheckItems(withQuestions(bfs, 1));
+    const { concept, content } = withQuestions(bfs, 1);
+    const items = selfCheckItems(concept, content);
     expect(items.map((i) => i.text)).toEqual([
       "Explores level by level",
       "Uses a queue",
@@ -84,7 +107,7 @@ describe("explain it back, offline", () => {
 
   it("falls back to the parts of the scope", () => {
     expect(scopeParts("a, b (c, d); `x, y`, e")).toEqual(["a", "b (c, d)", "x, y", "e"]);
-    const items = selfCheckItems({ ...bfs, content: { simple: "", interview: [], questions: [] } });
+    const items = selfCheckItems(bfs, EMPTY_CONTENT);
     expect(items.length).toBeGreaterThan(1);
     expect(items.map((i) => i.text).join(", ")).toBe(scopeParts(bfs.scope).join(", "));
   });

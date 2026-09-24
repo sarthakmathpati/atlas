@@ -3,16 +3,18 @@
 Read `CLAUDE.md` first, then this file, then `BUILD_SPEC.md`. Update this file at the end of every
 work session and at least every hour.
 
-**Current state:** Phases 0 to 4 are done (sessions 1 to 4, 24 Sep 2026). The problem tracker
-(Phase 3) and now the map and concepts (Phase 4): a zoomable, colored knowledge map with semantic
-zoom, filters, focus mode, dragging, minimap, search fly-to, menus and the path to a concept; the
-concept panel (Learn, Practice, Notes, Ask) with "Why this color?"; manual status and never fade;
-the welcome questions with self-assessment; offline flashcards, explain it back and concept
-reviews; the owner's own concepts; "Ready to learn next" and plan items on Today.
-**Next up:** Phase 5 (content), one or two subjects per session, never two content sessions at
-once. Start with DSA (section 5.3 order). Every concept needs simple, interview and questions;
-must-know concepts need deep; patterns need signals and a template. Flashcards, explain it back,
-the Learn tab and the hint ladder pick the content up automatically.
+**Current state:** Phases 0 to 4 are done (sessions 1 to 4, 24 Sep 2026). Phase 5 (content) is
+under way: session 5 finished DSA (all 249 concepts, every must-know with a deep article, every
+pattern with signals and a template, every code block compiled and run) and wrote the pattern drill
+bank (276 original prompts, at least 3 per pattern). Concept text now loads per subject on demand,
+so the startup bundle stays small as content grows.
+**Next up:** Phase 5 continues with OOP, then OS (section 5.3 order: DSA, OOP, OS, CN, DBMS, SQL,
+System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles, Markets, Architecture,
+Aptitude, Engineering essentials, Career), one or two subjects per session, never two content
+sessions at once. Follow `content/README.md` → "Writing conventions", run
+`npm run check:content-code -- <subject>`, and add each finished subject to `FINISHED` in
+`tests/syllabus/content.test.ts`. Still to write in Phase 5 besides concepts: extra quant puzzles
+(section 8.2) and design prompts with rubrics (section 8.4), unless they are already complete.
 
 ## Phases (BUILD_SPEC.md section 13)
 
@@ -23,7 +25,7 @@ the Learn tab and the hint ladder pick the content up automatically.
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5 (in progress): DSA, 141 of 249 concepts written so far (topics complexity to tries), every code block compiled and run against worked examples. |
+| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -37,15 +39,15 @@ Status: **Not started**, **Foundation** (data or logic exists, no UI yet), **In 
 |---|---|---|---|---|
 | F1 | App shell, navigation and theme | 2 | Done | Sidebar (collapsible; collapsed by default under 1024 px), top bar, bottom tabs and More sheet under 768 px, every route in the spec (plus a `#/practice` hub and `#/kit`), toasts with Undo, skeletons while loading, error boundaries (app and per page) with "Export my data", no-flash theme. The Ask Claude button opens a drawer with the context chip; the chat itself is F20 (Phase 6). |
 | F2 | Knowledge map | 4 | Done | React Flow canvas on a drafting grid with adaptive spacing. Far (below 0.3): subject cards over tinted organic regions, progress ring (share strong), coral fading badge, cross-subject links bundled per subject pair (thickness by count). Middle (to 0.7): topic cards with a status bar (culled when crowded), topic prerequisite arrows, status dots, faint subject names. Near: concept bubbles in the four status shapes, sized by importance, P mark for patterns, clock when due, dot for linked problems (bigger for 3+), diamond for your own concepts, labels that never overlap. Level changes cross-fade. Pan, zoom, pinch, zoom buttons, fit all; click a region or topic to fly there; click a concept to open the panel; hover tooltip plus prerequisite and dependent highlight; right-click or long-press menu (studied, set status, flashcards, explain it back, Ask Claude, path, add to plan, hide); drag with a mouse to move (saved, Reset layout with undo); filters (subjects, status, importance, ready to learn, due, track override, advanced, hidden) in the URL; focus mode (1 or 2 steps); minimap with status dots; search jump flies and pulses; add your own concept from a topic's menu or the map menu; the ink moment when a concept turns strong; list view (F30). Dragging is off on touch screens (touch pans; long-press opens the menu). 60 fps couldn't be measured in the headless browser; only visible bubbles render and each subscribes to its own status. |
-| F3 | Concept panel | 4 | Done | Side panel (resizable, from 768 px) or bottom sheet on the map, and `#/concept/<id>` as a page. Header: breadcrumb, name, status chip with "Why this color?" (knowledge and its sources, practice by difficulty, reviews, what would turn it green, manual status and never fade), importance, minutes, tracks, pattern, unverified, yours, hidden. Learn: Simple, Interview, Deep (remembered per concept; Simple for not started), scope, Mark as studied, Flashcards, Explain it back, Quick quiz and Ask Claude (phase 6 dialogs), interview questions with hidden answers, Learn first, Unlocks, Connected ideas (fly the map there). Practice: suggested next problem (easy, medium, hard ramp), linked problems with status and next review, signals and template for patterns (when written), drill (phase 8). Notes: autosaved Markdown with preview (side by side when wide), saved answers (move into notes, delete with undo), your explanations. Ask: what arrives in phase 6. Back and forward through visited concepts. "Explain with Claude" for missing content arrives in phase 6. |
+| F3 | Concept panel | 4 | Done | Side panel (resizable, from 768 px) or bottom sheet on the map, and `#/concept/<id>` as a page. Header: breadcrumb, name, status chip with "Why this color?" (knowledge and its sources, practice by difficulty, reviews, what would turn it green, manual status and never fade), importance, minutes, tracks, pattern, unverified, yours, hidden. Learn: Simple, Interview, Deep (remembered per concept; Simple for not started), scope, Mark as studied, Flashcards, Explain it back, Quick quiz and Ask Claude (phase 6 dialogs), interview questions with hidden answers, Learn first, Unlocks, Connected ideas (fly the map there). Practice: suggested next problem (easy, medium, hard ramp), linked problems with status and next review, signals and template for patterns (when written), drill (phase 8). Notes: autosaved Markdown with preview (side by side when wide), saved answers (move into notes, delete with undo), your explanations. Ask: what arrives in phase 6. Back and forward through visited concepts. "Explain with Claude" for missing content arrives in phase 6. The text loads with its subject (skeleton meanwhile, "Try again" if it fails). |
 | F4 | Mastery status and colors | 4 | Done | Section 11.2 engine with tests; statuses refresh after attempts, checks, studied, manual status, on start and at midnight. Manual status (a manual strong counts as a 0.8 check and still fades when overdue), never fade, "Why this color?" computed by the same functions as the status, status changes to strong or fading logged per day, the ink moment. |
 | F5 | Onboarding and self-assessment | 4 | Done | `#/welcome` on first visit (re-run from Settings → Profile or Today): name and track, interview date and language (suggests C++ for quant), daily time and balance, per-subject self-assessment with topic checklists (some: 0.3, learning; comfortable: 0.5 plus reviews from tomorrow, at most 15 a day, must-know first), Claude mode, CSV import. Skippable; answers editable later. Today then shows ready-to-learn concepts; the full plan comes with the planner (phase 7). |
 | F6 | Problem library | 3 | Done | All 435 LeetCode (incl. SQL), 41 quant and 46 design prompts plus the owner's own. Columns: status, number and title, difficulty, patterns, last result, last tried, next review, star; cards on phones. Filters (status incl. mastered, difficulty, source, topic or subject, pattern, owner tags, due, starred, premium) combine and live in the URL; sort by any column; group by topic; header stats. Quick add (link, number or title; own problems prefilled from the slug; offline "Suggest patterns"). CSV import with preview, options and undo. Renders progressively. Claude pattern suggestions in Phase 6. |
 | F7 | Problem workspace, code saving and attempts | 3 | Done | Split view (resizable) or Problem/Code tabs; insight, summary, notes (write/preview), own tags, link editing, own-problem editing and delete with undo; CodeMirror with language picker (profile language, SQL for SQL, plain text for puzzles), starter template toggle, timer (auto-start on first keystroke, counts toward activity); drafts autosave in 2 s and on leaving; save dialog (four results with honest locks, minutes from the timer, complexities, approach, mistake tags with inline add, insight nudge on the first solve); attempts timeline, code viewer, copy into editor, delete with undo, two-attempt diff; toast with the next review. Review my code and Dry run are Claude features (Phase 6, honest dialogs). Not built: the optional JavaScript runner (stretch goal). |
 | F8 | Mistake journal | 3 | Done | Top mistakes for 30 days, 90 days or all time with trend arrows; pre-interview checklist (top 5, editable "how to avoid it"); by category; "where they happen" by pattern; every attempt per tag linking to its code; manage tags (add, rename, category, how to avoid, archive, merge with re-tagging and undo). "Suggest with Claude" in Phase 6; the checklist joins revision sheets in Phase 7. |
 | F9 | Re-solve reminders and review queue | 3 / 4 | Done | Problems: section 11.1 scheduling (tested table by table), Review page most urgent first with reasons and estimates, coming up this week, mastered count, badge, re-solve mode with hidden earlier work and Reveal, "Bring it back for review", retirement, tricky problems, local-midnight rollover. Concepts: due concepts on the Review page with a short review (interview points, then flashcards or explain it back; counts even before the due date), "Flashcards for all", schedule moved by each check (tested). |
-| F10 | Pattern drill | 8 | Foundation | `drills.seed.ts` holds the 2 spec examples; the 270+ prompt bank is written in Phase 5. |
-| F11 | Hint ladder | 3 / 6 | In progress | Offline ladder done: nudge, approach, pseudocode (warning first), revealed by clicks only, hints used saved on the attempt (and in the draft), "Show full solution" with confirmation opens the LeetCode editorial or a puzzle's answer and marks "saw the solution". Works for every seed problem with patterns (tested). Claude-written, cached hints in Phase 6. |
+| F10 | Pattern drill | 8 | Foundation | The seed bank is written: 276 original prompts in everyday settings, each with its answer patterns, a one-line key insight and a difficulty; every one of the 90 patterns is the main answer of at least 3 (tested). The drill page arrives in phase 8. |
+| F11 | Hint ladder | 3 / 6 | In progress | Offline ladder done: nudge, approach, pseudocode (warning first), revealed by clicks only, hints used saved on the attempt (and in the draft), "Show full solution" with confirmation opens the LeetCode editorial or a puzzle's answer and marks "saw the solution". Works for every seed problem with patterns (tested). With DSA written, the nudge uses the pattern's first signal as a clue, the approach lists its signals and the pseudocode is its C++ template. Claude-written, cached hints in Phase 6. |
 | F12 | Claude code review and dry run | 6 | Foundation | Code review zod schema. |
 | F13 | Explain it back | 4 / 6 | In progress | Offline self-check done: 40-word minimum with a gentle counter, then tick the interview points (or scope parts) you covered; score = ticked / total, saved as a check with your text; history in the Notes tab. Claude grading arrives in phase 6. |
 | F14 | Quizzes and flashcards | 4 / 6 | In progress | Offline flashcards done: one concept, a topic, a subject or everything due (`#/quiz`, the panel, the map menu, Review, search); Again, Hard, Good, Easy; one check per concept per session; moves the review schedule; recall cards until questions are written. Claude quick quizzes arrive in phase 6. |
@@ -74,7 +76,7 @@ deep for every must-know concept; signals and template for every pattern.
 | Subject | Concepts with core content | Must-know with deep | Patterns with signals and template |
 |---|---|---|---|
 | lang | 0 / 46 | 0 / 22 | – |
-| dsa | 141 / 249 | 72 / 115 | 62 / 90 |
+| dsa | 249 / 249 | 115 / 115 | 90 / 90 |
 | oop | 0 / 53 | 0 / 24 | – |
 | lld | 0 / 32 | 0 / 11 | – |
 | os | 0 / 65 | 0 / 29 | – |
@@ -110,12 +112,14 @@ deep for every must-know concept; signals and template for every pattern.
 - **GitHub push (session 1):** the first push failed with "Claude doesn't have GitHub access"
   (HTTP 403); it worked after GitHub was reconnected at https://claude.ai/connect-github. If it
   happens again, commits stay safe locally, but push before the session ends.
-- **Bundle size:** pages load lazily now. The web build's main file is still about 1 MB before
-  compression, mostly React and the syllabus JSON (about 440 KB), which the palette and the Ask
-  Claude context need at once. Heavy parts are separate chunks: CodeMirror (about 650 KB, shared by
-  the editor and code highlighting), Markdown with KaTeX (about 430 KB) and Recharts (about
-  380 KB, only on the design kit page for now). The artifact file is 3.4 MB (limit 15 MB). Revisit
-  in Phase 9 (for example, load the syllabus JSON with a dynamic import after first paint).
+- **Bundle size:** pages load lazily. Since session 5 the concept text is out of the startup
+  bundle (CLAUDE.md decision 53): the syllabus structure chunk is about 370 KB (66 KB gzipped),
+  and each subject's text is its own chunk (DSA: 1.16 MB, 377 KB gzipped), loaded when a concept,
+  flashcards, hints or the palette first need it. Other heavy chunks: CodeMirror (about 650 KB),
+  Markdown with KaTeX (about 430 KB), Recharts (about 370 KB, design kit only). The artifact file
+  inlines everything: 5.2 MB now (limit 15 MB); at the DSA rate, all 18 subjects would add about
+  4 to 5 MB more, so it should stay under the limit, but watch `check-artifact` after each
+  content session. If it gets close, compress the content chunks in the artifact build.
 - **Quant bank:** the spec table has 41 puzzles, not 40. Four prompts carry a short answer-format
   hint (for example "(Answer in minutes.)"); `q-twenty-one` has a two-part spoken answer, so it is
   self-graded against its note.
@@ -132,6 +136,18 @@ deep for every must-know concept; signals and template for every pattern.
   the shell now, because the top bar and Settings need them.
 - **Ask Claude drawer, "Explain with Claude", API key, Review my code, Dry run, Suggest with
   Claude:** each shows an honest "arrives in phase 6" message; nothing pretends to work.
+- **Phase 5 notes (session 5, DSA):** content was checked three ways: `check:content-code`
+  compiles every C++ block (g++ -std=c++20, in parallel, about 35 s) and parses every Python block;
+  snippets were run against their worked examples and random tests against brute force (C++ with
+  AddressSanitizer and UBSan); concept metadata was diffed against the Phase 4 baseline, so no id,
+  name, scope, prerequisite or importance changed and the map didn't move. Bugs found and fixed on
+  the way: a unary minus in the expression evaluator, capacity 0 in the LRU cache, an empty target
+  in the minimum window code, and several worked-example tables. The build now fails on stray `###`
+  headings. The hint nudge reads "A clue to look for: …", and a test makes sure it never names
+  the pattern. Screens reviewed: Learn (simple, deep, questions), Practice (signals, template),
+  flashcards with real questions, explain it back with interview points, hints in the workspace
+  and search by a simple-level word, at 390 and 1280 px in both themes; no console errors. Fixed
+  on the way: linked problem rows now wrap under long titles on phones.
 - **Phase 3 notes (session 3):** the section 11.2 status engine and concept scheduling were built
   now (see CLAUDE.md decisions 29 to 39), so Phase 4 builds UI on them. Offline hint text lives in
   `src/data/hintLadder.ts` (original, per topic); Phase 5's templates and signals make levels 1 to

@@ -12,10 +12,11 @@ import { cx } from "@/components/ui/cx";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field, Input, Select, Switch, Textarea, type SelectOption } from "@/components/ui/Field";
 import { IMPORTANCE_LABEL, STATUS_LABEL, STATUS_ORDER } from "@/components/ui/labels";
+import { Skeleton } from "@/components/ui/Misc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { subjects, topicById, topicsBySubject } from "@/data/syllabus";
-import { buildDeck } from "@/lib/review/flashcards";
+import { deckSize } from "@/lib/review/flashcards";
 import {
   MIN_EXPLAIN_WORDS,
   plainText,
@@ -32,8 +33,10 @@ import {
   setNeverFade,
   useConceptState,
 } from "@/stores/conceptStateStore";
+import { useConceptContent } from "@/stores/contentStore";
 import { addCustomConcept, findConcept, useConcept } from "@/stores/customConceptStore";
 import { toast } from "@/stores/toastStore";
+import { ContentUnavailable } from "../../concept/ContentUnavailable";
 import { FlashcardIntro, FlashcardSession } from "./FlashcardSession";
 
 // ----- flashcards ------------------------------------------------------------------------------
@@ -44,9 +47,7 @@ function FlashcardsDialog() {
   const key = request ? `${request.title}|${request.conceptIds.join(",")}` : null;
   const deck = useMemo(() => {
     if (!request) return { cards: 0, covered: 0 };
-    const list = request.conceptIds.map((id) => findConcept(id)).filter((c) => c !== undefined);
-    const cards = buildDeck(list);
-    return { cards: cards.length, covered: new Set(cards.map((c) => c.conceptId)).size };
+    return deckSize(request.conceptIds.map((id) => findConcept(id)).filter((c) => c !== undefined));
   }, [request]);
   const close = () => {
     setStarted(null);
@@ -98,11 +99,16 @@ function ExplainBody({
   const [step, setStep] = useState<"write" | "check" | "done">("write");
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   const [score, setScore] = useState(0);
-  const items = useMemo(() => (concept ? selfCheckItems(concept) : []), [concept]);
+  // The points to tick come from the interview level, which loads while the owner writes.
+  const { value: content, failed, retry } = useConceptContent(concept);
+  const items = useMemo(
+    () => (concept && content ? selfCheckItems(concept, content) : []),
+    [concept, content],
+  );
   if (!concept) return null;
   const words = wordCount(text);
   const enough = words >= MIN_EXPLAIN_WORDS;
-  const fromScope = concept.content.interview.length === 0;
+  const fromScope = (content?.interview.length ?? 0) === 0;
 
   const save = () => {
     const s = selfCheckScore(ticked.size, items.length);
@@ -150,6 +156,25 @@ function ExplainBody({
         <div className="flex justify-end">
           <Button variant="primary" disabled={!enough} onClick={() => setStep("check")}>
             Check my explanation
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "check" && !content) {
+    return (
+      <div className="flex flex-col gap-3 px-4 py-4 sm:px-5">
+        {failed ? (
+          <ContentUnavailable onRetry={retry} />
+        ) : (
+          <div role="status" aria-label="Loading the points to check">
+            <Skeleton className="h-40 w-full" />
+          </div>
+        )}
+        <div className="flex justify-start">
+          <Button variant="ghost" onClick={() => setStep("write")}>
+            Edit my explanation
           </Button>
         </div>
       </div>
@@ -265,7 +290,8 @@ function ConceptReviewDialog() {
   const conceptId = useConceptDialogs((s) => s.review);
   const concept = useConcept(conceptId ?? undefined);
   const close = () => useConceptDialogs.setState({ review: null });
-  const points = concept?.content.interview ?? [];
+  const { value: content, failed, retry } = useConceptContent(concept);
+  const points = content?.interview ?? [];
   return (
     <Dialog
       open={conceptId !== null}
@@ -305,7 +331,11 @@ function ConceptReviewDialog() {
     >
       {concept && (
         <div className="px-4 py-4 sm:px-5">
-          {points.length > 0 ? (
+          {failed ? (
+            <ContentUnavailable onRetry={retry} />
+          ) : !content ? (
+            <Skeleton className="h-32 w-full" />
+          ) : points.length > 0 ? (
             <ul className="list-disc space-y-1.5 pl-5 text-base text-text">
               {points.map((p) => (
                 <li key={p}>{plainText(p)}</li>

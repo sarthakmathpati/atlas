@@ -163,7 +163,7 @@ export const TOPIC_HINTS: Record<string, TopicHints> = {
     ],
   },
   "dsa.backtracking": {
-    area: "Combinations and choices",
+    area: "Exploring every choice",
     nudge:
       "Do you need every valid arrangement or selection? If you build one choice at a time, what can you choose next, and when should you stop and undo?",
     outline: [
@@ -397,7 +397,7 @@ export const TOPIC_HINTS: Record<string, TopicHints> = {
   "dsa.math": {
     area: "Math",
     nudge:
-      "Is there a formula, an invariant or a number property (gcd, primes, remainders) that replaces the brute-force loop?",
+      "Is there a formula, an invariant or a number property (divisibility, remainders, parity) that replaces the brute-force loop?",
     outline: [
       "Work out small cases by hand and look for a pattern.",
       "Name the property you use (divisibility, gcd, modular arithmetic, digit sums).",
