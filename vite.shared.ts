@@ -34,10 +34,63 @@ function bundleStats(outDir: string): Plugin {
   };
 }
 
+/** KaTeX's stylesheet lists each math font three times (woff2, woff, ttf). Every browser Atlas
+ *  supports reads woff2, so drop the other two formats: they would triple the inlined font size
+ *  in the single-file artifact. */
+function katexWoff2Only(): Plugin {
+  return {
+    name: "atlas-katex-woff2-only",
+    enforce: "pre",
+    transform(code, id) {
+      if (!/katex(\.min)?\.css($|\?)/.test(id)) return null;
+      return code.replace(
+        /,\s*url\([^)]+\.woff\)\s*format\("woff"\)\s*,\s*url\([^)]+\.ttf\)\s*format\("truetype"\)/g,
+        "",
+      );
+    },
+  };
+}
+
+/** A few bundled libraries mention documentation URLs inside error messages. They are never
+ *  fetched, but the artifact check rejects any URL it hasn't reviewed, so the build rewrites these
+ *  exact strings into plain words instead of widening the check (CLAUDE.md decision 10). */
+const LIBRARY_LINK_REWRITES: { module: RegExp; from: string; to: string }[] = [
+  {
+    module: /hast-util-to-jsx-runtime[\\/]/,
+    from: "https://github.com/syntax-tree/hast-util-to-jsx-runtime",
+    to: "the hast-util-to-jsx-runtime readme",
+  },
+  {
+    module: /[\\/]redux[\\/]dist[\\/]/,
+    from: "https://redux.js.org/Errors?code=",
+    to: "the Redux error list, code ",
+  },
+  {
+    module: /[\\/]@reduxjs[\\/]toolkit[\\/]dist[\\/]/,
+    from: "https://redux-toolkit.js.org/Errors?code=",
+    to: "the Redux Toolkit error list, code ",
+  },
+];
+
+function rewriteLibraryLinks(): Plugin {
+  return {
+    name: "atlas-rewrite-library-links",
+    enforce: "pre",
+    transform(code, id) {
+      let out = code;
+      for (const rule of LIBRARY_LINK_REWRITES) {
+        if (rule.module.test(id) && out.includes(rule.from))
+          out = out.split(rule.from).join(rule.to);
+      }
+      return out === code ? null : out;
+    },
+  };
+}
+
 export function sharedConfig(target: BuildTarget, outDir: string): UserConfig {
   return {
     base: "./",
-    plugins: [react(), tailwindcss(), bundleStats(outDir)],
+    plugins: [katexWoff2Only(), rewriteLibraryLinks(), react(), tailwindcss(), bundleStats(outDir)],
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),

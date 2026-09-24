@@ -50,9 +50,19 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   mistake tags, drills), validated against the syllabus by `tests/seed/*`.
 - **Types**: `src/lib/types.ts` (section 4). zod schemas for every stored entity in
   `src/lib/storage/schemas.ts`; AI JSON schemas in `src/lib/ai/schemas.ts`.
-- **State**: Zustand, one store per domain, hydrated from the Repository (from Phase 2).
-- **Routing**: hash routes (`#/map`, `#/problems/lc-1`).
-- **Styling**: Tailwind v4 + CSS custom properties in `src/styles/tokens.css` (section 12).
+- **State**: Zustand, one store per domain in `src/stores/` (profile, activity, focus timer,
+  concept statuses, toasts, shell UI), loaded by `app/providers/StoreHydrator.tsx` once storage is
+  ready, reloaded after import/reset and on remote changes. Stores write through the Repository.
+- **Routing**: hash routes (`#/map`, `#/problems/lc-1`) from a small router in `src/app/router.ts`;
+  `src/app/routes.tsx` maps every route to a lazy page. Links are plain `<a href="#/…">`.
+- **Shell**: `src/app/shell/` (AppShell, Sidebar, TopBar, MobileNav, PageHeader, PageFrame,
+  shortcuts, Ask Claude panel, focus timer). Every page starts with `<PageFrame><PageHeader/>`.
+- **Component kit**: `src/components/ui/` (section 12.7). Heavy parts are default exports loaded
+  with `lazy()`: `MarkdownView`, `code/CodeEditor`, `code/DiffView` (named), `charts`. The design
+  kit page `#/kit` (Settings → About) shows every component.
+- **Styling**: Tailwind v4 + CSS custom properties in `src/styles/tokens.css` (section 12);
+  `src/styles/components.css` (in `@layer components`) holds dialog motion, code token colors
+  and reading text. Always join classes with `cx()` so overrides win.
 - **Dates**: local time; due dates stored as `yyyy-mm-dd` (`src/lib/time.ts`).
 
 ## Commands
@@ -126,9 +136,46 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     seed answer) evaluates answers with a small recursive-descent parser, never `eval`: numbers,
     fractions, `%`, `+ - * / ^`, `e`, `pi`, `sqrt`, implicit multiplication, variables such as `n`
     (compared at n = 2, 3, 5, 10), and yes/no words. Tolerance 0.5% relative.
-16. **Preview page**: Phases 0 and 1 ship `src/features/preview/` as the live page. Phase 2
-    replaces it with the real shell. The ThemeToggle, TextFileDialog (the "downloads unavailable"
-    fallback from section 2.5) and ErrorBoundary are meant to be kept and moved into the shell.
+16. **Preview page** (Phases 0 and 1) was replaced by the shell in Phase 2. The theme toggle became
+    a menu in the top bar and a segmented control in Settings; TextFileDialog moved to
+    `app/shell`; ErrorBoundary wraps the app and, inline, each page (the shell keeps working).
 17. **GitHub Actions** use `actions/checkout@v5`, `setup-node@v5` (Node from `.nvmrc`),
     `configure-pages@v5`, `upload-pages-artifact@v4`, `deploy-pages@v4`. CI also fails if the
     committed generated data in `src/data` is stale.
+18. **Layers without a UI library**: Dialog, Drawer and BottomSheet use native `<dialog>` (real
+    modal, Escape, top layer); popovers, menus, comboboxes, tooltips and toasts use
+    `@floating-ui/react-dom` for position and the Popover API (`popover="manual"`, set only where
+    supported) to sit above dialogs. Motion is CSS (`@starting-style`, 150 to 200 ms); the `motion`
+    library isn't used yet. Reduced motion: `data-motion` on `<html>` from Settings, else the system.
+19. **Class merging**: `cx()` is tailwind-merge (with the `control`/`panel` radius and `float`
+    shadow tokens), so a `className` passed to a kit component overrides its defaults.
+20. **Code colors**: the editor and static views share lezer's `classHighlighter` (`tok-*`
+    classes) styled by `--code-*` tokens. CodeMirror is themed in JS (`EditorView.theme` on
+    tokens) because its injected styles beat layered CSS. Languages: C++, Java, Python,
+    JavaScript, SQL (MySQL dialect), plus TypeScript in Markdown.
+21. **KaTeX**: pinned to 0.16.x (rehype-katex's range) so one copy ships; a build plugin keeps
+    only woff2 fonts; one-line `$$…$$` is turned into display math (`components/ui/markdown.ts`).
+22. **Library link rewrites**: rather than allowing more hosts in `check-artifact.mjs`, the build
+    rewrites three error-message links (hast-util-to-jsx-runtime on GitHub, Redux and Redux
+    Toolkit error pages) into words (`vite.shared.ts`).
+23. **Charts** (Recharts wrappers in `components/ui/charts.tsx`): bars at most 24 px with a 4 px
+    rounded end, 2 px lines, hairline grid, legend for 2+ series, hover tooltip, and "Show as
+    table" on every chart. Difficulty uses an ordinal blue ramp validated against the surfaces
+    (light `#86b6ef/#2a78d6/#104281`; dark flips to `#2a78d6/#5598e7/#9ec5f4`).
+24. **Search** (F23): MiniSearch over subjects, topics, concepts, problems, puzzles, design prompts
+    and mistake tags; ids prefixed by kind (`concept:…`); prefix + fuzzy (0.25, words of 4+
+    letters), AND then OR; boosts must 1.3, important 1.1, topics 1.15, subjects 1.3. Built when the
+    browser is idle after first paint; mistake tags refresh when the palette opens.
+25. **Activity** (F29): an activity clock counts time while any source runs (focus timer now,
+    attempt timers from Phase 3); overlapping sources count once and gaps over 2 minutes (sleep)
+    don't count. `ActivityDay` gained optional `attempts`, `checks`, `planItemsDone` counters (no
+    migration needed). The streak freeze is derived, not stored: it covers one missed day with
+    active days on both sides, once per ISO week, and doesn't add to the count.
+26. **Backups**: the reminder counts from `createdAt` when there has never been a backup; showing
+    the file in the copy dialog counts as a backup. Replace-import and reset keep an in-memory
+    snapshot so the toast can undo them during the visit.
+27. **Later-phase routes** render "Arrives in phase N" pages (what the page will do, plus links to
+    what works). Concept, problem and design pages already show everything the seed data knows.
+28. **Per-browser conveniences in localStorage** (never synced, always in try/catch):
+    `atlas.theme`, `atlas.sidebar`, `atlas.recent` (palette), `atlas.setup.map|search` (Today
+    checklist), `atlas.askWidth` (drawer width).

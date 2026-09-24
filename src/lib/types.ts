@@ -346,6 +346,10 @@ export interface ActivityDay {
   problemsSolved: number;
   reviews: number;
   conceptsTouched: number;
+  /** Counters for "any attempt, check, or completed plan item" (section 11.7 active days). */
+  attempts?: number;
+  checks?: number;
+  planItemsDone?: number;
 }
 
 export interface ActivityMonth {

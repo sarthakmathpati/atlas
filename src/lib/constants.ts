@@ -16,6 +16,11 @@ export const CONCEPT_STEPS_DAYS = [2, 5, 12, 25, 50, 90] as const;
 export const REVIEW_INTENSITY = { gentle: 1.25, normal: 1, intense: 0.8 } as const;
 export const DIFFICULTY_FACTOR = { easy: 1.1, medium: 1, hard: 0.9 } as const;
 
+// Activity and streaks (11.7)
+export const ACTIVE_DAY_MINUTES = 10;
+/** Heatmap color levels: 0, 1 to 29, 30 to 59, 60 to 119, 120 or more minutes. */
+export const HEATMAP_LEVELS = [1, 30, 60, 120] as const;
+
 // Attempts (F7)
 export const ATTEMPT_CAP = 30;
 export const ATTEMPT_WARN = 20;
