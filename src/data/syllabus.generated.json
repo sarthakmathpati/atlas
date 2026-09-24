@@ -10650,9 +10650,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A graph is a set of things (vertices) and connections between them (edges), like cities and the roads joining them. You can store it as a list of neighbors for each city, as a big yes-or-no table of every pair, or as a plain list of roads. Which one you choose decides how fast each question about the graph can be answered.",
+    "interview": [
+     "**Adjacency list**: `adj[u]` holds u's neighbors (with weights if needed). Space **O(V + E)**; iterate neighbors in O(deg u). The default for sparse graphs and interview problems.",
+     "**Adjacency matrix**: `m[u][v]` is 1 or a weight. Space **O(V²)**; edge check O(1); iterating neighbors O(V). Good for dense graphs and Floyd-Warshall.",
+     "**Edge list**: a list of `(u, v, w)`. Good for Kruskal and Bellman-Ford, which just scan all edges.",
+     "**Undirected** edges are added in both directions; **directed** edges once. Weighted graphs store pairs `(v, w)`.",
+     "Many problems give edges as input, so building the adjacency list is step one; implicit graphs (grids, states) generate neighbors on the fly.",
+     "Say V and E out loud: complexities are written in both (BFS is O(V + E), not O(n))."
+    ],
+    "questions": [
+     {
+      "q": "When would you use an adjacency matrix instead of an adjacency list?",
+      "a": "When the graph is dense (E close to V²) or small, or when you need O(1) checks of whether an edge exists, as in Floyd-Warshall. For sparse graphs a matrix wastes O(V²) space and makes iterating over neighbors O(V)."
+     },
+     {
+      "q": "What is the space complexity of an adjacency list?",
+      "a": "O(V + E): one list per vertex, and each edge stored once (directed) or twice (undirected). That's why BFS and DFS on adjacency lists run in O(V + E)."
+     },
+     {
+      "q": "How do you represent a weighted graph?",
+      "a": "In an adjacency list, store (neighbor, weight) pairs. In a matrix, store the weight in m[u][v], with a sentinel such as infinity for missing edges. An edge list stores (u, v, weight) triples."
+     },
+     {
+      "q": "Which algorithms work naturally on an edge list?",
+      "a": "Algorithms that repeatedly scan all edges without needing neighbor lookups: Kruskal's algorithm (sort edges by weight) and Bellman-Ford (relax every edge V − 1 times)."
+     },
+     {
+      "q": "What is an implicit graph?",
+      "a": "A graph whose vertices and edges aren't stored but generated on demand, such as grid cells with their adjacent cells, or puzzle states with the moves between them. You write a function that produces a state's neighbors and run BFS or DFS over it."
+     }
+    ],
+    "deep": "#### Intuition\n\nA graph can be stored in several ways, and the right one depends on which operation must be fast. \"Who are the neighbors of u?\" favors an adjacency list. \"Is there an edge from u to v?\" favors a matrix. \"Give me all edges sorted by weight\" favors an edge list. Most interview graphs are sparse ($E$ close to $V$), so adjacency lists win.\n\n#### Worked example\n\nDirected, weighted edges: `0→1 (4)`, `0→2 (1)`, `2→1 (2)`, `1→3 (5)`.\n\n| representation | contents |\n|---|---|\n| adjacency list | 0: [(1,4), (2,1)]; 1: [(3,5)]; 2: [(1,2)]; 3: [] |\n| matrix (∞ = no edge) | row 0: [0, 4, 1, ∞]; row 1: [∞, 0, ∞, 5]; row 2: [∞, 2, 0, ∞]; row 3: [∞, ∞, ∞, 0] |\n| edge list | (0,1,4), (0,2,1), (2,1,2), (1,3,5) |\n\n#### Code\n\n```cpp\n// Build an adjacency list from an edge list.\nvector<vector<pair<int, int>>> buildWeighted(int n, const vector<array<int, 3>>& edges, bool directed) {\n    vector<vector<pair<int, int>>> adj(n);\n    for (auto [u, v, w] : edges) {\n        adj[u].push_back({v, w});\n        if (!directed) adj[v].push_back({u, w});\n    }\n    return adj;\n}\n\nvector<vector<int>> buildMatrix(int n, const vector<array<int, 3>>& edges) {\n    const int INF = INT_MAX / 2;                    // \"no edge\", safe to add twice\n    vector<vector<int>> m(n, vector<int>(n, INF));\n    for (int i = 0; i < n; i++) m[i][i] = 0;\n    for (auto [u, v, w] : edges) m[u][v] = min(m[u][v], w);  // keep the lightest parallel edge\n    return m;\n}\n```\n\n```python\nfrom collections import defaultdict\n\ndef build_adjacency(edges, directed=False):\n    adj = defaultdict(list)          # works for any hashable vertex labels\n    for u, v in edges:\n        adj[u].append(v)\n        if not directed:\n            adj[v].append(u)\n    return adj\n\ndef in_out_degrees(n, edges):\n    indeg, outdeg = [0] * n, [0] * n\n    for u, v in edges:\n        outdeg[u] += 1\n        indeg[v] += 1\n    return indeg, outdeg\n```\n\n#### Cost comparison\n\n| Operation | Adjacency list | Matrix | Edge list |\n|---|---|---|---|\n| Space | $O(V + E)$ | $O(V^2)$ | $O(E)$ |\n| Is (u, v) an edge? | $O(\\deg u)$ | $O(1)$ | $O(E)$ |\n| Neighbors of u | $O(\\deg u)$ | $O(V)$ | $O(E)$ |\n| Full traversal | $O(V + E)$ | $O(V^2)$ | |\n\nWith $V = 10^5$, a matrix needs $10^{10}$ cells: impossible. With $V = 500$, a matrix is fine and simplifies code.\n\n#### Implicit graphs\n\nMany graphs are never stored: a grid (neighbors are adjacent cells), a word ladder (neighbors differ by one letter), a lock (neighbors turn one wheel). Write a `neighbors(state)` function and run the usual traversal; the complexity counts the states and transitions you generate.\n\n#### Edge cases and bugs\n\n- Forgetting the reverse edge in undirected graphs.\n- Vertices labeled 1 to n: allocate `n + 1` slots or subtract 1.\n- Self-loops and parallel edges: decide whether they matter (cycle detection, counting).\n- Disconnected graphs: traversals must start from every unvisited vertex.\n\n#### Variants\n\nIn-degree and out-degree arrays (topological sort), reversed graphs (Kosaraju, \"who can reach the target\"), compressed sparse row format (fast, static), and hash-map adjacency for string vertices.\n\nConnects to: BFS, DFS, topological sort, shortest paths, Kruskal's algorithm."
    }
   },
   {
@@ -10675,9 +10704,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "BFS explores a graph in rings, like ripples spreading from a stone dropped in water. It visits everything one step away, then two steps away, and so on. That is why it finds the shortest path when every edge costs the same.",
+    "interview": [
+     "Queue plus visited set: push the start, mark it; pop a vertex, push each **unvisited** neighbor and mark it **when pushed** (not when popped).",
+     "Distances: `dist[v] = dist[u] + 1` when v is discovered from u. The first time a vertex is reached is along a shortest path (unweighted).",
+     "**O(V + E)** time, **O(V)** space.",
+     "Levels: process the queue in batches (size snapshot) to know the current distance.",
+     "Path reconstruction: store `parent[v]`, walk back from the target.",
+     "Weighted graphs need Dijkstra; weights 0 and 1 need 0-1 BFS."
+    ],
+    "questions": [
+     {
+      "q": "Why does BFS find shortest paths in unweighted graphs?",
+      "a": "The queue processes vertices in order of discovery, so all vertices at distance d are processed before any at distance d + 1. When a vertex is first discovered, it is from a vertex one step closer to the source, so its recorded distance is the minimum possible."
+     },
+     {
+      "q": "What is the time and space complexity of BFS?",
+      "a": "O(V + E) time with an adjacency list, since each vertex is enqueued once and each edge examined once (twice for undirected graphs). O(V) space for the queue and visited markers."
+     },
+     {
+      "q": "Why should you mark vertices as visited when you push them rather than when you pop them?",
+      "a": "Otherwise a vertex can be pushed many times by different neighbors before it is processed, blowing the queue up to O(E) entries and wasting time. Marking on push ensures each vertex is queued exactly once."
+     },
+     {
+      "q": "How do you reconstruct the actual shortest path, not just its length?",
+      "a": "Record parent[v] = u when v is discovered from u. After BFS, start at the target and follow parents back to the source, then reverse the list."
+     },
+     {
+      "q": "When is BFS the wrong choice for shortest paths?",
+      "a": "When edges have different non-negative weights: BFS minimizes the number of edges, not total weight, so use Dijkstra. With weights 0 and 1 only, a 0-1 BFS with a deque works. With negative weights, use Bellman-Ford."
+     }
+    ],
+    "deep": "#### Intuition\n\nA queue releases vertices in the order they were discovered. Vertices at distance 1 are discovered before any at distance 2, those before distance 3, and so on, so BFS visits vertices in non-decreasing order of distance from the start. When every edge has the same cost, the first time you reach a vertex is therefore along a shortest path.\n\n#### Worked example\n\nGraph: `0–1, 0–2, 1–3, 2–3, 3–4`. BFS from 0.\n\n| step | pop | newly discovered (dist) | queue after |\n|---|---|---|---|\n| 1 | 0 | 1 (1), 2 (1) | 1 2 |\n| 2 | 1 | 3 (2) | 2 3 |\n| 3 | 2 | (3 already seen) | 3 |\n| 4 | 3 | 4 (3) | 4 |\n| 5 | 4 | | |\n\nDistances: 0:0, 1:1, 2:1, 3:2, 4:3. Path to 4 via parents: 4 ← 3 ← 1 ← 0.\n\n#### Code\n\n```cpp\n// Shortest distances (in edges) from src; -1 means unreachable.\nvector<int> bfsDistances(const vector<vector<int>>& adj, int src) {\n    vector<int> dist(adj.size(), -1);\n    queue<int> q;\n    dist[src] = 0;                                   // mark when pushed\n    q.push(src);\n    while (!q.empty()) {\n        int u = q.front(); q.pop();\n        for (int v : adj[u]) {\n            if (dist[v] != -1) continue;             // already discovered\n            dist[v] = dist[u] + 1;\n            q.push(v);\n        }\n    }\n    return dist;\n}\n\nvector<int> shortestPath(const vector<vector<int>>& adj, int src, int dst) {\n    vector<int> parent(adj.size(), -2);              // -2: unseen\n    queue<int> q;\n    parent[src] = -1;\n    q.push(src);\n    while (!q.empty() && parent[dst] == -2) {\n        int u = q.front(); q.pop();\n        for (int v : adj[u])\n            if (parent[v] == -2) { parent[v] = u; q.push(v); }\n    }\n    if (parent[dst] == -2) return {};\n    vector<int> path;\n    for (int v = dst; v != -1; v = parent[v]) path.push_back(v);\n    reverse(path.begin(), path.end());\n    return path;\n}\n```\n\n```python\nfrom collections import deque\n\ndef bfs_levels(adj, src):\n    \"\"\"Vertices grouped by distance from src.\"\"\"\n    seen, levels, q = {src}, [], deque([src])\n    while q:\n        level = []\n        for _ in range(len(q)):\n            u = q.popleft()\n            level.append(u)\n            for v in adj[u]:\n                if v not in seen:\n                    seen.add(v)\n                    q.append(v)\n        levels.append(level)\n    return levels\n```\n\n#### Why mark on push, not on pop\n\nIf you mark a vertex only when it is popped, it can be pushed several times by different neighbors before its first pop. The answers stay correct, but the queue can grow to $O(E)$ and time increases. Marking when pushing guarantees each vertex enters the queue once.\n\n#### Complexity\n\nEach vertex is enqueued and dequeued once, and each adjacency list is scanned once: $O(V + E)$ time. The queue and visited array take $O(V)$ space.\n\n#### Edge cases and bugs\n\n- Disconnected graphs: unreachable vertices keep distance −1 (or ∞).\n- Source equals target: distance 0.\n- Using BFS on weighted graphs gives the fewest edges, not the least cost.\n- Using a Python list as a queue (`pop(0)` is O(n)).\n\n#### Variants\n\n- Multi-source BFS (start with many sources at distance 0).\n- Bidirectional BFS: search from both ends and meet in the middle, often exploring far fewer states.\n- BFS on grids and state spaces; 0-1 BFS with a deque; BFS layers for bipartite checks.\n\nConnects to: queues, DFS, multi-source BFS, Dijkstra's algorithm, level-order traversal.",
+    "signals": [
+     "shortest path or fewest steps when every move costs the same",
+     "\"minimum number of moves, jumps or transformations\"",
+     "process nodes level by level, in rings around a start",
+     "the nearest node satisfying a condition"
+    ],
+    "template": "```cpp\n// BFS from a source over an implicit or explicit graph; dist doubles as \"visited\".\ntemplate <class Neighbors>\nvector<int> bfs(int n, int src, Neighbors neighbors) {\n    vector<int> dist(n, -1);\n    queue<int> q;\n    dist[src] = 0;\n    q.push(src);\n    while (!q.empty()) {\n        int u = q.front(); q.pop();\n        for (int v : neighbors(u)) {\n            if (dist[v] != -1) continue;       // seen already\n            dist[v] = dist[u] + 1;             // mark on push\n            q.push(v);                         // (return early here if v is the target)\n        }\n    }\n    return dist;\n}\n```"
    }
   },
   {
@@ -10699,9 +10764,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "DFS explores a graph by following one path as far as it can go, then backing up to the last fork and trying the next branch. It is like exploring a maze by always taking the next unexplored corridor and retracing your steps at dead ends. It naturally finds everything reachable and reveals structure such as cycles and the order in which things must be done.",
+    "interview": [
+     "Recursive: mark u visited, recurse into each unvisited neighbor. Iterative: an explicit stack.",
+     "**O(V + E)** time, **O(V)** space (visited plus stack depth, which can be V).",
+     "**Discovery time** (when first visited) and **finish time** (when all descendants are done) power cycle detection, topological sort (reverse finish order) and SCCs.",
+     "Uses: reachability, connected components, cycle detection, topological sort, path existence, backtracking over states.",
+     "DFS does **not** give shortest paths in unweighted graphs; use BFS for those.",
+     "Deep recursion can overflow on large graphs (a path of 10⁵ vertices); switch to an iterative stack."
+    ],
+    "questions": [
+     {
+      "q": "What is the difference between BFS and DFS?",
+      "a": "BFS uses a queue and explores in order of distance from the start, so it finds shortest paths in unweighted graphs. DFS uses a stack or recursion and goes as deep as possible before backing up, which suits reachability, cycle detection, topological sort and exhaustive search. Both are O(V + E)."
+     },
+     {
+      "q": "What are discovery and finish times used for?",
+      "a": "Discovery is when DFS first reaches a vertex; finish is when all vertices reachable from it are done. Reverse finish order gives a topological order in a DAG, an edge to a discovered but unfinished vertex reveals a cycle in a directed graph, and finish times drive Kosaraju's SCC algorithm."
+     },
+     {
+      "q": "When would you use iterative DFS instead of recursion?",
+      "a": "When the graph can be deep, such as a path of 10^5 vertices, which can overflow the call stack, especially in Python. An explicit stack lives on the heap and avoids the limit."
+     },
+     {
+      "q": "Why doesn't DFS find shortest paths?",
+      "a": "DFS may reach a vertex first through a long detour, because it follows one branch to the end before trying others. Nothing guarantees the first visit is along a shortest path, unlike BFS, which explores by increasing distance."
+     },
+     {
+      "q": "What is the complexity of DFS, and why?",
+      "a": "O(V + E): every vertex is marked once and never revisited, and each adjacency list is scanned once when its vertex is processed."
+     }
+    ],
+    "deep": "#### Intuition\n\nDFS commits to one direction and goes deep, remembering where it came from on the call stack. When a vertex has no unvisited neighbors, the search backs up. The moment a vertex \"finishes\" (all its reachable descendants are done) carries structural information: in a directed acyclic graph, a vertex always finishes after everything it points to, which is exactly what topological sorting needs.\n\n#### Worked example: discovery and finish times\n\nDirected graph: `A→B, A→C, B→D, C→D`. DFS from A, neighbors in alphabetical order.\n\n| time | event | stack (top right) |\n|---|---|---|\n| 1 | discover A | A |\n| 2 | discover B | A B |\n| 3 | discover D | A B D |\n| 4 | finish D | A B |\n| 5 | finish B | A |\n| 6 | discover C (D already visited) | A C |\n| 7 | finish C | A |\n| 8 | finish A | |\n\nFinish order: D, B, C, A. Reversed: A, C, B, D, a valid topological order.\n\n#### Code\n\n```cpp\nvoid dfs(int u, const vector<vector<int>>& adj, vector<bool>& seen, vector<int>& finishOrder) {\n    seen[u] = true;                                  // discovery\n    for (int v : adj[u])\n        if (!seen[v]) dfs(v, adj, seen, finishOrder);\n    finishOrder.push_back(u);                        // finish: all descendants done\n}\n\n// Iterative DFS (preorder of discovery), safe for very deep graphs.\nvector<int> dfsIterative(const vector<vector<int>>& adj, int src) {\n    vector<bool> seen(adj.size(), false);\n    vector<int> order, st = {src};\n    while (!st.empty()) {\n        int u = st.back(); st.pop_back();\n        if (seen[u]) continue;                       // a vertex can be pushed more than once\n        seen[u] = true;\n        order.push_back(u);\n        for (int i = (int)adj[u].size() - 1; i >= 0; i--)  // reverse: visit in list order\n            if (!seen[adj[u][i]]) st.push_back(adj[u][i]);\n    }\n    return order;\n}\n```\n\n```python\ndef has_path(adj, src, dst):\n    seen, stack = {src}, [src]\n    while stack:\n        u = stack.pop()\n        if u == dst:\n            return True\n        for v in adj[u]:\n            if v not in seen:\n                seen.add(v)\n                stack.append(v)\n    return False\n\ndef all_paths_dag(adj, src, dst):\n    \"\"\"Every path from src to dst in a DAG (backtracking DFS; no visited set needed).\"\"\"\n    paths, path = [], [src]\n    def go(u):\n        if u == dst:\n            paths.append(path[:])\n            return\n        for v in adj[u]:\n            path.append(v)\n            go(v)\n            path.pop()\n    go(src)\n    return paths\n```\n\n#### Complexity\n\nEach vertex is visited once and each edge examined once (twice if undirected): $O(V + E)$. The visited array is $O(V)$, and the recursion or stack can reach depth $O(V)$. Enumerating **all** paths (backtracking) is exponential in the worst case, a different problem.\n\n#### Edge cases and bugs\n\n- Forgetting the visited set on graphs with cycles loops forever.\n- Stack overflow on long chains; Python's default limit is 1,000 frames.\n- In the iterative version, marking on pop (as above) allows duplicates on the stack; marking on push changes the visiting order slightly but also works for reachability.\n- Disconnected graphs: loop over all vertices and start DFS from each unvisited one.\n\n#### Variants\n\n- DFS with colors (white, gray, black) for directed cycle detection.\n- DFS on grids (flood fill, islands).\n- Tarjan's algorithms (bridges, articulation points, SCCs) use discovery times and low-links.\n- Backtracking is DFS over a tree of choices, where \"visited\" is undone on return.\n\nConnects to: BFS, connected components, cycle detection, topological sort, backtracking.",
+    "signals": [
+     "can you get from A to B (reachability, path existence)",
+     "explore everything connected to a start point",
+     "detect cycles or compute an order that respects dependencies",
+     "enumerate paths or configurations with backtracking"
+    ],
+    "template": "```cpp\n// Recursive DFS with discovery and finish hooks.\nstruct DFS {\n    const vector<vector<int>>& adj;\n    vector<int> state;                           // 0 = unseen, 1 = on the stack, 2 = finished\n    explicit DFS(const vector<vector<int>>& g) : adj(g), state(g.size(), 0) {}\n    void run(int u) {\n        state[u] = 1;                            // discovery: pre-work here\n        for (int v : adj[u]) {\n            if (state[v] == 0) run(v);           // tree edge\n            // state[v] == 1 here means a back edge (a cycle in a directed graph)\n        }\n        state[u] = 2;                            // finish: post-work here (e.g. push to an order)\n    }\n};\n```"
    }
   },
   {
@@ -10723,9 +10824,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A grid is a graph in disguise: each cell is a vertex, and it connects to its neighbors up, down, left and right. Counting islands on a map of land and water is just counting groups of connected land cells. You explore each group with DFS or BFS, marking cells as you go, like coloring in a region with a paint bucket.",
+    "interview": [
+     "Neighbors via direction arrays: `dr = {1, -1, 0, 0}`, `dc = {0, 0, 1, -1}`; 8 directions add the diagonals.",
+     "Always **bounds check** before reading `grid[r][c]`: `0 <= r < R && 0 <= c < C`.",
+     "**Flood fill / number of islands**: for each unvisited land cell, start a DFS or BFS that marks the whole island; count the starts. **O(R · C)**.",
+     "Mark visited by **overwriting** the grid (if allowed) or with a separate boolean grid.",
+     "Shortest path in a grid with unit steps: **BFS**. Obstacles are simply cells you skip.",
+     "Border tricks: surrounded regions and enclaves start from the border and mark everything reachable from it."
+    ],
+    "questions": [
+     {
+      "q": "How do you count the number of islands in a grid?",
+      "a": "Scan every cell. When you find unvisited land, increase the count and flood fill the whole island with DFS or BFS, marking each land cell visited. Each cell is processed once, so it's O(R · C)."
+     },
+     {
+      "q": "How do you generate the neighbors of a cell cleanly?",
+      "a": "Use direction arrays such as dr = {1, −1, 0, 0} and dc = {0, 0, 1, −1} (add the four diagonals for 8 directions), and for each direction compute the new cell and check it's inside the grid before using it."
+     },
+     {
+      "q": "Why might recursive flood fill fail on large grids, and what's the fix?",
+      "a": "A large all-land region makes the recursion as deep as the number of cells, which can overflow the call stack. Use an explicit stack or BFS queue instead."
+     },
+     {
+      "q": "How do you find the shortest path in a grid where each step costs 1?",
+      "a": "BFS from the start cell, skipping walls and visited cells; the distance when the target is first reached is the shortest path length. DFS doesn't guarantee shortest paths."
+     },
+     {
+      "q": "How do you solve \"surrounded regions\", where regions touching the border stay?",
+      "a": "Instead of searching each region, flood fill from every border cell that is open, marking the cells connected to the border. Afterwards, every open cell not marked is surrounded and can be flipped."
+     }
+    ],
+    "deep": "#### Intuition\n\nOnce you see cells as vertices and adjacency as edges, grid problems become ordinary graph traversals. The only grid-specific details are generating neighbors with direction arrays and staying inside the bounds. Because each cell has at most 4 (or 8) neighbors, $E = O(V)$ and every traversal is $O(R \\cdot C)$.\n\n#### Worked example: count islands\n\n```\n1 1 0 0\n1 0 0 1\n0 0 1 1\n0 0 0 0\n```\n\n| scan reaches | land and unvisited? | flood fill marks | islands |\n|---|---|---|---|\n| (0,0) | yes | (0,0), (0,1), (1,0) | 1 |\n| (1,3) | yes | (1,3), (2,3), (2,2) | 2 |\n| every other cell | no | | 2 |\n\n#### Code\n\n```cpp\nint numIslands(vector<vector<char>>& g) {\n    int R = g.size(), C = R ? g[0].size() : 0, islands = 0;\n    int dr[4] = {1, -1, 0, 0}, dc[4] = {0, 0, 1, -1};\n    for (int r = 0; r < R; r++)\n        for (int c = 0; c < C; c++) {\n            if (g[r][c] != '1') continue;\n            islands++;\n            vector<pair<int, int>> st = {{r, c}};          // iterative flood fill\n            g[r][c] = '0';                                  // mark when pushed\n            while (!st.empty()) {\n                auto [cr, cc] = st.back(); st.pop_back();\n                for (int k = 0; k < 4; k++) {\n                    int nr = cr + dr[k], nc = cc + dc[k];\n                    if (nr < 0 || nc < 0 || nr >= R || nc >= C || g[nr][nc] != '1') continue;\n                    g[nr][nc] = '0';\n                    st.push_back({nr, nc});\n                }\n            }\n        }\n    return islands;\n}\n\n// Shortest path from the top-left to the bottom-right through 0-cells (8 directions).\nint shortestClearPath(const vector<vector<int>>& g) {\n    int n = g.size();\n    if (g[0][0] || g[n - 1][n - 1]) return -1;\n    vector<vector<int>> dist(n, vector<int>(n, -1));\n    queue<pair<int, int>> q;\n    q.push({0, 0});\n    dist[0][0] = 1;                                         // counts cells on the path\n    while (!q.empty()) {\n        auto [r, c] = q.front(); q.pop();\n        for (int dr = -1; dr <= 1; dr++)\n            for (int dc = -1; dc <= 1; dc++) {\n                int nr = r + dr, nc = c + dc;\n                if (nr < 0 || nc < 0 || nr >= n || nc >= n || g[nr][nc] || dist[nr][nc] != -1) continue;\n                dist[nr][nc] = dist[r][c] + 1;\n                q.push({nr, nc});\n            }\n    }\n    return dist[n - 1][n - 1];\n}\n```\n\n```python\ndef max_area_of_island(grid):\n    R, C = len(grid), len(grid[0])\n    seen = [[False] * C for _ in range(R)]\n\n    def area(r, c):\n        stack, total = [(r, c)], 0\n        seen[r][c] = True\n        while stack:\n            cr, cc = stack.pop()\n            total += 1\n            for nr, nc in ((cr + 1, cc), (cr - 1, cc), (cr, cc + 1), (cr, cc - 1)):\n                if 0 <= nr < R and 0 <= nc < C and grid[nr][nc] == 1 and not seen[nr][nc]:\n                    seen[nr][nc] = True\n                    stack.append((nr, nc))\n        return total\n\n    return max((area(r, c) for r in range(R) for c in range(C)\n                if grid[r][c] == 1 and not seen[r][c]), default=0)\n```\n\n#### Marking visited: overwrite or keep a grid?\n\nOverwriting cells (land becomes water, or a sentinel like `'#'`) saves memory and is common in interviews, but it destroys the input; say so and offer to restore it or copy it. A separate `visited` grid keeps the input intact and is required when the same grid is searched several times with different rules. For problems where the path matters (word search), the mark must be removed on the way back; for reachability (islands), it stays.\n\n#### Complexity\n\nEvery cell is visited once and checks at most 4 or 8 neighbors: $O(R \\cdot C)$ time. Space $O(R \\cdot C)$ in the worst case for the stack, queue or visited grid.\n\n#### Edge cases and bugs\n\n- Bounds checks after reading the cell (crash) instead of before.\n- Recursive flood fill on a 1000 × 1000 grid of land can recurse a million levels deep; use an explicit stack or BFS.\n- Mixing up rows and columns (`grid[c][r]`).\n- Mutating the input when the caller needs it; copy it or use a visited grid.\n\n#### Variants\n\n- Surrounded regions, number of enclaves, Pacific Atlantic water flow (start from the borders).\n- Island perimeter (count edges to water), distinct island shapes (record the path signature).\n- Shortest path with obstacles and k removals (BFS over (r, c, k) states).\n- Rotting oranges and distance to the nearest 0 (multi-source BFS).\n\nConnects to: DFS, BFS, connected components, multi-source BFS, matrix traversal.",
+    "signals": [
+     "a 2D grid of cells where movement is between adjacent cells",
+     "count islands, regions or connected blobs",
+     "fill a region (paint bucket), or find areas cut off from the border",
+     "shortest number of steps in a maze"
+    ],
+    "template": "```cpp\n// Grid traversal skeleton: direction arrays, bounds check, visited marking.\nconst int DR[4] = {1, -1, 0, 0}, DC[4] = {0, 0, 1, -1};\n\nint floodFillSize(vector<vector<int>>& g, int sr, int sc, int target, int mark) {\n    int R = g.size(), C = g[0].size(), size = 0;\n    if (g[sr][sc] != target) return 0;\n    vector<pair<int, int>> st = {{sr, sc}};\n    g[sr][sc] = mark;                                  // mark when pushed\n    while (!st.empty()) {\n        auto [r, c] = st.back(); st.pop_back();\n        size++;\n        for (int k = 0; k < 4; k++) {\n            int nr = r + DR[k], nc = c + DC[k];\n            if (nr < 0 || nc < 0 || nr >= R || nc >= C) continue;  // bounds first\n            if (g[nr][nc] != target) continue;                      // wall, water or seen\n            g[nr][nc] = mark;\n            st.push_back({nr, nc});\n        }\n    }\n    return size;\n}\n```"
    }
   },
   {
@@ -10747,9 +10884,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A connected component is a group of vertices that can all reach each other, with no path to anything outside the group. It is like the separate friend circles in a school, where everyone in a circle is connected through friends of friends. Counting them means starting a search from anyone not yet visited, marking everyone that search reaches, and repeating.",
+    "interview": [
+     "Loop over all vertices; for each unvisited one, run DFS or BFS to mark its whole component; count the starts. **O(V + E)**.",
+     "Label each vertex with its component id if later queries ask \"are u and v connected?\" (O(1) per query).",
+     "**Union-find** is an alternative, especially when edges arrive over time (online) or you only need the count.",
+     "Directed graphs: \"connected\" becomes **weakly** connected (ignore direction) or **strongly** connected (SCC algorithms).",
+     "Number of edges needed to connect everything = components − 1 (network connections problem, if enough spare edges exist)."
+    ],
+    "questions": [
+     {
+      "q": "How do you count connected components in an undirected graph?",
+      "a": "Loop over every vertex. For each one not yet visited, run DFS or BFS to mark everything reachable from it, and increase the count. Each vertex and edge is processed once, so it's O(V + E)."
+     },
+     {
+      "q": "When would you use union-find instead of DFS for components?",
+      "a": "When edges arrive over time and you need connectivity answers after each one, or when you only need to merge groups and count them. Union-find handles each union and query in nearly O(1) amortized without rebuilding anything."
+     },
+     {
+      "q": "How many extra edges are needed to connect a graph with k components?",
+      "a": "At least k − 1, one to join each additional component to the rest. If edges can only be moved from elsewhere, you also need the graph to have at least n − 1 edges in total."
+     },
+     {
+      "q": "How do you count pairs of vertices that can't reach each other?",
+      "a": "Compute the size of every component. A vertex in a component of size s can't reach the n − s vertices outside it, so the number of unreachable pairs is the sum of s · (n − s) over components, divided by two."
+     }
+    ],
+    "deep": "#### Intuition\n\nA single traversal from a vertex finds exactly its component: everything reachable from it. Vertices not reached belong to other components. So one pass over all vertices, launching a traversal from each unvisited vertex, visits every vertex and edge once and discovers each component exactly once.\n\n#### Worked example\n\n`n = 6`, edges `0–1, 1–2, 3–4`. Vertex 5 is isolated.\n\n| start | reached | component id |\n|---|---|---|\n| 0 | 0, 1, 2 | 0 |\n| 3 | 3, 4 | 1 |\n| 5 | 5 | 2 |\n\nThree components. Queries: 0 and 2 connected (same id); 2 and 3 not.\n\n#### Code\n\n```cpp\nvector<int> componentIds(int n, const vector<vector<int>>& adj, int& count) {\n    vector<int> comp(n, -1);\n    count = 0;\n    for (int s = 0; s < n; s++) {\n        if (comp[s] != -1) continue;\n        vector<int> st = {s};\n        comp[s] = count;\n        while (!st.empty()) {\n            int u = st.back(); st.pop_back();\n            for (int v : adj[u])\n                if (comp[v] == -1) { comp[v] = count; st.push_back(v); }\n        }\n        count++;                                     // one component fully labeled\n    }\n    return comp;\n}\n\n// Minimum cables to move so that n computers are connected (edges given), or -1.\nint makeConnected(int n, const vector<vector<int>>& connections) {\n    if ((int)connections.size() < n - 1) return -1;   // not enough cables at all\n    vector<vector<int>> adj(n);\n    for (auto& e : connections) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n    int count;\n    componentIds(n, adj, count);\n    return count - 1;\n}\n```\n\n```python\ndef count_components(n, edges):\n    adj = [[] for _ in range(n)]\n    for u, v in edges:\n        adj[u].append(v)\n        adj[v].append(u)\n    seen, count = [False] * n, 0\n    for s in range(n):\n        if seen[s]:\n            continue\n        count += 1\n        seen[s] = True\n        stack = [s]\n        while stack:\n            u = stack.pop()\n            for v in adj[u]:\n                if not seen[v]:\n                    seen[v] = True\n                    stack.append(v)\n    return count\n```\n\n#### Components in other shapes\n\nThe same loop works on any representation: an adjacency matrix (scan row u for neighbors, $O(V^2)$ total), a grid (neighbors are adjacent cells), or an implicit graph where two items are connected when they share something (a row, a column, an email). In the last case, connecting every pair explicitly can create $O(n^2)$ edges; connecting each item to a shared key instead (or using union-find keyed by the shared value) keeps it linear.\n\n#### DFS/BFS versus union-find\n\n| Situation | Better choice |\n|---|---|\n| All edges known up front, need component labels | DFS or BFS, $O(V + E)$ |\n| Edges arrive one at a time, \"are u and v connected now?\" | union-find, near $O(1)$ each |\n| Also need component sizes or merging with extra data | union-find with size |\n| Need paths or distances inside a component | BFS |\n\n#### Complexity\n\n$O(V + E)$ time and $O(V)$ space.\n\n#### Edge cases and bugs\n\n- Isolated vertices are components too; don't only iterate over vertices that appear in edges.\n- Vertex labels 1 to n versus 0 to n − 1.\n- Treating a directed graph as undirected without saying so.\n\n#### Variants\n\n- Number of provinces (adjacency matrix input), friend circles, accounts merge.\n- Largest component, size of each component, and pairs of unreachable nodes: $\\sum_i s_i (n - s_i) / 2$ from component sizes.\n- Components after removing an edge or vertex (bridges and articulation points).\n\nConnects to: DFS, BFS, disjoint set union, strongly connected components."
    }
   },
   {
@@ -10771,9 +10932,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Multi-source BFS starts spreading from many places at once instead of from a single start. Imagine several fires breaking out at the same moment and spreading one cell per minute: each cell burns at the time the nearest fire reaches it. Putting all the starting points in the queue together finds every cell's distance to its nearest source in one pass.",
+    "interview": [
+     "Push **all sources** into the queue at distance 0, mark them, then run ordinary BFS. **O(V + E)** total, not O(k · (V + E)).",
+     "Result: each vertex's distance to its **nearest** source.",
+     "**Rotting oranges**: sources = rotten oranges; answer = number of BFS levels until no fresh orange is reached (−1 if some fresh orange stays fresh).",
+     "**Distance to the nearest 0** (01 matrix), walls and gates, as far from land as possible (maximize the minimum distance).",
+     "Equivalent to adding a super-source connected to every source with weight 0.",
+     "Also used \"in reverse\": start from targets to compute distances **to** them."
+    ],
+    "questions": [
+     {
+      "q": "How do you compute every cell's distance to the nearest 0 in a matrix efficiently?",
+      "a": "Put all zero cells into the BFS queue at distance 0, then run a normal BFS; each cell's distance is set the first time it's reached. That takes O(R · C), versus O(R · C) per source if you ran BFS from each zero separately."
+     },
+     {
+      "q": "Why does starting BFS from all sources at once give the nearest-source distance?",
+      "a": "BFS expands in order of distance, and with all sources at distance 0 the waves from every source grow together. A vertex is first reached by the wave that gets there soonest, which comes from its nearest source."
+     },
+     {
+      "q": "How do you compute the time for all oranges to rot?",
+      "a": "Queue all rotten oranges, count the fresh ones, and run BFS level by level, where each level is one minute and rots fresh neighbors. If the fresh count reaches zero, the number of levels processed is the answer; if the queue empties first, return −1."
+     },
+     {
+      "q": "What is the relationship between multi-source BFS and a super-source?",
+      "a": "It is equivalent to adding a virtual vertex connected by zero-cost edges to every source and running single-source BFS from it. The same trick works for Dijkstra with weighted edges."
+     }
+    ],
+    "deep": "#### Intuition\n\nRunning BFS separately from each of $k$ sources and taking minimums costs $k$ times as much. But BFS processes vertices in order of distance, so if all sources start in the queue at distance 0, the frontier expands from all of them simultaneously. Each vertex is first reached by the wave from its nearest source, which is exactly the minimum over sources.\n\n#### Worked example: rotting oranges\n\nMinute 0 (2 = rotten, 1 = fresh, 0 = empty):\n\n```\n2 1 1\n1 1 0\n0 1 1\n```\n\n| minute | newly rotten |\n|---|---|\n| 1 | (0,1), (1,0) |\n| 2 | (0,2), (1,1) |\n| 3 | (2,1) |\n| 4 | (2,2) |\n\nAll fresh oranges rot after **4** minutes.\n\n#### Code\n\n```cpp\nint orangesRotting(vector<vector<int>>& g) {\n    int R = g.size(), C = g[0].size(), fresh = 0, minutes = 0;\n    queue<pair<int, int>> q;\n    for (int r = 0; r < R; r++)\n        for (int c = 0; c < C; c++) {\n            if (g[r][c] == 2) q.push({r, c});        // every source starts at time 0\n            else if (g[r][c] == 1) fresh++;\n        }\n    int dr[4] = {1, -1, 0, 0}, dc[4] = {0, 0, 1, -1};\n    while (!q.empty() && fresh > 0) {\n        for (int size = q.size(); size > 0; size--) {   // one minute = one BFS level\n            auto [r, c] = q.front(); q.pop();\n            for (int k = 0; k < 4; k++) {\n                int nr = r + dr[k], nc = c + dc[k];\n                if (nr < 0 || nc < 0 || nr >= R || nc >= C || g[nr][nc] != 1) continue;\n                g[nr][nc] = 2;\n                fresh--;\n                q.push({nr, nc});\n            }\n        }\n        minutes++;\n    }\n    return fresh == 0 ? minutes : -1;\n}\n```\n\n```python\nfrom collections import deque\n\ndef distance_to_nearest_zero(mat):\n    R, C = len(mat), len(mat[0])\n    dist = [[-1] * C for _ in range(R)]\n    q = deque()\n    for r in range(R):\n        for c in range(C):\n            if mat[r][c] == 0:\n                dist[r][c] = 0\n                q.append((r, c))\n    while q:\n        r, c = q.popleft()\n        for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n            if 0 <= nr < R and 0 <= nc < C and dist[nr][nc] == -1:\n                dist[nr][nc] = dist[r][c] + 1\n                q.append((nr, nc))\n    return dist\n```\n\n#### Reversing the direction of the question\n\n\"How far is each cell from the nearest exit?\" and \"how far is each exit from the nearest cell?\" look similar but differ. Multi-source BFS answers the first kind: start from all the exits at once. If the graph is directed, run the BFS on the reversed graph when you need distances **to** the sources rather than **from** them. Also note that multi-source BFS gives only the distance to the nearest source; if you need, for each cell, the distances to every source, you're back to one BFS per source.\n\n#### Complexity\n\n$O(V + E)$, which is $O(R \\cdot C)$ on grids, no matter how many sources there are. Space $O(V)$.\n\n#### Edge cases and bugs\n\n- No fresh oranges at the start: the answer is 0, not −1.\n- Counting a final extra minute when the last level rots nothing: stop when `fresh == 0` (as above) or subtract one.\n- Unreachable targets must be detected (fresh count stays positive, or distance stays −1).\n- Running single-source BFS from every source: correct but $k$ times slower.\n\n#### Variants\n\n- As far from land as possible: multi-source BFS from all land cells, answer the largest distance to water.\n- Walls and gates: sources are gates.\n- Map of highest peak (heights from water cells).\n- Voronoi-style labeling: also record which source reached each cell first.\n\nConnects to: BFS, grids as graphs, Dijkstra (multi-source with weights works the same way).",
+    "signals": [
+     "distance from every cell to the nearest of many sources",
+     "something spreads from several starting points simultaneously (rot, fire, infection)",
+     "\"minimum time until everything is reached\"",
+     "maximize the distance to the nearest special cell"
+    ],
+    "template": "```cpp\n// Multi-source BFS: all sources start at distance 0.\nvector<int> nearestSourceDist(int n, const vector<int>& sources, const vector<vector<int>>& adj) {\n    vector<int> dist(n, -1);\n    queue<int> q;\n    for (int s : sources) { dist[s] = 0; q.push(s); }\n    while (!q.empty()) {\n        int u = q.front(); q.pop();\n        for (int v : adj[u])\n            if (dist[v] == -1) { dist[v] = dist[u] + 1; q.push(v); }\n    }\n    return dist;                               // -1: unreachable from every source\n}\n```"
    }
   },
   {
@@ -10795,9 +10988,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "An undirected graph has a cycle if you can leave a vertex and come back to it without reusing an edge. During a search, reaching a vertex you already visited, other than the one you just came from, means you found another way around: a cycle. Union-find gives a second method: an edge whose two ends are already connected closes a loop.",
+    "interview": [
+     "**DFS with parent**: when exploring u's neighbor v, if v is visited and **v != parent(u)**, there's a cycle. O(V + E).",
+     "BFS works the same way, storing each vertex's parent.",
+     "**Union-find**: for each edge (u, v), if `find(u) == find(v)` the edge closes a cycle; otherwise union them. Near O(E).",
+     "Quick count test for a connected graph: it's a tree iff E = V − 1 (and connected); more edges imply a cycle.",
+     "Parallel edges (two edges between the same pair) form a cycle; the parent check must use edge ids to see them.",
+     "Must loop over all components."
+    ],
+    "questions": [
+     {
+      "q": "How do you detect a cycle in an undirected graph with DFS?",
+      "a": "Track each vertex's parent in the DFS tree. When exploring u's neighbors, a neighbor that is already visited and isn't u's parent means there's a second path between them, so there's a cycle. It's O(V + E)."
+     },
+     {
+      "q": "Why must you ignore the parent?",
+      "a": "In an undirected graph, the edge from u back to its parent is the same edge you just used to reach u. Without ignoring it, every edge would look like a cycle."
+     },
+     {
+      "q": "How does union-find detect a cycle?",
+      "a": "Process edges one at a time. If both endpoints already have the same root, they're already connected, so this edge closes a cycle. Otherwise, union their sets. It runs in near-linear time."
+     },
+     {
+      "q": "How can you check whether a graph is a tree?",
+      "a": "It must be connected and acyclic, which for n vertices is equivalent to having exactly n − 1 edges and no cycle (or n − 1 edges and being connected). Check the edge count, then run union-find or a traversal."
+     },
+     {
+      "q": "Why is the undirected method wrong for directed graphs?",
+      "a": "In a directed graph, reaching an already visited vertex doesn't imply a cycle: two separate paths can lead to the same vertex without any loop, like A→B, A→C, B→D, C→D. Directed graphs need the three-color DFS or Kahn's algorithm."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn a DFS of an undirected graph, every edge either leads to a new vertex (a tree edge) or to a vertex already discovered. The edge back to the parent is just the tree edge seen from the other side. Any other edge to a visited vertex connects two vertices that were already joined through the DFS tree, so together with the tree path it forms a cycle.\n\n#### Worked example\n\nEdges `0–1, 1–2, 2–0, 2–3`. DFS from 0.\n\n| visit | from | neighbors checked | result |\n|---|---|---|---|\n| 0 | | 1 (unvisited) | go to 1 |\n| 1 | 0 | 0 (parent, ignore), 2 (unvisited) | go to 2 |\n| 2 | 1 | 1 (parent), 0 (visited, not parent) | **cycle** 0–1–2–0 |\n\nWith union-find: `0–1` union, `1–2` union, `2–0`: find(2) == find(0), cycle.\n\n#### Code\n\n```cpp\nbool hasCycleDfs(int n, const vector<vector<int>>& adj) {\n    vector<int> parent(n, -2);                           // -2: unvisited\n    for (int s = 0; s < n; s++) {\n        if (parent[s] != -2) continue;\n        vector<int> st = {s};\n        parent[s] = -1;\n        while (!st.empty()) {\n            int u = st.back(); st.pop_back();\n            for (int v : adj[u]) {\n                if (parent[v] == -2) { parent[v] = u; st.push_back(v); }\n                else if (v != parent[u]) return true;    // visited and not the tree parent\n            }\n        }\n    }\n    return false;\n}\n\nbool hasCycleDsu(int n, const vector<pair<int, int>>& edges) {\n    vector<int> p(n);\n    iota(p.begin(), p.end(), 0);\n    function<int(int)> find = [&](int x) { return p[x] == x ? x : p[x] = find(p[x]); };\n    for (auto [u, v] : edges) {\n        int a = find(u), b = find(v);\n        if (a == b) return true;                         // already connected: this edge closes a loop\n        p[a] = b;\n    }\n    return false;\n}\n```\n\n```python\ndef valid_tree(n, edges):\n    \"\"\"A graph is a tree iff it has n - 1 edges and no cycle (then it is connected).\"\"\"\n    if len(edges) != n - 1:\n        return False\n    parent = list(range(n))\n    def find(x):\n        while parent[x] != x:\n            parent[x] = parent[parent[x]]\n            x = parent[x]\n        return x\n    for u, v in edges:\n        a, b = find(u), find(v)\n        if a == b:\n            return False\n        parent[a] = b\n    return True\n```\n\n#### Why the iterative check is subtle\n\nIn the iterative DFS above, a vertex is marked (given a parent) when pushed. A vertex v may already be marked by a different parent while still on the stack; seeing it again from u means two different tree paths reach v, which also forms a cycle, so reporting it is correct. The only neighbor to ignore is the actual tree parent of u.\n\n#### Complexity\n\nDFS/BFS: $O(V + E)$. Union-find: $O(E \\, \\alpha(V))$, effectively linear.\n\n#### Edge cases and bugs\n\n- Self-loops (`u–u`) are cycles; the parent check alone may miss them if the parent is also u. Check `u == v` explicitly if self-loops can appear.\n- Parallel edges `u–v` twice: a cycle of length 2 in a multigraph, invisible to a parent-vertex check; track the parent edge id.\n- Forgetting disconnected parts.\n\n#### Variants\n\n- Redundant connection: return the edge that closes the first cycle (union-find).\n- Graph valid tree (above), and find the cycle's vertices (walk parents from both endpoints).\n\nConnects to: DFS, disjoint set union, cycle detection in directed graphs, trees."
    }
   },
   {
@@ -10828,9 +11050,34 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "In a directed graph, a cycle means following the arrows can bring you back where you started, like tasks that each wait on the next and the last waits on the first. DFS finds it by remembering which vertices are on the current path. If the search reaches a vertex that is still on the current path, the arrows loop back: that is a cycle.",
+    "interview": [
+     "**Three colors**: white (unvisited), gray (on the current DFS path), black (finished). An edge to a **gray** vertex is a back edge: a cycle. Edges to black vertices are fine.",
+     "O(V + E) time, O(V) space.",
+     "**Kahn's algorithm** (BFS topological sort) also detects cycles: if fewer than V vertices get processed, the remaining ones are in or behind a cycle.",
+     "A plain visited set is **not enough** for directed graphs (a diamond A→B, A→C, B→D, C→D revisits D without a cycle).",
+     "Uses: course schedule (can all courses be finished?), deadlock detection, build dependency checks.",
+     "To output the cycle: store parents and walk back from the gray vertex."
+    ],
+    "questions": [
+     {
+      "q": "How do you detect a cycle in a directed graph?",
+      "a": "Run DFS with three states: unvisited, on the current path (gray), and finished (black). An edge to a gray vertex points back to an ancestor on the current path, which closes a cycle. Edges to black vertices are safe. It's O(V + E)."
+     },
+     {
+      "q": "Why isn't a simple visited set enough for directed graphs?",
+      "a": "Two different paths can lead to the same vertex without any cycle, like A→B→D and A→C→D. With only \"visited\", reaching D the second time would look like a cycle. The finished state distinguishes a fully explored vertex from one still on the current path."
+     },
+     {
+      "q": "How does Kahn's algorithm detect a cycle?",
+      "a": "It repeatedly removes vertices with in-degree 0. Vertices on a cycle never reach in-degree 0, because each has an incoming edge from another cycle vertex. If fewer than V vertices are removed, the graph has a cycle."
+     },
+     {
+      "q": "How would you decide whether all courses can be finished given prerequisite pairs?",
+      "a": "Build a directed graph with an edge from each prerequisite to the course that needs it, and check it for a cycle with Kahn's algorithm or three-color DFS. All courses can be finished exactly when there is no cycle."
+     }
+    ],
+    "deep": "#### Intuition\n\nA cycle exists exactly when DFS finds an edge pointing to an ancestor on the current recursion path (a back edge). Visited vertices that have already finished are safe: everything reachable from them was fully explored without returning to them, so reaching them again can't close a loop. That's why you need three states, not two.\n\n#### Worked example\n\nEdges `0→1, 1→2, 2→0, 2→3`. DFS from 0.\n\n| step | vertex | colors after | edge examined |\n|---|---|---|---|\n| 1 | 0 | 0 gray | 0→1 |\n| 2 | 1 | 0, 1 gray | 1→2 |\n| 3 | 2 | 0, 1, 2 gray | 2→0: 0 is **gray**: cycle |\n\nContrast `0→1, 0→2, 1→3, 2→3`: when DFS reaches 3 the second time (from 2), 3 is **black**, so no cycle.\n\n#### Code\n\n```cpp\nbool hasDirectedCycle(int n, const vector<vector<int>>& adj) {\n    vector<int> color(n, 0);                          // 0 white, 1 gray, 2 black\n    function<bool(int)> dfs = [&](int u) -> bool {\n        color[u] = 1;\n        for (int v : adj[u]) {\n            if (color[v] == 1) return true;           // back edge to the current path\n            if (color[v] == 0 && dfs(v)) return true;\n        }\n        color[u] = 2;                                 // fully explored, never part of a new cycle\n        return false;\n    };\n    for (int s = 0; s < n; s++)\n        if (color[s] == 0 && dfs(s)) return true;\n    return false;\n}\n```\n\n```python\nfrom collections import deque\n\ndef can_finish(num_courses, prerequisites):\n    \"\"\"Kahn's algorithm: all courses can be taken iff the graph has no cycle.\"\"\"\n    adj = [[] for _ in range(num_courses)]\n    indeg = [0] * num_courses\n    for course, pre in prerequisites:\n        adj[pre].append(course)\n        indeg[course] += 1\n    q = deque(i for i in range(num_courses) if indeg[i] == 0)\n    taken = 0\n    while q:\n        u = q.popleft()\n        taken += 1\n        for v in adj[u]:\n            indeg[v] -= 1\n            if indeg[v] == 0:\n                q.append(v)\n    return taken == num_courses\n\ndef eventual_safe_nodes(graph):\n    \"\"\"Nodes from which every path ends at a terminal node (none reaches a cycle).\"\"\"\n    color = [0] * len(graph)                 # 0 unseen, 1 on path, 2 safe\n    def safe(u):\n        if color[u]:\n            return color[u] == 2\n        color[u] = 1\n        if any(not safe(v) for v in graph[u]):\n            return False                     # stays gray: part of or leads to a cycle\n        color[u] = 2\n        return True\n    return [u for u in range(len(graph)) if safe(u)]\n```\n\n#### DFS colors or Kahn's algorithm?\n\nBoth are linear. Kahn's algorithm is iterative (no recursion depth issues), naturally produces a topological order when there is no cycle, and tells you which vertices are stuck (in-degree never reached 0). The three-color DFS finds an actual cycle quickly and extends to problems like \"eventual safe states\", where you need to know which vertices lead into a cycle. Pick the one that also gives you what the rest of the problem needs.\n\n#### Complexity\n\n$O(V + E)$ for both methods; $O(V)$ space. The recursive DFS can be deep; Kahn's algorithm avoids recursion.\n\n#### Edge cases and bugs\n\n- Using only visited/unvisited: false cycles on diamonds.\n- Self-loops (`u→u`): the three-color method catches them (u is gray when the edge is checked).\n- Forgetting to launch DFS from every white vertex.\n- Edge direction in \"course, prerequisite\" pairs: the edge goes from prerequisite to course.\n\n#### Variants\n\n- Course schedule II (return an order): topological sort.\n- Find eventual safe states (above), detect deadlocks in wait-for graphs.\n- Find the cycle itself: store `parent` and, on hitting a gray vertex, walk back.\n\nConnects to: DFS, topological sort, strongly connected components, cycle detection in undirected graphs."
    }
   },
   {
@@ -10862,9 +11109,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A topological sort puts tasks in an order where every task comes after everything it depends on, like getting dressed: socks before shoes, shirt before jacket. You repeatedly pick a task with nothing left to wait for, do it, and remove it from everyone's waiting list. If you get stuck while tasks remain, the dependencies go in a circle and no valid order exists.",
+    "interview": [
+     "Only defined for **DAGs** (directed acyclic graphs); a cycle means no order exists.",
+     "**Kahn's algorithm** (BFS): compute in-degrees; queue all vertices with in-degree 0; pop, append to the order, decrement neighbors' in-degrees, queue those that reach 0. **O(V + E)**.",
+     "**DFS method**: append each vertex when it **finishes**; reverse the list at the end.",
+     "If the order has fewer than V vertices (Kahn), there's a cycle.",
+     "Many valid orders may exist; a **min-heap** instead of a queue gives the lexicographically smallest one (O((V + E) log V)).",
+     "Uses: course schedules, build systems, task scheduling, DP on DAGs (process in topological order), alien dictionary (derive edges from adjacent words)."
+    ],
+    "questions": [
+     {
+      "q": "What is a topological order, and when does one exist?",
+      "a": "An ordering of a directed graph's vertices in which every edge u → v has u before v. It exists exactly when the graph has no directed cycle."
+     },
+     {
+      "q": "Describe Kahn's algorithm.",
+      "a": "Compute every vertex's in-degree and queue those with in-degree 0. Repeatedly pop a vertex, append it to the order, and decrement the in-degree of each vertex it points to, queueing any that drop to 0. If the order ends with fewer than V vertices, there's a cycle. O(V + E)."
+     },
+     {
+      "q": "How does the DFS approach produce a topological order?",
+      "a": "Run DFS and record each vertex when it finishes, after all vertices reachable from it. For any edge u → v in a DAG, v finishes before u, so reversing the finish order puts u before v."
+     },
+     {
+      "q": "How do you find the minimum number of semesters to finish courses with prerequisites?",
+      "a": "Run Kahn's algorithm level by level: all courses with in-degree 0 form the first semester, the courses they unlock form the next, and so on. The number of levels is the answer, if every course gets processed."
+     },
+     {
+      "q": "How do you check whether a topological order is unique?",
+      "a": "With Kahn's algorithm, the order is unique exactly when the queue never holds more than one vertex at a time. If two vertices are ever available together, they could be swapped."
+     }
+    ],
+    "deep": "#### Intuition\n\nA vertex with no incoming edges depends on nothing, so it can go first. Removing it may free other vertices. Repeating this \"peel off the sources\" process produces an order in which every edge points forward. The DFS method gets the same result from the other end: a vertex finishes only after everything it points to has finished, so reversed finish order puts each vertex before its dependents.\n\n#### Worked example: Kahn's algorithm\n\nEdges (prerequisite → course): `0→1, 0→2, 1→3, 2→3, 3→4`.\n\n| step | queue | pop | in-degrees after (1, 2, 3, 4) | order |\n|---|---|---|---|---|\n| start | 0 | | 1, 1, 2, 1 | |\n| 1 | 0 | 0 | 0, 0, 2, 1 → push 1, 2 | 0 |\n| 2 | 1 2 | 1 | 3 drops to 1 | 0 1 |\n| 3 | 2 | 2 | 3 drops to 0 → push 3 | 0 1 2 |\n| 4 | 3 | 3 | 4 drops to 0 → push 4 | 0 1 2 3 |\n| 5 | 4 | 4 | | 0 1 2 3 4 |\n\nAll 5 vertices are ordered, so there is no cycle.\n\n#### Code\n\n```cpp\n// Kahn's algorithm; returns an empty vector if there is a cycle.\nvector<int> topoSort(int n, const vector<vector<int>>& adj) {\n    vector<int> indeg(n, 0), order;\n    for (int u = 0; u < n; u++) for (int v : adj[u]) indeg[v]++;\n    queue<int> q;\n    for (int u = 0; u < n; u++) if (indeg[u] == 0) q.push(u);\n    while (!q.empty()) {\n        int u = q.front(); q.pop();\n        order.push_back(u);\n        for (int v : adj[u])\n            if (--indeg[v] == 0) q.push(v);       // all of v's prerequisites are done\n    }\n    if ((int)order.size() < n) return {};          // leftover vertices sit on or behind a cycle\n    return order;\n}\n\n// DFS version: reverse finish order (assumes a DAG).\nvector<int> topoSortDfs(int n, const vector<vector<int>>& adj) {\n    vector<bool> seen(n, false);\n    vector<int> order;\n    function<void(int)> dfs = [&](int u) {\n        seen[u] = true;\n        for (int v : adj[u]) if (!seen[v]) dfs(v);\n        order.push_back(u);                        // u finishes after all it points to\n    };\n    for (int u = 0; u < n; u++) if (!seen[u]) dfs(u);\n    reverse(order.begin(), order.end());\n    return order;\n}\n```\n\n```python\nfrom collections import defaultdict, deque\n\ndef alien_order(words):\n    \"\"\"Letter order of an alien language from a sorted word list ('' if invalid).\"\"\"\n    letters = {c for w in words for c in w}\n    adj, indeg = defaultdict(set), {c: 0 for c in letters}\n    for a, b in zip(words, words[1:]):\n        for x, y in zip(a, b):\n            if x != y:\n                if y not in adj[x]:\n                    adj[x].add(y)\n                    indeg[y] += 1\n                break\n        else:\n            if len(a) > len(b):\n                return \"\"                  # \"abc\" before \"ab\" is impossible\n    q = deque(sorted(c for c in letters if indeg[c] == 0))\n    out = []\n    while q:\n        c = q.popleft()\n        out.append(c)\n        for d in sorted(adj[c]):\n            indeg[d] -= 1\n            if indeg[d] == 0:\n                q.append(d)\n    return \"\".join(out) if len(out) == len(letters) else \"\"\n```\n\n#### Complexity\n\nBoth methods: $O(V + E)$ time, $O(V)$ extra space (plus recursion depth for DFS).\n\n#### Edge cases and bugs\n\n- Edge direction: \"a depends on b\" is the edge `b → a`.\n- Duplicate edges inflate in-degrees; deduplicate or handle consistently (the alien dictionary uses a set).\n- Isolated vertices must appear in the order too.\n- DFS method with a cycle silently returns an invalid order unless you add three-color detection.\n\n#### Variants\n\n- Course schedule II, parallel courses (count BFS levels to get the minimum number of semesters), sequence reconstruction (unique order iff the queue always has exactly one vertex).\n- Longest path in a DAG: DP in topological order.\n- Lexicographically smallest order: min-heap instead of queue.\n\nConnects to: cycle detection in directed graphs, BFS, DFS, shortest paths in a DAG, DP.",
+    "signals": [
+     "tasks with prerequisites or dependencies that must be ordered",
+     "\"can all courses be finished\" or \"give a valid build order\"",
+     "derive an order from pairwise \"comes before\" facts (alien dictionary)",
+     "DP over a directed acyclic graph"
+    ],
+    "template": "```cpp\n// Kahn's algorithm skeleton (prerequisite -> dependent edges).\nvector<int> kahn(int n, const vector<pair<int, int>>& edges) {\n    vector<vector<int>> adj(n);\n    vector<int> indeg(n, 0), order;\n    for (auto [u, v] : edges) { adj[u].push_back(v); indeg[v]++; }\n    queue<int> q;                                      // priority_queue for smallest-first order\n    for (int u = 0; u < n; u++) if (!indeg[u]) q.push(u);\n    while (!q.empty()) {\n        int u = q.front(); q.pop();\n        order.push_back(u);                            // (process levels here for \"rounds\")\n        for (int v : adj[u]) if (--indeg[v] == 0) q.push(v);\n    }\n    return (int)order.size() == n ? order : vector<int>{};   // empty: there is a cycle\n}\n```"
    }
   },
   {
@@ -10886,9 +11169,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A graph is bipartite if you can split its vertices into two teams so that every edge connects players from different teams. You check by coloring: give a starting vertex one color, all its neighbors the other color, their neighbors the first color, and so on. If two neighbors ever need the same color, the split is impossible.",
+    "interview": [
+     "BFS or DFS assigning colors 0/1; each neighbor gets the opposite color; a neighbor with the **same** color means not bipartite. **O(V + E)**.",
+     "Check every component (start a coloring from each uncolored vertex).",
+     "A graph is bipartite **iff it has no odd-length cycle**.",
+     "Trees and even cycles are bipartite; a triangle isn't.",
+     "Union-find alternative: for each vertex, union all its neighbors together; a vertex in the same set as a neighbor means not bipartite (or DSU with parity).",
+     "Uses: possible bipartition (people who dislike each other), two-team assignments, matching problems."
+    ],
+    "questions": [
+     {
+      "q": "How do you check whether a graph is bipartite?",
+      "a": "Try to 2-color it with BFS or DFS: color a start vertex 0, give every uncolored neighbor the opposite color, and fail if an edge connects two vertices of the same color. Repeat from every uncolored vertex for disconnected graphs. It's O(V + E)."
+     },
+     {
+      "q": "What structural property characterizes bipartite graphs?",
+      "a": "A graph is bipartite exactly when it contains no cycle of odd length. Coloring alternates along any path, so an odd cycle forces two adjacent vertices to share a color."
+     },
+     {
+      "q": "Is every tree bipartite?",
+      "a": "Yes. A tree has no cycles at all, so coloring vertices by the parity of their depth always gives adjacent vertices different colors."
+     },
+     {
+      "q": "How can union-find check bipartiteness?",
+      "a": "For each vertex, all its neighbors must end up on the same side, opposite to the vertex. Union all neighbors of each vertex together; if a vertex ever ends up in the same set as one of its neighbors, the graph isn't bipartite. A parity-tracking DSU does the same while edges arrive one by one."
+     }
+    ],
+    "deep": "#### Intuition\n\nWalking along any path alternates colors. If you return to the start after an odd number of steps, the colors disagree: that's an odd cycle. BFS layers make this concrete: vertices at even distance get color 0 and odd distance get color 1, and an edge between two vertices of the same layer parity reveals an odd cycle.\n\n#### Worked example\n\nEdges `0–1, 1–2, 2–3, 3–0` (a square): colors 0, 1, 0, 1: bipartite. Add `0–2`: vertex 2 has color 0, same as 0: not bipartite (triangle 0–1–2).\n\n| vertex | color | neighbors and check |\n|---|---|---|\n| 0 | 0 | 1 → 1, 3 → 1 |\n| 1 | 1 | 2 → 0 |\n| 3 | 1 | 2 is 0: ok |\n| 2 | 0 | with edge 0–2: 0 has color 0 = 2's color: **conflict** |\n\n#### Code\n\n```cpp\nbool isBipartite(const vector<vector<int>>& adj) {\n    int n = adj.size();\n    vector<int> color(n, -1);\n    for (int s = 0; s < n; s++) {\n        if (color[s] != -1) continue;\n        queue<int> q;\n        q.push(s);\n        color[s] = 0;\n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            for (int v : adj[u]) {\n                if (color[v] == -1) { color[v] = color[u] ^ 1; q.push(v); }\n                else if (color[v] == color[u]) return false;   // same color on an edge\n            }\n        }\n    }\n    return true;\n}\n```\n\n```python\ndef possible_bipartition(n, dislikes):\n    \"\"\"People 1..n; each dislike pair must be on different sides.\"\"\"\n    adj = [[] for _ in range(n + 1)]\n    for a, b in dislikes:\n        adj[a].append(b)\n        adj[b].append(a)\n    color = [None] * (n + 1)\n    for s in range(1, n + 1):\n        if color[s] is not None:\n            continue\n        color[s] = 0\n        stack = [s]\n        while stack:\n            u = stack.pop()\n            for v in adj[u]:\n                if color[v] is None:\n                    color[v] = 1 - color[u]\n                    stack.append(v)\n                elif color[v] == color[u]:\n                    return False\n    return True\n```\n\n#### Complexity\n\n$O(V + E)$ time, $O(V)$ space.\n\n#### Edge cases and bugs\n\n- Disconnected graphs: color each component.\n- Self-loops make a graph non-bipartite (a vertex adjacent to itself).\n- 1-indexed input.\n\n#### Variants\n\n- Is graph bipartite (adjacency list input), possible bipartition, two-coloring a map region graph.\n- Maximum bipartite matching once the graph is known to be bipartite.\n- Online bipartiteness as edges arrive: DSU with parity.\n\nConnects to: BFS, DFS, DSU with extra data, bipartite matching.",
+    "signals": [
+     "split items into two groups so that conflicting pairs are separated",
+     "two-color a graph, or check for an odd cycle",
+     "\"dislike\", \"rival\" or \"conflict\" pairs with two teams",
+     "a matching problem that needs two sides first"
+    ],
+    "template": "```cpp\n// Two-coloring by BFS; returns false on the first same-color edge.\nbool twoColor(const vector<vector<int>>& adj, vector<int>& color) {\n    int n = adj.size();\n    color.assign(n, -1);\n    for (int s = 0; s < n; s++) {\n        if (color[s] != -1) continue;                  // new component\n        color[s] = 0;\n        queue<int> q; q.push(s);\n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            for (int v : adj[u]) {\n                if (color[v] == -1) { color[v] = 1 - color[u]; q.push(v); }\n                else if (color[v] == color[u]) return false;   // odd cycle\n            }\n        }\n    }\n    return true;\n}\n```"
    }
   },
   {
@@ -10910,9 +11225,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Sometimes the \"graph\" isn't given at all: each possible situation is a vertex, and each allowed move is an edge. A combination lock's positions, or words that differ by one letter, form such a graph. BFS over these situations finds the fewest moves to reach a goal, generating neighbors only as it needs them.",
+    "interview": [
+     "Define the **state** (what fully describes a situation), the **moves** (neighbors), the **start** and the **goal**; then plain BFS with a visited set of states.",
+     "**Open the lock**: states are 4-digit strings; each wheel turns ±1 (8 neighbors); dead ends are blocked states. At most 10,000 states.",
+     "**Word ladder**: states are dictionary words; neighbors differ by one letter. Generate candidates by changing each position to 'a'..'z' and checking the word set: O(N · L · 26) overall.",
+     "Encode states compactly (strings, integers, bitmasks, tuples) so they hash fast.",
+     "**Bidirectional BFS** (expand from both ends, always the smaller frontier) cuts the explored states dramatically.",
+     "Extra state dimensions appear often: (cell, keys held), (cell, obstacles removed), (position, speed)."
+    ],
+    "questions": [
+     {
+      "q": "What is an implicit graph, and how do you run BFS on it?",
+      "a": "A graph whose vertices are states generated by rules rather than stored in memory, such as lock combinations or words. You write a function that lists a state's neighbors by applying every allowed move, then run BFS with a hash set of visited states."
+     },
+     {
+      "q": "How do you find the shortest word ladder efficiently?",
+      "a": "BFS from the start word. For each word, generate neighbors by changing one position to each of the 26 letters and keep those in the dictionary that aren't visited yet. That's O(N · L · 26) candidate checks, far better than comparing every pair of words."
+     },
+     {
+      "q": "What should a state contain?",
+      "a": "Everything that affects which moves are possible later or whether the goal is reached, and nothing else. For a maze with keys, the position alone isn't enough; the state must be (position, keys held), otherwise BFS would merge situations that behave differently."
+     },
+     {
+      "q": "What does bidirectional BFS gain?",
+      "a": "It searches from both ends and stops when the frontiers meet, so each side only goes about half the distance. With branching factor b and distance d, that's roughly 2 · b^(d/2) states instead of b^d."
+     }
+    ],
+    "deep": "#### Intuition\n\nBFS doesn't care whether vertices are stored in an adjacency list or generated by rules. If each move costs the same, the minimum number of moves to reach the goal is a shortest path in the state graph. The work is choosing a state that captures everything that affects future moves, and nothing more (to keep the state count small).\n\n#### Worked example: open the lock\n\nStart `0000`, target `0202`, dead ends `{0201, 0101, 0102, 1212, 2002}`.\n\n| level | some states reached |\n|---|---|\n| 0 | 0000 |\n| 1 | 1000, 9000, 0100, 0900, 0010, 0090, 0001, 0009 |\n| 2 | …, 0200, 0110, 0011, 0019, 0002, … (0101 is a dead end, skipped) |\n| 3 | …, 0210, 0290, … |\n| … | … |\n\nBFS finds `0202` at depth **6** (for example 0000 → 1000 → 1100 → 1200 → 1201 → 1202 → 0202); the direct routes through 0201 or 0102 are blocked by dead ends.\n\n#### Code\n\n```cpp\nint openLock(const vector<string>& deadends, const string& target) {\n    unordered_set<string> blocked(deadends.begin(), deadends.end()), seen;\n    if (blocked.count(\"0000\")) return -1;\n    queue<string> q;\n    q.push(\"0000\");\n    seen.insert(\"0000\");\n    for (int steps = 0; !q.empty(); steps++) {\n        for (int size = q.size(); size > 0; size--) {\n            string s = q.front(); q.pop();\n            if (s == target) return steps;\n            for (int i = 0; i < 4; i++)\n                for (int d : {1, 9}) {                         // +1 or -1 (mod 10)\n                    string t = s;\n                    t[i] = '0' + (t[i] - '0' + d) % 10;\n                    if (!blocked.count(t) && seen.insert(t).second) q.push(t);\n                }\n        }\n    }\n    return -1;\n}\n```\n\n```python\nfrom collections import deque\nfrom string import ascii_lowercase\n\ndef ladder_length(begin, end, words):\n    \"\"\"Number of words in the shortest transformation sequence, or 0.\"\"\"\n    word_set = set(words)\n    if end not in word_set:\n        return 0\n    q, seen = deque([(begin, 1)]), {begin}\n    while q:\n        word, length = q.popleft()\n        if word == end:\n            return length\n        for i in range(len(word)):\n            for c in ascii_lowercase:\n                nxt = word[:i] + c + word[i + 1:]\n                if nxt in word_set and nxt not in seen:\n                    seen.add(nxt)\n                    q.append((nxt, length + 1))\n    return 0\n```\n\n#### Bidirectional BFS\n\nSearch from the start and the goal at the same time, each step expanding the smaller frontier, and stop when they meet. With branching factor $b$ and distance $d$, one-sided BFS explores about $b^d$ states and bidirectional about $2 b^{d/2}$, often a huge saving (word ladder, sliding puzzles).\n\n#### Complexity\n\n$O(S \\cdot M)$, where $S$ is the number of reachable states and $M$ the cost of generating one state's neighbors (including hashing the new state). Open the lock: $10^4$ states × 8 moves × 4-char strings.\n\n#### Edge cases and bugs\n\n- The start itself is a dead end or equals the target.\n- Forgetting to mark states as seen when pushing, which multiplies work.\n- A state that misses information (for example, keys collected) makes BFS give wrong answers.\n\n#### Variants\n\n- Sliding puzzle (state = board string), minimum genetic mutation, jump game with teleports.\n- Shortest path to get all keys: state (cell, bitmask of keys).\n- Shortest path with at most k obstacles removed: state (cell, removals left).\n- Word ladder II (all shortest paths): BFS for distances, then DFS backtracking along decreasing distances.\n\nConnects to: BFS, graph representations (implicit graphs), bitmask state, shortest path with bitmask state.",
+    "signals": [
+     "the minimum number of moves between configurations (locks, puzzles, words)",
+     "each move changes one small part of the state",
+     "the state graph is too large to build but easy to generate",
+     "shortest path where position alone isn't the full state (keys, remaining budget)"
+    ],
+    "template": "```cpp\n// BFS over hashable states generated on the fly.\ntemplate <class State, class Next, class IsGoal>\nint minMoves(State start, Next next, IsGoal isGoal) {\n    queue<State> q;\n    set<State> seen;                        // unordered_set with a hash for speed\n    q.push(start);\n    seen.insert(start);\n    for (int steps = 0; !q.empty(); steps++) {\n        for (int size = q.size(); size > 0; size--) {\n            State s = q.front(); q.pop();\n            if (isGoal(s)) return steps;\n            for (const State& t : next(s))  // all states one move away\n                if (seen.insert(t).second) q.push(t);\n        }\n    }\n    return -1;                              // goal unreachable\n}\n```"
    }
   },
   {
@@ -10934,9 +11281,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Cloning a graph means building a brand-new copy with the same shape, where no copy points back into the original. Because the graph can have cycles, you keep a map from each original vertex to its copy, like a seating chart telling you which new chair matches each old chair. Whenever you meet a vertex already in the map, you reuse its copy instead of making another.",
+    "interview": [
+     "DFS or BFS with a hash map `original → clone`. Create the clone **when first discovered**, then connect clone neighbors to the neighbors' clones.",
+     "The map doubles as the visited set, which handles cycles and shared neighbors.",
+     "**O(V + E)** time and O(V) space.",
+     "Same idea: copy a linked list with random pointers, deep-copy an object graph, clone a tree with parent pointers.",
+     "Pitfall: creating a clone for every visit (infinite recursion on cycles, or duplicate clones)."
+    ],
+    "questions": [
+     {
+      "q": "How do you clone a graph that may contain cycles?",
+      "a": "Traverse it with DFS or BFS while keeping a hash map from each original node to its clone. When you first meet a node, create its clone and store it; when you meet it again, reuse the stored clone. Then fill each clone's neighbor list with the clones of the original's neighbors."
+     },
+     {
+      "q": "Why is the hash map essential?",
+      "a": "It serves as the visited set, preventing infinite loops on cycles, and it guarantees that every original node has exactly one clone, so two nodes sharing a neighbor end up sharing the same cloned neighbor."
+     },
+     {
+      "q": "When should you insert a node into the map, before or after cloning its neighbors?",
+      "a": "Before. With a cycle, recursing into neighbors can lead back to the current node, and it must already be in the map at that point, or the recursion would create a second clone and never terminate."
+     },
+     {
+      "q": "What are the time and space costs of cloning a graph?",
+      "a": "O(V + E) time, since each node is cloned once and each edge copied once, and O(V) space for the map plus the traversal stack or queue."
+     }
+    ]
    }
   },
   {
@@ -10963,9 +11333,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Dijkstra's algorithm finds the cheapest route from one place to every other place when roads have different lengths. It always settles the closest unsettled place next, like spreading water that reaches nearer towns before farther ones. Once a place is settled, no cheaper route to it can appear later, as long as no road has a negative length.",
+    "interview": [
+     "Min-heap of `(distance, vertex)`; pop the smallest; skip if **stale** (`d > dist[u]`); **relax** each edge: if `dist[u] + w < dist[v]`, update and push.",
+     "Requires **non-negative** weights. With negative edges use Bellman-Ford.",
+     "**O((V + E) log V)** with a binary heap (lazy deletion, so the heap can hold up to E entries: O(E log E), same order).",
+     "Dense graphs: the O(V²) array version (no heap) can be faster.",
+     "Store `parent[v]` to rebuild the path. Stop early when the target is popped if you only need one distance.",
+     "Unweighted graphs: plain BFS; weights 0 and 1: 0-1 BFS."
+    ],
+    "questions": [
+     {
+      "q": "How does Dijkstra's algorithm work?",
+      "a": "Keep tentative distances, starting at 0 for the source and infinity elsewhere, and a min-heap of (distance, vertex). Repeatedly pop the closest vertex; if the entry is stale, skip it; otherwise relax its outgoing edges, pushing improved distances. Each popped non-stale vertex has its final shortest distance."
+     },
+     {
+      "q": "Why does Dijkstra require non-negative edge weights?",
+      "a": "It finalizes the closest unsettled vertex on the assumption that any other path to it passes through a farther vertex and can only get longer. A negative edge could make such a path shorter after the vertex is finalized, and the classic algorithm never revisits a finalized vertex, so the answer would be wrong. Versions that re-insert improved vertices lose the O((V + E) log V) guarantee."
+     },
+     {
+      "q": "What is the complexity of Dijkstra with a binary heap?",
+      "a": "O((V + E) log V). Every edge relaxation can push one entry, and each push or pop costs O(log V). With lazy deletion the heap can hold up to E entries, which is still O(log V) per operation since log E ≤ 2 log V."
+     },
+     {
+      "q": "What is a stale heap entry, and why skip it?",
+      "a": "When a vertex's distance improves, a new entry is pushed while the old, larger one stays in the heap. When the old entry is popped, its distance is larger than the vertex's current best, so processing it would waste time; skipping it keeps each vertex processed once."
+     },
+     {
+      "q": "How do you reconstruct the shortest path itself?",
+      "a": "Record parent[v] = u whenever relaxing edge u → v improves dist[v]. After the algorithm, follow parents back from the target to the source and reverse."
+     }
+    ],
+    "deep": "#### Intuition\n\nAmong all unsettled vertices, the one with the smallest tentative distance can't be improved: any other route to it would pass through some other unsettled vertex, which is already at least as far away, and non-negative edges can only add more. So it is safe to finalize it and use it to improve its neighbors. A min-heap finds that vertex quickly.\n\n#### Worked example\n\nEdges (directed): `A→B 4, A→C 1, C→B 2, B→D 1, C→D 5`. Source A.\n\n| pop | dist after relaxing (A, B, C, D) | heap after |\n|---|---|---|\n| (0, A) | 0, 4, 1, ∞ | (1,C) (4,B) |\n| (1, C) | 0, 3, 1, 6 | (3,B) (4,B) (6,D) |\n| (3, B) | 0, 3, 1, 4 | (4,B) (4,D) (6,D) |\n| (4, B) | stale (4 > 3): skip | (4,D) (6,D) |\n| (4, D) | final | (6,D) |\n| (6, D) | stale: skip | |\n\nShortest distances: A 0, B 3, C 1, D 4. Path to D: A → C → B → D.\n\n#### Code\n\n```cpp\nvector<long long> dijkstra(const vector<vector<pair<int, int>>>& adj, int src) {\n    const long long INF = LLONG_MAX;\n    vector<long long> dist(adj.size(), INF);\n    using P = pair<long long, int>;                  // (distance, vertex)\n    priority_queue<P, vector<P>, greater<P>> pq;\n    dist[src] = 0;\n    pq.push({0, src});\n    while (!pq.empty()) {\n        auto [d, u] = pq.top(); pq.pop();\n        if (d > dist[u]) continue;                   // stale entry: u was settled cheaper\n        for (auto [v, w] : adj[u]) {\n            if (dist[u] + w < dist[v]) {             // relax\n                dist[v] = dist[u] + w;\n                pq.push({dist[v], v});\n            }\n        }\n    }\n    return dist;\n}\n```\n\n```python\nimport heapq\n\ndef dijkstra(adj, src):\n    \"\"\"adj[u] = list of (v, w) with w >= 0. Returns (dist, parent).\"\"\"\n    n = len(adj)\n    dist, parent = [float(\"inf\")] * n, [-1] * n\n    dist[src] = 0\n    pq = [(0, src)]\n    while pq:\n        d, u = heapq.heappop(pq)\n        if d > dist[u]:\n            continue\n        for v, w in adj[u]:\n            nd = d + w\n            if nd < dist[v]:\n                dist[v], parent[v] = nd, u\n                heapq.heappush(pq, (nd, v))\n    return dist, parent\n\ndef network_delay_time(times, n, k):\n    \"\"\"Time for a signal from node k to reach all n nodes (1-indexed), or -1.\"\"\"\n    adj = [[] for _ in range(n + 1)]\n    for u, v, w in times:\n        adj[u].append((v, w))\n    dist, _ = dijkstra(adj, k)\n    best = max(dist[1:])\n    return best if best < float(\"inf\") else -1\n```\n\n#### Complexity\n\nEach edge can push one heap entry, so there are at most $E + 1$ pushes and pops, each $O(\\log E) = O(\\log V)$: total $O((V + E) \\log V)$. Space $O(V + E)$. The array-based version scans all vertices to find the minimum: $O(V^2)$, better when $E \\approx V^2$.\n\n#### Why negative edges break it\n\nWith `A→B 2`, `A→C 3`, `C→B −2`: the textbook algorithm finalizes B at distance 2 before looking at C, but the true distance is 1 (via C), and a finalized vertex is never revisited. The lazy version above happens to repair this example, because it pushes B again when its distance drops; but then vertices can be processed many times, the $O((V + E) \\log V)$ bound is lost (the worst case becomes exponential), and a negative cycle would make it loop forever. With negative edges, use Bellman-Ford (or shortest paths in a DAG when the graph has no cycles).\n\n#### Edge cases and bugs\n\n- Integer overflow when adding to an \"infinite\" distance: skip relaxation from unreachable vertices, or use a large but safe INF.\n- Forgetting the stale-entry check: still correct but slower (vertices processed multiple times).\n- Using a max-heap by mistake in C++ (`priority_queue` is a max-heap by default).\n- Undirected graphs: add both directions.\n\n#### Variants\n\n- Path with minimum effort (minimize the maximum edge on the path), maximum probability path (multiply, maximize).\n- Cheapest flight with at most k stops: Dijkstra on (vertex, stops) states or Bellman-Ford with k + 1 rounds.\n- Multi-source Dijkstra (all sources at distance 0), Dijkstra on grids with weighted cells.\n\nConnects to: BFS, 0-1 BFS, Bellman-Ford, Dijkstra variants, Prim's algorithm (same heap structure).",
+    "signals": [
+     "cheapest, fastest or shortest route with different non-negative edge weights",
+     "network delay or signal travel time from one source",
+     "a grid or graph where each move has a cost",
+     "minimum total cost to reach a state"
+    ],
+    "template": "```cpp\n// Dijkstra with lazy deletion. adj[u] = {(v, w)}, w >= 0.\nvector<long long> shortest(const vector<vector<pair<int, long long>>>& adj, int src) {\n    vector<long long> dist(adj.size(), LLONG_MAX);\n    priority_queue<pair<long long, int>, vector<pair<long long, int>>, greater<>> pq;\n    dist[src] = 0;\n    pq.push({0, src});\n    while (!pq.empty()) {\n        auto [d, u] = pq.top(); pq.pop();\n        if (d != dist[u]) continue;                       // stale\n        // (if u is the target, you can stop here)\n        for (auto [v, w] : adj[u])\n            if (d + w < dist[v]) { dist[v] = d + w; pq.push({dist[v], v}); }\n    }\n    return dist;\n}\n```"
    }
   },
   {
@@ -10987,9 +11393,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "0-1 BFS finds shortest paths when every move costs either nothing or one unit. It uses a line open at both ends: free moves jump to the front of the line and paid moves join the back. That keeps the line sorted by distance, so it works like Dijkstra without needing a heap.",
+    "interview": [
+     "Deque of vertices; pop from the front; for an edge of weight 0, push the neighbor to the **front**; weight 1, to the **back** (when it improves the distance).",
+     "The deque always holds vertices with distances d and d + 1 only, in order: a two-level priority queue.",
+     "**O(V + E)** time, faster than Dijkstra's O((V + E) log V).",
+     "Uses: minimum walls to remove to reach a cell, minimum cost to make a grid have a valid path (following an arrow is free, changing it costs 1), minimum edges to reverse to reach a node.",
+     "A vertex can be pushed more than once; skip it when popped with an outdated distance, or check `dist` on relaxation as usual."
+    ],
+    "questions": [
+     {
+      "q": "How does 0-1 BFS find shortest paths without a heap?",
+      "a": "It uses a deque. When relaxing an edge of weight 0, the neighbor has the same distance as the current vertex, so it goes to the front; with weight 1 it goes to the back. The deque stays sorted by distance, so popping from the front always gives the closest vertex, like Dijkstra's heap."
+     },
+     {
+      "q": "What is the complexity of 0-1 BFS, and how does it compare with Dijkstra?",
+      "a": "O(V + E), since deque operations are O(1), versus O((V + E) log V) for Dijkstra with a binary heap. It only applies when every weight is 0 or 1."
+     },
+     {
+      "q": "How can \"minimum edge reversals to reach a node\" be modeled as 0-1 BFS?",
+      "a": "For each directed edge u → v, add a cost-0 edge u → v and a cost-1 edge v → u, meaning \"use this edge backwards by reversing it\". The shortest distance to the target counts the minimum reversals."
+     },
+     {
+      "q": "What happens if you push a weight-0 neighbor to the back instead of the front?",
+      "a": "The deque may stop being sorted by distance, so a vertex can be processed before its true shortest distance is known. The result can then be wrong, unless you keep relaxing, which loses the linear-time guarantee."
+     }
+    ],
+    "deep": "#### Intuition\n\nDijkstra needs a heap because distances can be anything. With weights only 0 and 1, the vertices waiting to be processed only ever have two distinct distances, the current distance $d$ and $d + 1$. A deque can keep them sorted cheaply: a 0-edge produces another vertex at distance $d$ (front), a 1-edge produces one at $d + 1$ (back).\n\n#### Worked example: minimum edge reversals\n\nDirected edges `0→1, 2→1, 2→3`. From 0, how many edges must be reversed to reach 3? Model each original edge as cost 0 forward and cost 1 backward.\n\n| pop | dist (0,1,2,3) | pushes |\n|---|---|---|\n| 0 | 0, 0, ∞, ∞ | 1 at the front (0→1 is free) |\n| 1 | 0, 0, 1, ∞ | 2 at the back (1→2 reverses 2→1: cost 1) |\n| 2 | 0, 0, 1, 1 | 3 at the front (2→3 is free) |\n| 3 | final | |\n\nOne reversal is needed.\n\n#### Code\n\n```cpp\n// adj[u] = {(v, w)} with w in {0, 1}.\nvector<int> zeroOneBfs(const vector<vector<pair<int, int>>>& adj, int src) {\n    vector<int> dist(adj.size(), INT_MAX);\n    deque<int> dq;\n    dist[src] = 0;\n    dq.push_back(src);\n    while (!dq.empty()) {\n        int u = dq.front(); dq.pop_front();\n        for (auto [v, w] : adj[u]) {\n            if (dist[u] + w < dist[v]) {\n                dist[v] = dist[u] + w;\n                if (w == 0) dq.push_front(v);         // same distance: process soon\n                else dq.push_back(v);                 // one more: process later\n            }\n        }\n    }\n    return dist;\n}\n```\n\n```python\nfrom collections import deque\n\ndef min_obstacles_to_remove(grid):\n    \"\"\"Walk from top-left to bottom-right; entering a 1-cell costs 1 (remove it).\"\"\"\n    R, C = len(grid), len(grid[0])\n    dist = [[float(\"inf\")] * C for _ in range(R)]\n    dist[0][0] = 0\n    dq = deque([(0, 0)])\n    while dq:\n        r, c = dq.popleft()\n        for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n            if 0 <= nr < R and 0 <= nc < C:\n                w = grid[nr][nc]\n                if dist[r][c] + w < dist[nr][nc]:\n                    dist[nr][nc] = dist[r][c] + w\n                    if w == 0:\n                        dq.appendleft((nr, nc))\n                    else:\n                        dq.append((nr, nc))\n    return dist[R - 1][C - 1]\n```\n\n#### Complexity\n\nEach vertex's distance can only decrease a bounded number of times (at most twice in practice, since distances in the deque differ by at most 1), so the total work is $O(V + E)$.\n\n#### Edge cases and bugs\n\n- Pushing weight-0 neighbors to the back breaks the ordering (the result can be wrong).\n- Weights other than 0 and 1: use Dijkstra, or Dial's algorithm (buckets) for small integer weights.\n\n#### Variants\n\n- Minimum cost to make at least one valid path in a grid (arrows: following costs 0, changing costs 1).\n- Reorder routes so every city reaches city 0 (count reversed edges; a plain DFS also works on trees).\n- Dial's algorithm: buckets for weights 0 to k, $O(V \\cdot k + E)$.\n\nConnects to: BFS, Dijkstra's algorithm, deques, grids as graphs.",
+    "signals": [
+     "each move is either free or costs exactly one",
+     "minimum number of walls, obstacles or changes along a path",
+     "minimum edge reversals or direction changes",
+     "a grid where following an arrow is free but changing it costs 1"
+    ],
+    "template": "```cpp\n// 0-1 BFS on a grid: entering a cell costs cost(r, c), which is 0 or 1.\ntemplate <class Cost>\nint zeroOneGrid(int R, int C, Cost cost) {\n    vector<vector<int>> dist(R, vector<int>(C, INT_MAX));\n    deque<pair<int, int>> dq;\n    dist[0][0] = 0;\n    dq.push_back({0, 0});\n    int dr[4] = {1, -1, 0, 0}, dc[4] = {0, 0, 1, -1};\n    while (!dq.empty()) {\n        auto [r, c] = dq.front(); dq.pop_front();\n        for (int k = 0; k < 4; k++) {\n            int nr = r + dr[k], nc = c + dc[k];\n            if (nr < 0 || nc < 0 || nr >= R || nc >= C) continue;\n            int w = cost(nr, nc);\n            if (dist[r][c] + w < dist[nr][nc]) {\n                dist[nr][nc] = dist[r][c] + w;\n                w ? dq.push_back({nr, nc}) : dq.push_front({nr, nc});\n            }\n        }\n    }\n    return dist[R - 1][C - 1];\n}\n```"
    }
   },
   {
@@ -11014,9 +11451,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Bellman-Ford finds shortest paths even when some roads have negative costs, like a route that pays you a rebate. It simply tries to improve every road's destination again and again: after enough rounds, every shortest path has been discovered one edge at a time. If an improvement is still possible after that, there is a loop that keeps getting cheaper forever.",
+    "interview": [
+     "Repeat **V − 1 rounds**: relax every edge `(u, v, w)`. A shortest path has at most V − 1 edges, and round i fixes all paths with i edges. **O(V · E)**.",
+     "A **V-th round** that still improves something means a **negative cycle** reachable from the source.",
+     "**At most k edges** (cheapest flights within k stops = k + 1 edges): run k + 1 rounds, relaxing from a **copy** of the previous round's distances so one round adds at most one edge.",
+     "Works on edge lists; handles negative weights (Dijkstra can't).",
+     "SPFA (queue-based Bellman-Ford) is often faster in practice but has the same worst case."
+    ],
+    "questions": [
+     {
+      "q": "Why does Bellman-Ford run V − 1 rounds of relaxation?",
+      "a": "Without negative cycles, a shortest path visits each vertex at most once, so it has at most V − 1 edges. After round i, every shortest path using at most i edges has been found, so V − 1 rounds cover all of them."
+     },
+     {
+      "q": "How does Bellman-Ford detect a negative cycle?",
+      "a": "After V − 1 rounds all shortest distances are final if no negative cycle is reachable. Run one more round: if any edge can still be relaxed, some distance keeps decreasing, which only happens with a reachable negative cycle."
+     },
+     {
+      "q": "How do you find the cheapest flight with at most k stops?",
+      "a": "Run k + 1 rounds of Bellman-Ford, since k stops means at most k + 1 flights. In each round, relax edges using a copy of the previous round's distances, so a single round can't chain several new edges together."
+     },
+     {
+      "q": "Why must the k-stops version relax from a copy of the distances?",
+      "a": "If a round updates distances in place, an edge relaxed early in the round can feed into another edge later in the same round, letting one round extend a path by several edges. Using last round's copy limits each round to one extra edge."
+     }
+    ]
    }
   },
   {
@@ -11036,9 +11496,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Floyd-Warshall computes the shortest distance between every pair of places at once. It asks, one place at a time, whether passing through that place gives any pair a shorter route. After every place has been considered as a possible stopover, all distances are final.",
+    "interview": [
+     "`dist[i][j]` starts as the edge weight (0 on the diagonal, ∞ if no edge). For each `k`, for each `i`, `j`: `dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])`.",
+     "**k must be the outermost loop**: after iteration k, distances use only intermediate vertices from {0..k}.",
+     "**O(V³)** time, **O(V²)** space: fine for V up to about 400 to 500.",
+     "Handles negative edges; a negative value on the diagonal (`dist[i][i] < 0`) means a negative cycle.",
+     "Uses: all-pairs distances, city with the fewest reachable cities within a threshold, transitive closure (with booleans).",
+     "For sparse graphs with non-negative weights, running Dijkstra from every vertex is O(V (V + E) log V), often faster."
+    ],
+    "questions": [
+     {
+      "q": "What does Floyd-Warshall compute, and how?",
+      "a": "The shortest distance between every pair of vertices. It considers each vertex k in turn as an allowed intermediate stop and updates every pair (i, j) with dist[i][k] + dist[k][j] when that is shorter. After all k, the distances are the true shortest distances."
+     },
+     {
+      "q": "Why must the loop over k be the outermost loop?",
+      "a": "The algorithm's invariant is that after processing k, dist[i][j] is the shortest path using only intermediates among the first k vertices. That requires all pairs to be updated for one k before moving to the next; nesting k inside breaks the invariant and gives wrong answers."
+     },
+     {
+      "q": "How does Floyd-Warshall detect a negative cycle?",
+      "a": "After it finishes, a vertex i with dist[i][i] < 0 lies on a negative cycle, since there is a way to leave i and return with negative total cost."
+     },
+     {
+      "q": "When is Floyd-Warshall a good choice?",
+      "a": "When you need all-pairs distances on a small graph (a few hundred vertices), possibly with negative edges, and simple code matters. For large sparse graphs, repeated Dijkstra is faster."
+     }
+    ]
    }
   },
   {
@@ -11060,9 +11544,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "In a graph with no cycles, you can list the vertices so that every edge points forward. Processing vertices in that order means that by the time you reach a vertex, every route into it has already been counted. So one pass that improves each vertex's neighbors finds all shortest (or longest) paths, even with negative edges.",
+    "interview": [
+     "Topologically sort, then relax each vertex's outgoing edges in that order. **O(V + E)**.",
+     "Works with **negative** weights (there are no cycles, so no negative cycles).",
+     "**Longest path** in a DAG: same algorithm with max instead of min (or negate weights). Longest path in a general graph is NP-hard.",
+     "It's DP on a DAG: `dist[v] = min over edges (u → v) of dist[u] + w`.",
+     "Uses: critical path in project scheduling, longest increasing path in a matrix (edges from smaller to larger cells), counting paths."
+    ],
+    "questions": [
+     {
+      "q": "How do you compute shortest paths in a DAG in linear time?",
+      "a": "Find a topological order, set the source distance to 0, and process vertices in that order, relaxing all their outgoing edges. When a vertex is processed, all edges into it have already been relaxed, so its distance is final. That's O(V + E)."
+     },
+     {
+      "q": "Why does this work with negative edge weights, unlike Dijkstra?",
+      "a": "Correctness comes from the topological order, not from settling the nearest vertex first. Every predecessor of a vertex is processed before it, whatever the weights, and a DAG can't contain a negative cycle."
+     },
+     {
+      "q": "How do you find the longest path in a DAG?",
+      "a": "Use the same topological-order DP but take the maximum instead of the minimum, or negate the weights and find the shortest path. This works only because the graph is acyclic; longest simple path in a general graph is NP-hard."
+     },
+     {
+      "q": "How is \"longest increasing path in a matrix\" a DAG problem?",
+      "a": "Draw an edge from each cell to every neighbor with a larger value. Strictly increasing edges can't form a cycle, so the graph is a DAG, and the longest path is found with DP in topological order or memoized DFS, in O(R · C)."
+     }
+    ]
    }
   },
   {
@@ -11084,9 +11591,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Dijkstra's idea, always settle the best unsettled vertex, works for more than summing distances. You can minimize the worst single step of a route, like finding a hike whose steepest climb is as gentle as possible, or maximize the chance that every link of a route works. You only change how a path's value is computed and compared.",
+    "interview": [
+     "**Minimize the maximum edge** (path with minimum effort): path value = `max(dist[u], w)`; min-heap. Also solvable with binary search + BFS, or union-find.",
+     "**Maximize probability**: path value = `dist[u] * p`, max-heap; works because probabilities ≤ 1 never increase along a path.",
+     "**Count shortest paths**: when `dist[u] + w < dist[v]`, set `ways[v] = ways[u]`; when equal, `ways[v] += ways[u]` (modulo if needed).",
+     "**State expansion**: Dijkstra over (vertex, extra state) such as stops used, fuel, or parity.",
+     "Requirement: the path value must never improve by extending a path (monotone), like non-negative weights."
+    ],
+    "questions": [
+     {
+      "q": "How do you find a path that minimizes the largest edge weight?",
+      "a": "Run Dijkstra where a path's value is the maximum edge on it: relaxing edge (u, v, w) gives max(dist[u], w). The first time the target is popped, its value is optimal. Binary search on the answer with BFS, or adding edges in increasing order with union-find, also work."
+     },
+     {
+      "q": "How do you find the path with the maximum success probability?",
+      "a": "Run Dijkstra with a max-heap, where extending a path multiplies its probability by the edge's probability. Since probabilities are at most 1, extending a path never increases its value, which is the property Dijkstra needs."
+     },
+     {
+      "q": "How do you count the number of shortest paths to each vertex?",
+      "a": "Keep ways[v] alongside dist[v]. When an edge gives a strictly shorter distance, set ways[v] = ways[u]; when it gives an equal distance, add ways[u] to ways[v]. Process vertices in Dijkstra order so ways[u] is final before it's used."
+     },
+     {
+      "q": "What condition must a path value satisfy for Dijkstra-style algorithms to work?",
+      "a": "Extending a path must never make its value better than before (monotone), just as non-negative weights never shorten a path. Maximum edge, sums of non-negative weights and products of probabilities at most 1 all satisfy this."
+     }
+    ]
    }
   },
   {
@@ -11108,9 +11638,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A* is Dijkstra with a sense of direction: it prefers vertices that look closer to the goal. It ranks each vertex by the distance traveled so far plus an estimate of the remaining distance, like a traveler heading toward a city they can see on the horizon. If the estimate never overestimates, A* still finds the shortest path, often much faster.",
+    "interview": [
+     "Priority = `g(v) + h(v)`: `g` = best known cost from the start, `h` = heuristic estimate to the goal.",
+     "**Admissible** heuristic: never overestimates the true remaining cost; then A* returns an optimal path.",
+     "**Consistent** (monotone) heuristic: `h(u) ≤ w(u, v) + h(v)`; then each vertex is settled once, like Dijkstra.",
+     "Grid heuristics: Manhattan distance (4 directions), Chebyshev or octile (8 directions), Euclidean.",
+     "`h = 0` gives Dijkstra; a better (larger but admissible) `h` explores fewer vertices.",
+     "Used in games, maps and puzzles (8-puzzle with the Manhattan distance of tiles)."
+    ],
+    "questions": [
+     {
+      "q": "How does A* differ from Dijkstra's algorithm?",
+      "a": "Dijkstra orders vertices by the cost so far, g. A* orders them by g + h, where h estimates the remaining cost to the goal, so it expands vertices in the goal's direction first. With h = 0 the two are identical."
+     },
+     {
+      "q": "What makes a heuristic admissible, and why does it matter?",
+      "a": "An admissible heuristic never overestimates the true remaining cost. That guarantees the goal isn't popped with a suboptimal cost, because the optimal path's priority is never above the true shortest distance."
+     },
+     {
+      "q": "What is a consistent heuristic?",
+      "a": "One where for every edge u → v, h(u) ≤ w(u, v) + h(v), a triangle inequality. Consistency implies admissibility and means that, as in Dijkstra, a vertex's cost is final the first time it's popped."
+     },
+     {
+      "q": "What heuristic would you use for shortest paths on a 4-directional grid?",
+      "a": "The Manhattan distance |r1 − r2| + |c1 − c2|, since every move changes one coordinate by 1 and there's no shortcut. For 8 directions with equal diagonal cost, use the Chebyshev distance."
+     }
+    ]
    }
   },
   {
@@ -11130,9 +11684,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Disjoint set union keeps track of which items belong to the same group as groups merge over time. Each group has a leader, and every item points toward it, like employees who report through managers up to a boss. Two items are in the same group exactly when they lead up to the same boss, and merging two groups just makes one boss report to the other.",
+    "interview": [
+     "Operations: `find(x)` returns the set's representative (root); `union(a, b)` merges two sets.",
+     "**Path compression**: during `find`, point nodes directly at the root.",
+     "**Union by size or rank**: attach the smaller tree under the larger.",
+     "With both: **O(α(n))** amortized per operation, where α is the inverse Ackermann function (≤ 4 for any practical n): effectively constant.",
+     "Without optimizations, a chain can make `find` O(n).",
+     "Uses: dynamic connectivity, counting components as edges arrive, Kruskal's MST, cycle detection in undirected graphs, grouping equal items (accounts merge, similar strings)."
+    ],
+    "questions": [
+     {
+      "q": "What are the two optimizations for disjoint set union, and what do they achieve?",
+      "a": "Union by size or rank attaches the smaller tree under the larger, which keeps trees shallow. Path compression makes nodes on a find path point closer to the root. Together they make each operation O(α(n)) amortized, effectively constant."
+     },
+     {
+      "q": "What is the inverse Ackermann function, informally?",
+      "a": "A function that grows extremely slowly: it is at most 4 for any n that could ever be stored. So O(α(n)) is constant for practical purposes, though not strictly O(1)."
+     },
+     {
+      "q": "How do you use DSU to count connected components as edges are added?",
+      "a": "Start with n components. For each edge, if its endpoints have different roots, unite them and decrease the count; if they share a root, the count doesn't change. Each edge costs nearly O(1)."
+     },
+     {
+      "q": "What can't DSU do efficiently?",
+      "a": "Split a set or delete an edge, since unions can't be undone once paths are compressed. Problems with deletions are often solved offline by processing operations in reverse, turning deletions into unions."
+     },
+     {
+      "q": "What happens without any optimization?",
+      "a": "Unions can build a long chain, making find O(n), so m operations can cost O(m · n). Either optimization alone brings it to O(log n) per operation."
+     }
+    ],
+    "deep": "#### Intuition\n\nEach set is stored as a tree of parent pointers whose root represents the set. `find` climbs to the root; `union` links one root under the other. The two optimizations keep the trees flat: union by size prevents tall trees from forming, and path compression flattens whatever height remains every time you search through it.\n\n#### Worked example\n\nStart with `0 1 2 3 4`, each its own set.\n\n| operation | parent array after | sets |\n|---|---|---|\n| union(0, 1) | 0: 0, 1: 0 | {0,1} {2} {3} {4} |\n| union(2, 3) | 2: 2, 3: 2 | {0,1} {2,3} {4} |\n| union(1, 3) | root(1)=0, root(3)=2, same size: 2 → 0 | {0,1,2,3} {4} |\n| find(3) | 3 → 2 → 0; compress: 3 → 0 | |\n| connected(1, 4)? | roots 0 and 4 differ | no |\n\n#### Code\n\n```cpp\nstruct DSU {\n    vector<int> parent, size;\n    int components;\n    explicit DSU(int n) : parent(n), size(n, 1), components(n) {\n        iota(parent.begin(), parent.end(), 0);\n    }\n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];         // path halving (a form of compression)\n            x = parent[x];\n        }\n        return x;\n    }\n    bool unite(int a, int b) {\n        a = find(a), b = find(b);\n        if (a == b) return false;                  // already in the same set\n        if (size[a] < size[b]) swap(a, b);\n        parent[b] = a;                             // smaller tree under the larger\n        size[a] += size[b];\n        components--;\n        return true;\n    }\n    bool connected(int a, int b) { return find(a) == find(b); }\n};\n```\n\n```python\nclass DSU:\n    def __init__(self, n):\n        self.parent = list(range(n))\n        self.size = [1] * n\n        self.components = n\n\n    def find(self, x):\n        root = x\n        while self.parent[root] != root:\n            root = self.parent[root]\n        while self.parent[x] != root:          # full path compression\n            self.parent[x], x = root, self.parent[x]\n        return root\n\n    def union(self, a, b):\n        a, b = self.find(a), self.find(b)\n        if a == b:\n            return False\n        if self.size[a] < self.size[b]:\n            a, b = b, a\n        self.parent[b] = a\n        self.size[a] += self.size[b]\n        self.components -= 1\n        return True\n```\n\n#### Complexity\n\nWith union by size (or rank) and path compression, $m$ operations on $n$ elements take $O(m \\, \\alpha(n))$, where $\\alpha$ grows so slowly that it is at most 4 for any input that fits in the universe. With only one of the two optimizations it is $O(\\log n)$ per operation. Space $O(n)$.\n\n#### Edge cases and bugs\n\n- Calling `parent[a] = b` on non-roots (forgetting `find` first) corrupts the structure.\n- Recursive `find` with path compression can overflow the stack on a long chain before it gets compressed; the iterative version is safe.\n- Elements that aren't integers: map them to indices with a hash map first.\n- DSU doesn't support splitting sets (deleting edges); process deletions offline in reverse if needed.\n\n#### Variants\n\n- Size tracking (largest component), component count (as above).\n- Weighted DSU: store an offset to the parent (evaluate division, parity for bipartiteness).\n- Rollback DSU (union by size, no compression) for offline dynamic connectivity.\n\nConnects to: DSU applications, Kruskal's algorithm, cycle detection in undirected graphs, connected components."
    }
   },
   {
@@ -11154,9 +11737,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Union-find shines whenever things get grouped by \"these two belong together\" facts. Merging accounts that share an email, finding the extra cable that creates a loop, or grouping similar words all come down to joining pairs and asking who ends up together. Each fact is one merge, and the final groups fall out at the end.",
+    "interview": [
+     "**Connectivity queries** as edges arrive: `unite` per edge, `find` per query.",
+     "**Redundant connection**: the first edge whose endpoints are already connected closes a cycle: return it.",
+     "**Accounts merge**: union accounts that share an email (map email → first account seen), then group emails by root and sort them.",
+     "**Number of islands II** (land added over time): add a cell, union with land neighbors, report components after each addition.",
+     "**Similar string groups**, **satisfiability of equations** (union all `==`, then check every `!=`).",
+     "Map arbitrary keys to indices, and for grids use `r * C + c`."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the edge that turns a tree into a graph with one cycle?",
+      "a": "Process edges in order with union-find. The first edge whose endpoints are already in the same set connects two vertices that were already connected, so it closes the cycle; return it."
+     },
+     {
+      "q": "How does union-find solve accounts merge?",
+      "a": "Treat each account as an element. Map each email to the first account that listed it, and union any later account containing that email with it. Then group all emails by the root of their account, sort each group and attach the account name."
+     },
+     {
+      "q": "How do you check whether equality and inequality equations between variables can all hold?",
+      "a": "First union the two sides of every equality. Then check each inequality: if its two variables have the same root, they're forced equal, so the equations are unsatisfiable. The order matters: all equalities must be processed first."
+     },
+     {
+      "q": "How do you report the number of islands after each land cell is added?",
+      "a": "Keep a DSU of land cells and a component count. Adding a new land cell adds one component, then uniting it with each adjacent land cell in a different set reduces the count by one per merge. Each addition is nearly O(1)."
+     }
+    ],
+    "deep": "#### Intuition\n\nDSU turns a stream of \"same group\" facts into groups without building and traversing a graph each time. Whenever the answer only depends on which items are connected (not how), and connections only get added, DSU is the simplest and fastest tool.\n\n#### Worked example: satisfiability of equality equations\n\nEquations: `a==b`, `b==c`, `a!=c`.\n\n| step | action | result |\n|---|---|---|\n| 1 | union a, b | {a, b} |\n| 2 | union b, c | {a, b, c} |\n| 3 | check a != c | find(a) == find(c): **contradiction** |\n\nProcessing all equalities first is essential; checking `!=` in input order would miss later merges.\n\n#### Code\n\n```cpp\nstruct UF {\n    vector<int> p;\n    explicit UF(int n) : p(n) { iota(p.begin(), p.end(), 0); }\n    int find(int x) { return p[x] == x ? x : p[x] = find(p[x]); }\n    bool unite(int a, int b) { a = find(a); b = find(b); if (a == b) return false; p[a] = b; return true; }\n};\n\nvector<int> findRedundantConnection(const vector<vector<int>>& edges) {\n    UF uf(edges.size() + 1);                        // vertices 1..n\n    for (auto& e : edges)\n        if (!uf.unite(e[0], e[1])) return e;        // already connected: this edge closes a cycle\n    return {};\n}\n\nbool equationsPossible(const vector<string>& eqs) {\n    UF uf(26);\n    for (auto& e : eqs) if (e[1] == '=') uf.unite(e[0] - 'a', e[3] - 'a');   // all equalities first\n    for (auto& e : eqs) if (e[1] == '!' && uf.find(e[0] - 'a') == uf.find(e[3] - 'a')) return false;\n    return true;\n}\n```\n\n```python\ndef accounts_merge(accounts):\n    parent = list(range(len(accounts)))\n    def find(x):\n        while parent[x] != x:\n            parent[x] = parent[parent[x]]\n            x = parent[x]\n        return x\n\n    owner = {}                                   # email -> first account index\n    for i, (_, *emails) in enumerate(accounts):\n        for email in emails:\n            if email in owner:\n                parent[find(i)] = find(owner[email])\n            else:\n                owner[email] = i\n\n    groups = {}\n    for email, i in owner.items():\n        groups.setdefault(find(i), []).append(email)\n    return [[accounts[root][0]] + sorted(emails) for root, emails in groups.items()]\n\ndef islands_after_each_addition(R, C, positions):\n    parent, count, out = {}, 0, []\n    def find(x):\n        while parent[x] != x:\n            parent[x] = parent[parent[x]]\n            x = parent[x]\n        return x\n    for r, c in positions:\n        cell = r * C + c\n        if cell not in parent:\n            parent[cell] = cell\n            count += 1\n            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                nb = nr * C + nc\n                if 0 <= nr < R and 0 <= nc < C and nb in parent:\n                    a, b = find(cell), find(nb)\n                    if a != b:\n                        parent[a] = b\n                        count -= 1\n        out.append(count)\n    return out\n```\n\n#### Recognizing a DSU problem\n\nLook for three clues: the problem is about which things end up in the same group; the grouping facts are symmetric and transitive (if a is with b and b is with c, then a is with c); and facts only ever add connections. If connections can be removed, or you need the path between two items, DSU is the wrong tool; use a graph traversal instead.\n\n#### Complexity\n\n$O((n + m) \\, \\alpha(n))$ for $n$ items and $m$ union or find operations, plus the problem's own work (sorting emails in accounts merge: $O(E \\log E)$).\n\n#### Edge cases and bugs\n\n- Re-adding the same land cell in islands II must not change the count.\n- Emails shared by accounts with different names can't happen by problem definition, but key by email, not name.\n- 1-indexed vertices in redundant connection.\n\n#### Variants\n\n- Most stones removed (union stones sharing a row or column; answer = stones − components).\n- Smallest string with swaps (union swappable indices, sort characters within each group).\n- Graph connectivity with a threshold (union multiples of each divisor greater than the threshold).\n- Minimize malware spread (component sizes and counts of infected nodes).\n\nConnects to: disjoint set union, connected components, Kruskal's algorithm, cycle detection.",
+    "signals": [
+     "items are grouped by pairwise \"same as\" or \"connected to\" facts",
+     "connectivity questions while edges keep being added",
+     "find the edge that creates a cycle",
+     "merge records that share any common key (emails, rows, columns)"
+    ],
+    "template": "```cpp\n// Grouping with union-find, then collecting members by root.\nvector<vector<int>> groups(int n, const vector<pair<int, int>>& sameAs) {\n    vector<int> p(n);\n    iota(p.begin(), p.end(), 0);\n    function<int(int)> find = [&](int x) { return p[x] == x ? x : p[x] = find(p[x]); };\n    for (auto [a, b] : sameAs) p[find(a)] = find(b);     // merge (add size ranks if needed)\n    unordered_map<int, vector<int>> byRoot;\n    for (int i = 0; i < n; i++) byRoot[find(i)].push_back(i);\n    vector<vector<int>> out;\n    for (auto& [root, members] : byRoot) out.push_back(members);\n    return out;\n}\n```"
    }
   },
   {
@@ -11178,9 +11793,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Kruskal's algorithm connects all points as cheaply as possible, forming a minimum spanning tree. It looks at connections from cheapest to most expensive and keeps each one that joins two groups not yet connected, skipping any that would form a loop. It is like building roads between villages, always building the cheapest road that actually links someone new.",
+    "interview": [
+     "A **minimum spanning tree** (MST) connects all V vertices of a connected, undirected, weighted graph with V − 1 edges and minimum total weight.",
+     "Kruskal: **sort edges** by weight; for each edge, if its endpoints are in different DSU sets, add it and unite. Stop at V − 1 edges.",
+     "**O(E log E)** for sorting (DSU work is nearly linear).",
+     "Correctness: the **cut property**: the lightest edge crossing any cut belongs to some MST.",
+     "If fewer than V − 1 edges are added, the graph is disconnected (you get a minimum spanning forest).",
+     "Prefer Kruskal for sparse graphs and edge lists; Prim for dense graphs or adjacency lists."
+    ],
+    "questions": [
+     {
+      "q": "How does Kruskal's algorithm build a minimum spanning tree?",
+      "a": "Sort all edges by weight. Go through them from lightest to heaviest and add an edge whenever its endpoints are in different components, uniting those components in a DSU; skip edges that would create a cycle. Stop after V − 1 edges."
+     },
+     {
+      "q": "What is the cut property, and why does it justify Kruskal?",
+      "a": "For any partition of the vertices into two sides, the lightest edge crossing between them belongs to some MST. When Kruskal adds an edge, it is the lightest edge leaving its component (all lighter edges were already processed), so by the cut property it is safe."
+     },
+     {
+      "q": "What is Kruskal's time complexity?",
+      "a": "O(E log E) for sorting, which dominates; the DSU operations add O(E · α(V)). Since E ≤ V², log E is O(log V), so it is also written O(E log V)."
+     },
+     {
+      "q": "When would you choose Prim's algorithm instead?",
+      "a": "For dense graphs, especially complete graphs defined by coordinates, where Prim's O(V²) array version avoids generating and sorting all V² edges. Kruskal is simpler when you already have an edge list of a sparse graph."
+     },
+     {
+      "q": "How can a precomputed set of mandatory edges be handled?",
+      "a": "Add them first: unite their endpoints and add their weights, then run Kruskal on the remaining edges. The result is the cheapest spanning tree that includes the mandatory edges."
+     }
+    ],
+    "deep": "#### Intuition\n\nAdding the cheapest edge that doesn't create a cycle is always safe. Consider the two groups (components) that edge connects: some edge must eventually join the first group to the rest, and none is cheaper than this one among the edges still possible, because all cheaper edges were already considered and either used or rejected as cycle-makers. That's the cut property.\n\n#### Worked example\n\nVertices A–D. Edges sorted: `A–B 1, B–C 2, A–C 3, C–D 4, B–D 5`.\n\n| edge | same set? | action | MST weight |\n|---|---|---|---|\n| A–B 1 | no | take | 1 |\n| B–C 2 | no | take | 3 |\n| A–C 3 | yes (A, B, C joined) | skip (cycle) | 3 |\n| C–D 4 | no | take (3 edges: done) | 7 |\n\nMST weight **7**.\n\n#### Code\n\n```cpp\nlong long kruskal(int n, vector<array<int, 3>> edges) {    // {w, u, v}\n    sort(edges.begin(), edges.end());                       // by weight\n    vector<int> p(n), sz(n, 1);\n    iota(p.begin(), p.end(), 0);\n    auto find = [&](int x) {\n        while (p[x] != x) x = p[x] = p[p[x]];\n        return x;\n    };\n    long long total = 0;\n    int used = 0;\n    for (auto [w, u, v] : edges) {\n        int a = find(u), b = find(v);\n        if (a == b) continue;                               // would create a cycle\n        if (sz[a] < sz[b]) swap(a, b);\n        p[b] = a;\n        sz[a] += sz[b];\n        total += w;\n        if (++used == n - 1) break;\n    }\n    return used == n - 1 ? total : -1;                      // -1: graph not connected\n}\n```\n\n```python\ndef min_cost_connect_points(points):\n    \"\"\"Manhattan-distance MST over points with Kruskal (O(n^2 log n) edges).\"\"\"\n    n = len(points)\n    edges = sorted(\n        (abs(x1 - x2) + abs(y1 - y2), i, j)\n        for i, (x1, y1) in enumerate(points)\n        for j, (x2, y2) in enumerate(points[:i])\n    )\n    parent = list(range(n))\n    def find(x):\n        while parent[x] != x:\n            parent[x] = parent[parent[x]]\n            x = parent[x]\n        return x\n    total = used = 0\n    for w, i, j in edges:\n        a, b = find(i), find(j)\n        if a != b:\n            parent[a] = b\n            total += w\n            used += 1\n            if used == n - 1:\n                break\n    return total\n```\n\nFor all-pairs complete graphs like \"connect points\", Prim's $O(V^2)$ version beats sorting $O(V^2)$ edges.\n\n#### Complexity\n\nSorting: $O(E \\log E) = O(E \\log V)$. DSU operations: $O(E \\, \\alpha(V))$. Space $O(V + E)$.\n\n#### Edge cases and bugs\n\n- Disconnected graphs: fewer than V − 1 edges are taken; report it.\n- Equal weights: any tie order gives a valid MST (MSTs may not be unique, but their weight is).\n- Directed graphs: MST is defined for undirected graphs (the directed analogue is an arborescence, a different algorithm).\n\n#### Variants\n\n- Critical and pseudo-critical edges (force-include or exclude each edge and compare weights).\n- Minimum spanning tree with some edges pre-built (union them first at cost 0).\n- Maximum spanning tree (sort descending), and \"minimize the maximum edge\" (the MST's largest edge is the answer, the bottleneck property).\n- Optimize water distribution: add a virtual vertex whose edges cost the well prices.\n\nConnects to: disjoint set union, Prim's algorithm, greedy fundamentals (exchange argument), sorting."
    }
   },
   {
@@ -11202,9 +11846,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Prim's algorithm grows a minimum spanning tree outward from one starting point. At each step it adds the cheapest connection from the tree built so far to a new point, like a city expanding its road network by always building the cheapest road to a town not yet connected. After every point is reached, the roads form the cheapest possible network.",
+    "interview": [
+     "Start at any vertex; min-heap of `(weight, vertex)` for edges leaving the tree; pop the lightest edge to an unvisited vertex, add it, push that vertex's edges. **O(E log V)**.",
+     "Dense or complete graphs: array version with `minEdge[v]` and a linear scan: **O(V²)**, no heap.",
+     "Correct by the **cut property** (the tree versus the rest is a cut).",
+     "Very similar to Dijkstra; the difference is the key: the edge weight itself, not the distance from the source.",
+     "Produces a tree only if the graph is connected; otherwise it covers one component."
+    ],
+    "questions": [
+     {
+      "q": "How does Prim's algorithm work?",
+      "a": "Start from any vertex as the tree. Repeatedly add the lightest edge that connects a tree vertex to a non-tree vertex, using a min-heap of candidate edges, until all vertices are in the tree. By the cut property each chosen edge belongs to an MST."
+     },
+     {
+      "q": "How is Prim's algorithm different from Dijkstra's?",
+      "a": "Both grow a set from a start vertex using a priority queue. Dijkstra prioritizes a vertex by its total distance from the source (dist[u] + w), while Prim prioritizes it by the single edge weight connecting it to the tree (w)."
+     },
+     {
+      "q": "What are the complexities of the heap and array versions of Prim?",
+      "a": "With a binary heap and lazy deletion, O(E log V). With an array of best edge weights and a linear scan for the minimum, O(V²), which is better for dense graphs where E is close to V²."
+     },
+     {
+      "q": "When is Prim preferable to Kruskal?",
+      "a": "For dense graphs, especially complete graphs given by coordinates (like connecting points by distance), where the O(V²) array version avoids building and sorting all V² edges."
+     }
+    ]
    }
   },
   {
@@ -11226,9 +11893,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Union-find can carry extra information about each group, such as how many members it has or which side of a split each member is on. When two groups merge, their extra information is combined at the leader. It is like merging two clubs and adding up their member counts in the new club's record.",
+    "interview": [
+     "Store data at the **root**: size, sum, min, max, count of special members; combine it in `union`.",
+     "**Weighted / parity DSU**: each node stores its relation to its parent (for example, parity = \"same side or opposite side\"); `find` accumulates relations along the path while compressing.",
+     "**Online bipartiteness**: union(u, v) with the constraint \"different sides\"; if they're already connected with the same parity, the graph isn't bipartite.",
+     "**Evaluate division**: weight = ratio to the parent; `a / b` = weight(a) / weight(b) when they share a root.",
+     "Update relations carefully during path compression (multiply or XOR the accumulated values)."
+    ],
+    "questions": [
+     {
+      "q": "How do you track the size of each component in union-find?",
+      "a": "Keep a size array that is meaningful only at roots. On union, attach one root under the other and add its size to the new root's size. The component size of x is size[find(x)]."
+     },
+     {
+      "q": "How does a parity DSU check bipartiteness as edges are added?",
+      "a": "Each node stores the parity of its path to its parent. find returns the root together with the node's parity to the root. For an edge u–v, if they have the same root and the same parity, the edge creates an odd cycle; otherwise union them, setting the new link's parity so that u and v end up on opposite sides."
+     },
+     {
+      "q": "How does union-find solve \"evaluate division\" queries?",
+      "a": "Store for each variable its ratio to its parent. An equation a / b = k unites the two sets and sets the link weight so the ratio holds. A query a / b is answerable when both share a root, and equals weight(a to root) divided by weight(b to root)."
+     },
+     {
+      "q": "What must path compression do in a weighted DSU?",
+      "a": "When a node is re-pointed directly to the root, its stored relation must become its relation to the root, which is the combination (sum, XOR or product) of the relations along the old path. Otherwise the stored weights become wrong."
+     }
+    ]
    }
   },
   {
@@ -11248,9 +11938,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A bridge is a connection whose removal splits a network into pieces, and an articulation point is a single node with the same effect. Think of the only road into a valley, or the one airport connecting two regions. Tarjan's method finds them all in one depth-first search by tracking how high up each part of the search tree can reach through back routes.",
+    "interview": [
+     "DFS assigns `tin[u]` (discovery time) and `low[u]` = the smallest `tin` reachable from u's subtree using at most one back edge.",
+     "Edge `u–v` (v a child) is a **bridge** iff `low[v] > tin[u]`: v's subtree can't reach u or above without this edge.",
+     "u is an **articulation point** iff (non-root) some child v has `low[v] >= tin[u]`, or (root) it has **two or more** DFS children.",
+     "One DFS: **O(V + E)**. Skip the edge to the parent (by edge id if parallel edges exist).",
+     "Uses: critical connections in a network, single points of failure, biconnected components."
+    ],
+    "questions": [
+     {
+      "q": "What is a low-link value?",
+      "a": "low[u] is the smallest discovery time reachable from u's DFS subtree by following tree edges down and then at most one back edge up. It tells you how high in the DFS tree a subtree can climb without using the edge from its parent."
+     },
+     {
+      "q": "What is the condition for a tree edge u–v to be a bridge?",
+      "a": "low[v] > tin[u]. It means nothing in v's subtree has a back edge to u or any ancestor of u, so removing the edge disconnects v's subtree from the rest."
+     },
+     {
+      "q": "How does the articulation point condition differ from the bridge condition?",
+      "a": "For a non-root u, the condition is low[v] >= tin[u] for some child v: the subtree can reach at most u itself, so removing u cuts it off. The root is special: it is an articulation point only if it has at least two DFS children."
+     },
+     {
+      "q": "Why must you skip the parent edge rather than the parent vertex when there are parallel edges?",
+      "a": "Two parallel edges between u and its parent form a cycle, so neither is a bridge. Skipping by vertex ignores both and wrongly reports a bridge; skipping only the specific edge used to enter u keeps the other one as a back edge."
+     }
+    ]
    }
   },
   {
@@ -11270,9 +11983,31 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "In a directed graph, a strongly connected component is a group where every member can reach every other member by following the arrows. Think of groups of web pages that all link to each other in a loop, directly or indirectly. Shrinking each group to a single point leaves a graph with no cycles, which makes further analysis easy.",
+    "interview": [
+     "**Kosaraju**: (1) DFS the graph, record vertices by finish time; (2) reverse all edges; (3) DFS the reversed graph in decreasing finish time; each DFS tree is one SCC. **O(V + E)**, two passes.",
+     "**Tarjan**: one DFS with `tin`, `low` and a stack of vertices; when `low[u] == tin[u]`, pop the stack down to u: that's an SCC. O(V + E).",
+     "The **condensation** (one node per SCC) is a DAG, useful for topological reasoning on cyclic graphs.",
+     "Uses: 2-SAT, finding mutual reachability groups, minimum edges to make a graph strongly connected (max(sources, sinks) of the condensation, if more than one SCC)."
+    ],
+    "questions": [
+     {
+      "q": "What is a strongly connected component?",
+      "a": "A maximal set of vertices in a directed graph where every vertex can reach every other along directed paths. Every directed graph splits uniquely into SCCs."
+     },
+     {
+      "q": "How does Kosaraju's algorithm work?",
+      "a": "Run DFS on the graph and push vertices onto a list when they finish. Reverse every edge, then process vertices in decreasing finish order, running a DFS on the reversed graph from each unvisited one. Each of those DFS trees is exactly one SCC."
+     },
+     {
+      "q": "Why is the condensation graph always acyclic?",
+      "a": "If two SCCs were on a cycle in the condensation, every vertex in both could reach every vertex in the other, so they would form one larger SCC, contradicting maximality."
+     },
+     {
+      "q": "How many edges must be added to make a directed graph strongly connected?",
+      "a": "Compute the condensation DAG. If it has one node, zero. Otherwise, the answer is the maximum of the number of source components (in-degree 0) and sink components (out-degree 0)."
+     }
+    ]
    }
   },
   {
@@ -11292,9 +12027,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "An Eulerian path walks along every edge of a graph exactly once, like drawing a figure without lifting your pen or retracing a line. Whether it exists depends only on how many edges touch each vertex. Hierholzer's algorithm builds the path by walking until stuck and splicing in detours around unused loops.",
+    "interview": [
+     "**Undirected**: an Eulerian circuit exists iff all vertices with edges are connected and every degree is even; a path iff exactly 0 or 2 vertices have odd degree (start at an odd one).",
+     "**Directed**: circuit iff in-degree = out-degree everywhere (and connected); path iff one vertex has out − in = 1 (start), one has in − out = 1 (end), all others balanced.",
+     "**Hierholzer**: DFS that consumes edges; append a vertex to the answer **after** all its edges are used (post-order); reverse at the end. **O(E)**.",
+     "**Reconstruct itinerary**: directed Eulerian path from \"JFK\" with lexicographically smallest order: keep each adjacency list sorted (min-heap) and always take the smallest.",
+     "Other uses: valid arrangement of pairs, De Bruijn sequences (cracking the safe)."
+    ],
+    "questions": [
+     {
+      "q": "When does an undirected graph have an Eulerian path?",
+      "a": "When all vertices with at least one edge are in one connected component and the number of odd-degree vertices is 0 (then there is an Eulerian circuit) or 2 (then the path starts at one odd vertex and ends at the other)."
+     },
+     {
+      "q": "How does Hierholzer's algorithm work?",
+      "a": "Start at a valid start vertex and walk along unused edges, removing each as you use it. When you reach a vertex with no unused edges, add it to the path and back up. The vertices collected in this post-order, reversed, form the Eulerian path, with side loops spliced in automatically. It runs in O(E)."
+     },
+     {
+      "q": "How do you reconstruct an itinerary using every ticket once, with the smallest lexical order?",
+      "a": "Treat tickets as directed edges and find an Eulerian path from the given start with Hierholzer's algorithm, always taking the lexicographically smallest unused destination (sorted lists or a min-heap per airport). Append airports in post-order and reverse."
+     },
+     {
+      "q": "Why does Hierholzer's algorithm add vertices in post-order instead of when first visited?",
+      "a": "Greedily following edges can enter a dead end before using all edges. Adding a vertex only when it has no unused edges ensures dead ends are placed at the end of the path, and loops explored later get spliced in before them when the list is reversed."
+     }
+    ]
    }
   },
   {
@@ -11314,9 +12072,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Maximum flow asks how much can travel from a source to a sink through a network of pipes, each with a capacity. You keep finding a route with spare capacity and pushing as much as it allows, while allowing earlier choices to be partly undone through \"reverse\" capacity. When no route remains, the flow is maximal, and it equals the capacity of the network's narrowest cut.",
+    "interview": [
+     "**Residual graph**: for each edge, remaining capacity forward and \"undo\" capacity backward (equal to the flow sent).",
+     "**Ford-Fulkerson**: repeatedly find any augmenting path in the residual graph and push its bottleneck. Terminates for integer capacities; time depends on the flow value.",
+     "**Edmonds-Karp**: choose augmenting paths with **BFS** (fewest edges): **O(V · E²)**.",
+     "**Max-flow min-cut theorem**: maximum flow = minimum total capacity of edges that separate source from sink. After max flow, vertices reachable from the source in the residual graph form the min-cut side.",
+     "Dinic's algorithm is faster in practice (O(V² E), much better on unit graphs).",
+     "Uses: bipartite matching, edge-disjoint paths, project selection, image segmentation."
+    ],
+    "questions": [
+     {
+      "q": "What is an augmenting path in the context of maximum flow?",
+      "a": "A path from source to sink in the residual graph where every edge has positive remaining capacity. Pushing flow equal to the smallest remaining capacity along it increases the total flow."
+     },
+     {
+      "q": "Why do reverse edges exist in the residual graph?",
+      "a": "They let the algorithm cancel flow sent earlier along an edge, rerouting it when a better combination of paths exists. Without them, a poor early choice of path could block the maximum flow."
+     },
+     {
+      "q": "What does the max-flow min-cut theorem say?",
+      "a": "The maximum amount of flow from source to sink equals the minimum total capacity of a set of edges whose removal disconnects the sink from the source. The final residual graph reveals such a cut: the vertices still reachable from the source on one side, the rest on the other."
+     },
+     {
+      "q": "How does Edmonds-Karp improve on basic Ford-Fulkerson?",
+      "a": "It always augments along a shortest path (in number of edges), found with BFS. This bounds the number of augmentations by O(V · E), giving O(V · E²) time regardless of the capacities' size."
+     }
+    ]
    }
   },
   {
@@ -11338,9 +12120,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Bipartite matching pairs items from two groups, such as applicants and jobs, where each pair must be allowed and nobody gets two partners. The trick is to try to match each applicant, and if their preferred job is taken, ask the current holder whether they can move to another job. Each successful chain of moves adds one more pair.",
+    "interview": [
+     "**Augmenting path**: a path that alternates unmatched and matched edges, starting and ending at unmatched vertices; flipping it adds one to the matching.",
+     "**Kuhn's algorithm**: for each left vertex, DFS for an augmenting path with a fresh visited set: **O(V · E)**.",
+     "**Hopcroft-Karp**: many shortest augmenting paths per phase: **O(E √V)**.",
+     "Equivalent to max flow with unit capacities (source → left → right → sink).",
+     "**König's theorem**: in bipartite graphs, maximum matching = minimum vertex cover.",
+     "Uses: assigning tasks, maximum students taking an exam (seat conflicts), domino tilings."
+    ],
+    "questions": [
+     {
+      "q": "What is an augmenting path in bipartite matching?",
+      "a": "A path that starts at an unmatched left vertex and ends at an unmatched right vertex, alternating between edges not in the matching and edges in it. Swapping the status of every edge on the path increases the matching size by one."
+     },
+     {
+      "q": "How does Kuhn's algorithm find a maximum matching?",
+      "a": "For each left vertex, run a DFS trying each neighbor: if the neighbor is free, match them; if it's taken, recursively try to rematch its current partner elsewhere. If the DFS succeeds, the matching grows by one. Total time O(V · E)."
+     },
+     {
+      "q": "How does bipartite matching relate to maximum flow?",
+      "a": "Add a source connected to every left vertex and a sink connected from every right vertex, all with capacity 1, and direct the original edges left to right with capacity 1. The maximum flow equals the maximum matching size."
+     },
+     {
+      "q": "What does König's theorem state?",
+      "a": "In a bipartite graph, the size of a maximum matching equals the size of a minimum vertex cover (the fewest vertices touching every edge). It lets you solve some covering problems with matching."
+     }
+    ]
    }
   },
   {
@@ -11360,9 +12166,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some shortest-path problems care not only where you are but also which places you have already visited. A bitmask records the visited set as a row of on-off switches, one per place. Running BFS over (place, visited switches) finds the fewest steps to visit everything, as long as there are only a handful of places.",
+    "interview": [
+     "State = `(node, mask)` where bit i of `mask` means node i has been visited (or key i collected).",
+     "**Shortest path visiting all nodes** (unweighted): multi-source BFS from every `(i, 1 << i)`; answer when `mask == full`. States: n · 2ⁿ; time **O(2ⁿ · n²)**-ish (O(2ⁿ · E)).",
+     "Weighted version (travelling salesman): DP over subsets `dp[mask][i]`, **O(2ⁿ · n²)**.",
+     "**Shortest path to get all keys**: BFS over (row, col, keys mask); doors need their key bit set.",
+     "Practical for n up to about 12 to 20."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the shortest path that visits every node of a small unweighted graph?",
+      "a": "BFS over states (current node, set of visited nodes as a bitmask), starting from every node with only itself visited. Moving to a neighbor sets its bit. The first time any state has the full mask, its distance is the answer. With n nodes there are n · 2^n states."
+     },
+     {
+      "q": "Why does the state need the visited mask and not just the current node?",
+      "a": "The same node can be revisited with different sets of already visited nodes, and those situations have different futures. Keeping only the node would merge them and prune paths that are actually needed."
+     },
+     {
+      "q": "How do you handle \"collect all keys\" in a grid maze?",
+      "a": "BFS where the state is (row, column, keys collected as a bitmask). Stepping on a key sets its bit; a door can only be passed if its key's bit is set. The answer is the distance of the first state whose mask includes every key."
+     },
+     {
+      "q": "How large can n be for bitmask-state searches?",
+      "a": "The state count grows as n · 2^n, so about n ≤ 12 to 16 for BFS with heavy per-state work, and up to about 20 for tight DP loops. Beyond that, the approach is too slow or uses too much memory."
+     }
+    ]
    }
   },
   {
