@@ -82,6 +82,23 @@ export class SearchIndex {
     this.kindIds.set(doc.kind, set);
   }
 
+  /** Ids per named group of documents that are refreshed together (for example custom problems). */
+  private readonly groupIds = new Map<string, Set<string>>();
+
+  /** Replaces one named group of documents, leaving everything else of the same kind alone. */
+  replaceGroup(group: string, docs: SearchDoc[]): void {
+    const next = new Set(docs.map((d) => d.id));
+    for (const id of this.groupIds.get(group) ?? []) {
+      if (!next.has(id) && this.mini.has(id)) this.mini.discard(id);
+    }
+    for (const doc of docs) {
+      if (this.mini.has(doc.id)) this.mini.replace(doc);
+      else this.mini.add(doc);
+      this.remember(doc);
+    }
+    this.groupIds.set(group, next);
+  }
+
   /** Replaces every document of one kind (for example the owner's mistake tags). */
   replaceKind(kind: SearchKind, docs: SearchDoc[]): void {
     const next = new Set(docs.map((d) => d.id));

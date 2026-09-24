@@ -5,6 +5,9 @@ import { Command } from "cmdk";
 import {
   ArrowRight,
   Clock,
+  Code2,
+  FileUp,
+  Plus,
   CornerDownLeft,
   Download,
   DraftingCompass,
@@ -35,9 +38,10 @@ import type { SearchHit, SearchKind } from "@/lib/search/searchIndex";
 import { useConceptStatus } from "@/stores/conceptStateStore";
 import { toast } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useProblemStore } from "@/stores/problemStore";
 import { exportBackup } from "../settings/backup";
 import { markSetupStep } from "../today/setupSteps";
-import { getSearchIndex, mistakeTagDocs } from "./docs";
+import { customProblemDocs, getSearchIndex, mistakeTagDocs } from "./docs";
 import { pushRecent, readRecents, type RecentItem } from "./recents";
 
 const GROUP_LABEL: Record<SearchKind, string> = {
@@ -82,6 +86,8 @@ interface PaletteAction {
   group: "Go to" | "Commands";
   shortcut?: string[];
   run: () => void | Promise<void>;
+  /** The palette stays open (the command asks a follow-up question). */
+  keepOpen?: boolean;
 }
 
 function Row({
@@ -125,6 +131,10 @@ export function CommandPalette() {
   const setAskOpen = useUiStore((s) => s.setAskOpen);
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUiStore((s) => s.setSidebarCollapsed);
+  const setQuickAddOpen = useUiStore((s) => s.setQuickAddOpen);
+  const setCsvImportOpen = useUiStore((s) => s.setCsvImportOpen);
+  /** "New attempt for…" asks which problem: the list shows problems only. */
+  const [pickProblem, setPickProblem] = useState(false);
   const services = useServicesState();
   const [query, setQuery] = useState("");
   const deferred = useDeferredValue(query);
@@ -137,13 +147,19 @@ export function CommandPalette() {
     setWasOpen(open);
     if (open) {
       setQuery("");
+      setPickProblem(false);
       setRecents(readRecents());
     }
   }
 
-  // Mistake tags can change, so refresh them in the index when the palette opens.
+  // The owner's own problems and mistake tags change, so refresh them when the palette opens.
   useEffect(() => {
-    if (!open || services.status !== "ready") return;
+    if (!open) return;
+    getSearchIndex().replaceGroup(
+      "custom-problems",
+      customProblemDocs(useProblemStore.getState().states),
+    );
+    if (services.status !== "ready") return;
     let cancelled = false;
     services.services.repository.mistakeTags
       .list()
@@ -179,6 +195,34 @@ export function CommandPalette() {
       run: () => navigate("/weekly"),
     });
     const commands: PaletteAction[] = [
+      {
+        id: "cmd:attempt",
+        label: "New attempt for…",
+        icon: Code2,
+        keywords: "attempt solve code problem workspace editor",
+        group: "Commands",
+        keepOpen: true,
+        run: () => {
+          setPickProblem(true);
+          setQuery("");
+        },
+      },
+      {
+        id: "cmd:add-problem",
+        label: "Add a problem",
+        icon: Plus,
+        keywords: "new problem leetcode link quick add custom",
+        group: "Commands",
+        run: () => setQuickAddOpen(true),
+      },
+      {
+        id: "cmd:import-csv",
+        label: "Import problems from CSV",
+        icon: FileUp,
+        keywords: "csv spreadsheet history tracker import problems",
+        group: "Commands",
+        run: () => setCsvImportOpen(true),
+      },
       {
         id: "cmd:ask",
         label: "Ask Claude",
@@ -246,10 +290,19 @@ export function CommandPalette() {
       },
     ];
     return [...goTo, ...commands];
-  }, [services, setAskOpen, setShortcutsOpen, sidebarCollapsed, setSidebarCollapsed]);
+  }, [
+    services,
+    setAskOpen,
+    setShortcutsOpen,
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    setQuickAddOpen,
+    setCsvImportOpen,
+  ]);
 
   const q = deferred.trim().toLowerCase();
   const matchedActions = useMemo(() => {
+    if (pickProblem) return [];
     if (!q) return actions;
     const words = q.split(/\s+/);
     return actions
@@ -258,14 +311,19 @@ export function CommandPalette() {
         return words.every((w) => hay.includes(w));
       })
       .slice(0, 5);
-  }, [actions, q]);
+  }, [actions, q, pickProblem]);
 
   const groups = useMemo(() => {
     void tagsVersion;
-    return q ? getSearchIndex().search(q) : [];
-  }, [q, tagsVersion]);
+    const all = q ? getSearchIndex().search(q) : [];
+    return pickProblem ? all.filter((g) => g.kind === "problem" || g.kind === "puzzle") : all;
+  }, [q, tagsVersion, pickProblem]);
 
   const runAction = (action: PaletteAction) => {
+    if (action.keepOpen) {
+      void action.run();
+      return;
+    }
     close();
     markSetupStep("search");
     void action.run();
@@ -340,7 +398,11 @@ export function CommandPalette() {
           <Command.Input
             value={query}
             onValueChange={setQuery}
-            placeholder="Search concepts, problems and pages"
+            placeholder={
+              pickProblem
+                ? "Which problem? Type a title or number"
+                : "Search concepts, problems and pages"
+            }
             className="h-13 min-w-0 flex-1 bg-transparent text-md text-text outline-none placeholder:text-faint"
             data-autofocus
           />
@@ -358,7 +420,12 @@ export function CommandPalette() {
               No results for “{deferred.trim()}”. Try fewer letters or another word.
             </div>
           )}
-          {!q && recents.length > 0 && (
+          {pickProblem && !q && (
+            <div className="px-3 py-8 text-center text-base text-muted">
+              Type a problem's title or number to open its workspace.
+            </div>
+          )}
+          {!q && !pickProblem && recents.length > 0 && (
             <Command.Group heading="Recent">
               {recents.map((r) => (
                 <Row
@@ -372,7 +439,7 @@ export function CommandPalette() {
               ))}
             </Command.Group>
           )}
-          {!q && (
+          {!q && !pickProblem && (
             <>
               <Command.Group heading="Go to">
                 {actionRows(actions.filter((a) => a.group === "Go to"))}

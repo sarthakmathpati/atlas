@@ -7,12 +7,9 @@ import {
   Dumbbell,
   Gauge,
   Layers,
-  ListChecks,
   MessageSquareQuote,
   MessagesSquare,
-  NotebookPen,
   Puzzle,
-  RotateCcw,
   ScrollText,
 } from "lucide-react";
 import { PageFrame } from "@/app/shell/PageFrame";
@@ -23,55 +20,15 @@ import { MOD_KEY } from "@/components/ui/platform";
 import { Tile } from "@/components/ui/Progress";
 import { BEHAVIORAL_QUESTIONS } from "@/data/behavioral.seed";
 import { DESIGN_PROBLEMS } from "@/data/designs.seed";
-import { LEETCODE_PROBLEMS } from "@/data/problems.seed";
 import { QUANT_PUZZLES } from "@/data/quant.seed";
 import { syllabus } from "@/data/syllabus";
 import { ComingSoon } from "./ComingSoon";
 
-const TRACKER = "The problem tracker";
 const MAP = "The map and concepts";
 const PLANNING = "Planning and insight";
 const PRACTICE = "Practice extensions";
 
 const MAP_LINK = { label: "Browse the syllabus", href: "#/map" };
-
-export function ProblemsPage() {
-  return (
-    <ComingSoon
-      title="Problems"
-      description={`Every problem in one place, attached to the map: ${LEETCODE_PROBLEMS.length} LeetCode problems, ${QUANT_PUZZLES.length} quant puzzles and ${DESIGN_PROBLEMS.length} design prompts are ready to track.`}
-      icon={ListChecks}
-      phase={3}
-      phaseName={TRACKER}
-      features={[
-        "Filter by topic, pattern, difficulty, status and what's due, or search by title or number.",
-        "Paste a LeetCode link to add a problem, or import your history from a CSV file.",
-        "Write code for each attempt and see every earlier attempt again, with a side-by-side diff.",
-        "Save the one insight worth remembering and tag the mistakes you made.",
-      ]}
-      links={[{ label: "An example problem: Two Sum", href: "#/problems/lc-1" }, MAP_LINK]}
-    />
-  );
-}
-
-export function ReviewPage() {
-  return (
-    <ComingSoon
-      title="Review"
-      description="Problems and concepts come back just before you'd forget them."
-      icon={RotateCcw}
-      phase={3}
-      phaseName={TRACKER}
-      features={[
-        "See problems due for a re-solve, most overdue first.",
-        "Re-solve with your old code and notes hidden until you choose to reveal them.",
-        "Retire problems you've solved alone three times at long intervals.",
-        "Concept reviews with flashcards and quick checks arrive with the map in phase 4.",
-      ]}
-      links={[MAP_LINK]}
-    />
-  );
-}
 
 export function PracticePage() {
   const tiles = [
@@ -238,23 +195,6 @@ export function StoriesPage() {
         "Write stories in the situation, task, action, result format.",
         `Link them to the ${BEHAVIORAL_QUESTIONS.length} common questions and see which have no story yet.`,
         "Timed practice answers, and a builder for “Tell me about yourself”.",
-      ]}
-    />
-  );
-}
-
-export function MistakesPage() {
-  return (
-    <ComingSoon
-      title="Mistakes"
-      description="Stop repeating the same small mistakes."
-      icon={NotebookPen}
-      phase={3}
-      phaseName={TRACKER}
-      features={[
-        "Your most common mistakes over 30 days, 90 days or all time.",
-        "A pre-interview checklist of your top five, each with how to avoid it.",
-        "Every attempt that had a given mistake, one click from its code.",
       ]}
     />
   );

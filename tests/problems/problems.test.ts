@@ -13,7 +13,13 @@ import {
   taggedAttempts,
   topPatternFor,
 } from "@/lib/mistakes/stats";
-import { allProblems, problemInfo, problemsForConcept, problemUrl } from "@/lib/problems/catalog";
+import {
+  allProblems,
+  problemInfo,
+  problemsForConcept,
+  problemUrl,
+  withScheme,
+} from "@/lib/problems/catalog";
 import {
   csvAttemptId,
   mapColumns,
@@ -78,6 +84,14 @@ describe("catalog", () => {
     expect(
       problemUrl(info, { ...makeProblem("lc-1", 0), urlOverride: "https://example.org/x" }),
     ).toBe("https://example.org/x");
+  });
+  it("adds https to links typed without a scheme", () => {
+    expect(withScheme("leetcode.com/problems/two-sum/")).toBe(
+      "https://leetcode.com/problems/two-sum/",
+    );
+    expect(withScheme("example.org")).toBe("https://example.org/");
+    expect(withScheme("http://example.org/a")).toBe("http://example.org/a");
+    expect(withScheme("")).toBe("");
   });
   it("finds custom problems by concept", () => {
     expect(conceptById.has("dsa.heaps.top-k-elements")).toBe(true);

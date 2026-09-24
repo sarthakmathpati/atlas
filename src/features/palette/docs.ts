@@ -3,7 +3,7 @@ import { conceptHref, problemHref, routeHref } from "@/app/router";
 import { SEED_PROBLEMS } from "@/data/seed";
 import { conceptById, concepts, subjectById, subjects, topicById, topics } from "@/data/syllabus";
 import { SearchIndex, type SearchDoc } from "@/lib/search/searchIndex";
-import type { MistakeTag } from "@/lib/types";
+import type { MistakeTag, ProblemState } from "@/lib/types";
 
 const DIFFICULTY = { easy: "Easy", medium: "Medium", hard: "Hard" } as const;
 const IMPORTANCE_BOOST = { must: 1.3, important: 1.1, advanced: 1 } as const;
@@ -97,6 +97,28 @@ export function mistakeTagDocs(tags: MistakeTag[]): SearchDoc[] {
       text: t.description,
       href: routeHref("/mistakes", undefined, { tag: t.id }),
     }));
+}
+
+/** The owner's own problems (kept in ProblemState.custom). */
+export function customProblemDocs(states: Readonly<Record<string, ProblemState>>): SearchDoc[] {
+  const docs: SearchDoc[] = [];
+  for (const s of Object.values(states)) {
+    if (!s.custom) continue;
+    const patterns = s.custom.conceptIds
+      .map((id) => conceptById.get(id)?.name)
+      .filter(Boolean)
+      .join(", ");
+    docs.push({
+      id: `problem:${s.problemId}`,
+      kind: "problem",
+      title: s.custom.title,
+      subtitle: `${DIFFICULTY[s.custom.difficulty]}, added by you${patterns ? `, ${patterns}` : ""}`,
+      keywords: "custom mine my own",
+      text: patterns,
+      href: problemHref(s.problemId),
+    });
+  }
+  return docs;
 }
 
 let index: SearchIndex | null = null;

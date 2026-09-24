@@ -1,7 +1,8 @@
 // Today (home, F16). The daily plan arrives with the planner in phase 7; until then this page greets
 // the owner, counts down to the interview, and offers a short setup checklist that reads real data.
-import { Check, Circle, Search } from "lucide-react";
+import { Check, Circle, RotateCcw, Search } from "lucide-react";
 import type { ReactNode } from "react";
+import { routeHref } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -14,9 +15,14 @@ import { LEETCODE_PROBLEMS } from "@/data/problems.seed";
 import { QUANT_PUZZLES } from "@/data/quant.seed";
 import { syllabus } from "@/data/syllabus";
 import { daysBetween, localDate } from "@/lib/time";
+import { problemLabel } from "@/lib/problems/catalog";
+import { dueReason } from "@/lib/review/queue";
 import { useMinutesOn } from "@/stores/activityStore";
+import { useToday } from "@/stores/clockStore";
+import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useReviewQueue } from "../review/useReviewQueue";
 import { setupStepDone } from "./setupSteps";
 
 function greeting(hour: number): string {
@@ -60,8 +66,12 @@ interface Step {
 export default function TodayPage() {
   const profile = useProfileStore((s) => s.profile);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
-  const today = localDate();
+  const today = useToday();
   const minutes = useMinutesOn(today);
+  const queue = useReviewQueue();
+  const hasAttempt = useProblemStore((s) =>
+    Object.values(s.states).some((p) => p.attempts.length > 0),
+  );
   const now = new Date();
   const name = profile?.name.trim();
   const dateLine = now.toLocaleDateString(undefined, {
@@ -91,6 +101,17 @@ export default function TodayPage() {
           action: (
             <Button size="sm" href="#/settings?section=profile">
               Add a date
+            </Button>
+          ),
+        },
+        {
+          id: "problem",
+          done: hasAttempt,
+          title: "Save your first attempt",
+          detail: `Open any of the ${LEETCODE_PROBLEMS.length} LeetCode problems, write your code and save it. Already solving elsewhere? Import a CSV.`,
+          action: (
+            <Button size="sm" href="#/problems">
+              Open problems
             </Button>
           ),
         },
@@ -168,14 +189,53 @@ export default function TodayPage() {
                 value={minutes / (profile?.dailyMinutes ?? 90)}
                 label="Minutes today against your daily time"
               />
-              <p className="mt-4 text-base text-muted">
-                Your daily plan will appear here: three to eight things sized to your time, each
-                with a plain reason, such as a problem due for a re-solve or a concept you're ready
-                to learn. It arrives once the problem tracker and the map are in place.
-              </p>
-              <p className="mt-2 text-base text-muted">
-                Meanwhile, the focus timer in the top bar counts your study minutes toward today and
-                your streak.
+              {queue.problems.length > 0 ? (
+                <div className="mt-4">
+                  <p className="text-base text-text">
+                    {queue.problems.length === 1
+                      ? "1 problem is due for a re-solve."
+                      : `${queue.problems.length} problems are due for a re-solve.`}
+                  </p>
+                  <ul className="mt-2 divide-y divide-rule rounded-control border border-rule">
+                    {queue.problems.slice(0, 3).map((p) => (
+                      <li key={p.info.id} className="flex items-center gap-3 px-3 py-2">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-text">
+                            {problemLabel(p.info)}
+                          </span>
+                          <span className="block truncate text-sm text-muted">
+                            {dueReason(p, today)}
+                          </span>
+                        </span>
+                        <Button
+                          size="sm"
+                          icon={RotateCcw}
+                          href={routeHref("/problems", p.info.id, { mode: "resolve" })}
+                        >
+                          Re-solve
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                  {queue.problems.length > 3 && (
+                    <a
+                      href="#/review"
+                      className="mt-2 inline-block text-sm text-accent hover:underline"
+                    >
+                      See all {queue.problems.length} in Review
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-4 text-base text-muted">
+                  Nothing is due for a re-solve today. Solve a problem and save your attempt: it
+                  comes back here just before you'd forget it.
+                </p>
+              )}
+              <p className="mt-3 text-sm text-muted">
+                Your full daily plan, sized to your time with a reason for each item, arrives in
+                phase 7. The focus timer in the top bar counts your minutes toward today and your
+                streak.
               </p>
             </div>
           </section>

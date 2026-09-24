@@ -3,7 +3,13 @@
 // Also an offline "suggest concepts": the patterns of the most similar seed problems by title.
 import { conceptById } from "@/data/syllabus";
 import type { ConceptId, ProblemState } from "@/lib/types";
-import { allProblems, leetCodeSlug, slugFromLeetCodeUrl, type ProblemInfo } from "./catalog";
+import {
+  allProblems,
+  leetCodeSlug,
+  slugFromLeetCodeUrl,
+  withScheme,
+  type ProblemInfo,
+} from "./catalog";
 
 export type ParsedInput =
   | { kind: "empty" }
@@ -15,7 +21,7 @@ export function parseProblemInput(text: string): ParsedInput {
   const t = text.trim();
   if (!t) return { kind: "empty" };
   if (/^https?:\/\//i.test(t) || /^(www\.)?leetcode\.(com|cn)\//i.test(t)) {
-    const url = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+    const url = withScheme(t);
     return { kind: "url", url, slug: slugFromLeetCodeUrl(url) };
   }
   const n = /^(?:lc\s*|leetcode\s*|#)?(\d{1,5})\.?$/i.exec(t);

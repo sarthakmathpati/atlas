@@ -3,7 +3,7 @@
 // rest can become the owner's own problems. Each row becomes an attempt without code.
 // Pure parsing and planning here; the problem store applies the plan.
 import type { AttemptResult, Difficulty, ProblemState } from "@/lib/types";
-import { leetCodeSlug, slugFromLeetCodeUrl, type ProblemInfo } from "./catalog";
+import { leetCodeSlug, slugFromLeetCodeUrl, withScheme, type ProblemInfo } from "./catalog";
 import { findProblemMatches, parseProblemInput, titleFromSlug } from "./quickAdd";
 
 /** RFC 4180 CSV: quoted fields, doubled quotes, commas and newlines inside quotes. The delimiter
@@ -214,7 +214,7 @@ export function planCsvImport(
       const line = i + 2;
       const rawTitle = get(row, "title");
       const rawUrl = get(row, "url");
-      const url = rawUrl ? (/^https?:/i.test(rawUrl) ? rawUrl : `https://${rawUrl}`) : undefined;
+      const url = rawUrl ? withScheme(rawUrl) : undefined;
       const slug = url ? slugFromLeetCodeUrl(url) : undefined;
       const title = rawTitle || (slug ? titleFromSlug(slug) : "");
       const resultRaw = get(row, "result");

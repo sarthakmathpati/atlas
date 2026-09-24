@@ -1,0 +1,19 @@
+// The review queue from the stores, recomputed when problems, concepts, settings or the date
+// change. Shared by the Review page and the navigation badges.
+import { useMemo } from "react";
+import { buildReviewQueue, type ReviewQueue } from "@/lib/review/queue";
+import { useToday } from "@/stores/clockStore";
+import { useConceptStateStore } from "@/stores/conceptStateStore";
+import { useProblemStore } from "@/stores/problemStore";
+import { useProfileStore } from "@/stores/profileStore";
+
+export function useReviewQueue(): ReviewQueue {
+  const problems = useProblemStore((s) => s.states);
+  const concepts = useConceptStateStore((s) => s.states);
+  const intensity = useProfileStore((s) => s.profile?.reviewIntensity ?? "normal");
+  const today = useToday();
+  return useMemo(
+    () => buildReviewQueue(problems, concepts, intensity, today),
+    [problems, concepts, intensity, today],
+  );
+}

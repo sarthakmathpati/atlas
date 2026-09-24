@@ -13,7 +13,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { MultiCombobox } from "@/components/ui/MultiCombobox";
 import { DIFFICULTY_LABEL } from "@/components/ui/labels";
 import { subjects, topics } from "@/data/syllabus";
-import { problemLabel, type ProblemInfo } from "@/lib/problems/catalog";
+import { problemLabel, withScheme, type ProblemInfo } from "@/lib/problems/catalog";
 import {
   findProblemMatches,
   parseProblemInput,
@@ -123,7 +123,7 @@ export function QuickAddDialog() {
         difficulty,
         source: /leetcode\.(com|cn)/i.test(cleanUrl) ? "leetcode" : "custom",
         conceptIds,
-        ...(cleanUrl ? { url: /^https?:/i.test(cleanUrl) ? cleanUrl : `https://${cleanUrl}` } : {}),
+        ...(cleanUrl ? { url: withScheme(cleanUrl) } : {}),
         ...(topicId ? { topicId } : {}),
       },
       { summary },

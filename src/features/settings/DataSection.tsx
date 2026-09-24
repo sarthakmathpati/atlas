@@ -1,13 +1,14 @@
 // Settings → Data (F22 in Settings): where data lives, export, import (preview, then merge or
 // replace), the backup reminder, and reset. Replace and reset can be undone from the toast for
 // the rest of the visit, because Atlas keeps a copy of what was there before.
-import { Download, Upload } from "lucide-react";
+import { Download, FileText, Upload } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import type { Services } from "@/app/providers/servicesContext";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input, Switch } from "@/components/ui/Field";
 import { Callout } from "@/components/ui/Misc";
+import { buildNotesMarkdown, notesFilename } from "@/lib/export/notesMarkdown";
 import { prepareRepository } from "@/lib/storage";
 import {
   ImportError,
@@ -317,6 +318,36 @@ export function DataSection({ profile, services }: { profile: Profile; services:
     if (result.message) toast(result.message, { tone: result.ok ? "success" : "error" });
   };
 
+  const onExportNotes = async () => {
+    setBusy(true);
+    try {
+      const [notes, problems] = await Promise.all([
+        services.repository.conceptNotes.list(),
+        services.repository.problemStates.list(),
+      ]);
+      const { markdown, count } = buildNotesMarkdown(notes, problems);
+      const result = await services.fileSaver.save({
+        filename: notesFilename(),
+        data: markdown,
+        mime: "text/markdown",
+      });
+      if (result.status === "saved")
+        toast(
+          count
+            ? `Exported ${count} ${count === 1 ? "note" : "notes"}.`
+            : "Exported. There are no notes yet.",
+          {
+            tone: "success",
+          },
+        );
+      else if (result.status === "failed") toast(result.message, { tone: "error" });
+    } catch {
+      toast("Couldn't export your notes right now. Try again in a moment.", { tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     try {
@@ -383,6 +414,14 @@ export function DataSection({ profile, services }: { profile: Profile; services:
             onChange={(e) => void onFile(e.target.files?.[0])}
           />
         </div>
+      </SettingsRow>
+      <SettingsRow
+        label="Notes as Markdown"
+        description="Your concept notes, saved Claude answers, and each problem's insight, summary and notes, grouped by subject and topic. Handy for reading or printing; import needs the backup file."
+      >
+        <Button icon={FileText} onClick={() => void onExportNotes()} disabled={busy}>
+          Export notes
+        </Button>
       </SettingsRow>
       <div className="px-4 py-4 sm:px-5">
         <Switch

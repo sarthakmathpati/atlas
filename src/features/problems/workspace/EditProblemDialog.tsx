@@ -6,6 +6,7 @@ import { Field, Input, Select } from "@/components/ui/Field";
 import { MultiCombobox } from "@/components/ui/MultiCombobox";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { subjects, topics } from "@/data/syllabus";
+import { withScheme } from "@/lib/problems/catalog";
 import type { CustomProblem, Difficulty } from "@/lib/types";
 import { updateCustomProblem } from "@/stores/problemStore";
 import { toast } from "@/stores/toastStore";
@@ -40,7 +41,7 @@ export function EditProblemDialog({ open, onClose, id, custom }: EditProblemDial
     updateCustomProblem(id, {
       ...draft,
       title: draft.title.trim(),
-      url: url ? (/^https?:/i.test(url) ? url : `https://${url}`) : undefined,
+      url: url ? withScheme(url) : undefined,
       topicId: draft.topicId || undefined,
       source:
         url && /leetcode\.(com|cn)/i.test(url)
