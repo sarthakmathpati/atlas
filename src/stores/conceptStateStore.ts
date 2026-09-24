@@ -9,7 +9,12 @@
 // the status and the day's activity always move together.
 import { nanoid } from "nanoid";
 import { create } from "zustand";
-import { computeStatus, nextConceptState, type StatusResult } from "@/lib/mastery/status";
+import {
+  computeStatus,
+  nextConceptState,
+  type StatusInput,
+  type StatusResult,
+} from "@/lib/mastery/status";
 import { conceptsOfProblem, problemsForConcept } from "@/lib/problems/catalog";
 import { applyConceptReview, startConceptReview } from "@/lib/srs/concept";
 import { createConceptState } from "@/lib/storage/defaults";
@@ -71,13 +76,13 @@ function commitStates(list: ConceptState[]): void {
   repo?.conceptStates.bulkPut(list).catch(saveFailed);
 }
 
-/** The status engine's full result for one concept, from the stores (for "Why this color?"). */
-export function evaluateConcept(conceptId: string, now: Date = new Date()): StatusResult | null {
+/** Everything the status engine reads for one concept, from the stores. */
+export function statusInput(conceptId: string, now: Date = new Date()): StatusInput | null {
   const concept = findConcept(conceptId);
   if (!concept) return null;
   const problems = useProblemStore.getState().states;
   const { states, checks } = useConceptStateStore.getState();
-  return computeStatus({
+  return {
     concept,
     state: states[conceptId],
     checks: checks[conceptId] ?? [],
@@ -89,7 +94,13 @@ export function evaluateConcept(conceptId: string, now: Date = new Date()): Stat
     today: localDate(now),
     now,
     intensity: intensity(),
-  });
+  };
+}
+
+/** The status engine's full result for one concept, from the stores (for "Why this color?"). */
+export function evaluateConcept(conceptId: string, now: Date = new Date()): StatusResult | null {
+  const input = statusInput(conceptId, now);
+  return input ? computeStatus(input) : null;
 }
 
 /**

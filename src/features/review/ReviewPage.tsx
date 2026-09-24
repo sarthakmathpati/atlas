@@ -1,6 +1,6 @@
 // Review (F9): problems due for a re-solve and concepts due for review, most urgent first, with
 // what comes up this week. A re-solve opens the workspace with earlier work hidden.
-import { ArrowRight, CalendarClock, RotateCcw, Trophy } from "lucide-react";
+import { ArrowRight, CalendarClock, Layers, RotateCcw, Trophy } from "lucide-react";
 import { conceptHref, routeHref } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
@@ -9,12 +9,14 @@ import { Chip, DifficultyChip } from "@/components/ui/Chip";
 import { EmptyState, PageSkeleton } from "@/components/ui/Misc";
 import { STATUS_LABEL } from "@/components/ui/labels";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
-import { conceptById, topicById } from "@/data/syllabus";
+import { topicById } from "@/data/syllabus";
 import { ESTIMATES } from "@/lib/constants";
 import { problemLabel } from "@/lib/problems/catalog";
 import { weekdayDate } from "@/lib/problems/progress";
 import { dueReason, type DueConcept, type DueProblem } from "@/lib/review/queue";
 import { useToday } from "@/stores/clockStore";
+import { openConceptReview, openFlashcards } from "@/stores/conceptDialogStore";
+import { findConcept } from "@/stores/customConceptStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useReviewQueue } from "./useReviewQueue";
 
@@ -62,26 +64,36 @@ function ProblemRow({ item, today }: { item: DueProblem; today: string }) {
 }
 
 function ConceptRow({ item }: { item: DueConcept }) {
-  const concept = conceptById.get(item.conceptId)!;
+  const concept = findConcept(item.conceptId);
+  if (!concept) return null;
   return (
-    <li className="flex items-center gap-3 border-t border-rule px-4 py-3 first:border-t-0">
-      <StatusGlyph status={item.state.status} size={16} title={STATUS_LABEL[item.state.status]} />
-      <div className="min-w-0 flex-1">
-        <a
-          href={conceptHref(concept.id)}
-          className="font-medium text-text hover:text-accent hover:underline"
-        >
-          {concept.name}
-        </a>
-        <p className="text-sm text-muted">{topicById.get(concept.topicId)?.name}</p>
+    <li className="flex flex-col gap-2 border-t border-rule px-4 py-3 first:border-t-0 sm:flex-row sm:items-center sm:gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <StatusGlyph status={item.state.status} size={16} title={STATUS_LABEL[item.state.status]} />
+        <div className="min-w-0 flex-1">
+          <a
+            href={conceptHref(concept.id)}
+            className="font-medium text-text hover:text-accent hover:underline"
+          >
+            {concept.name}
+          </a>
+          <p className="text-sm text-muted">{topicById.get(concept.topicId)?.name}</p>
+        </div>
       </div>
-      <span
-        className={
-          item.daysLate > 0 ? "text-sm font-medium text-warning" : "text-sm font-medium text-accent"
-        }
-      >
-        {lateLabel(item.daysLate)}
-      </span>
+      <div className="flex shrink-0 items-center gap-3 pl-7 sm:pl-0">
+        <span
+          className={
+            item.daysLate > 0
+              ? "text-sm font-medium text-warning"
+              : "text-sm font-medium text-accent"
+          }
+        >
+          {lateLabel(item.daysLate)}
+        </span>
+        <Button size="sm" icon={RotateCcw} onClick={() => openConceptReview(concept.id)}>
+          Review
+        </Button>
+      </div>
     </li>
   );
 }
@@ -91,23 +103,25 @@ function Panel({
   count,
   children,
   id,
+  action,
 }: {
   title: string;
   count?: number;
   children: React.ReactNode;
   id: string;
+  action?: React.ReactNode;
 }) {
   return (
     <section aria-labelledby={id} className="rounded-panel border border-rule bg-surface">
-      <h2
-        id={id}
-        className="flex items-baseline justify-between gap-3 border-b border-rule px-4 py-3 text-md font-semibold text-text"
-      >
-        {title}
-        {count !== undefined && (
-          <span className="text-sm font-normal text-muted tabular-nums">{count}</span>
-        )}
-      </h2>
+      <div className="flex items-center justify-between gap-3 border-b border-rule px-4 py-2.5">
+        <h2 id={id} className="flex items-baseline gap-3 py-0.5 text-md font-semibold text-text">
+          {title}
+          {count !== undefined && (
+            <span className="text-sm font-normal text-muted tabular-nums">{count}</span>
+          )}
+        </h2>
+        {action}
+      </div>
       {children}
     </section>
   );
@@ -161,7 +175,28 @@ export default function ReviewPage() {
                 </ul>
               </Panel>
             )}
-            <Panel title="Concepts to review" count={queue.concepts.length} id="due-concepts">
+            <Panel
+              title="Concepts to review"
+              count={queue.concepts.length}
+              id="due-concepts"
+              action={
+                queue.concepts.length > 1 ? (
+                  <Button
+                    size="sm"
+                    icon={Layers}
+                    onClick={() =>
+                      openFlashcards({
+                        conceptIds: queue.concepts.map((c) => c.conceptId),
+                        title: "Flashcards: everything due",
+                        session: true,
+                      })
+                    }
+                  >
+                    Flashcards for all
+                  </Button>
+                ) : undefined
+              }
+            >
               {queue.concepts.length > 0 && (
                 <ul>
                   {queue.concepts.map((c) => (
@@ -170,9 +205,11 @@ export default function ReviewPage() {
                 </ul>
               )}
               <p className="border-t border-rule px-4 py-3 text-sm text-muted first:border-t-0">
-                Concepts join the review queue once you study them or take a quick check. The short
-                review (interview points, then flashcards or explaining it back) arrives with the
-                map in phase 4.
+                {queue.concepts.length === 0
+                  ? "Concepts join the review queue once you study them or take a quick check. "
+                  : ""}
+                A review shows the interview points, then checks you with flashcards or by
+                explaining it back. How it goes sets the next review, further apart each time.
               </p>
             </Panel>
           </div>

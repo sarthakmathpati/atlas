@@ -24,7 +24,6 @@ import { QUANT_PUZZLES } from "@/data/quant.seed";
 import { syllabus } from "@/data/syllabus";
 import { ComingSoon } from "./ComingSoon";
 
-const MAP = "The map and concepts";
 const PLANNING = "Planning and insight";
 const PRACTICE = "Practice extensions";
 
@@ -44,7 +43,7 @@ export function PracticePage() {
       icon: Layers,
       title: "Flashcards and quizzes",
       text: "Quick checks on theory from each concept's interview questions.",
-      when: "Phase 4",
+      when: null,
     },
     {
       href: "#/mental-math",
@@ -82,7 +81,11 @@ export function PracticePage() {
                   </span>
                 }
                 footer={
-                  <span className="text-xs text-faint">Arrives in {t.when.toLowerCase()}</span>
+                  t.when ? (
+                    <span className="text-xs text-faint">Arrives in {t.when.toLowerCase()}</span>
+                  ) : (
+                    <span className="text-xs text-success">Ready</span>
+                  )
                 }
               >
                 {t.text}
@@ -109,24 +112,6 @@ export function DrillPage() {
         "Accuracy per pattern and the pairs you confuse most often.",
       ]}
       links={[{ label: "See all patterns", href: "#/map" }]}
-    />
-  );
-}
-
-export function QuizPage() {
-  return (
-    <ComingSoon
-      title="Flashcards and quizzes"
-      description="Fast, repeatable checks for theory subjects."
-      icon={Layers}
-      phase={4}
-      phaseName={MAP}
-      features={[
-        "Flashcards from each concept's interview questions, rated Again, Hard, Good or Easy.",
-        "Sessions for one concept, a topic, a subject or everything that's due.",
-        "Quick quizzes written by Claude arrive in phase 6.",
-      ]}
-      links={[MAP_LINK]}
     />
   );
 }

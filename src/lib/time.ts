@@ -33,3 +33,12 @@ export function addDaysToDate(day: string, days: number): string {
 export function daysBetween(a: string, b: string): number {
   return differenceInCalendarDays(parseLocalDate(b), parseLocalDate(a));
 }
+
+/** "45 min", "1 h", "2 h 15 min". */
+export function formatMinutes(total: number): string {
+  const rounded = Math.round(total);
+  if (rounded < 60) return `${rounded} min`;
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}

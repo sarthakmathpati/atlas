@@ -1,8 +1,15 @@
 // The map as a list (F30's accessible alternative to the canvas): every subject, topic and concept
-// in learning order, with statuses. Searchable; a subject, topic or concept can be targeted from a
-// link (#/map?subject=…, ?topic=…, ?focus=…), which opens it, scrolls to it and highlights it.
+// in learning order (the owner's own concepts included), with statuses and status mixes.
+// Searchable; a subject, topic or concept can be targeted from a link (#/map?view=list&subject=…,
+// ?topic=…, ?focus=…), which opens it, scrolls to it and highlights it.
 import { ChevronRight, Search } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Chip } from "@/components/ui/Chip";
+import { SegmentedBar } from "@/components/ui/Progress";
+import { isCustomConceptId } from "@/lib/concepts/custom";
+import { countStatuses } from "@/lib/map/summary";
+import { useConceptStateStore } from "@/stores/conceptStateStore";
+import { useCustomConceptStore } from "@/stores/customConceptStore";
 import { conceptHref } from "@/app/router";
 import { ImportanceChip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
@@ -11,7 +18,13 @@ import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { STATUS_LABEL } from "@/components/ui/labels";
 import { SubjectIcon } from "@/components/ui/SubjectIcon";
 import { seedProblemsByConcept } from "@/data/seed";
-import { concepts, conceptsByTopic, subjects, topicById, topicsBySubject } from "@/data/syllabus";
+import {
+  conceptById,
+  conceptsByTopic,
+  subjects,
+  topicById,
+  topicsBySubject,
+} from "@/data/syllabus";
 import type { Concept } from "@/lib/types";
 import { useConceptStatus } from "@/stores/conceptStateStore";
 
@@ -21,6 +34,7 @@ function matches(c: Concept, q: string): boolean {
 
 function ConceptRow({ concept, highlighted }: { concept: Concept; highlighted: boolean }) {
   const status = useConceptStatus(concept.id);
+  const hidden = useConceptStateStore((s) => Boolean(s.states[concept.id]?.hidden));
   const problems = seedProblemsByConcept.get(concept.id)?.length ?? 0;
   return (
     <li id={`list-${concept.id}`} className="scroll-mt-24 border-t border-rule first:border-t-0">
@@ -41,6 +55,8 @@ function ConceptRow({ concept, highlighted }: { concept: Concept; highlighted: b
                 Pattern
               </span>
             )}
+            {isCustomConceptId(concept.id) && <Chip className="text-accent">Yours</Chip>}
+            {hidden && <Chip className="border-dashed">Hidden from the map</Chip>}
           </div>
           {concept.scope !== concept.name && (
             <p className="mt-1 pl-[22px] text-sm text-muted">{concept.scope}</p>
@@ -67,13 +83,48 @@ export interface ListTarget {
 }
 
 interface MapListViewProps {
-  /** Subjects whose topics are shown. */
-  open: ReadonlySet<string>;
-  onToggle: (subjectId: string) => void;
   target: ListTarget | null;
 }
 
-export function MapListView({ open, onToggle, target }: MapListViewProps) {
+function subjectOf(target: ListTarget | null, custom: Record<string, Concept>): string | null {
+  if (!target) return null;
+  if (target.kind === "subject") return target.id;
+  if (target.kind === "topic") return topicById.get(target.id)?.subjectId ?? null;
+  return (conceptById.get(target.id) ?? custom[target.id])?.subjectId ?? null;
+}
+
+export function MapListView({ target }: MapListViewProps) {
+  const custom = useCustomConceptStore((s) => s.concepts);
+  const statuses = useConceptStateStore((s) => s.states);
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => {
+    const s = subjectOf(target, custom);
+    return new Set(s ? [s] : []);
+  });
+  // A new link opens its subject.
+  const [openedFor, setOpenedFor] = useState(target?.key ?? "");
+  if (target && openedFor !== target.key) {
+    setOpenedFor(target.key);
+    const s = subjectOf(target, custom);
+    if (s && !open.has(s)) setOpen(new Set(open).add(s));
+  }
+  const onToggle = (id: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const byTopic = useMemo(() => {
+    const map = new Map<string, Concept[]>();
+    for (const t of topicById.keys()) {
+      const extra = Object.values(custom)
+        .filter((c) => c.topicId === t)
+        .sort((a, b) => a.order - b.order);
+      map.set(t, [...(conceptsByTopic.get(t) ?? []), ...extra]);
+    }
+    return map;
+  }, [custom]);
+  const statusOf = (id: string) => statuses[id]?.status ?? "not_started";
   const [query, setQuery] = useState("");
   const deferred = useDeferredValue(query.trim().toLowerCase());
   const sectionRefs = useRef(new Map<string, HTMLElement>());
@@ -91,9 +142,10 @@ export function MapListView({ open, onToggle, target }: MapListViewProps) {
     return () => cancelAnimationFrame(frame);
   }, [target]);
 
+  const all = useMemo(() => [...byTopic.values()].flat(), [byTopic]);
   const matchCount = useMemo(
-    () => (deferred ? concepts.filter((c) => matches(c, deferred)).length : concepts.length),
-    [deferred],
+    () => (deferred ? all.filter((c) => matches(c, deferred)).length : all.length),
+    [deferred, all],
   );
 
   return (
@@ -118,7 +170,7 @@ export function MapListView({ open, onToggle, target }: MapListViewProps) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Filter ${concepts.length} concepts`}
+            placeholder={`Filter ${all.length} concepts`}
             className="h-11 w-full rounded-control border border-rule bg-surface pr-3 pl-9 text-base text-text placeholder:text-faint hover:border-rule-strong focus-visible:border-accent sm:h-10"
           />
         </label>
@@ -137,15 +189,15 @@ export function MapListView({ open, onToggle, target }: MapListViewProps) {
           const visibleTopics = subjectTopics
             .map((t) => ({
               topic: t,
-              items: (conceptsByTopic.get(t.id) ?? []).filter(
-                (c) => !deferred || matches(c, deferred),
-              ),
+              items: (byTopic.get(t.id) ?? []).filter((c) => !deferred || matches(c, deferred)),
             }))
             .filter((t) => t.items.length > 0);
           if (deferred && visibleTopics.length === 0) return null;
-          const total = subjectTopics.reduce(
-            (n, t) => n + (conceptsByTopic.get(t.id)?.length ?? 0),
-            0,
+          const subjectConcepts = subjectTopics.flatMap((t) => byTopic.get(t.id) ?? []);
+          const total = subjectConcepts.length;
+          const counts = countStatuses(
+            subjectConcepts.map((c) => c.id),
+            statusOf,
           );
           const isOpen = Boolean(deferred) || open.has(subject.id);
           const panelId = `subject-panel-${subject.id}`;
@@ -185,9 +237,12 @@ export function MapListView({ open, onToggle, target }: MapListViewProps) {
                     <span className="block font-medium text-text">{subject.name}</span>
                     <span className="block truncate text-sm text-muted">{subject.description}</span>
                   </span>
-                  <span className="shrink-0 text-right text-sm text-muted tabular-nums">
-                    {subjectTopics.length} topics
-                    <span className="hidden sm:inline">, {total} concepts</span>
+                  <span className="flex shrink-0 flex-col items-end gap-1 text-right text-sm text-muted tabular-nums">
+                    <span>
+                      {counts.strong} of {total} strong
+                      <span className="hidden sm:inline">, {subjectTopics.length} topics</span>
+                    </span>
+                    <SegmentedBar counts={counts} className="w-24" height={4} />
                   </span>
                 </button>
               </h3>
@@ -205,7 +260,18 @@ export function MapListView({ open, onToggle, target }: MapListViewProps) {
                       )}
                     >
                       <div className="flex flex-wrap items-baseline justify-between gap-x-4 px-2">
-                        <h4 className="text-base font-semibold text-text">{topic.name}</h4>
+                        <h4 className="text-base font-semibold text-text">
+                          {topic.name}
+                          <span className="ml-2 text-sm font-normal text-muted tabular-nums">
+                            {
+                              countStatuses(
+                                (byTopic.get(topic.id) ?? []).map((c) => c.id),
+                                statusOf,
+                              ).strong
+                            }{" "}
+                            of {byTopic.get(topic.id)?.length ?? 0} strong
+                          </span>
+                        </h4>
                         {topic.prereqTopics.length > 0 && (
                           <p className="text-xs text-muted">
                             After{" "}

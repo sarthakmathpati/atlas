@@ -91,10 +91,12 @@ describe("app shell", () => {
     await screen.findByRole("heading", { level: 1 });
     await user.keyboard("gm");
     await waitFor(() => expect(window.location.hash).toBe("#/map"));
+    // The map's list view has a text field.
+    await user.click(await screen.findByRole("radio", { name: "List" }));
     const filter = await screen.findByPlaceholderText(/Filter \d+ concepts/);
     await user.click(filter);
     await user.keyboard("gp");
-    expect(window.location.hash).toBe("#/map");
+    expect(window.location.hash).toBe("#/map?view=list");
     expect(filter).toHaveValue("gp");
   });
 

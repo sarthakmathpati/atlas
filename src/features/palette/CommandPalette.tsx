@@ -4,6 +4,7 @@
 import { Command } from "cmdk";
 import {
   ArrowRight,
+  CirclePlus,
   Clock,
   Code2,
   FileUp,
@@ -18,6 +19,7 @@ import {
   Moon,
   PanelLeft,
   Puzzle,
+  Route,
   Search,
   Sparkles,
   Sun,
@@ -26,7 +28,7 @@ import {
 } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useServicesState } from "@/app/providers/servicesContext";
-import { navigate } from "@/app/router";
+import { navigate, routeHref } from "@/app/router";
 import { ALL_NAV_ITEMS } from "@/app/shell/nav";
 import { setTheme } from "@/app/theme";
 import { Dialog } from "@/components/ui/Dialog";
@@ -35,13 +37,17 @@ import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { SubjectIcon } from "@/components/ui/SubjectIcon";
 import { subjectById } from "@/data/syllabus";
 import type { SearchHit, SearchKind } from "@/lib/search/searchIndex";
-import { useConceptStatus } from "@/stores/conceptStateStore";
+import { openAddConcept, openFlashcards } from "@/stores/conceptDialogStore";
+import { useConceptStateStore, useConceptStatus } from "@/stores/conceptStateStore";
+import { useCustomConceptStore } from "@/stores/customConceptStore";
+import { isDue } from "@/lib/srs/intervals";
+import { localDate } from "@/lib/time";
 import { toast } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { exportBackup } from "../settings/backup";
 import { markSetupStep } from "../today/setupSteps";
-import { customProblemDocs, getSearchIndex, mistakeTagDocs } from "./docs";
+import { customConceptDocs, customProblemDocs, getSearchIndex, mistakeTagDocs } from "./docs";
 import { pushRecent, readRecents, type RecentItem } from "./recents";
 
 const GROUP_LABEL: Record<SearchKind, string> = {
@@ -121,6 +127,15 @@ function Row({
   );
 }
 
+/** Concepts due for review today, most overdue first (not hidden). */
+function dueConceptIds(): string[] {
+  const today = localDate();
+  return Object.values(useConceptStateStore.getState().states)
+    .filter((s) => !s.hidden && isDue(s.srs.dueAt, today))
+    .sort((a, b) => (a.srs.dueAt! < b.srs.dueAt! ? -1 : 1))
+    .map((s) => s.conceptId);
+}
+
 const HEADING =
   "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted";
 
@@ -133,8 +148,8 @@ export function CommandPalette() {
   const setSidebarCollapsed = useUiStore((s) => s.setSidebarCollapsed);
   const setQuickAddOpen = useUiStore((s) => s.setQuickAddOpen);
   const setCsvImportOpen = useUiStore((s) => s.setCsvImportOpen);
-  /** "New attempt for…" asks which problem: the list shows problems only. */
-  const [pickProblem, setPickProblem] = useState(false);
+  /** "New attempt for…" asks which problem, "Show my path to…" which concept. */
+  const [pick, setPick] = useState<null | "problem" | "path">(null);
   const services = useServicesState();
   const [query, setQuery] = useState("");
   const deferred = useDeferredValue(query);
@@ -147,7 +162,7 @@ export function CommandPalette() {
     setWasOpen(open);
     if (open) {
       setQuery("");
-      setPickProblem(false);
+      setPick(null);
       setRecents(readRecents());
     }
   }
@@ -158,6 +173,10 @@ export function CommandPalette() {
     getSearchIndex().replaceGroup(
       "custom-problems",
       customProblemDocs(useProblemStore.getState().states),
+    );
+    getSearchIndex().replaceGroup(
+      "custom-concepts",
+      customConceptDocs(Object.values(useCustomConceptStore.getState().concepts)),
     );
     if (services.status !== "ready") return;
     let cancelled = false;
@@ -203,9 +222,44 @@ export function CommandPalette() {
         group: "Commands",
         keepOpen: true,
         run: () => {
-          setPickProblem(true);
+          setPick("problem");
           setQuery("");
         },
+      },
+      {
+        id: "cmd:flashcards-due",
+        label: "Start flashcards for due concepts",
+        icon: Layers,
+        keywords: "flashcards review due concepts cards quiz",
+        group: "Commands",
+        run: () => {
+          const due = dueConceptIds();
+          if (due.length === 0) {
+            toast("No concepts are due for review today.");
+            return;
+          }
+          openFlashcards({ conceptIds: due, title: "Flashcards: everything due", session: true });
+        },
+      },
+      {
+        id: "cmd:path",
+        label: "Show my path to…",
+        icon: Route,
+        keywords: "path prerequisites learn first roadmap concept",
+        group: "Commands",
+        keepOpen: true,
+        run: () => {
+          setPick("path");
+          setQuery("");
+        },
+      },
+      {
+        id: "cmd:add-concept",
+        label: "Add a concept",
+        icon: CirclePlus,
+        keywords: "new concept bubble map custom own",
+        group: "Commands",
+        run: () => openAddConcept(""),
       },
       {
         id: "cmd:add-problem",
@@ -302,7 +356,7 @@ export function CommandPalette() {
 
   const q = deferred.trim().toLowerCase();
   const matchedActions = useMemo(() => {
-    if (pickProblem) return [];
+    if (pick) return [];
     if (!q) return actions;
     const words = q.split(/\s+/);
     return actions
@@ -311,13 +365,15 @@ export function CommandPalette() {
         return words.every((w) => hay.includes(w));
       })
       .slice(0, 5);
-  }, [actions, q, pickProblem]);
+  }, [actions, q, pick]);
 
   const groups = useMemo(() => {
     void tagsVersion;
     const all = q ? getSearchIndex().search(q) : [];
-    return pickProblem ? all.filter((g) => g.kind === "problem" || g.kind === "puzzle") : all;
-  }, [q, tagsVersion, pickProblem]);
+    if (pick === "problem") return all.filter((g) => g.kind === "problem" || g.kind === "puzzle");
+    if (pick === "path") return all.filter((g) => g.kind === "concept");
+    return all;
+  }, [q, tagsVersion, pick]);
 
   const runAction = (action: PaletteAction) => {
     if (action.keepOpen) {
@@ -332,6 +388,10 @@ export function CommandPalette() {
   const openHit = (hit: SearchHit | RecentItem) => {
     close();
     markSetupStep("search");
+    if (pick === "path" && hit.kind === "concept") {
+      navigate(routeHref("/map", undefined, { path: hit.id.replace(/^concept:/, "") }));
+      return;
+    }
     setRecents(pushRecent(hit));
     navigate(hit.href);
   };
@@ -399,9 +459,11 @@ export function CommandPalette() {
             value={query}
             onValueChange={setQuery}
             placeholder={
-              pickProblem
+              pick === "problem"
                 ? "Which problem? Type a title or number"
-                : "Search concepts, problems and pages"
+                : pick === "path"
+                  ? "Your path to which concept? Type its name"
+                  : "Search concepts, problems and pages"
             }
             className="h-13 min-w-0 flex-1 bg-transparent text-md text-text outline-none placeholder:text-faint"
             data-autofocus
@@ -420,12 +482,14 @@ export function CommandPalette() {
               No results for “{deferred.trim()}”. Try fewer letters or another word.
             </div>
           )}
-          {pickProblem && !q && (
+          {pick && !q && (
             <div className="px-3 py-8 text-center text-base text-muted">
-              Type a problem's title or number to open its workspace.
+              {pick === "problem"
+                ? "Type a problem's title or number to open its workspace."
+                : "Type a concept's name to see everything you need before it."}
             </div>
           )}
-          {!q && !pickProblem && recents.length > 0 && (
+          {!q && !pick && recents.length > 0 && (
             <Command.Group heading="Recent">
               {recents.map((r) => (
                 <Row
@@ -439,7 +503,7 @@ export function CommandPalette() {
               ))}
             </Command.Group>
           )}
-          {!q && !pickProblem && (
+          {!q && !pick && (
             <>
               <Command.Group heading="Go to">
                 {actionRows(actions.filter((a) => a.group === "Go to"))}

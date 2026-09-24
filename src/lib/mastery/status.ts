@@ -183,6 +183,25 @@ export function computePractice(linked: readonly LinkedProblem[]): Practice {
   return { practice: Math.min(1, sum / PRACTICE_TARGET), sum, hasMediumPlus, attempted };
 }
 
+/** Linked problems by difficulty, counted from each one's latest attempt ("Why this color?"). */
+export function practiceBreakdown(linked: readonly LinkedProblem[]): {
+  alone: Record<Difficulty, number>;
+  withHints: Record<Difficulty, number>;
+  total: Record<Difficulty, number>;
+} {
+  const zero = (): Record<Difficulty, number> => ({ easy: 0, medium: 0, hard: 0 });
+  const alone = zero();
+  const withHints = zero();
+  const total = zero();
+  for (const p of linked) {
+    total[p.difficulty]++;
+    const last = latestAttempt(p.state);
+    if (last?.result === "solved_alone") alone[p.difficulty]++;
+    else if (last?.result === "solved_with_hints") withHints[p.difficulty]++;
+  }
+  return { alone, withHints, total };
+}
+
 export interface StatusInput {
   concept: { id: string; isPattern: boolean };
   state?: ConceptState;
