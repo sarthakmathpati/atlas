@@ -7823,9 +7823,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A stack is a pile where you can only add or remove at the top, like a stack of plates: the last plate you put down is the first one you pick up. That rule is called last in, first out. It is exactly what you need whenever the most recent unfinished thing must be handled first, such as undo or matching brackets.",
+    "interview": [
+     "**LIFO**: `push`, `pop`, `top`/`peek`, `empty`, all **O(1)** (amortized for a dynamic array).",
+     "Implementations: dynamic array (push and pop at the end; cache-friendly) or linked list (push and pop at the head).",
+     "Library: C++ `std::stack` or `vector`; Java `ArrayDeque` (not the legacy `Stack` class); Python `list` with `append` and `pop`.",
+     "Real uses: function call stack, undo and redo, browser back button, DFS, parsing nested structure, backtracking.",
+     "Signals: **nesting** (brackets, tags, directories), \"most recent unmatched\", reversing order, and processing an element once all later ones that affect it are known.",
+     "Always check `empty()` before `top()` or `pop()`."
+    ],
+    "questions": [
+     {
+      "q": "What does LIFO mean, and what operations does a stack support?",
+      "a": "Last in, first out: the most recently added element is the first removed. A stack supports push (add on top), pop (remove the top) and top or peek (read it), plus an emptiness check, all in O(1)."
+     },
+     {
+      "q": "How would you implement a stack, and what are the trade-offs?",
+      "a": "With a dynamic array, pushing and popping at the end is O(1) amortized and cache-friendly. With a singly linked list, pushing and popping at the head is O(1) worst case but uses extra memory per node and scatters data in memory."
+     },
+     {
+      "q": "Give real-world uses of stacks.",
+      "a": "The function call stack, undo in editors, the back button in browsers, matching brackets and HTML tags, evaluating expressions, and depth-first search. All of them handle the most recent unfinished item first."
+     },
+     {
+      "q": "What is the signal that a problem needs a stack?",
+      "a": "Nested structure or \"most recent unmatched\" logic: brackets, nested encodings like 3[a2[c]], directory paths with \"..\", or needing the nearest previous element that satisfies a condition. Reversal is another hint."
+     },
+     {
+      "q": "Why is Java's Stack class discouraged?",
+      "a": "It extends Vector, so every method is synchronized, which adds overhead, and it exposes list operations that break the stack abstraction. ArrayDeque is faster and is the recommended stack in modern Java."
+     }
+    ],
+    "deep": "#### Intuition\n\nWhenever work is **nested**, the thing opened last must be closed first. A stack records the open things in order, and its top is always the innermost one. That is why parsers, recursion and undo systems all use stacks.\n\n#### Implementations\n\n```cpp\n// Array-backed stack: push and pop at the end of a vector, O(1) amortized.\nclass IntStack {\n    vector<int> data;\npublic:\n    void push(int x) { data.push_back(x); }\n    void pop() { data.pop_back(); }            // caller checks empty() first\n    int top() const { return data.back(); }\n    bool empty() const { return data.empty(); }\n    int size() const { return data.size(); }\n};\n\n// Reverse the words of a sentence with a stack (the last word pushed comes out first).\nstring reverseWords(const string& s) {\n    stringstream in(s);\n    stack<string> st;\n    string word, out;\n    while (in >> word) st.push(word);\n    while (!st.empty()) {\n        out += st.top();\n        st.pop();\n        if (!st.empty()) out += ' ';\n    }\n    return out;\n}\n```\n\n```python\nclass UndoableText:\n    \"\"\"Undo with a stack of previous states (the most recent change is undone first).\"\"\"\n    def __init__(self):\n        self.text = \"\"\n        self.history = []\n\n    def type(self, s):\n        self.history.append(self.text)\n        self.text += s\n\n    def undo(self):\n        if self.history:\n            self.text = self.history.pop()\n```\n\n#### Worked example: undo\n\n| action | text | history (top on the right) |\n|---|---|---|\n| type \"Hi\" | Hi | \"\" |\n| type \" you\" | Hi you | \"\", \"Hi\" |\n| undo | Hi | \"\" |\n| undo | (empty) | |\n\nUndo always restores the most recent saved state, which is the top of the stack.\n\n#### The call stack\n\nEach function call pushes a frame (arguments, local variables, return address); returning pops it. Deep recursion overflows this stack. Converting recursion to iteration means managing your own stack of \"what is left to do\", which lives on the heap and can grow much larger.\n\n#### Complexity\n\nPush, pop and top are $O(1)$ (amortized $O(1)$ for dynamic arrays because of occasional resizing). Space is $O(n)$ for $n$ stored elements.\n\n#### When a stack is the wrong tool\n\nA stack only exposes its top. If you need the oldest item, use a queue; if you need the smallest or largest item regardless of arrival order, use a heap; if you need to look up arbitrary items, use a hash map or an ordered set. A useful test in interviews: say out loud which item must be processed next. If the answer is always \"the most recent one still waiting\", a stack fits.\n\n#### Edge cases and bugs\n\n- Popping or reading the top of an empty stack: undefined behavior in C++ (`std::stack::top` on empty), an exception in Java and Python.\n- In Java, `Stack` is synchronized and slow; prefer `ArrayDeque` with `push`, `pop`, `peek`.\n- Storing indices instead of values when you later need positions (monotonic stack problems).\n\n#### Variants\n\n- Min stack (track the minimum alongside each element), max-frequency stack.\n- Two stacks for undo and redo; two stacks to build a queue.\n- Monotonic stack for next greater element problems.\n\nConnects to: bracket matching, expression evaluation, monotonic stack, DFS, recursion to iteration."
    }
   },
   {
@@ -7850,9 +7879,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A queue is a line where people join at the back and leave from the front, so the first to arrive is the first served. A deque, a double-ended queue, lets you add and remove at both ends, like a line where people can also cut in at the front or leave from the back. Queues keep things in arrival order, which is exactly what breadth-first search needs.",
+    "interview": [
+     "**FIFO**: `push`/`enqueue` at the back, `pop`/`dequeue` at the front, `front`: all **O(1)**.",
+     "**Circular buffer**: a fixed array with `head` and `size` (or head and tail); the back index is `(head + size) % capacity`, so no shifting is needed.",
+     "**Deque**: push and pop at both ends in O(1). C++ `std::deque`, Java `ArrayDeque`, Python `collections.deque`.",
+     "Don't use a Python `list` as a queue: `pop(0)` is O(n). Use `deque.popleft()`.",
+     "Uses: BFS, task scheduling, buffering streams, rate limiters (sliding time window), and the monotonic deque.",
+     "A **priority queue** is not FIFO: it serves the smallest (or largest) key first (a heap)."
+    ],
+    "questions": [
+     {
+      "q": "What is the difference between a stack and a queue?",
+      "a": "A stack is last in, first out: you add and remove at the same end. A queue is first in, first out: you add at the back and remove from the front. Stacks suit nested or most-recent-first work; queues suit processing in arrival order, such as BFS."
+     },
+     {
+      "q": "How does a circular buffer implement a queue in a fixed array?",
+      "a": "It keeps the index of the front element and the current size. New elements go to (head + size) mod capacity and removing advances head by one mod capacity, so nothing ever shifts and every operation is O(1)."
+     },
+     {
+      "q": "Why shouldn't you use a Python list as a queue?",
+      "a": "list.pop(0) shifts every remaining element, costing O(n), so a BFS over n nodes becomes O(n²). collections.deque supports popleft in O(1)."
+     },
+     {
+      "q": "What is a deque, and where is it useful?",
+      "a": "A double-ended queue that supports O(1) insertion and removal at both ends. It can act as a stack or a queue, and it powers the monotonic deque for sliding window maximums and 0-1 BFS, where zero-weight edges go to the front."
+     },
+     {
+      "q": "How do you tell a full circular buffer from an empty one?",
+      "a": "If you store only head and tail indices, both states have head == tail. Either keep an explicit count of elements, or leave one slot unused so that \"full\" means (tail + 1) mod capacity == head."
+     }
+    ],
+    "deep": "#### Intuition\n\nA queue preserves arrival order. Processing items in that order is what makes BFS explore a graph level by level and what makes a printer or task runner fair. A deque adds the ability to work at both ends, which lets it serve as a stack, a queue, or a sliding window that shrinks from the front and grows at the back.\n\n#### Circular buffer\n\nA queue in a plain array would need shifting every time the front is removed. A circular buffer keeps a `head` index that moves forward and wraps around.\n\nCapacity 4:\n\n| operation | array | head | size |\n|---|---|---|---|\n| push 1, 2, 3 | 1 2 3 _ | 0 | 3 |\n| pop → 1 | _ 2 3 _ | 1 | 2 |\n| push 4, 5 | 5 2 3 4 | 1 | 4 |\n| pop → 2 | 5 _ 3 4 | 2 | 3 |\n\nThe value 5 was written at index `(1 + 3) % 4 = 0`, wrapping around.\n\n#### Code\n\n```cpp\nclass CircularQueue {\n    vector<int> buf;\n    int head = 0, count = 0;\npublic:\n    explicit CircularQueue(int capacity) : buf(capacity) {}\n    bool push(int x) {\n        if (count == (int)buf.size()) return false;           // full\n        buf[(head + count) % buf.size()] = x;\n        count++;\n        return true;\n    }\n    bool pop() {\n        if (count == 0) return false;                           // empty\n        head = (head + 1) % buf.size();\n        count--;\n        return true;\n    }\n    int front() const { return buf[head]; }\n    int back() const { return buf[(head + count - 1) % buf.size()]; }\n    bool empty() const { return count == 0; }\n};\n```\n\n```python\nfrom collections import deque\n\ndef bfs_order(graph, start):\n    \"\"\"Visit nodes in breadth-first order using a FIFO queue.\"\"\"\n    seen, order, q = {start}, [], deque([start])\n    while q:\n        node = q.popleft()                  # O(1), unlike list.pop(0)\n        order.append(node)\n        for nxt in graph.get(node, []):\n            if nxt not in seen:\n                seen.add(nxt)\n                q.append(nxt)\n    return order\n\nclass HitCounter:\n    \"\"\"Hits in the last 300 seconds: drop old timestamps from the front.\"\"\"\n    def __init__(self):\n        self.q = deque()\n\n    def hit(self, t):\n        self.q.append(t)\n\n    def count(self, t):\n        while self.q and self.q[0] <= t - 300:\n            self.q.popleft()\n        return len(self.q)\n```\n\n#### Deque operations\n\n| C++ `deque` | Java `ArrayDeque` | Python `deque` |\n|---|---|---|\n| `push_back`, `push_front` | `offerLast`, `offerFirst` | `append`, `appendleft` |\n| `pop_back`, `pop_front` | `pollLast`, `pollFirst` | `pop`, `popleft` |\n| `back`, `front` | `peekLast`, `peekFirst` | `q[-1]`, `q[0]` |\n\n#### Complexity\n\nAll queue and deque end operations are $O(1)$. `std::deque` also allows $O(1)$ random access by index; Python's `deque` indexing is $O(n)$ in the middle.\n\n#### Edge cases and bugs\n\n- Full versus empty in a circular buffer: with only `head` and `tail` indices both look like `head == tail`; keep a `count` (or leave one slot unused).\n- Modulo of a negative index when moving `head` backwards: use `(head - 1 + cap) % cap`.\n- Using a list as a queue in Python makes BFS quadratic on large graphs.\n\n#### Variants\n\nCircular deque design, monotonic deque (sliding window maximum), 0-1 BFS (push weight-0 edges to the front), multi-level queues in schedulers.\n\nConnects to: BFS, monotonic deque, circular queue and deque design, sliding window."
    }
   },
   {
@@ -7874,9 +7932,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "To check brackets like \"([{}])\", you keep a stack of the brackets that are still open. Each closing bracket must match the most recently opened one, like closing nested boxes from the inside out. If a closer doesn't match, or brackets are left open at the end, the string is invalid.",
+    "interview": [
+     "Push opening brackets; on a closing bracket, the stack must be non-empty and its top must be the matching opener; pop it. Valid iff the stack is empty at the end. **O(n)** time and space.",
+     "Only one bracket type: a counter is enough (never negative, zero at the end).",
+     "**Longest valid parentheses**: stack of **indices** seeded with −1; push `(` indices; on `)` pop, then if empty push the current index as a new base, else the length is `i - top`. O(n).",
+     "Two-pass counter alternative for longest valid: left-to-right and right-to-left with open/close counts, O(1) space.",
+     "**Minimum removals** or **minimum additions** to make valid: count unmatched openers and closers.",
+     "With wildcards (`*` as `(`, `)` or empty): track the range [low, high] of possible open counts."
+    ],
+    "questions": [
+     {
+      "q": "How do you check whether a string of brackets is valid?",
+      "a": "Scan left to right with a stack. Push every opener; for every closer, check that the stack is non-empty and its top is the matching opener, then pop. The string is valid if no check fails and the stack is empty at the end. O(n) time and space."
+     },
+     {
+      "q": "When is a counter enough instead of a stack?",
+      "a": "When there is only one type of bracket. Increase for \"(\" and decrease for \")\"; the string is valid if the counter never goes negative and ends at zero. With several types you need the stack to know which opener is most recent."
+     },
+     {
+      "q": "How do you find the length of the longest valid parentheses substring?",
+      "a": "Keep a stack of indices seeded with −1. Push the index of each \"(\". For \")\", pop; if the stack becomes empty, push the current index as the new base, otherwise the valid length ending here is i minus the new top. Track the maximum."
+     },
+     {
+      "q": "How many characters must be added to make a parentheses string valid?",
+      "a": "Scan with a count of open brackets. A \")\" with no open bracket needs an added \"(\", so count it; otherwise close one open bracket. At the end, every remaining open bracket needs a \")\". The answer is the sum of both counts."
+     },
+     {
+      "q": "How do you handle a wildcard that can be \"(\", \")\" or empty?",
+      "a": "Track the lowest and highest possible number of open brackets. \"(\" raises both, \")\" lowers both, \"*\" lowers the low end and raises the high end. Fail if the high end goes negative, clamp the low end at zero, and succeed if zero is reachable at the end."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn a valid string, brackets are properly nested: every closer closes the most recent opener that is still open. A stack's top is exactly \"the most recent still-open thing\", so each closer is checked against the top and removes it.\n\n#### Worked example: \"{[()]}(\"\n\n| i | char | action | stack (top right) |\n|---|---|---|---|\n| 0 | { | push | { |\n| 1 | [ | push | { [ |\n| 2 | ( | push | { [ ( |\n| 3 | ) | matches ( → pop | { [ |\n| 4 | ] | matches [ → pop | { |\n| 5 | } | matches { → pop | (empty) |\n| 6 | ( | push | ( |\n\nThe stack isn't empty at the end: invalid (an unclosed `(`).\n\n#### Code\n\n```cpp\nbool isValid(const string& s) {\n    vector<char> st;\n    for (char c : s) {\n        if (c == '(' || c == '[' || c == '{') {\n            st.push_back(c);\n        } else {\n            char need = c == ')' ? '(' : c == ']' ? '[' : '{';\n            if (st.empty() || st.back() != need) return false;  // wrong or missing opener\n            st.pop_back();\n        }\n    }\n    return st.empty();                                           // nothing left open\n}\n\nint longestValidParentheses(const string& s) {\n    vector<int> st = {-1};                 // index before the current valid run\n    int best = 0;\n    for (int i = 0; i < (int)s.size(); i++) {\n        if (s[i] == '(') st.push_back(i);\n        else {\n            st.pop_back();\n            if (st.empty()) st.push_back(i);                    // unmatched ')' is a new base\n            else best = max(best, i - st.back());\n        }\n    }\n    return best;\n}\n```\n\n```python\ndef min_add_to_make_valid(s):\n    open_count = additions = 0\n    for c in s:\n        if c == \"(\":\n            open_count += 1\n        elif open_count:\n            open_count -= 1\n        else:\n            additions += 1           # a ')' with nothing to match needs a '(' added\n    return additions + open_count    # plus a ')' for every '(' left open\n\ndef check_valid_string_with_stars(s):\n    lo = hi = 0                      # range of possible numbers of open '('\n    for c in s:\n        lo += 1 if c == \"(\" else -1\n        hi += 1 if c != \")\" else -1\n        if hi < 0:\n            return False             # too many ')' even if every '*' is '('\n        lo = max(lo, 0)\n    return lo == 0\n```\n\n#### Why the −1 base works\n\nThe stack bottom always holds the index just before the current run of valid characters. After popping a match, `i - st.back()` is the length of the valid substring ending at `i`. An unmatched `)` can't be part of any valid substring, so it becomes the new base.\n\n#### Complexity\n\nEach character is pushed and popped at most once: $O(n)$ time, $O(n)$ space ($O(1)$ with counters for single-type problems).\n\n#### Edge cases and bugs\n\n- Empty string is valid.\n- A closer on an empty stack: check emptiness before reading the top.\n- Starting with a closer, or ending with openers: both invalid.\n\n#### Variants\n\n- Remove the minimum number of invalid parentheses (BFS over removals, or two passes with counters to build one answer).\n- Score of parentheses, maximum nesting depth (a counter).\n- Validate HTML or XML tags (stack of tag names).\n- Generate all valid combinations (backtracking with open and close counts).\n\nConnects to: stack basics, expression evaluation, stack-based string processing, generate parentheses (backtracking).",
+    "signals": [
+     "brackets, parentheses or tags that must be properly nested",
+     "\"valid parentheses\" or the longest valid substring of them",
+     "minimum insertions or removals to balance brackets",
+     "matching each closing element with the most recent open one"
+    ],
+    "template": "```cpp\n// Match closers against the most recent unmatched opener.\nbool balanced(const string& s, const string& open = \"([{\", const string& close = \")]}\") {\n    vector<char> st;\n    for (char c : s) {\n        size_t o = open.find(c), k = close.find(c);\n        if (o != string::npos) st.push_back(c);                 // opener: remember it\n        else if (k != string::npos) {                           // closer: must match the top\n            if (st.empty() || st.back() != open[k]) return false;\n            st.pop_back();\n        }                                                       // other characters: ignore\n    }\n    return st.empty();\n}\n```"
    }
   },
   {
@@ -7898,9 +7992,44 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Evaluating an expression like \"3 + 4 * 2\" means respecting the rule that multiplication happens before addition, and that brackets happen first. Stacks let a program hold numbers and pending operators until it knows it is safe to apply them, like a cashier who waits for the whole order before totaling a discount. Postfix notation, where operators come after their numbers, is the easiest form: one stack is enough.",
+    "interview": [
+     "**Postfix (RPN)**: push numbers; on an operator, pop `b` then `a`, push `a op b`. O(n). Order matters for `-` and `/`.",
+     "**Infix without parentheses** (`+ - * /`): keep the last operator; push `+num`/`-num`, and apply `*` and `/` to the top immediately; sum the stack at the end. O(n).",
+     "**Infix with `+ -` and parentheses**: running `result` and `sign`; on `(` push the current result and sign, start fresh; on `)` pop and combine.",
+     "**General infix** (precedence and parentheses): two stacks, numbers and operators; before pushing an operator, apply operators on the stack with **higher or equal** precedence (left associativity). This is Dijkstra's shunting-yard idea.",
+     "Watch multi-digit numbers, spaces, unary minus (`-(2+3)`, `-5`), and integer division rounding toward zero."
+    ],
+    "questions": [
+     {
+      "q": "How do you evaluate a postfix (reverse Polish) expression?",
+      "a": "Scan tokens left to right. Push numbers; for an operator, pop the right operand, then the left one, apply the operator and push the result. The single value left on the stack is the answer, in O(n)."
+     },
+     {
+      "q": "How do you evaluate \"3 + 5 * 2 − 4\" without parentheses in one pass?",
+      "a": "Keep the previous operator and a stack. When a number ends, push it for +, push its negative for −, or combine it with the top for * and /. At the end, sum the stack. Multiplication and division are applied immediately, which gives them precedence."
+     },
+     {
+      "q": "How does the two-stack method handle precedence and parentheses?",
+      "a": "Push numbers onto one stack and operators onto another. Before pushing an operator, apply all stacked operators of higher or equal precedence (stopping at a \"(\"). On \")\", apply operators until the matching \"(\" and discard it. At the end, apply everything left."
+     },
+     {
+      "q": "How do you handle unary minus?",
+      "a": "Detect a minus where an operand is expected: at the start, after \"(\" or after another operator. Treat it as a separate unary operator that binds tighter than * and / and negates one operand, or keep a sign variable that multiplies the next number or parenthesized group. Rewriting it as 0 − x only works when nothing binds tighter around it: 10 / −2 * 3 would go wrong."
+     },
+     {
+      "q": "What is a subtle difference between languages in integer division?",
+      "a": "C++ and Java truncate toward zero, so −7 / 2 is −3, while Python's // floors, giving −4. To match typical problem statements in Python, use int(a / b) or adjust the floor result for negative quotients."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn \"3 + 4 * 2\", when you read `+` you can't apply it yet, because the next operator might bind tighter. So you hold it. When a lower- or equal-precedence operator (or the end) arrives, everything held that binds at least as tightly can be applied. Parentheses act as a wall: nothing inside is applied across them until the `)` closes them.\n\n#### Worked example: \"3 + 4 * 2 - 6 / 3\" with two stacks\n\n| token | action | numbers | operators |\n|---|---|---|---|\n| 3 | push | 3 | |\n| + | push | 3 | + |\n| 4 | push | 3 4 | + |\n| * | `*` binds tighter than `+`: push | 3 4 | + * |\n| 2 | push | 3 4 2 | + * |\n| - | apply `*` (4·2=8), apply `+` (3+8=11), push `-` | 11 | - |\n| 6 | push | 11 6 | - |\n| / | push | 11 6 | - / |\n| 3 | push | 11 6 3 | - / |\n| end | apply `/` (6/3=2), apply `-` (11−2=9) | 9 | |\n\n#### Code\n\n```cpp\n// Full infix evaluator: + - * /, parentheses, spaces, multi-digit and unary minus.\nlong long evaluate(const string& s) {\n    vector<long long> nums;\n    vector<char> ops;\n    // 'u' is unary minus: it binds tighter than * and /, and applies to one operand.\n    auto prec = [](char op) { return op == 'u' ? 3 : (op == '*' || op == '/') ? 2 : 1; };\n    auto applyTop = [&]() {\n        char op = ops.back(); ops.pop_back();\n        long long b = nums.back(); nums.pop_back();\n        if (op == 'u') { nums.push_back(-b); return; }\n        long long a = nums.back(); nums.pop_back();\n        nums.push_back(op == '+' ? a + b : op == '-' ? a - b : op == '*' ? a * b : a / b);\n    };\n    bool expectOperand = true;                  // true at the start and after '(' or an operator\n    for (int i = 0; i < (int)s.size(); i++) {\n        char c = s[i];\n        if (c == ' ') continue;\n        if (isdigit((unsigned char)c)) {\n            long long v = 0;\n            while (i < (int)s.size() && isdigit((unsigned char)s[i])) v = v * 10 + (s[i++] - '0');\n            i--;\n            nums.push_back(v);\n            expectOperand = false;\n        } else if (c == '(') {\n            ops.push_back(c);\n            expectOperand = true;\n        } else if (c == ')') {\n            while (ops.back() != '(') applyTop();\n            ops.pop_back();                     // discard '('\n            expectOperand = false;\n        } else {                                // operator\n            if (expectOperand) {                // a sign where an operand should start\n                if (c == '-') ops.push_back('u');   // unary minus; unary plus is ignored\n                continue;\n            }\n            while (!ops.empty() && ops.back() != '(' && prec(ops.back()) >= prec(c)) applyTop();\n            ops.push_back(c);\n            expectOperand = true;\n        }\n    }\n    while (!ops.empty()) applyTop();\n    return nums.back();\n}\n```\n\n```python\ndef eval_rpn(tokens):\n    st = []\n    for t in tokens:\n        if t in \"+-*/\" and len(t) == 1:\n            b, a = st.pop(), st.pop()           # the right operand is on top\n            if t == \"+\":\n                st.append(a + b)\n            elif t == \"-\":\n                st.append(a - b)\n            elif t == \"*\":\n                st.append(a * b)\n            else:\n                st.append(int(a / b))           # truncate toward zero, like C++ and Java\n        else:\n            st.append(int(t))\n    return st[-1]\n\ndef calculate_no_parens(s):\n    \"\"\"+ - * / with precedence, no parentheses.\"\"\"\n    st, num, op = [], 0, \"+\"\n    for i, c in enumerate(s + \"+\"):             # a sentinel operator flushes the last number\n        if c.isdigit():\n            num = num * 10 + int(c)\n        elif c in \"+-*/\":\n            if op == \"+\":\n                st.append(num)\n            elif op == \"-\":\n                st.append(-num)\n            elif op == \"*\":\n                st.append(st.pop() * num)\n            else:\n                st.append(int(st.pop() / num))\n            op, num = c, 0\n    return sum(st)\n```\n\n#### Complexity\n\nEach token is pushed and popped at most once: $O(n)$ time, $O(n)$ space for the stacks.\n\n#### Edge cases and bugs\n\n- Operand order in RPN: pop `b` first, then `a`, and compute `a - b`.\n- Python's `//` rounds toward negative infinity; interview problems usually want truncation toward zero: `int(a / b)` (fine for values that fit in a double).\n- Unary minus at the start, after `(` or after another operator: a separate unary operator with the highest precedence handles `10 / -2 * 3` correctly; the `0 - x` shortcut does not.\n- Right-associative operators such as `^`: apply only strictly higher precedence before pushing.\n\n#### Variants\n\n- Convert infix to postfix (shunting-yard output queue), build an expression tree.\n- Basic calculator III (all of the above), decode strings with nested repetition.\n- Evaluate boolean expressions, parse nested lists (a stack of containers).\n\nConnects to: bracket matching, stack basics, recursion (recursive descent parsing), trees (expression trees).",
+    "signals": [
+     "evaluate an arithmetic string with operators and parentheses",
+     "reverse Polish (postfix) notation",
+     "operator precedence (\"multiplication before addition\")",
+     "build a calculator or parse a formula"
+    ],
+    "template": "```cpp\n// Two-stack infix evaluation skeleton (binary + - * /, parentheses).\nlong long evalInfix(const vector<string>& tokens) {\n    vector<long long> nums;\n    vector<char> ops;\n    auto prec = [](char o) { return o == '*' || o == '/' ? 2 : 1; };\n    auto apply = [&] {\n        long long b = nums.back(); nums.pop_back();\n        long long a = nums.back(); nums.pop_back();\n        char o = ops.back(); ops.pop_back();\n        nums.push_back(o == '+' ? a + b : o == '-' ? a - b : o == '*' ? a * b : a / b);\n    };\n    for (const string& t : tokens) {\n        if (t == \"(\") ops.push_back('(');\n        else if (t == \")\") { while (ops.back() != '(') apply(); ops.pop_back(); }\n        else if (t == \"+\" || t == \"-\" || t == \"*\" || t == \"/\") {\n            while (!ops.empty() && ops.back() != '(' && prec(ops.back()) >= prec(t[0])) apply();\n            ops.push_back(t[0]);                       // wait until precedence is known\n        } else nums.push_back(stoll(t));               // a number\n    }\n    while (!ops.empty()) apply();\n    return nums.back();\n}\n```"
    }
   },
   {
@@ -7922,9 +8051,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Many string puzzles are easiest when you build the answer on a stack and let each new character interact with the top. Removing adjacent duplicate letters is like a game where two equal tiles side by side disappear, possibly letting new neighbors meet. Nested patterns such as \"3[ab]\" work the same way: open a new level on the stack, and fold it back when the bracket closes.",
+    "interview": [
+     "**Adjacent duplicates**: push characters; if the new one equals the top, pop instead. Result = the stack. O(n). With a count (remove k equal in a row): store (char, count) pairs.",
+     "**Decode string** (`3[a2[c]]` → `accaccacc`): stack of (previous string, repeat count); on `[` push and reset; on `]` pop and append `current` repeated.",
+     "**Simplify path**: split by `/`; skip empty and `.`; `..` pops if possible; otherwise push; join with `/`.",
+     "**Asteroid collision**: push right-movers; a left-mover destroys smaller right-movers on top, dies against larger, both die if equal.",
+     "**Backspace compare**: stack, or scan from the right with a skip counter in O(1) space.",
+     "All O(n) time; the stack is the answer being built."
+    ],
+    "questions": [
+     {
+      "q": "How do you repeatedly remove adjacent equal characters from a string?",
+      "a": "Scan characters with a stack. If the current character equals the top, pop (the pair cancels); otherwise push. Cascading removals happen naturally because each pop exposes the previous survivor. The remaining stack is the answer, in O(n)."
+     },
+     {
+      "q": "How do you decode a string like \"3[a2[c]]\"?",
+      "a": "Keep a current string and a current number. On \"[\", push (current string, number) and reset both. On \"]\", pop (prefix, k) and set current = prefix + current repeated k times. Letters append to the current string and digits build the number."
+     },
+     {
+      "q": "How do you simplify a Unix-style path?",
+      "a": "Split on \"/\" and process the parts with a stack: ignore empty parts and \".\", pop on \"..\" if the stack isn't empty, and push any other name. Join the stack with \"/\" and prefix a \"/\"."
+     },
+     {
+      "q": "How does the asteroid collision simulation work?",
+      "a": "Push asteroids moving right. When one moves left, compare it with right-movers on top of the stack: smaller ones explode and are popped, an equal one destroys both, and a larger one destroys the incoming asteroid. If it survives, push it."
+     }
+    ],
+    "deep": "#### Intuition\n\nWhen each new element may cancel, merge with, or be absorbed by the **most recent surviving** element, a stack is the natural structure: its top is always that most recent survivor. Cancellations can cascade (removing a pair exposes a new top), which a single pass with a stack handles for free.\n\n#### Worked example: decode \"3[a2[c]]\"\n\n| char | action | stack of (prefix, k) | current | number |\n|---|---|---|---|---|\n| 3 | read digit | | \"\" | 3 |\n| [ | push (\"\", 3), reset | (\"\",3) | \"\" | 0 |\n| a | append | (\"\",3) | \"a\" | 0 |\n| 2 | read digit | (\"\",3) | \"a\" | 2 |\n| [ | push (\"a\", 2), reset | (\"\",3) (\"a\",2) | \"\" | 0 |\n| c | append | … | \"c\" | 0 |\n| ] | pop (\"a\",2): \"a\" + \"c\"×2 | (\"\",3) | \"acc\" | 0 |\n| ] | pop (\"\",3): \"\" + \"acc\"×3 | | \"accaccacc\" | 0 |\n\n#### Code\n\n```cpp\nstring decodeString(const string& s) {\n    vector<pair<string, int>> st;              // (string before '[', repeat count)\n    string cur;\n    int k = 0;\n    for (char c : s) {\n        if (isdigit((unsigned char)c)) k = k * 10 + (c - '0');\n        else if (c == '[') { st.push_back({cur, k}); cur.clear(); k = 0; }\n        else if (c == ']') {\n            auto [prefix, times] = st.back();\n            st.pop_back();\n            string repeated;\n            for (int i = 0; i < times; i++) repeated += cur;\n            cur = prefix + repeated;\n        } else cur += c;\n    }\n    return cur;\n}\n\nvector<int> asteroidCollision(const vector<int>& a) {\n    vector<int> st;\n    for (int x : a) {\n        bool alive = true;\n        while (alive && x < 0 && !st.empty() && st.back() > 0) {\n            if (st.back() < -x) st.pop_back();          // the right-mover explodes; keep going\n            else {\n                if (st.back() == -x) st.pop_back();     // both explode\n                alive = false;                          // x explodes\n            }\n        }\n        if (alive) st.push_back(x);\n    }\n    return st;\n}\n```\n\n```python\ndef remove_adjacent_duplicates(s, k=2):\n    st = []                                   # [char, run length]\n    for c in s:\n        if st and st[-1][0] == c:\n            st[-1][1] += 1\n            if st[-1][1] == k:\n                st.pop()                      # k equal neighbors vanish\n        else:\n            st.append([c, 1])\n    return \"\".join(c * n for c, n in st)\n\ndef simplify_path(path):\n    st = []\n    for part in path.split(\"/\"):\n        if part == \"..\":\n            if st:\n                st.pop()\n        elif part and part != \".\":\n            st.append(part)\n    return \"/\" + \"/\".join(st)\n```\n\n#### Complexity\n\nEvery character or token is pushed and popped at most once: $O(n)$ time and $O(n)$ space, plus the output size for decode string (which can be exponential in the nesting depth).\n\n#### Edge cases and bugs\n\n- Multi-digit repeat counts (`12[a]`).\n- Decode strings with letters after a bracket closes (`2[a]bc`).\n- Simplify path: `\"..\"` at the root stays at the root; repeated slashes produce empty parts.\n- Asteroids moving apart (left-mover before right-mover) never collide.\n\n#### Variants\n\n- Remove all adjacent duplicates in a string (k = 2), make the string great (remove adjacent opposite-case letters).\n- Validate stack sequences (simulate pushes and pops).\n- Build the smallest string with a greedy stack (remove k digits), which is the greedy stack pattern.\n\nConnects to: stack basics, bracket matching, greedy stack, expression evaluation.",
+    "signals": [
+     "adjacent elements cancel, merge or collide as you scan",
+     "nested encodings with counts and brackets",
+     "file paths with \".\" and \"..\"",
+     "backspace characters or undo markers inside a string"
+    ],
+    "template": "```cpp\n// Build the result on a stack; each new item interacts with the most recent survivor.\nstring processWithStack(const string& s) {\n    string st;                                  // a string works as a stack of chars\n    for (char c : s) {\n        if (!st.empty() && st.back() == c) {    // interaction rule: cancel, merge, compare...\n            st.pop_back();                      // may expose a new top for the next item\n        } else {\n            st.push_back(c);\n        }\n    }\n    return st;                                  // the survivors, in order\n}\n```"
    }
   },
   {
@@ -7944,9 +8105,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "These are small design puzzles where you build one structure out of others or add a feature without slowing it down. A min stack remembers the smallest value at every height, like writing the lowest price so far next to each receipt in a pile. A queue built from two stacks pours one stack into the other so the oldest item ends up on top.",
+    "interview": [
+     "**Min stack**: store pairs (value, min so far), or a second stack of minimums pushed when the new value is ≤ the current min. All operations O(1).",
+     "**Queue using two stacks**: push onto `in`; for pop or peek, if `out` is empty, move everything from `in` to `out`. Each element moves at most once: **O(1) amortized**.",
+     "**Stack using queues**: on push, enqueue then rotate the queue so the new element is at the front (O(n) push, O(1) pop), or make pop the O(n) side.",
+     "**Max stack** with arbitrary `popMax`: needs a balanced tree or a heap with lazy deletion (O(log n)).",
+     "Say which operation is amortized and why."
+    ],
+    "questions": [
+     {
+      "q": "How do you implement a stack that returns its minimum in O(1)?",
+      "a": "Alongside each pushed value, store the minimum of the stack at that height, either as pairs or in a second stack. The current minimum is always the top's stored minimum, and popping restores the previous minimum automatically."
+     },
+     {
+      "q": "How do you build a queue from two stacks, and why is it O(1) amortized?",
+      "a": "Push new items onto an input stack. To pop, take from an output stack; when it's empty, move all items from the input stack to it, which reverses their order so the oldest is on top. Each item is moved at most once, so n operations cost O(n) in total."
+     },
+     {
+      "q": "How do you implement a stack with queues?",
+      "a": "With one queue, push the new element and then rotate the queue by moving the other size − 1 elements from the front to the back, so the newest element is at the front. Pop and top are then O(1) and push is O(n)."
+     },
+     {
+      "q": "Why does a max stack with popMax need more than two stacks?",
+      "a": "popMax removes the maximum even when it's buried in the middle, and the next maximum must then be found quickly. A balanced tree or a heap with lazy deletion (plus a doubly linked list for order) gives O(log n) per operation."
+     }
+    ]
    }
   },
   {
@@ -7968,9 +8152,46 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A monotonic stack keeps its items in sorted order by throwing out any item that can never be useful again. Picture people standing in a line looking right: a tall newcomer blocks the view of everyone shorter behind them, so those shorter people now know who their \"next taller person\" is and can leave. One pass answers \"who is the next bigger one?\" for everybody.",
+    "interview": [
+     "**Next greater element**: scan left to right; while the stack's top value is smaller than the current value, pop it and record the current value as its answer; push the current index. The stack stays **decreasing**.",
+     "Variants by comparison and direction: next smaller (increasing stack), previous greater or smaller (read the top **before** pushing), strict versus non-strict for duplicates.",
+     "Each index is pushed once and popped at most once: **O(n)** time, O(n) space.",
+     "Store **indices**, so you can compute distances (days until a warmer temperature) and look up values.",
+     "Circular arrays: loop over `2n` indices using `i % n`.",
+     "Signals: \"next greater/smaller\", \"how many days until\", \"span\", \"nearest larger to the left\", visibility and blocking."
+    ],
+    "questions": [
+     {
+      "q": "How does a monotonic stack find the next greater element for every index in O(n)?",
+      "a": "Scan left to right keeping indices whose values are decreasing and still waiting for an answer. When a larger value arrives, pop every smaller waiting index and record the new value as its answer, then push the current index. Each index is pushed and popped at most once."
+     },
+     {
+      "q": "Why does the stack stay sorted?",
+      "a": "Before pushing a value, you pop every value on top that it beats. So whatever remains under it is larger (for the next-greater version), and the stack is decreasing from bottom to top at all times."
+     },
+     {
+      "q": "How do you get the previous smaller element instead?",
+      "a": "Keep an increasing stack. For each index, pop while the top is greater than or equal to the current value; the remaining top, if any, is the previous smaller element. Record it, then push the current index."
+     },
+     {
+      "q": "How do you handle a circular array?",
+      "a": "Iterate over 2n positions using index i mod n, but only push indices during the first lap. During the second lap, elements near the end can find their next greater element at the beginning of the array."
+     },
+     {
+      "q": "Why store indices instead of values?",
+      "a": "Indices let you compute distances (days until warmer, span lengths), write answers into the right slots, and distinguish equal values. The value is always available as a[index]."
+     }
+    ],
+    "deep": "#### Intuition\n\nFor \"next greater element\", a brute force looks right from every index: $O(n^2)$. Notice that once a larger value appears, every smaller value before it has found its answer and will never be the answer for anything further right (the larger value blocks it). So you only keep elements still waiting for an answer, and they are always in decreasing order: that is the monotonic stack.\n\n#### Worked example: next greater element\n\n`a = 2 1 2 4 3`\n\n| i | a[i] | pops (index → answer) | stack after (values) |\n|---|---|---|---|\n| 0 | 2 | | 2 |\n| 1 | 1 | | 2 1 |\n| 2 | 2 | 1 → 2 | 2 2 |\n| 3 | 4 | 2 → 4, 2 → 4 | 4 |\n| 4 | 3 | | 4 3 |\n\nAnswers: `4 2 4 -1 -1`. The first 2 found 4, not the later 2, because the comparison is strict (`<`).\n\n#### Code\n\n```cpp\n// Next greater element to the right (-1 if none).\nvector<int> nextGreater(const vector<int>& a) {\n    int n = a.size();\n    vector<int> ans(n, -1), st;                    // st holds indices, values decreasing\n    for (int i = 0; i < n; i++) {\n        while (!st.empty() && a[st.back()] < a[i]) {\n            ans[st.back()] = a[i];\n            st.pop_back();\n        }\n        st.push_back(i);\n    }\n    return ans;\n}\n\n// Days until a warmer temperature (distance to the next strictly greater value).\nvector<int> dailyTemperatures(const vector<int>& t) {\n    int n = t.size();\n    vector<int> wait(n, 0), st;\n    for (int i = 0; i < n; i++) {\n        while (!st.empty() && t[st.back()] < t[i]) {\n            wait[st.back()] = i - st.back();\n            st.pop_back();\n        }\n        st.push_back(i);\n    }\n    return wait;\n}\n```\n\n```python\ndef previous_smaller(a):\n    \"\"\"Index of the nearest element to the left that is strictly smaller, or -1.\"\"\"\n    ans, st = [-1] * len(a), []\n    for i, x in enumerate(a):\n        while st and a[st[-1]] >= x:     # pop everything not smaller than x\n            st.pop()\n        ans[i] = st[-1] if st else -1    # read the answer before pushing\n        st.append(i)\n    return ans\n\ndef next_greater_circular(a):\n    n = len(a)\n    ans, st = [-1] * n, []\n    for i in range(2 * n):               # the second lap lets elements see the start\n        x = a[i % n]\n        while st and a[st[-1]] < x:\n            ans[st.pop()] = x\n        if i < n:\n            st.append(i)\n    return ans\n```\n\n#### Which stack for which question\n\n| Question | Stack order (bottom to top) | Pop while | Answer read |\n|---|---|---|---|\n| next greater | decreasing | top < current | when popped |\n| next smaller | increasing | top > current | when popped |\n| previous greater | decreasing | top <= current | top after popping |\n| previous smaller | increasing | top >= current | top after popping |\n\nSwapping `<` and `<=` decides how equal values are treated (strictly greater versus greater or equal).\n\n#### Complexity\n\n$O(n)$ time: each index is pushed once and popped at most once. $O(n)$ space in the worst case (a strictly decreasing input for next greater).\n\n#### Edge cases and bugs\n\n- Storing values instead of indices loses positions (needed for distances and for duplicate handling).\n- Getting strictness wrong with duplicates, which matters for counting problems (contribution technique).\n- Elements left in the stack at the end have no answer; initialize answers to -1 or n.\n\n#### Variants\n\n- Stock span (previous greater or equal, count the distance).\n- Largest rectangle in a histogram, maximal rectangle.\n- Sum of subarray minimums (previous and next smaller).\n- Remove k digits (greedy stack), 132 pattern (scan from the right with a stack).\n- Trapping rain water (stack of decreasing heights, fill layer by layer).\n\nConnects to: stack basics, largest rectangle in histogram, contribution technique, amortized analysis.",
+    "signals": [
+     "next greater or next smaller element for every position",
+     "\"how many days until a warmer day\" or distance to the nearest larger value",
+     "stock span, visibility, \"who can see whom\" in a line",
+     "nearest element to the left or right that is larger or smaller",
+     "O(n) required where the brute force looks right from every index"
+    ],
+    "template": "```cpp\n// Monotonic stack: for each i, resolve the waiting indices that a[i] beats.\nvector<int> nextGreaterIndex(const vector<int>& a) {\n    int n = a.size();\n    vector<int> nxt(n, n), st;                       // n means \"none\"\n    for (int i = 0; i < n; i++) {\n        while (!st.empty() && a[st.back()] < a[i]) { // flip to > for next smaller\n            nxt[st.back()] = i;                      // a[i] is the answer for the popped index\n            st.pop_back();\n        }\n        // previous-greater-or-equal of i is st.back() here (if any)\n        st.push_back(i);\n    }\n    return nxt;\n}\n```"
    }
   },
   {
@@ -7992,9 +8213,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Given bars of different heights side by side, the largest rectangle you can draw inside them is limited by its shortest bar. For each bar, imagine it as the shortest one and stretch left and right until you hit a lower bar. A monotonic stack finds those left and right walls for every bar in one pass.",
+    "interview": [
+     "For bar `i` as the minimum, the rectangle spans from just after the **previous smaller** bar to just before the **next smaller** bar: area `h[i] * (right - left - 1)`.",
+     "One pass with an **increasing** stack: when a lower bar arrives, pop taller bars; for a popped bar, the current index is its right wall and the new top is its left wall.",
+     "Append a sentinel height 0 at the end so every bar gets popped.",
+     "**O(n)** time, O(n) space; brute force is O(n²).",
+     "**Maximal rectangle** of 1s in a binary matrix: for each row, build heights of consecutive 1s above each column and run the histogram algorithm: **O(R · C)**."
+    ],
+    "questions": [
+     {
+      "q": "What is the key idea behind the O(n) largest rectangle solution?",
+      "a": "Every candidate rectangle is determined by its shortest bar, and it stretches from just after the previous shorter bar to just before the next shorter bar. An increasing monotonic stack gives both boundaries for a bar at the moment it is popped."
+     },
+     {
+      "q": "When a bar is popped, how is its width computed?",
+      "a": "The current index i is the first bar to its right that is lower, and the index now on top of the stack is the nearest lower-or-equal bar to its left (or −1 if the stack is empty). The width is i − left − 1."
+     },
+     {
+      "q": "Why append a 0 at the end of the heights?",
+      "a": "A bar of height 0 is lower than everything, so it pops every remaining bar and computes their areas. Without it, bars left on the stack at the end would need a separate cleanup loop."
+     },
+     {
+      "q": "How do you find the largest rectangle of 1s in a binary matrix?",
+      "a": "Treat each row as the base of a histogram whose heights count consecutive 1s above each column, updating heights row by row. Run the histogram algorithm on each row and take the maximum, for O(R · C) total."
+     }
+    ],
+    "deep": "#### Intuition\n\nAny optimal rectangle has some shortest bar, and it extends as far as it can in both directions while every bar is at least that tall. So for every bar, compute how far it extends: the first lower bar on each side. A monotonic increasing stack gives both walls at the moment a bar is popped: the bar causing the pop is the first lower bar on the right, and the bar beneath it on the stack is the first lower (or equal) bar on the left.\n\n#### Worked example\n\nHeights `2 1 5 6 2 3`, with a sentinel 0 appended at index 6.\n\n| i | h[i] | pops (bar: height × width) | stack (indices) after |\n|---|---|---|---|\n| 0 | 2 | | 0 |\n| 1 | 1 | bar 0: 2 × 1 = 2 | 1 |\n| 2 | 5 | | 1 2 |\n| 3 | 6 | | 1 2 3 |\n| 4 | 2 | bar 3: 6 × 1 = 6; bar 2: 5 × 2 = 10 | 1 4 |\n| 5 | 3 | | 1 4 5 |\n| 6 | 0 | bar 5: 3 × 1 = 3; bar 4: 2 × 4 = 8; bar 1: 1 × 6 = 6 | 6 |\n\nLargest: **10** (bars 2 and 3 at height 5). When bar 2 is popped at i = 4, the stack top below it is index 1, so the width is `4 - 1 - 1 = 2`.\n\n#### Code\n\n```cpp\nlong long largestRectangle(vector<int> h) {\n    h.push_back(0);                                   // sentinel flushes the stack\n    vector<int> st;                                   // indices, heights increasing\n    long long best = 0;\n    for (int i = 0; i < (int)h.size(); i++) {\n        while (!st.empty() && h[st.back()] >= h[i]) {\n            long long height = h[st.back()];\n            st.pop_back();\n            int left = st.empty() ? -1 : st.back();   // previous smaller bar\n            best = max(best, height * (i - left - 1)); // i is the next smaller bar\n        }\n        st.push_back(i);\n    }\n    return best;\n}\n\nlong long maximalRectangle(const vector<vector<char>>& m) {\n    if (m.empty()) return 0;\n    vector<int> heights(m[0].size(), 0);\n    long long best = 0;\n    for (const auto& row : m) {\n        for (int c = 0; c < (int)row.size(); c++)\n            heights[c] = row[c] == '1' ? heights[c] + 1 : 0;  // consecutive 1s above\n        best = max(best, largestRectangle(heights));\n    }\n    return best;\n}\n```\n\n```python\ndef largest_rectangle(heights):\n    h = heights + [0]\n    st, best = [], 0\n    for i, x in enumerate(h):\n        while st and h[st[-1]] >= x:\n            height = h[st.pop()]\n            left = st[-1] if st else -1\n            best = max(best, height * (i - left - 1))\n        st.append(i)\n    return best\n```\n\n#### Complexity\n\nEach bar is pushed and popped once: $O(n)$ time, $O(n)$ space. Maximal rectangle: $O(R \\cdot C)$ time, $O(C)$ space.\n\n#### Equal heights\n\nWith `>=` in the pop condition, a bar is popped by an equal bar to its right, and its computed width stops early. That is fine: the last bar of an equal run is popped later with the full width, so the maximum is still found.\n\n#### Edge cases and bugs\n\n- Forgetting the sentinel leaves bars in the stack; you would need a second loop to process them.\n- Width when the stack is empty after popping: the bar extends to the left edge, so `left = -1`.\n- Overflow: height up to $10^4$ times width $10^5$ fits in 32 bits, but larger inputs need 64-bit.\n\n#### Variants\n\n- Maximal square in a binary matrix (DP is simpler).\n- Count submatrices of all 1s (stack with running sums).\n- Largest rectangle with divide and conquer or a segment tree for range minimum: $O(n \\log n)$.\n\nConnects to: monotonic stack, contribution technique, DP on grids (maximal square).",
+    "signals": [
+     "the largest rectangle under a bar chart or skyline",
+     "the largest all-1s rectangle in a binary matrix",
+     "area determined by the minimum height over a range times its width",
+     "for each element, how far it extends while being the minimum"
+    ],
+    "template": "```cpp\n// For each index, the widest range where it is the minimum: area = h * width.\nlong long bestAreaAsMinimum(vector<int> h) {\n    h.push_back(0);                                     // sentinel\n    vector<int> st;                                     // increasing heights\n    long long best = 0;\n    for (int i = 0; i < (int)h.size(); i++) {\n        while (!st.empty() && h[st.back()] >= h[i]) {\n            int mid = st.back(); st.pop_back();         // h[mid] is the minimum of (left, i)\n            int left = st.empty() ? -1 : st.back();\n            best = max(best, 1LL * h[mid] * (i - left - 1));\n        }\n        st.push_back(i);\n    }\n    return best;\n}\n```"
    }
   },
   {
@@ -8016,9 +8268,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Instead of looking at every subarray and finding its minimum, flip the question: for each element, count how many subarrays have it as their minimum. It is like crediting each player with the matches they won instead of replaying every match. The element's contribution is its value times that count, and adding contributions gives the total.",
+    "interview": [
+     "Sum over all subarrays of min = Σ `a[i] × (number of subarrays where a[i] is the minimum)`.",
+     "That count is `left[i] × right[i]`: `left` = distance to the previous smaller element, `right` = distance to the next smaller element. Both from monotonic stacks: **O(n)**.",
+     "**Ties**: use strictly smaller on one side and smaller-or-equal on the other, so each subarray's minimum is credited to exactly one index.",
+     "Sum of subarray ranges = Σ max − Σ min, each by the contribution technique.",
+     "Take results modulo 10⁹ + 7 when asked; counts can reach n²/4.",
+     "Also works for \"sum of subarray maximums\", \"number of subarrays where a[i] is the max\", and similar."
+    ],
+    "questions": [
+     {
+      "q": "How do you sum the minimum of every subarray in O(n)?",
+      "a": "Count, for each element, how many subarrays have it as the minimum: (i − previous smaller index) × (next smaller index − i). Multiply by the element and add over all indices. Previous and next smaller indices come from two monotonic stack passes."
+     },
+     {
+      "q": "Why does the count equal left × right?",
+      "a": "A subarray has a[i] as its minimum exactly when it contains i and doesn't reach the nearest smaller element on either side. Its start can be any of the left positions after the previous smaller element, and its end any of the right positions before the next smaller element, independently."
+     },
+     {
+      "q": "How do you avoid double counting when values repeat?",
+      "a": "Use a strict comparison on one side and a non-strict one on the other: for example, previous strictly smaller and next smaller-or-equal. Then a subarray with several equal minimums is credited to exactly one of them."
+     },
+     {
+      "q": "How do you compute the sum of ranges (max − min) over all subarrays?",
+      "a": "Compute the sum of subarray maximums and the sum of subarray minimums separately with the contribution technique, then subtract. Each is O(n), so the total is O(n)."
+     }
+    ],
+    "deep": "#### Intuition\n\nThere are $n(n+1)/2$ subarrays, so computing each minimum is at least quadratic. But each subarray's minimum sits at some index, so the total equals a sum over indices. For index $i$, the subarrays where $a_i$ is the minimum start anywhere after the previous smaller element and end anywhere before the next smaller element. Choices of start times choices of end gives the count.\n\n#### Worked example: sum of subarray minimums of `3 1 2 4`\n\n| i | a[i] | previous smaller (index) | next smaller (index) | left = i − prev | right = next − i | contribution |\n|---|---|---|---|---|---|---|\n| 0 | 3 | −1 | 1 | 1 | 1 | 3 × 1 × 1 = 3 |\n| 1 | 1 | −1 | 4 (none) | 2 | 3 | 1 × 2 × 3 = 6 |\n| 2 | 2 | 1 | 4 (none) | 1 | 2 | 2 × 1 × 2 = 4 |\n| 3 | 4 | 2 | 4 (none) | 1 | 1 | 4 × 1 × 1 = 4 |\n\nTotal **17**. Check by listing: [3]3, [1]1, [2]2, [4]4, [3,1]1, [1,2]1, [2,4]2, [3,1,2]1, [1,2,4]1, [3,1,2,4]1 = 17.\n\n#### Code\n\n```cpp\nlong long sumSubarrayMins(const vector<int>& a) {\n    const long long MOD = 1'000'000'007;\n    int n = a.size();\n    vector<int> prevLess(n, -1), nextLessEq(n, n), st;\n    for (int i = 0; i < n; i++) {                   // previous strictly smaller\n        while (!st.empty() && a[st.back()] >= a[i]) st.pop_back();\n        prevLess[i] = st.empty() ? -1 : st.back();\n        st.push_back(i);\n    }\n    st.clear();\n    for (int i = n - 1; i >= 0; i--) {              // next smaller or equal\n        while (!st.empty() && a[st.back()] > a[i]) st.pop_back();\n        nextLessEq[i] = st.empty() ? n : st.back();\n        st.push_back(i);\n    }\n    long long total = 0;\n    for (int i = 0; i < n; i++) {\n        long long count = 1LL * (i - prevLess[i]) * (nextLessEq[i] - i);\n        total = (total + a[i] % MOD * (count % MOD)) % MOD;\n    }\n    return total;\n}\n```\n\n```python\ndef sum_subarray_extreme(a, want_min=True):\n    \"\"\"Sum over all subarrays of their minimum (or maximum), with the tie rule applied.\"\"\"\n    n = len(a)\n    better = (lambda x, y: x < y) if want_min else (lambda x, y: x > y)\n    left, right, st = [0] * n, [0] * n, []\n    for i in range(n):                           # previous strictly better\n        while st and not better(a[st[-1]], a[i]):\n            st.pop()\n        left[i] = i - (st[-1] if st else -1)\n        st.append(i)\n    st = []\n    for i in range(n - 1, -1, -1):               # next better or equal\n        while st and better(a[i], a[st[-1]]):\n            st.pop()\n        right[i] = (st[-1] if st else n) - i\n        st.append(i)\n    return sum(a[i] * left[i] * right[i] for i in range(n))\n\ndef sum_subarray_ranges(a):\n    return sum_subarray_extreme(a, False) - sum_subarray_extreme(a, True)\n```\n\n#### The tie rule\n\nWith `2 2`, the subarray `[2, 2]` has two minimal positions. If both sides used \"strictly smaller\", both indices would claim it; if both used \"smaller or equal\", neither would. Using strict on one side and non-strict on the other assigns it to exactly one index (here the left one extends right over equal values).\n\n#### Complexity\n\nTwo monotonic stack passes and one sum: $O(n)$ time, $O(n)$ space.\n\n#### Edge cases and bugs\n\n- Double counting with duplicates (see the tie rule).\n- Overflow: $a_i \\le 3 \\cdot 10^4$ and counts up to $n^2/4 \\approx 2.5 \\cdot 10^9$ for $n = 10^5$: use 64-bit and take the modulus.\n\n#### Variants\n\n- Sum of subarray maximums, sum of subarray ranges (max − min).\n- Count subarrays where a given element is the maximum (a building block of harder problems).\n- Sum of (min × sum) over subarrays: combine with prefix sums of prefix sums.\n\nConnects to: monotonic stack, largest rectangle in histogram, prefix sums.",
+    "signals": [
+     "sum or count over all subarrays of their minimum or maximum",
+     "\"sum of subarray ranges\" or of max − min",
+     "for each element, in how many subarrays is it the smallest (or largest)",
+     "quadratically many subarrays but an O(n) requirement"
+    ],
+    "template": "```cpp\n// Contribution: each a[i] is the minimum of (i - L[i]) * (R[i] - i) subarrays.\nlong long sumOfMins(const vector<int>& a) {\n    int n = a.size();\n    vector<int> L(n), R(n), st;\n    for (int i = 0; i < n; i++) {                                // previous strictly smaller\n        while (!st.empty() && a[st.back()] >= a[i]) st.pop_back();\n        L[i] = st.empty() ? -1 : st.back();\n        st.push_back(i);\n    }\n    st.clear();\n    for (int i = n - 1; i >= 0; i--) {                           // next smaller or equal\n        while (!st.empty() && a[st.back()] > a[i]) st.pop_back();\n        R[i] = st.empty() ? n : st.back();\n        st.push_back(i);\n    }\n    long long total = 0;\n    for (int i = 0; i < n; i++) total += 1LL * a[i] * (i - L[i]) * (R[i] - i);\n    return total;                                                // take % MOD if required\n}\n```"
    }
   },
   {
@@ -8040,9 +8324,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A monotonic deque is a monotonic stack that can also drop items from the front when they get too old. For the largest value in a sliding window, it keeps a short line of candidates in decreasing order: newcomers push out weaker candidates from the back, and candidates that left the window fall off the front. The front is always the answer for the current window.",
+    "interview": [
+     "Deque of indices with values in decreasing order (for maximum). For each `i`: pop from the **back** while `a[back] <= a[i]`; push `i`; pop from the **front** if it left the window; read the max at the front.",
+     "**O(n)**: each index enters and leaves once.",
+     "**Shortest subarray with sum at least K** (negatives allowed): deque of prefix-sum indices kept **increasing**; pop from the front while `P[i] - P[front] >= K` (record the length); pop from the back while `P[back] >= P[i]`. O(n).",
+     "Also: DP optimizations where `dp[i] = max(dp[j]) + cost` over a sliding range of j (constrained subsequence sum, jump game VI).",
+     "Min version: flip the comparisons (increasing deque)."
+    ],
+    "questions": [
+     {
+      "q": "How does a monotonic deque give the sliding window maximum in O(n)?",
+      "a": "Keep indices in the deque with decreasing values. A new element removes smaller elements from the back because they can never be the maximum again, and the front is removed when it leaves the window. The front is always the current maximum, and each index enters and leaves once."
+     },
+     {
+      "q": "Why can you discard an older element that is smaller than a newer one?",
+      "a": "The newer element is larger and stays in the window at least as long as the older one. So whenever the older one is in the window, the newer one beats it, and the older one can never be the answer."
+     },
+     {
+      "q": "How do you find the shortest subarray with sum at least K when numbers can be negative?",
+      "a": "Use prefix sums and a deque of prefix indices with increasing prefix values. For each end i, pop from the front while P[i] − P[front] ≥ K, recording lengths; then pop from the back any index whose prefix is at least P[i], and push i. It runs in O(n)."
+     },
+     {
+      "q": "Where do monotonic deques appear in dynamic programming?",
+      "a": "In transitions like dp[i] = a[i] + max(dp[j]) for j in the last k positions. The deque maintains the maximum of dp over a sliding window of j, cutting the cost from O(n · k) to O(n)."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn a window, an element that is smaller than a newer element can never be the maximum again: the newer one is larger and will stay in the window at least as long. So discard it from the back. The remaining candidates are in decreasing order of value and increasing order of index; the oldest (front) is the largest, and it is removed once it falls out of the window.\n\n#### Worked example: window maximum, k = 3\n\n`a = 1 3 -1 -3 5 3 6 7`\n\n| i | a[i] | deque after (values) | window | max |\n|---|---|---|---|---|\n| 0 | 1 | 1 | | |\n| 1 | 3 | 3 | | |\n| 2 | -1 | 3 -1 | 1 3 -1 | 3 |\n| 3 | -3 | 3 -1 -3 | 3 -1 -3 | 3 |\n| 4 | 5 | 5 | -1 -3 5 | 5 |\n| 5 | 3 | 5 3 | -3 5 3 | 5 |\n| 6 | 6 | 6 | 5 3 6 | 6 |\n| 7 | 7 | 7 | 3 6 7 | 7 |\n\nAt i = 4, the 5 pops everything; the 3 (index 1) would also have expired from the front.\n\n#### Code\n\n```cpp\nvector<int> maxSlidingWindow(const vector<int>& a, int k) {\n    deque<int> dq;                                     // indices, values decreasing\n    vector<int> out;\n    for (int i = 0; i < (int)a.size(); i++) {\n        while (!dq.empty() && a[dq.back()] <= a[i]) dq.pop_back();  // dominated\n        dq.push_back(i);\n        if (dq.front() <= i - k) dq.pop_front();       // expired\n        if (i >= k - 1) out.push_back(a[dq.front()]);\n    }\n    return out;\n}\n\n// Shortest non-empty subarray with sum >= K (values may be negative), -1 if none.\nint shortestSubarray(const vector<int>& a, long long K) {\n    int n = a.size(), best = INT_MAX;\n    vector<long long> P(n + 1, 0);\n    for (int i = 0; i < n; i++) P[i + 1] = P[i] + a[i];\n    deque<int> dq;                                     // prefix indices, P increasing\n    for (int i = 0; i <= n; i++) {\n        while (!dq.empty() && P[i] - P[dq.front()] >= K) {\n            best = min(best, i - dq.front());          // a later i can't do better with it\n            dq.pop_front();\n        }\n        while (!dq.empty() && P[dq.back()] >= P[i]) dq.pop_back();  // i is a better start\n        dq.push_back(i);\n    }\n    return best == INT_MAX ? -1 : best;\n}\n```\n\n```python\nfrom collections import deque\n\ndef max_sliding_window(a, k):\n    dq, out = deque(), []\n    for i, x in enumerate(a):\n        while dq and a[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            out.append(a[dq[0]])\n    return out\n\ndef constrained_subsequence_sum(a, k):\n    \"\"\"Max sum of a subsequence where consecutive picks are at most k apart.\"\"\"\n    dp, dq = [0] * len(a), deque()             # dq: indices with dp decreasing\n    for i, x in enumerate(a):\n        if dq and dq[0] < i - k:\n            dq.popleft()\n        dp[i] = x + max(0, dp[dq[0]] if dq else 0)\n        while dq and dp[dq[-1]] <= dp[i]:\n            dq.pop()\n        dq.append(i)\n    return max(dp)\n```\n\n#### Why the shortest-subarray deque works\n\nFor a start index $j$, once some end $i$ satisfies $P_i - P_j \\ge K$, later ends only give longer subarrays for that $j$, so $j$ can be popped from the front after recording. And if a newer index $i$ has $P_i \\le P_{back}$, then $i$ is a better start than `back` for every future end (smaller prefix, shorter length), so `back` is popped.\n\n#### Complexity\n\n$O(n)$ time for all versions; $O(k)$ or $O(n)$ space.\n\n#### Edge cases and bugs\n\n- Pushing values instead of indices makes expiry impossible to detect.\n- Checking expiry before pushing versus after: either works if the condition uses the right index.\n- In the shortest-subarray problem, forgetting the empty prefix `P[0] = 0`.\n\nConnects to: sliding window maximum, monotonic stack, prefix sums, DP optimization.",
+    "signals": [
+     "maximum or minimum of every sliding window",
+     "dp[i] depends on the best value among the previous k positions",
+     "shortest subarray with sum at least K when values can be negative",
+     "a queue where old items expire and dominated items can be dropped"
+    ],
+    "template": "```cpp\n// Monotonic deque over a sliding window of size k: front = index of the current max.\nvector<int> windowMax(const vector<int>& a, int k) {\n    deque<int> dq;\n    vector<int> res;\n    for (int i = 0; i < (int)a.size(); i++) {\n        while (!dq.empty() && a[dq.back()] <= a[i]) dq.pop_back();  // drop dominated (>= for min)\n        dq.push_back(i);\n        while (dq.front() <= i - k) dq.pop_front();                 // drop expired\n        if (i >= k - 1) res.push_back(a[dq.front()]);               // best in the window\n    }\n    return res;\n}\n```"
    }
   },
   {
@@ -8064,9 +8379,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A greedy stack builds the smallest (or largest) possible sequence by letting each new item push out worse items before it, while that is still allowed. To make a number as small as possible by deleting k digits, a smaller digit arriving should replace a bigger digit just before it, like letting a shorter person move ahead in a photo line. The stack keeps the best prefix found so far.",
+    "interview": [
+     "**Remove K digits** (smallest result): for each digit, while `k > 0` and the top is larger than it, pop (one deletion); push. Remove leftovers from the end if `k` remains; strip leading zeros. O(n).",
+     "Greedy reasoning: an earlier position matters more, so a smaller digit should come as early as possible.",
+     "**Remove duplicate letters** (smallest subsequence with each letter once): skip letters already in the stack; pop a larger top only if it **appears again later** (track last occurrence). O(n).",
+     "**Largest number from k digits**, **most competitive subsequence** (keep k items: pop while `remaining + stackSize > k`).",
+     "The stack ends up increasing (for smallest) with pops limited by a budget or a \"can I get it back later\" check."
+    ],
+    "questions": [
+     {
+      "q": "How do you remove k digits from a number to make it as small as possible?",
+      "a": "Scan digits with a stack. While deletions remain and the top digit is larger than the current one, pop it, since a smaller digit earlier gives a smaller number. Push the current digit. If deletions remain at the end, remove digits from the end, then strip leading zeros (returning \"0\" if nothing is left)."
+     },
+     {
+      "q": "Why is removing a larger digit before a smaller one always right?",
+      "a": "Numbers of equal length compare by their first differing digit. Replacing a larger digit at an earlier position with the smaller digit that follows it makes the number smaller no matter what comes later, so the greedy choice is safe."
+     },
+     {
+      "q": "How does \"remove duplicate letters\" decide whether it can pop a letter?",
+      "a": "It pops a larger letter from the top only if that letter occurs again later in the string, so it can be added back in a better position. It also skips a letter already in the stack. Last-occurrence indices and an in-stack set make each check O(1)."
+     },
+     {
+      "q": "How do you pick the lexicographically smallest subsequence of length k?",
+      "a": "Scan with a stack, and while the top is larger than the current element and there are enough elements left to still reach length k (remaining + stack size > k), pop. Push if the stack has fewer than k elements."
+     }
+    ]
    }
   },
   {
@@ -8103,9 +8441,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A binary heap is a tree that always keeps the smallest (or largest) item at the top, where you can grab it instantly. It is like a hospital waiting room where the most urgent patient is always seen next, no matter when they arrived. Adding or removing a patient only reshuffles a few people along one path, so it stays fast.",
+    "interview": [
+     "A **complete binary tree** stored in an array: children of `i` at `2i + 1` and `2i + 2`, parent at `(i - 1) / 2`.",
+     "**Heap property**: every parent ≤ its children (min-heap) or ≥ (max-heap). The root is the min (or max).",
+     "**Push**: append, then **sift up** (swap with the parent while smaller): O(log n). **Pop**: move the last element to the root, **sift down** (swap with the smaller child): O(log n). **Top**: O(1).",
+     "**Heapify** an array in **O(n)** by sifting down from the last parent to the root.",
+     "Not sorted and no fast search: finding an arbitrary element is O(n).",
+     "Library: C++ `priority_queue` (max-heap by default; `greater<>` for min), Java `PriorityQueue` (min-heap), Python `heapq` (min-heap on a list; negate values for a max-heap)."
+    ],
+    "questions": [
+     {
+      "q": "How is a binary heap stored in an array?",
+      "a": "It is a complete binary tree laid out level by level. For the node at index i, the children are at 2i + 1 and 2i + 2 and the parent is at (i − 1) / 2, so no pointers are needed."
+     },
+     {
+      "q": "How do push and pop work, and what do they cost?",
+      "a": "Push appends the element and sifts it up, swapping with its parent while it is smaller. Pop moves the last element to the root and sifts it down, swapping with its smaller child. Both walk one root-to-leaf path, so they cost O(log n)."
+     },
+     {
+      "q": "Why is building a heap from an array O(n) rather than O(n log n)?",
+      "a": "Sifting down from the last parent to the root costs each node its height, and most nodes are near the bottom: half are leaves, a quarter have height 1, and so on. The total, n · Σ h/2^(h+1), is at most n."
+     },
+     {
+      "q": "What can't a heap do efficiently?",
+      "a": "Search for an arbitrary value or delete an arbitrary element, which take O(n) without an extra index map. It also doesn't give sorted order; iterating over its array is not sorted."
+     },
+     {
+      "q": "How do you get a max-heap in Python and a min-heap in C++?",
+      "a": "Python's heapq is a min-heap, so push negated values (or negate the key). C++'s priority_queue is a max-heap, so declare it with greater<T> as the comparator for a min-heap."
+     }
+    ],
+    "deep": "#### Intuition\n\nA heap is a compromise between an unsorted array (fast insert, slow minimum) and a sorted array (fast minimum, slow insert). It keeps just enough order, each parent beating its children, to find the minimum at the root while inserts and removals only repair one root-to-leaf path of length $\\log n$.\n\n#### Worked example: push 1 into a min-heap\n\nArray `[2, 4, 3, 7, 9, 5]` (root 2). Push 1:\n\n| step | array | action |\n|---|---|---|\n| append | 2 4 3 7 9 5 1 | 1 at index 6, parent index 2 (value 3) |\n| sift up | 2 4 1 7 9 5 3 | 1 < 3: swap; now at index 2, parent index 0 (value 2) |\n| sift up | 1 4 2 7 9 5 3 | 1 < 2: swap; at the root, stop |\n\nPop the minimum: move the last element (3) to the root and sift down: `[3, 4, 2, 7, 9, 5]` → the smaller child is 2 → swap → `[2, 4, 3, 7, 9, 5]`.\n\n#### Code\n\n```cpp\nclass MinHeap {\n    vector<int> a;\n    void siftUp(int i) {\n        while (i > 0 && a[(i - 1) / 2] > a[i]) {\n            swap(a[i], a[(i - 1) / 2]);\n            i = (i - 1) / 2;\n        }\n    }\n    void siftDown(int i) {\n        int n = a.size();\n        while (true) {\n            int smallest = i, l = 2 * i + 1, r = 2 * i + 2;\n            if (l < n && a[l] < a[smallest]) smallest = l;\n            if (r < n && a[r] < a[smallest]) smallest = r;\n            if (smallest == i) return;\n            swap(a[i], a[smallest]);\n            i = smallest;\n        }\n    }\npublic:\n    MinHeap() = default;\n    explicit MinHeap(vector<int> v) : a(std::move(v)) {        // heapify in O(n)\n        for (int i = (int)a.size() / 2 - 1; i >= 0; i--) siftDown(i);\n    }\n    void push(int x) { a.push_back(x); siftUp(a.size() - 1); }\n    int top() const { return a[0]; }\n    void pop() { a[0] = a.back(); a.pop_back(); if (!a.empty()) siftDown(0); }\n    bool empty() const { return a.empty(); }\n};\n```\n\n```python\nimport heapq\n\ndef k_smallest_with_heapq(nums, k):\n    heap = list(nums)\n    heapq.heapify(heap)                      # O(n)\n    return [heapq.heappop(heap) for _ in range(min(k, len(heap)))]\n\ndef max_heap_demo(nums):\n    heap = [-x for x in nums]                # heapq is a min-heap: store negatives\n    heapq.heapify(heap)\n    return -heap[0]                          # the maximum\n```\n\n#### Why heapify is O(n)\n\nSift-down costs the height of the node. In a heap of $n$ nodes, about $n/2$ are leaves (height 0), $n/4$ have height 1, $n/8$ height 2, and so on:\n\n$$\\sum_{h \\ge 0} \\frac{n}{2^{h+1}} \\cdot h = n \\sum_{h \\ge 0} \\frac{h}{2^{h+1}} = n$$\n\nso building a heap by sifting down is linear, while inserting items one at a time is $O(n \\log n)$.\n\n#### Complexity\n\n| Operation | Cost |\n|---|---|\n| top | $O(1)$ |\n| push, pop | $O(\\log n)$ |\n| heapify | $O(n)$ |\n| search or delete arbitrary | $O(n)$ (O(log n) with an index map) |\n\n#### Edge cases and bugs\n\n- C++ `priority_queue` is a **max-heap** by default; Java's and Python's are min-heaps.\n- Custom comparators in C++ are reversed: `priority_queue<int, vector<int>, greater<int>>` is a min-heap.\n- Python compares tuples element by element; add a tiebreaker when the payload isn't comparable.\n- Mutating an element's priority inside the heap breaks the heap property; push a new entry instead (lazy deletion).\n\n#### Variants\n\nD-ary heaps (faster decrease-key for Dijkstra on dense graphs), indexed heaps (decrease-key in $O(\\log n)$), Fibonacci and pairing heaps (better amortized bounds), and treaps (heap plus BST).\n\nConnects to: heap sort, top K elements, k-way merge, two heaps, Dijkstra's algorithm."
    }
   },
   {
@@ -8132,9 +8499,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "To keep the K largest items from a long stream, you only need a small \"leaderboard\" of K spots. A new item gets on the leaderboard only if it beats the weakest current member, who then drops off. Keeping the weakest member at the top of a min-heap makes that check instant.",
+    "interview": [
+     "**K largest**: min-heap of size k; push each item, pop when the size exceeds k. The heap holds the k largest; its top is the kth largest. **O(n log k)** time, **O(k)** space.",
+     "**K smallest**: max-heap of size k (the mirror image).",
+     "Works on **streams** and doesn't modify the input.",
+     "Alternatives: sort, O(n log n); **quickselect**, O(n) average, modifies the input; bucket sort by frequency for top k frequent, O(n).",
+     "Custom keys: distance to origin (k closest points), frequency (top k frequent words, with ties broken alphabetically).",
+     "Choosing between heaps and quickselect: heap for streams or small k; quickselect for one-off large inputs."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the k largest elements of a large array or stream?",
+      "a": "Keep a min-heap of at most k elements. Push each element, and if the heap grows beyond k, pop its minimum. The heap then holds the k largest seen so far, with the kth largest on top. It is O(n log k) time and O(k) space."
+     },
+     {
+      "q": "Why use a min-heap, not a max-heap, for the k largest?",
+      "a": "The decision for each new element is whether it beats the weakest of the current top k, so the weakest must be instantly accessible and removable. That is the minimum, which a min-heap keeps on top."
+     },
+     {
+      "q": "When is quickselect better than a heap for top k?",
+      "a": "When the whole array is available, modifying it is allowed and you want O(n) average time, especially when k is large. A heap is better for streams, for small k, or when the input must stay unchanged."
+     },
+     {
+      "q": "How do you find the k closest points to the origin?",
+      "a": "Keep a max-heap of size k keyed by squared distance; push each point and pop the farthest when the size exceeds k. Alternatively quickselect on squared distances in O(n) average."
+     },
+     {
+      "q": "What is the complexity of heapifying all n elements and popping k times?",
+      "a": "O(n + k log n): heapify is linear and each pop is logarithmic. It is a good choice when k is small relative to n and all data is available at once."
+     }
+    ],
+    "deep": "#### Intuition\n\nTo know the k largest, you don't need to order everything, just to know the weakest of your current k candidates, so you can reject newcomers who are worse. A min-heap of size k keeps exactly that weakest candidate on top. Each newcomer costs $O(\\log k)$ at most.\n\n#### Worked example: 2 largest of `3 1 5 12 2 11`\n\n| item | heap after push | size > 2? pop min | heap |\n|---|---|---|---|\n| 3 | {3} | | {3} |\n| 1 | {1, 3} | | {1, 3} |\n| 5 | {1, 3, 5} | pop 1 | {3, 5} |\n| 12 | {3, 5, 12} | pop 3 | {5, 12} |\n| 2 | {2, 5, 12} | pop 2 | {5, 12} |\n| 11 | {5, 11, 12} | pop 5 | {11, 12} |\n\nAnswer: 11 and 12; the kth largest (k = 2) is the top, 11.\n\n#### Code\n\n```cpp\nint kthLargest(const vector<int>& nums, int k) {\n    priority_queue<int, vector<int>, greater<int>> heap;   // min-heap\n    for (int x : nums) {\n        heap.push(x);\n        if ((int)heap.size() > k) heap.pop();               // drop the weakest\n    }\n    return heap.top();\n}\n\nvector<vector<int>> kClosest(const vector<vector<int>>& pts, int k) {\n    // Max-heap by distance: the farthest of the current k is on top.\n    priority_queue<pair<long long, int>> heap;\n    for (int i = 0; i < (int)pts.size(); i++) {\n        long long d = 1LL * pts[i][0] * pts[i][0] + 1LL * pts[i][1] * pts[i][1];\n        heap.push({d, i});\n        if ((int)heap.size() > k) heap.pop();\n    }\n    vector<vector<int>> out;\n    while (!heap.empty()) { out.push_back(pts[heap.top().second]); heap.pop(); }\n    return out;\n}\n```\n\n```python\nimport heapq\nfrom collections import Counter\n\ndef top_k_frequent_words(words, k):\n    \"\"\"Most frequent first; ties in alphabetical order.\"\"\"\n    count = Counter(words)\n    return heapq.nsmallest(k, count, key=lambda w: (-count[w], w))\n\ndef kth_largest_stream(k, stream):\n    heap = []\n    for x in stream:\n        heapq.heappush(heap, x)\n        if len(heap) > k:\n            heapq.heappop(heap)\n        yield heap[0] if len(heap) == k else None   # current kth largest\n```\n\n#### Complexity\n\n- Heap: $O(n \\log k)$ time, $O(k)$ space.\n- Heapify everything then pop k times: $O(n + k \\log n)$.\n- Quickselect: $O(n)$ average, $O(n^2)$ worst, in place.\n- Sorting: $O(n \\log n)$.\n\n#### Edge cases and bugs\n\n- Using a max-heap for \"k largest\" and popping from it keeps the smallest items instead.\n- `k > n`: return everything.\n- Distances: compare squared distances to avoid floating point; use 64-bit for squares.\n- Ties in top k frequent words need a tiebreaker in the key, and in a min-heap of size k the tie order is reversed; `nsmallest` with a composite key avoids confusion.\n\n#### Variants\n\n- Kth largest element in a stream (keep the heap between queries).\n- Top k frequent elements, sort characters by frequency.\n- K pairs with the smallest sums (heap of candidate pairs, expanded lazily).\n- Kth smallest in a sorted matrix (heap of row heads or binary search by counting).\n\nConnects to: binary heap, quickselect, frequency counting, k-way merge.",
+    "signals": [
+     "the k largest, k smallest, k most frequent or k closest items",
+     "the kth largest element, especially in a stream",
+     "\"top k\" leaderboards that update as data arrives",
+     "k much smaller than n, where sorting everything is wasteful"
+    ],
+    "template": "```cpp\n// Keep the k \"best\" items: a heap whose top is the worst of the kept ones.\ntemplate <class T, class Worse>   // Worse(a, b): true if a should be dropped before b\nvector<T> keepTopK(const vector<T>& items, int k, Worse worse) {\n    auto cmp = [&](const T& a, const T& b) { return worse(b, a); };  // top = worst kept\n    priority_queue<T, vector<T>, decltype(cmp)> heap(cmp);\n    for (const T& x : items) {\n        heap.push(x);\n        if ((int)heap.size() > k) heap.pop();   // evict the worst\n    }\n    vector<T> out;\n    while (!heap.empty()) { out.push_back(heap.top()); heap.pop(); }\n    return out;                                 // worst first\n}\n// k largest ints: keepTopK(v, k, [](int a, int b) { return a < b; })\n```"
    }
   },
   {
@@ -8156,9 +8559,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "K-way merge combines several sorted lists into one sorted list. Imagine k checkout lines sorted by ticket number, and you always call the lowest ticket among the people at the front of each line. A min-heap holding just those front people tells you instantly who is next.",
+    "interview": [
+     "Min-heap of `(value, list id, index)` holding the current head of each list. Pop the smallest, output it, push the next element from the same list.",
+     "**O(N log k)** for N total elements, **O(k)** heap space.",
+     "**Smallest range covering k lists**: heap of heads plus the current **maximum** among them; the range is [heap min, max]; advance the list that owns the minimum; stop when a list is exhausted.",
+     "**Kth smallest in a sorted matrix** or among k sorted lists: pop k times.",
+     "**K pairs with smallest sums**: treat row i as the sorted list `a[i] + b[0], a[i] + b[1], …`.",
+     "Alternative for full merges: pairwise divide and conquer, also O(N log k)."
+    ],
+    "questions": [
+     {
+      "q": "How do you merge k sorted lists efficiently?",
+      "a": "Put the first element of each list into a min-heap along with its list and index. Repeatedly pop the smallest, append it to the output, and push the next element from the same list. Each of the N elements is pushed and popped once: O(N log k)."
+     },
+     {
+      "q": "How do you find the smallest range that includes at least one number from each of k sorted lists?",
+      "a": "Keep a heap of the current element from each list and track the maximum among them. The range [heap minimum, maximum] covers all lists; record it if it's the narrowest so far, then advance the list that holds the minimum. Stop when that list runs out."
+     },
+     {
+      "q": "Why can the smallest range search stop when one list is exhausted?",
+      "a": "Advancing is only ever done on the list holding the minimum. If that list has no next element, any further range would have to exclude it, so no later range can cover all k lists."
+     },
+     {
+      "q": "How do you find the k pairs with the smallest sums from two sorted arrays?",
+      "a": "Treat each a[i] as the head of a sorted list a[i] + b[0], a[i] + b[1], and so on. Seed a heap with (a[i] + b[0]) for the first k values of i, then pop k times, pushing the next pair from the same row each time. That is O(k log k)."
+     }
+    ],
+    "deep": "#### Intuition\n\nEach list is sorted, so the next element of the merged output must be one of the k current heads. Comparing k heads directly costs $O(k)$ per output element; a min-heap over the heads costs $O(\\log k)$. Only the list that just gave up its head needs a new entry.\n\n#### Worked example: smallest range covering three lists\n\nLists: `A = 4 10 15 24`, `B = 0 9 12 20`, `C = 5 18 22 30`.\n\n| heap (min …) | max | range | advance |\n|---|---|---|---|\n| 0(B) 4(A) 5(C) | 5 | [0, 5] | B → 9 |\n| 4(A) 5(C) 9(B) | 9 | [4, 9] | A → 10 |\n| 5(C) 9(B) 10(A) | 10 | [5, 10] | C → 18 |\n| 9(B) 10(A) 18(C) | 18 | [9, 18] | B → 12 |\n| 10(A) 12(B) 18(C) | 18 | [10, 18] | A → 15 |\n| 12(B) 15(A) 18(C) | 18 | [12, 18] | B → 20 |\n| 15(A) 18(C) 20(B) | 20 | [15, 20] | A → 24 |\n| 18(C) 20(B) 24(A) | 24 | [18, 24] | C → 22 |\n| 20(B) 22(C) 24(A) | 24 | [20, 24] | B is exhausted: stop |\n\nThe narrowest range has width 4: **[20, 24]**. On a tie in width, the code keeps the range found first, which has the smaller start because the popped minimums never decrease.\n\n#### Code\n\n```cpp\nvector<int> smallestRange(const vector<vector<int>>& lists) {\n    using T = tuple<int, int, int>;                        // value, list, index\n    priority_queue<T, vector<T>, greater<T>> heap;\n    int curMax = INT_MIN;\n    for (int i = 0; i < (int)lists.size(); i++) {\n        heap.push({lists[i][0], i, 0});\n        curMax = max(curMax, lists[i][0]);\n    }\n    vector<int> best = {get<0>(heap.top()), curMax};\n    while (true) {\n        auto [v, li, idx] = heap.top();\n        heap.pop();\n        if ((long long)curMax - v < (long long)best[1] - best[0]) best = {v, curMax};\n        if (idx + 1 == (int)lists[li].size()) break;       // this list can't advance\n        int next = lists[li][idx + 1];\n        heap.push({next, li, idx + 1});\n        curMax = max(curMax, next);\n    }\n    return best;\n}\n```\n\n```python\nimport heapq\n\ndef merge_k_sorted(lists):\n    heap = [(lst[0], i, 0) for i, lst in enumerate(lists) if lst]\n    heapq.heapify(heap)\n    out = []\n    while heap:\n        v, i, j = heapq.heappop(heap)\n        out.append(v)\n        if j + 1 < len(lists[i]):\n            heapq.heappush(heap, (lists[i][j + 1], i, j + 1))\n    return out\n\ndef k_smallest_pairs(a, b, k):\n    \"\"\"k pairs (x, y), x from a and y from b (both sorted), with the smallest sums.\"\"\"\n    if not a or not b:\n        return []\n    heap = [(a[i] + b[0], i, 0) for i in range(min(k, len(a)))]\n    heapq.heapify(heap)\n    out = []\n    while heap and len(out) < k:\n        _, i, j = heapq.heappop(heap)\n        out.append((a[i], b[j]))\n        if j + 1 < len(b):\n            heapq.heappush(heap, (a[i] + b[j + 1], i, j + 1))\n    return out\n```\n\n#### Complexity\n\n$O(N \\log k)$ time for a full merge (each element pushed and popped once), $O(k)$ extra space besides the output. Smallest range: $O(N \\log k)$. K smallest pairs: $O(k \\log k)$.\n\n#### Edge cases and bugs\n\n- Empty lists: skip them when seeding the heap (and in smallest range, the problem usually guarantees non-empty lists).\n- Stop the smallest-range loop as soon as the popped list is exhausted: without an element from that list, no further range covers all lists.\n- Tuples in Python: include the list index so equal values never compare payloads.\n\n#### Variants\n\n- External sorting (merge sorted runs from disk).\n- Merge k sorted linked lists (store node pointers).\n- Find the median of k sorted arrays, kth smallest prime fraction, ugly numbers (a heap of generated candidates).\n\nConnects to: merging sorted sequences, merging lists, top K elements, binary heap.",
+    "signals": [
+     "merge several sorted lists, arrays or streams into one",
+     "the kth smallest element across k sorted lists or a sorted matrix",
+     "a range or window that must include an element from every list",
+     "pairs from sorted arrays with the smallest sums"
+    ],
+    "template": "```cpp\n// K-way merge: heap of (value, list, position); pop the smallest, push its successor.\nvector<int> mergeKSorted(const vector<vector<int>>& lists) {\n    using T = tuple<int, int, int>;\n    priority_queue<T, vector<T>, greater<T>> heap;\n    for (int i = 0; i < (int)lists.size(); i++)\n        if (!lists[i].empty()) heap.push({lists[i][0], i, 0});\n    vector<int> out;\n    while (!heap.empty()) {\n        auto [v, li, j] = heap.top();\n        heap.pop();\n        out.push_back(v);                                         // process the smallest head\n        if (j + 1 < (int)lists[li].size()) heap.push({lists[li][j + 1], li, j + 1});\n    }\n    return out;\n}\n```"
    }
   },
   {
@@ -8180,9 +8615,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Two heaps split numbers into a lower half and an upper half, so the middle is always at their tops. Picture a line of people sorted by height, split into a short group and a tall group: you only need the tallest of the short group and the shortest of the tall group to know the median. A max-heap and a min-heap give you exactly those two people instantly.",
+    "interview": [
+     "**Max-heap `low`** holds the smaller half; **min-heap `high`** holds the larger half. Invariants: every value in `low` ≤ every value in `high`, and sizes differ by at most 1 (say `low` may have one extra).",
+     "**Add**: push to `low`, move `low`'s top to `high`, and if `high` is bigger, move its top back. O(log n).",
+     "**Median**: `low.top()` if sizes differ, else the average of both tops. O(1).",
+     "**Sliding window median**: also remove elements leaving the window: lazy deletion (a hash map of pending removals, pruned at the tops) or ordered multisets: O(n log k).",
+     "Also: IPO / maximize capital (a min-heap of locked projects by cost, a max-heap of affordable projects by profit)."
+    ],
+    "questions": [
+     {
+      "q": "How do two heaps give the running median?",
+      "a": "A max-heap holds the smaller half and a min-heap the larger half, with every element of the first at most every element of the second and sizes within one. The median is the max-heap's top when sizes differ, or the average of both tops when they are equal."
+     },
+     {
+      "q": "How do you insert a number while keeping both invariants?",
+      "a": "Push it into the max-heap, then move the max-heap's top into the min-heap, which keeps the ordering correct. If the min-heap is now larger, move its top back. Each insert is O(log n)."
+     },
+     {
+      "q": "What are the costs of add and median in this design?",
+      "a": "add is O(log n) because of a constant number of heap pushes and pops, and median is O(1) because it only reads the tops. Space is O(n)."
+     },
+     {
+      "q": "How do you support a sliding window median, where old elements leave?",
+      "a": "Heaps can't delete arbitrary elements quickly, so mark departing elements in a hash map of pending deletions and discard them when they reach a heap's top, adjusting the size counts. Alternatively use two ordered multisets, which support erase in O(log k)."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe median only depends on the middle one or two values. Keeping everything sorted costs $O(n)$ per insert (array) or needs a balanced tree. Two heaps keep only what matters accessible: the largest of the lower half and the smallest of the upper half. Rebalancing after each insert moves at most one element between the heaps.\n\n#### Worked example: stream `5 15 1 3`\n\n| add | low (max-heap) | high (min-heap) | median |\n|---|---|---|---|\n| 5 | 5 | | 5 |\n| 15 | 5 | 15 | (5 + 15) / 2 = 10 |\n| 1 | 5 1 | 15 | 5 |\n| 3 | 3 1 | 5 15 | (3 + 5) / 2 = 4 |\n\nAdding 3: push to `low` (5, 3, 1), move its top 5 to `high` (5, 15); now `high` has 2 and `low` 2: balanced.\n\n#### Code\n\n```cpp\nclass MedianFinder {\n    priority_queue<int> low;                                   // max-heap: smaller half\n    priority_queue<int, vector<int>, greater<int>> high;       // min-heap: larger half\npublic:\n    void add(int x) {\n        low.push(x);\n        high.push(low.top());                                  // largest of low goes up\n        low.pop();\n        if (high.size() > low.size()) {                        // keep low >= high in size\n            low.push(high.top());\n            high.pop();\n        }\n    }\n    double median() const {\n        if (low.size() > high.size()) return low.top();\n        return (low.top() + (double)high.top()) / 2.0;\n    }\n};\n```\n\n```python\nimport heapq\n\nclass MedianFinder:\n    def __init__(self):\n        self.low = []    # max-heap via negated values\n        self.high = []   # min-heap\n\n    def add(self, x):\n        heapq.heappush(self.low, -x)\n        heapq.heappush(self.high, -heapq.heappop(self.low))\n        if len(self.high) > len(self.low):\n            heapq.heappush(self.low, -heapq.heappop(self.high))\n\n    def median(self):\n        if len(self.low) > len(self.high):\n            return -self.low[0]\n        return (-self.low[0] + self.high[0]) / 2\n\ndef maximize_capital(k, w, profits, capital):\n    \"\"\"Pick at most k projects; each needs capital <= w and adds its profit to w.\"\"\"\n    locked = sorted(zip(capital, profits))\n    available, i = [], 0\n    for _ in range(k):\n        while i < len(locked) and locked[i][0] <= w:\n            heapq.heappush(available, -locked[i][1])   # max-heap of affordable profits\n            i += 1\n        if not available:\n            break\n        w -= heapq.heappop(available)\n    return w\n```\n\n#### Why pushing through `low` first works\n\nPushing into `low` and immediately moving `low`'s maximum to `high` guarantees the ordering invariant (everything in `low` ≤ everything in `high`) without comparing against the tops by hand. The final size check restores the size invariant. Each add does at most three heap operations: $O(\\log n)$.\n\n#### Complexity\n\nAdd: $O(\\log n)$. Median: $O(1)$. Space $O(n)$. Sliding window median with lazy deletion: $O(n \\log n)$ in the worst case (stale entries can pile up), $O(n \\log k)$ with ordered multisets.\n\n#### Edge cases and bugs\n\n- Integer overflow when averaging two large ints: average in floating point or `a + (b - a) / 2`.\n- Median of an empty structure: define the behavior.\n- Python's negation trick: remember to negate when reading `low`.\n\n#### Variants\n\n- Sliding window median (removals).\n- Find the median of a data stream where most numbers are in a small range: counting array plus the heaps for outliers.\n- Minimize total cost of moving to the median (the median minimizes the sum of absolute deviations).\n\nConnects to: binary heap, custom comparators and lazy deletion, scheduling with heaps.",
+    "signals": [
+     "the median of a stream of numbers as they arrive",
+     "balance a lower half against an upper half",
+     "sliding window median",
+     "choose the best available option once it becomes affordable (unlock then pick)"
+    ],
+    "template": "```cpp\n// Two heaps: low (max-heap) and high (min-heap), |low| - |high| in {0, 1}.\nstruct RunningMedian {\n    priority_queue<long long> low;\n    priority_queue<long long, vector<long long>, greater<long long>> high;\n    void add(long long x) {\n        low.push(x);                                   // 1. insert on the low side\n        high.push(low.top()); low.pop();               // 2. restore order: low <= high\n        if (high.size() > low.size()) {                // 3. restore sizes\n            low.push(high.top()); high.pop();\n        }\n    }\n    double median() const {\n        return low.size() > high.size() ? low.top() : (low.top() + high.top()) / 2.0;\n    }\n};\n```"
    }
   },
   {
@@ -8204,9 +8670,39 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Many scheduling problems ask \"what should happen next?\", and a heap answers that instantly. To count how many meeting rooms you need, you track when each room frees up and always check the one that frees up first. It is like a hotel front desk watching a list of checkout times, sorted so the earliest checkout is always on top.",
+    "interview": [
+     "**Meeting rooms II** (minimum rooms): sort meetings by start; min-heap of end times; if the earliest end ≤ the new start, reuse that room (pop); push the new end. Answer = the heap's maximum size. **O(n log n)**.",
+     "**Task scheduler with cooldown n**: count tasks; the formula `max(total, (maxFreq − 1) · (n + 1) + countOfMaxFreq)`, or simulate with a max-heap of counts and a cooldown queue.",
+     "**Single-threaded CPU**: sort tasks by arrival; a min-heap of (processing time, index) for available tasks; advance time, jump to the next arrival when idle.",
+     "**Process tasks on servers**: two heaps, free servers by (weight, index) and busy servers by (free time, …).",
+     "Pattern: sort events by time, and use a heap for \"the earliest finishing\" or \"the best available\" item."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the minimum number of meeting rooms needed?",
+      "a": "Sort meetings by start time and keep a min-heap of end times of rooms in use. For each meeting, if the earliest end time is at most its start, that room is free, so pop it; then push this meeting's end. The heap's size is the number of rooms in use, and its largest size is the answer, in O(n log n)."
+     },
+     {
+      "q": "How does the task scheduler formula work?",
+      "a": "The most frequent task (frequency f) forces f − 1 full cycles of length n + 1 plus a last partial cycle containing every task tied at frequency f. If other tasks overflow the idle slots, no idling is needed and the answer is just the total number of tasks, so the result is the maximum of the two."
+     },
+     {
+      "q": "How do you simulate a single-threaded CPU that always runs the shortest available task?",
+      "a": "Sort tasks by enqueue time. Keep a min-heap of available tasks keyed by (processing time, index). Add every task that has arrived by the current time; if none is available, jump the clock to the next arrival; otherwise pop and run the best one, advancing the clock by its duration."
+     },
+     {
+      "q": "What is the general shape of heap-based scheduling problems?",
+      "a": "Events are processed in time order (after sorting), and at each decision point you need the earliest finishing resource or the best available job. A heap provides that in O(log n), giving O(n log n) overall."
+     }
+    ],
+    "signals": [
+     "the number of rooms, servers or machines needed for overlapping jobs",
+     "always pick the job that finishes first or has the highest priority among those available",
+     "tasks with cooldowns or deadlines",
+     "simulate a processor or queue over time"
+    ],
+    "template": "```cpp\n// Resources needed over time: min-heap of end times of busy resources.\nint minResources(vector<pair<int, int>> jobs) {          // {start, end}\n    sort(jobs.begin(), jobs.end());                       // by start time\n    priority_queue<int, vector<int>, greater<int>> busyUntil;\n    int most = 0;\n    for (auto [start, end] : jobs) {\n        while (!busyUntil.empty() && busyUntil.top() <= start) busyUntil.pop();  // freed\n        busyUntil.push(end);                              // occupy a resource\n        most = max(most, (int)busyUntil.size());\n    }\n    return most;\n}\n```"
    }
   },
   {
@@ -8228,9 +8724,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Heaps usually can't remove an item from the middle or change its priority quickly. Lazy deletion works around this: instead of removing an outdated item, you leave it in place and throw it away later when it reaches the top, like ignoring expired coupons only when you pull them out of the drawer. A custom comparator tells the heap what \"best\" means for your data.",
+    "interview": [
+     "Custom order: C++ `priority_queue<T, vector<T>, Cmp>` where `Cmp(a, b)` returns true if `a` has **lower** priority (so `greater<>` makes a min-heap); Java `new PriorityQueue<>((a, b) -> ...)`; Python tuples `(key1, key2, payload)`.",
+     "**Lazy deletion**: when a priority changes or an item is removed, push a new entry (or record the deletion) and skip stale entries when they surface at the top. Dijkstra does this: skip a popped node whose distance is larger than the best known.",
+     "Stale entries can make the heap grow to O(total pushes); rebuild when stale entries dominate.",
+     "**Indexed heap**: keep each item's position in the heap array so decrease-key and delete are O(log n); more code, less memory.",
+     "Alternative for arbitrary deletes: an ordered set (`std::set`, `TreeSet`) with O(log n) erase."
+    ],
+    "questions": [
+     {
+      "q": "How does lazy deletion work in a heap?",
+      "a": "Instead of removing an entry when it becomes invalid, you leave it and record that it's invalid, or push a fresher entry. Whenever you look at the top, you first pop entries that are stale. Each entry is still pushed and popped once, so costs stay O(log n) amortized."
+     },
+     {
+      "q": "How does Dijkstra's algorithm use lazy deletion?",
+      "a": "When a shorter distance to a node is found, it pushes a new (distance, node) pair instead of decreasing the old key. When a pair is popped whose distance is larger than the node's best known distance, it's stale and is skipped."
+     },
+     {
+      "q": "What does the comparator mean in C++'s priority_queue?",
+      "a": "comp(a, b) returning true means a has lower priority than b, so b comes out first. With the default less<T> the largest element is on top; passing greater<T> puts the smallest on top."
+     },
+     {
+      "q": "What is an indexed heap, and when is it worth it?",
+      "a": "A heap that also stores each item's current position in the array, updated on every swap, so you can find an item and sift it up or down after changing its priority in O(log n). It's worth it when memory is tight or stale entries would pile up, such as Dijkstra on dense graphs."
+     }
+    ]
    }
   },
   {
