@@ -5,7 +5,8 @@
 //   npm run check:content-code -- dsa oop   only these subjects
 //
 // C++ blocks (```cpp) are compiled with `g++ -std=c++20 -fsyntax-only`, each inside its own
-// namespace with the usual headers, so snippets may reuse names. Python blocks (```python) are
+// namespace with the usual headers (plus POSIX and Linux ones such as unistd.h and sys/epoll.h,
+// so C++ checks need Linux), so snippets may reuse names. Python blocks (```python) are
 // parsed with `ast.parse`. Java blocks (```java) are compiled with one `javac` run, each block in
 // its own package with the common java.util imports; top-level `public` is dropped so a block may
 // hold several classes, and a block without a top-level type is wrapped in a class. A block whose
@@ -34,6 +35,20 @@ const PRELUDE = [
   "#include <thread>",
   "#include <mutex>",
   "#include <condition_variable>",
+  // POSIX headers for the OS subject (fork, pipes, mmap, semaphores, sockets, epoll).
+  "#include <fcntl.h>",
+  "#include <poll.h>",
+  "#include <pthread.h>",
+  "#include <semaphore.h>",
+  "#include <signal.h>",
+  "#include <sys/epoll.h>",
+  "#include <sys/mman.h>",
+  "#include <sys/socket.h>",
+  "#include <sys/stat.h>",
+  "#include <sys/syscall.h>",
+  "#include <sys/types.h>",
+  "#include <sys/wait.h>",
+  "#include <unistd.h>",
   "using namespace std;",
   "struct ListNode { int val; ListNode* next; ListNode(int v = 0, ListNode* n = nullptr) : val(v), next(n) {} };",
   "struct TreeNode { int val; TreeNode* left; TreeNode* right; TreeNode(int v = 0, TreeNode* l = nullptr, TreeNode* r = nullptr) : val(v), left(l), right(r) {} };",
