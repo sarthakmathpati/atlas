@@ -159,13 +159,20 @@ function parseConceptBlock(block, file) {
   const metaLines = [];
   const sections = {};
   let section = null;
-  for (const { text, inFence } of block.lines) {
+  for (const { text, inFence, lineNo } of block.lines) {
     const h = !inFence && text.match(SECTION_HEADING);
     if (h && SECTION_NAMES.has(h[1])) {
       section = h[1];
       if (sections[section]) throw new BuildError(`${where}: duplicate "### ${section}" section`);
       sections[section] = [];
       continue;
+    }
+    // Only the six reserved level-3 headings are allowed; anything else would silently become
+    // part of the previous section (for example, text appended to an answer).
+    if (!inFence && /^### /.test(text)) {
+      throw new BuildError(
+        `${file}:${lineNo} (${block.id}): "${text.trim()}" is not a section heading; use one of ${[...SECTION_NAMES].map((s) => `"### ${s}"`).join(", ")}, or "####" inside an article`,
+      );
     }
     if (section) sections[section].push(text);
     else metaLines.push(text);

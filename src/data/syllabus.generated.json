@@ -14303,9 +14303,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Computers store integers as rows of bits, zeros and ones, and bitwise operators work on those bits directly, position by position. AND keeps a 1 only where both numbers have a 1, OR where either does, and XOR where exactly one does, like comparing two rows of light switches. Shifting slides all the bits left or right, which multiplies or divides by powers of two.",
+    "interview": [
+     "`a & b` (AND), `a | b` (OR), `a ^ b` (XOR), `~a` (NOT), `a << k` (multiply by 2ᵏ), `a >> k` (divide by 2ᵏ, rounding down for non-negative a).",
+     "**Two's complement**: negative x is stored as `~|x| + 1`; an n-bit signed int ranges from −2ⁿ⁻¹ to 2ⁿ⁻¹ − 1; the top bit is the sign.",
+     "XOR facts: `x ^ x = 0`, `x ^ 0 = x`, commutative and associative, so pairs cancel.",
+     "Pitfalls: operator precedence (`a & b == c` parses as `a & (b == c)`; use parentheses), shifting by ≥ the bit width is undefined in C++, `1 << 31` overflows a 32-bit int (use `1LL` or `1U`).",
+     "Right shift of negatives: arithmetic (sign-extending) in Java `>>` and Python, logical in Java `>>>`; C++20 defines it as arithmetic.",
+     "Python integers are unbounded: mask with `& 0xFFFFFFFF` to imitate 32-bit behavior."
+    ],
+    "questions": [
+     {
+      "q": "What do AND, OR and XOR do bit by bit?",
+      "a": "AND gives 1 only where both bits are 1, OR gives 1 where at least one bit is 1, and XOR gives 1 where exactly one bit is 1. They apply to every bit position independently."
+     },
+     {
+      "q": "How are negative integers represented in two's complement?",
+      "a": "A negative number −x is stored as the bitwise NOT of x plus one. The highest bit acts as the sign, so an n-bit type holds values from −2^(n−1) to 2^(n−1) − 1, and addition works the same for positive and negative numbers."
+     },
+     {
+      "q": "What do left and right shifts compute?",
+      "a": "x << k multiplies x by 2^k (if it doesn't overflow), and x >> k divides a non-negative x by 2^k, rounding down. For negative numbers, an arithmetic right shift keeps the sign and rounds toward negative infinity."
+     },
+     {
+      "q": "What is a common precedence bug with bitwise operators?",
+      "a": "Writing x & 1 == 0, which parses as x & (1 == 0) in C, C++ and Java because comparison binds tighter than bitwise AND. Parenthesize: (x & 1) == 0."
+     },
+     {
+      "q": "What is the difference between >> and >>> in Java?",
+      "a": ">> is an arithmetic shift that copies the sign bit into the vacated positions, so negative numbers stay negative. >>> is a logical shift that fills with zeros, treating the value as unsigned."
+     }
+    ],
+    "deep": "#### Intuition\n\nA bitwise operation treats an integer as an array of up to 64 booleans and processes all of them in one instruction. That makes bits a compact way to store small sets (bit i on means item i is present) and a fast way to do certain arithmetic.\n\n#### Truth tables\n\n| a | b | a & b | a \\| b | a ^ b |\n|---|---|---|---|---|\n| 0 | 0 | 0 | 0 | 0 |\n| 0 | 1 | 0 | 1 | 1 |\n| 1 | 0 | 0 | 1 | 1 |\n| 1 | 1 | 1 | 1 | 0 |\n\n#### Worked example (8-bit)\n\n`a = 12 = 00001100`, `b = 10 = 00001010`.\n\n| expression | bits | value |\n|---|---|---|\n| a & b | 00001000 | 8 |\n| a \\| b | 00001110 | 14 |\n| a ^ b | 00000110 | 6 |\n| ~a (8-bit) | 11110011 | −13 as signed |\n| a << 2 | 00110000 | 48 |\n| a >> 2 | 00000011 | 3 |\n\nTwo's complement of 5: `00000101` → invert `11111010` → add 1 `11111011` = −5. That's why `~a == -a - 1` for every integer.\n\n#### Code\n\n```cpp\n// Print the low `width` bits of x, most significant first.\nstring toBinary(unsigned int x, int width = 8) {\n    string s;\n    for (int i = width - 1; i >= 0; i--) s += ((x >> i) & 1) ? '1' : '0';\n    return s;\n}\n\n// Reverse the bits of a 32-bit unsigned integer.\nuint32_t reverseBits(uint32_t x) {\n    uint32_t r = 0;\n    for (int i = 0; i < 32; i++) {\n        r = (r << 1) | (x & 1);        // append x's lowest bit to r\n        x >>= 1;\n    }\n    return r;\n}\n\nbool oppositeSigns(int a, int b) { return (a ^ b) < 0; }   // sign bits differ\n```\n\n```python\ndef to_signed_32(x):\n    \"\"\"Interpret the low 32 bits of a Python int as a signed 32-bit value.\"\"\"\n    x &= 0xFFFFFFFF\n    return x - (1 << 32) if x & (1 << 31) else x\n\ndef hamming_distance(a, b):\n    return bin(a ^ b).count(\"1\")   # differing bits are exactly the 1s of a XOR b\n```\n\n#### Complexity\n\nEach bitwise operation is $O(1)$ on machine words. Loops over bits are $O(w)$ for a $w$-bit word (32 or 64).\n\n#### Edge cases and bugs\n\n- Precedence: `==` binds tighter than `&`, `^`, `|`; always parenthesize `(x & mask) == 0`.\n- `1 << 31` is undefined for `int` in older C++ (overflow); `1 << 32` is undefined for any 32-bit type.\n- `~0` is −1 (all ones), not 1.\n- Python's `~x` is `-x - 1` and `>>` never loses the sign; emulate fixed width with masks.\n- Mixing signed and unsigned in C++ comparisons leads to surprising results.\n\n#### Variants\n\n- Bit fields and flags (permissions: `READ | WRITE`), packing several small values into one integer.\n- Gray code: `i ^ (i >> 1)` (consecutive values differ in one bit).\n- Bitsets for fast set operations on many elements.\n\nConnects to: single-bit tricks, XOR tricks, bitmask enumeration, data representation."
    }
   },
   {
@@ -14327,9 +14356,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Single-bit tricks read or change one bit of a number using a mask, a number with a 1 only where you want to act. It is like flipping one light switch in a long row without touching the others. Two clever formulas also find or remove the lowest 1 bit in a single step.",
+    "interview": [
+     "Mask for bit i: `1 << i` (use `1LL << i` for 64-bit).",
+     "**Check**: `(x >> i) & 1`. **Set**: `x | (1 << i)`. **Clear**: `x & ~(1 << i)`. **Toggle**: `x ^ (1 << i)`.",
+     "**Lowest set bit**: `x & -x` (two's complement: `-x = ~x + 1` flips everything above the lowest 1).",
+     "**Clear the lowest set bit**: `x & (x - 1)`; used to count bits and test powers of two.",
+     "**Power of two**: `x > 0 && (x & (x - 1)) == 0`.",
+     "**Keep the low k bits**: `x & ((1 << k) - 1)`."
+    ],
+    "questions": [
+     {
+      "q": "How do you check, set, clear and toggle bit i of x?",
+      "a": "Check with (x >> i) & 1, set with x | (1 << i), clear with x & ~(1 << i), and toggle with x ^ (1 << i). Use a 64-bit one (1LL) when i can be 31 or more."
+     },
+     {
+      "q": "Why does x & (x − 1) clear the lowest set bit?",
+      "a": "Subtracting 1 turns the lowest 1 into 0 and all the 0s below it into 1s, while higher bits stay the same. ANDing with the original keeps the higher bits and clears everything from the lowest 1 downward, which removes exactly that one bit."
+     },
+     {
+      "q": "How do you test whether a number is a power of two?",
+      "a": "A power of two has exactly one set bit, so clearing the lowest set bit leaves zero: x > 0 and (x & (x − 1)) == 0."
+     },
+     {
+      "q": "What does x & −x give, and where is it used?",
+      "a": "The value of the lowest set bit of x (for 12, which is 1100, it gives 4). Fenwick trees use it to find the size of the range each index covers."
+     },
+     {
+      "q": "How do you check whether a number is a power of four?",
+      "a": "It must be a power of two, and its single set bit must be at an even position, which you test by ANDing with 0x55555555 (binary 0101…01) and checking the result is non-zero."
+     }
+    ],
+    "deep": "#### Intuition\n\nSubtracting 1 from a number flips its lowest 1 bit to 0 and every 0 below it to 1, leaving the higher bits unchanged. So `x & (x - 1)` erases exactly the lowest 1. Similarly `-x = ~x + 1` has the same lowest 1 as `x` but every higher bit inverted, so `x & -x` keeps only that lowest 1.\n\n#### Worked example: x = 44 = 101100\n\n| expression | bits | value |\n|---|---|---|\n| x | 101100 | 44 |\n| x − 1 | 101011 | 43 |\n| x & (x − 1) | 101000 | 40 (lowest 1 cleared) |\n| −x (two's complement, low bits) | …010100 | |\n| x & −x | 000100 | 4 (lowest 1 isolated) |\n| x \\| (1 << 0) | 101101 | 45 (bit 0 set) |\n| x ^ (1 << 3) | 100100 | 36 (bit 3 toggled) |\n\n#### Code\n\n```cpp\nbool getBit(long long x, int i) { return (x >> i) & 1; }\nlong long setBit(long long x, int i) { return x | (1LL << i); }\nlong long clearBit(long long x, int i) { return x & ~(1LL << i); }\nlong long toggleBit(long long x, int i) { return x ^ (1LL << i); }\nlong long lowestSetBit(long long x) { return x & -x; }\nlong long clearLowest(long long x) { return x & (x - 1); }\nbool isPowerOfTwo(long long x) { return x > 0 && (x & (x - 1)) == 0; }\n\n// Index of the lowest set bit (x != 0): count trailing zeros.\nint lowestIndex(unsigned long long x) { return __builtin_ctzll(x); }\n```\n\n```python\ndef bits_set(x):\n    \"\"\"Indices of the set bits of a non-negative int, lowest first.\"\"\"\n    out = []\n    while x:\n        low = x & -x                 # isolate the lowest set bit\n        out.append(low.bit_length() - 1)\n        x &= x - 1                   # clear it\n    return out\n\ndef is_power_of_four(n):\n    return n > 0 and n & (n - 1) == 0 and n & 0x55555555 != 0   # the single 1 is at an even position\n```\n\n#### Where these show up\n\nFlags packed into one integer (a set of features, a visited set of up to 64 items) are read and changed with exactly these four operations. `x & -x` drives Fenwick trees, `x & (x - 1)` counts bits and tests powers of two, and \"is bit i set\" is the inner test of every bitmask DP. Memorize the four one-liners and the two lowest-bit identities; most bit problems combine them.\n\n#### Complexity\n\nEvery operation is $O(1)$. Iterating over set bits with `x &= x - 1` takes $O(\\text{number of set bits})$.\n\n#### Edge cases and bugs\n\n- `1 << 40` with a 32-bit `1`: use `1LL << 40`.\n- `x & -x` for the most negative value (`INT_MIN`): `-x` overflows in signed arithmetic; use unsigned types.\n- `isPowerOfTwo(0)` must be false; hence `x > 0`.\n- Python's `0x55555555` covers 32 bits; larger inputs need a wider mask.\n\n#### Variants\n\n- Fenwick trees use `i & -i` to jump between responsible ranges.\n- Iterating set bits of a mask (used in bitmask DP).\n- Next higher number with the same number of set bits (Gosper's hack).\n\nConnects to: bitwise operators, counting set bits, Fenwick tree, bitmask enumeration."
    }
   },
   {
@@ -14351,9 +14409,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "XOR has a magic property: XOR-ing a number with itself gives zero, so pairs of equal numbers cancel out. If every number in a list appears twice except one, XOR-ing them all leaves exactly the odd one out, like matching socks from a pile until one lonely sock remains. The same cancelling trick finds missing numbers without extra memory.",
+    "interview": [
+     "Properties: `x ^ x = 0`, `x ^ 0 = x`, commutative and associative, so order doesn't matter and pairs cancel.",
+     "**Single number** (others appear twice): XOR all elements. O(n), O(1).",
+     "**Missing number** in 0..n: XOR all indices 0..n and all values; the missing one survives.",
+     "**Two numbers appear once**: XOR all gives `a ^ b`; pick a set bit (`diff & -diff`), split elements by that bit, XOR each group.",
+     "**Others appear three times**: count each bit's ones mod 3 (or the ones/twos state machine).",
+     "**Swap without a temporary**: `a ^= b; b ^= a; a ^= b` (breaks if a and b are the same variable). Mostly a curiosity; use `swap`."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the one number that appears once when every other appears twice?",
+      "a": "XOR all the numbers. Equal pairs cancel because x ^ x = 0, and XOR is commutative and associative, so only the single number remains. It's O(n) time and O(1) space."
+     },
+     {
+      "q": "How do you find the missing number in an array containing 0 to n with one value missing?",
+      "a": "XOR every index from 0 to n together with every value in the array. Each present value cancels with its matching index, leaving the missing value. Summing and subtracting from n(n + 1)/2 also works but can overflow in some languages."
+     },
+     {
+      "q": "How do you find two numbers that each appear once when all others appear twice?",
+      "a": "XOR everything to get a ^ b, which is non-zero. Pick any set bit of it (for example the lowest, diff & −diff); a and b differ at that bit. Split all numbers by that bit and XOR each group separately; the groups yield a and b."
+     },
+     {
+      "q": "How can you swap two variables with XOR, and why is it rarely used?",
+      "a": "a ^= b; b ^= a; a ^= b swaps them without a temporary. It fails if both refer to the same memory location (the value becomes 0), it's harder to read, and modern compilers make ordinary swaps just as fast."
+     },
+     {
+      "q": "How do you find the number that appears once when every other appears three times?",
+      "a": "Count, for each bit position, how many numbers have that bit set, modulo 3; the remaining bits form the answer. The ones/twos state machine does the same in O(1) extra space with bitwise operations."
+     }
+    ],
+    "deep": "#### Intuition\n\nXOR is addition without carries (mod 2 per bit). Adding the same number twice returns to where you started, and the order of additions doesn't matter. So XOR over a multiset keeps exactly the bits contributed by elements that appear an odd number of times.\n\n#### Worked example: single number in `4 1 2 1 2`\n\n| step | running XOR (binary) | value |\n|---|---|---|\n| start | 000 | 0 |\n| ^4 | 100 | 4 |\n| ^1 | 101 | 5 |\n| ^2 | 111 | 7 |\n| ^1 | 110 | 6 |\n| ^2 | 100 | 4 |\n\nThe 1s and 2s cancel; **4** remains.\n\n#### Worked example: two single numbers in `1 2 1 3 2 5`\n\nXOR of all = `3 ^ 5 = 011 ^ 101 = 110`. The lowest set bit is `010`: 3 has it, 5 doesn't. Group with the bit: 2, 3, 2 → XOR = 3. Group without: 1, 1, 5 → XOR = 5. Answer: 3 and 5.\n\n#### Code\n\n```cpp\nint singleNumber(const vector<int>& a) {\n    int x = 0;\n    for (int v : a) x ^= v;                     // pairs cancel\n    return x;\n}\n\nint missingNumber(const vector<int>& a) {       // values 0..n with one missing\n    int x = a.size();                           // include n itself\n    for (int i = 0; i < (int)a.size(); i++) x ^= i ^ a[i];\n    return x;\n}\n\npair<int, int> twoSingles(const vector<int>& a) {\n    unsigned int diff = 0;\n    for (int v : a) diff ^= v;                  // = p ^ q\n    unsigned int bit = diff & -diff;            // a bit where p and q differ\n    int p = 0, q = 0;\n    for (int v : a) {\n        if (v & bit) p ^= v;                    // group containing one of them\n        else q ^= v;                            // group containing the other\n    }\n    return {p, q};\n}\n```\n\n```python\ndef single_number_thrice(nums):\n    \"\"\"Every number appears three times except one; bitwise state machine.\"\"\"\n    ones = twos = 0\n    for x in nums:\n        ones = (ones ^ x) & ~twos       # bits seen 1 time (mod 3)\n        twos = (twos ^ x) & ~ones       # bits seen 2 times (mod 3)\n    return ones\n\ndef xor_range(a, b):\n    \"\"\"XOR of all integers from a to b (inclusive), using the period-4 pattern of 0^1^...^n.\"\"\"\n    def upto(n):\n        return [n, 1, n + 1, 0][n % 4] if n >= 0 else 0\n    return upto(b) ^ upto(a - 1)\n```\n\n#### Complexity\n\n$O(n)$ time, $O(1)$ space for all of these.\n\n#### Edge cases and bugs\n\n- Negative numbers work with XOR; in Python, the \"three times\" machine works for negatives too because Python ints behave like infinite two's complement.\n- `diff & -diff` with `diff = INT_MIN` overflows for signed ints; use unsigned.\n- XOR swap on the same memory location zeroes it.\n\n#### Variants\n\n- Find the duplicate and the missing number (set mismatch): XOR plus the split trick.\n- Decode an XOR-encoded array, XOR queries on subarrays (prefix XOR).\n- Maximum XOR pair (bitwise trie).\n- XOR of all numbers from 1 to n has period 4: n, 1, n + 1, 0.\n\nConnects to: bitwise operators, prefix XOR, bitwise trie, cyclic sort.",
+    "signals": [
+     "every element appears twice (or an even number of times) except one or two",
+     "find a missing or extra number with O(1) extra space",
+     "pairs of equal values should cancel each other",
+     "XOR of ranges or of subarrays"
+    ],
+    "template": "```cpp\n// XOR accumulation: elements with even counts cancel, odd counts survive.\nint xorOfAll(const vector<int>& a) {\n    int acc = 0;\n    for (int v : a) acc ^= v;\n    return acc;\n}\n\n// Split by a distinguishing bit when two values survive.\npair<int, int> splitByBit(const vector<int>& a) {\n    unsigned int both = 0;\n    for (int v : a) both ^= v;\n    unsigned int bit = both & -both;             // lowest differing bit\n    int x = 0, y = 0;\n    for (int v : a) ((v & bit) ? x : y) ^= v;\n    return {x, y};\n}\n```"
    }
   },
   {
@@ -14375,9 +14469,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Counting set bits means counting how many 1s appear in a number's binary form, called its popcount. The quick trick is to repeatedly erase the lowest 1 until the number becomes zero, counting the erasures. To get counts for every number up to n, reuse earlier answers: a number has the same count as itself shifted right, plus its last bit.",
+    "interview": [
+     "Built-ins: C++ `__builtin_popcount` / `__builtin_popcountll` / C++20 `std::popcount`, Java `Integer.bitCount`, Python `int.bit_count()` (3.10+) or `bin(x).count(\"1\")`.",
+     "**Brian Kernighan**: `while (x) { x &= x - 1; count++; }`: O(number of set bits).",
+     "**Counting bits for 0..n** in O(n): `bits[i] = bits[i >> 1] + (i & 1)`, or `bits[i] = bits[i & (i - 1)] + 1`.",
+     "**Hamming distance** = popcount(a ^ b). **Total Hamming distance** over pairs: per bit, ones × zeros.",
+     "Parity: popcount mod 2 (or XOR-fold the bits)."
+    ],
+    "questions": [
+     {
+      "q": "How does Brian Kernighan's method count set bits?",
+      "a": "Repeatedly clear the lowest set bit with x &= x − 1 and count how many times you do it before x becomes 0. The loop runs once per set bit, which is faster than checking all 32 or 64 positions for sparse numbers."
+     },
+     {
+      "q": "How do you compute the number of set bits for every integer from 0 to n in O(n)?",
+      "a": "Use bits[i] = bits[i >> 1] + (i & 1): shifting right drops the lowest bit, whose value is added back. Alternatively bits[i] = bits[i & (i − 1)] + 1, since clearing the lowest set bit removes exactly one 1."
+     },
+     {
+      "q": "How do you compute the Hamming distance between two integers?",
+      "a": "XOR them, which leaves 1s exactly where they differ, and count the set bits of the result."
+     },
+     {
+      "q": "How do you compute the sum of Hamming distances over all pairs in an array efficiently?",
+      "a": "For each bit position, count how many numbers have the bit set (k) and how many don't (n − k). Every such pair differs at that bit, contributing k · (n − k). Summing over 32 bits gives O(32 · n) instead of O(n²)."
+     }
+    ]
    }
   },
   {
@@ -14404,9 +14521,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "With n items, every subset can be written as an n-bit number where bit i says whether item i is included. Counting from 0 to 2^n − 1 visits every subset once, like trying every combination of switches on a small control panel. You can also walk through just the subsets of a given subset with a neat decrement trick.",
+    "interview": [
+     "**All subsets**: `for mask in 0..2ⁿ−1`, item i is in when `(mask >> i) & 1`. O(2ⁿ · n) to list them.",
+     "**Submasks of m** (in decreasing order): `for (s = m; s > 0; s = (s - 1) & m)` plus the empty set. Over all masks m, total work is **O(3ⁿ)**.",
+     "**All k-element subsets**: Gosper's hack (next number with the same popcount), or filter by popcount.",
+     "Set operations: union `a | b`, intersection `a & b`, difference `a & ~b`, complement `full ^ a`, subset test `(a & b) == a`.",
+     "Practical for n ≤ 20 (2²⁰ ≈ 10⁶); submask enumeration for n ≤ about 15 (3¹⁵ ≈ 1.4 × 10⁷).",
+     "Uses: brute force over choices, bitmask DP states, maximum product of word lengths (letter sets as masks)."
+    ],
+    "questions": [
+     {
+      "q": "How do you iterate over every subset of n items with bitmasks?",
+      "a": "Loop mask from 0 to 2^n − 1; item i is in the subset when bit i of mask is set. This visits each of the 2^n subsets exactly once and is practical for n up to about 20."
+     },
+     {
+      "q": "How do you iterate over all submasks of a mask m?",
+      "a": "Start with s = m and repeatedly set s = (s − 1) & m until s becomes 0, then handle the empty set separately if needed. Each step produces the next smaller subset of m's bits."
+     },
+     {
+      "q": "Why is iterating submasks of every mask O(3^n) rather than O(4^n)?",
+      "a": "Each item is either outside the mask, inside the mask but outside the submask, or inside both: three possibilities per item, so there are 3^n (mask, submask) pairs in total."
+     },
+     {
+      "q": "How can bitmasks speed up \"maximum product of word lengths with no common letters\"?",
+      "a": "Encode each word's set of letters as a 26-bit mask. Two words share no letters exactly when their masks AND to zero, a single operation, so checking all pairs is O(n² + total letters)."
+     },
+     {
+      "q": "What is Gosper's hack used for?",
+      "a": "Generating all n-bit masks with exactly k set bits in increasing order: from x, it computes the next larger integer with the same popcount in O(1) using the lowest set bit and a ripple carry."
+     }
+    ],
+    "deep": "#### Intuition\n\nA mask is a compact set: integers from 0 to $2^n - 1$ correspond one-to-one with subsets of $n$ items. Incrementing the integer walks through all subsets. For submasks, `(s - 1) & m` gives the next smaller number whose bits are all inside `m`: subtracting 1 flips the lowest set bit and the zeros below it, and ANDing with `m` discards bits outside the set.\n\n#### Worked example: submasks of m = 1011\n\n| s | binary |\n|---|---|\n| 11 | 1011 |\n| (11 − 1) & 11 = 10 | 1010 |\n| (10 − 1) & 11 = 9 | 1001 |\n| (9 − 1) & 11 = 8 | 1000 |\n| (8 − 1) & 11 = 3 | 0011 |\n| (3 − 1) & 11 = 2 | 0010 |\n| (2 − 1) & 11 = 1 | 0001 |\n| (1 − 1) & 11 = 0 | stop (empty set handled separately) |\n\nSeven non-empty submasks, as expected for a mask with 3 set bits ($2^3 - 1 = 7$).\n\n#### Code\n\n```cpp\n// Largest product of lengths of two words with no common letters.\nint maxProductNoCommon(const vector<string>& words) {\n    int n = words.size(), best = 0;\n    vector<int> mask(n, 0);\n    for (int i = 0; i < n; i++)\n        for (char c : words[i]) mask[i] |= 1 << (c - 'a');   // letter set as 26 bits\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++)\n            if ((mask[i] & mask[j]) == 0)                      // disjoint letter sets\n                best = max(best, (int)(words[i].size() * words[j].size()));\n    return best;\n}\n\n// Visit every non-empty submask of m.\ntemplate <class Visit>\nvoid forEachSubmask(int m, Visit visit) {\n    for (int s = m; s > 0; s = (s - 1) & m) visit(s);\n}\n\n// Next integer with the same number of set bits (Gosper's hack), x > 0.\nlong long nextSamePopcount(long long x) {\n    long long low = x & -x, ripple = x + low;\n    return ripple | (((x ^ ripple) >> 2) / low);\n}\n```\n\n```python\ndef subsets_with_sum(nums, target):\n    \"\"\"All index subsets (as masks) whose sum equals target, by brute force over masks.\"\"\"\n    n, found = len(nums), []\n    for mask in range(1 << n):\n        if sum(nums[i] for i in range(n) if mask >> i & 1) == target:\n            found.append(mask)\n    return found\n\ndef k_subsets(n, k):\n    \"\"\"All masks of n bits with exactly k ones, in increasing order.\"\"\"\n    if k == 0:\n        return [0]\n    out, x = [], (1 << k) - 1\n    while x < 1 << n:\n        out.append(x)\n        low = x & -x\n        ripple = x + low\n        x = ripple | (((x ^ ripple) >> 2) // low)\n    return out\n```\n\n#### Why submask enumeration over all masks is O(3ⁿ)\n\nEach item is, relative to a pair (mask, submask), in one of three states: outside the mask, in the mask but not the submask, or in both. So the number of (mask, submask) pairs is $3^n$.\n\n#### Complexity\n\nAll subsets: $O(2^n)$ masks, $O(n)$ to decode each. Submasks of one mask with $k$ bits: $O(2^k)$. Over all masks: $O(3^n)$.\n\n#### Edge cases and bugs\n\n- The empty submask: the loop `s > 0` skips it; handle it separately if needed.\n- `1 << n` overflows for n ≥ 31 in 32-bit ints.\n- Decoding every mask with an inner loop over n bits when an incremental update (adding or removing one element) would be cheaper.\n\n#### Variants\n\n- Sum over subsets (SOS DP): `for bit: for mask: if mask has bit: f[mask] += f[mask ^ bit]`: O(2ⁿ · n).\n- Bitmask DP (TSP, assignment), meet in the middle (enumerate halves).\n- Represent small sets of letters, colors or features as masks for fast comparison.\n\nConnects to: subsets (backtracking), bitmask DP, meet in the middle, single-bit tricks.",
+    "signals": [
+     "n up to about 20 and a need to try every subset of items",
+     "sets of small items (letters, colors, cities) compared or combined quickly",
+     "iterate over all subsets of a given subset",
+     "a state that records which items are used"
+    ],
+    "template": "```cpp\n// Enumerate subsets as masks; decode membership with bit tests.\ntemplate <class Visit>\nvoid forEachSubset(int n, Visit visit) {\n    for (int mask = 0; mask < (1 << n); mask++) {\n        // for (int i = 0; i < n; i++) if (mask >> i & 1) { item i is chosen }\n        visit(mask);\n    }\n}\n// Submasks of m (non-empty): for (int s = m; s; s = (s - 1) & m) { ... }\n```"
    }
   },
   {
@@ -14428,9 +14581,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Basic arithmetic can be rebuilt from bit operations, which is how hardware does it. Adding two numbers is XOR for the digits that don't carry, plus AND shifted left for the carries, repeated until no carry is left. Division can be done by subtracting shifted copies of the divisor, like long division in base two.",
+    "interview": [
+     "**Add without +**: `while (b) { carry = (a & b) << 1; a ^= b; b = carry; }`. In C++ use unsigned to avoid signed overflow in the shift; in Python mask to 32 bits and convert back.",
+     "**Subtract**: `a + (~b + 1)`.",
+     "**Divide two integers** without `*`, `/`, `%`: work with absolute values in 64 bits; for bit k from high to low, if `(divisor << k) <= remaining`, subtract it and add `1 << k` to the quotient. O(32). Handle the overflow case `INT_MIN / -1`.",
+     "**Multiply** by shifts and adds (Russian peasant): add `a << i` for each set bit i of b.",
+     "Powers of two: `x & (x - 1) == 0`; multiply or divide by 2ᵏ with shifts; `x % 2ᵏ == x & (2ᵏ − 1)` for non-negative x."
+    ],
+    "questions": [
+     {
+      "q": "How do you add two integers without using + or −?",
+      "a": "XOR gives the sum without carries, and (a & b) << 1 gives the carries. Replace a with the XOR and b with the carries, and repeat until the carry is zero. Use unsigned arithmetic in C++, or 32-bit masks in Python, so negative numbers work."
+     },
+     {
+      "q": "How do you divide two integers using only shifts and subtraction?",
+      "a": "Take absolute values in a 64-bit type. For each bit position from high to low, if the divisor shifted left by k fits into what remains of the dividend, subtract it and set bit k of the quotient. Apply the sign at the end and clamp the one overflowing case, INT_MIN / −1."
+     },
+     {
+      "q": "Why is INT_MIN / −1 special?",
+      "a": "The true result, 2^31, doesn't fit in a signed 32-bit int (the maximum is 2^31 − 1). Problems usually say to return INT_MAX in that case, and in C++ performing the division directly is undefined behavior."
+     },
+     {
+      "q": "How do you compute x mod 2^k with bits?",
+      "a": "For non-negative x, x & ((1 << k) − 1) keeps the low k bits, which is exactly the remainder when dividing by 2^k."
+     }
+    ]
    }
   },
   {
@@ -14452,9 +14628,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "When trying every subset of 40 items is far too slow, split the items into two halves of 20. List every subset sum of each half (about a million each), sort one list, and for each sum in the other list, search for the partner that completes the target. It is like two search parties starting from opposite ends of a tunnel and meeting in the middle.",
+    "interview": [
+     "Split n items into halves A and B; enumerate all 2^(n/2) subset values of each.",
+     "Combine: sort one side, then binary search or two pointers for each value on the other side.",
+     "**O(2^(n/2) · n)** instead of O(2ⁿ): n = 40 goes from 10¹² to about 10⁶ · 40.",
+     "Uses: subset sum closest to a target, count subsets with sum ≤ k, 4Sum-count style problems (pairs of arrays), partition array into two arrays to minimize the sum difference (group by subset size).",
+     "Memory: two lists of 2^(n/2) values (tens of megabytes for n = 40)."
+    ],
+    "questions": [
+     {
+      "q": "What is meet in the middle, and when is it useful?",
+      "a": "Split the input into two halves, solve each half by brute force, and combine the results with sorting and searching. It's useful for exhaustive search over subsets when n is around 30 to 40, too large for 2^n but fine for 2^(n/2)."
+     },
+     {
+      "q": "How do you find the subset sum closest to a target with n = 40?",
+      "a": "Enumerate all subset sums of each half of 20 items. Sort the second list. For each sum s in the first list, binary search the second list for the values closest to target − s. That's O(2^20 · 20) instead of O(2^40)."
+     },
+     {
+      "q": "How do you combine the two halves when counting subsets with sum at most K?",
+      "a": "Sort both lists of half-sums and use two pointers: for each sum from the first list in increasing order, move a pointer down the second list to the largest value that keeps the total at most K, and add the number of values up to it."
+     },
+     {
+      "q": "How does 4Sum II (four arrays) use the same idea?",
+      "a": "Count all sums of pairs from the first two arrays in a hash map, then, for each pair from the last two arrays, look up how many first-half sums equal the negation. That's O(n²) instead of O(n⁴)."
+     }
+    ]
    }
   },
   {
@@ -14474,9 +14673,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The greatest common divisor of two numbers is the largest number that divides both, and the least common multiple is the smallest number both divide into. Euclid's algorithm finds the GCD by repeatedly replacing the larger number with the remainder of dividing it by the smaller, like cutting the largest possible square tiles off a rectangle until it's all squares. Once you have the GCD, the LCM is the product divided by it.",
+    "interview": [
+     "**Euclid**: `gcd(a, b) = gcd(b, a mod b)`, `gcd(a, 0) = a`. **O(log min(a, b))** steps.",
+     "**LCM**: `lcm(a, b) = a / gcd(a, b) * b` (divide first to avoid overflow).",
+     "GCD of a list: fold `gcd` over it; LCM of a list: fold `lcm` (watch overflow).",
+     "Library: C++17 `std::gcd`, `std::lcm`; Python `math.gcd`, `math.lcm` (3.9+); Java `BigInteger.gcd`.",
+     "Uses: reduce fractions (slopes in \"max points on a line\"), water jug problems (a target is reachable iff it's a multiple of gcd), string GCD (`s + t == t + s` then the prefix of length gcd), synchronizing cycles (LCM).",
+     "`gcd(0, 0)` is 0 by convention; `gcd` of negative numbers: use absolute values."
+    ],
+    "questions": [
+     {
+      "q": "How does Euclid's algorithm compute the GCD?",
+      "a": "Repeatedly replace (a, b) with (b, a mod b) until b is 0; then a is the GCD. It works because a and b have the same common divisors as b and a mod b, and the numbers shrink quickly."
+     },
+     {
+      "q": "What is the time complexity of Euclid's algorithm?",
+      "a": "O(log min(a, b)). Every two steps, the smaller number at least halves, and consecutive Fibonacci numbers are the worst case."
+     },
+     {
+      "q": "How do you compute the LCM safely?",
+      "a": "lcm(a, b) = a / gcd(a, b) * b. Dividing before multiplying keeps the intermediate value no larger than the result, avoiding overflow when a · b would overflow but the LCM fits."
+     },
+     {
+      "q": "How do you decide whether two jugs of sizes x and y can measure exactly z liters?",
+      "a": "By Bézout's identity, the amounts you can measure are the multiples of gcd(x, y), up to x + y in total. So z is reachable when z ≤ x + y and z is a multiple of gcd(x, y) (z = 0 is always reachable)."
+     },
+     {
+      "q": "How do you find the largest string that divides two strings?",
+      "a": "If s + t != t + s, there's no common repeating unit, so the answer is empty. Otherwise the answer is the prefix of s whose length is gcd(len(s), len(t))."
+     }
+    ],
+    "deep": "#### Intuition\n\nAny common divisor of a and b also divides `a − b`, and so `a mod b` (which is a minus a multiple of b). So the pair (a, b) and the pair (b, a mod b) have exactly the same common divisors, and therefore the same greatest one. The numbers shrink quickly, and when one reaches 0, the other is the GCD.\n\n#### Worked example: gcd(252, 105)\n\n| a | b | a mod b |\n|---|---|---|\n| 252 | 105 | 42 |\n| 105 | 42 | 21 |\n| 42 | 21 | 0 |\n| 21 | 0 | done |\n\nGCD = 21. LCM = 252 / 21 × 105 = 12 × 105 = 1260.\n\n#### Code\n\n```cpp\nlong long gcdLL(long long a, long long b) {\n    a = llabs(a), b = llabs(b);\n    while (b) { long long t = a % b; a = b; b = t; }\n    return a;\n}\n\nlong long lcmLL(long long a, long long b) {\n    if (a == 0 || b == 0) return 0;\n    return a / gcdLL(a, b) * b;              // divide first: smaller intermediate value\n}\n\n// Largest string that divides both (t divides s if s is t repeated).\nstring gcdOfStrings(const string& s, const string& t) {\n    if (s + t != t + s) return \"\";           // otherwise no common repeating unit exists\n    return s.substr(0, gcdLL(s.size(), t.size()));\n}\n```\n\n```python\nfrom math import gcd\nfrom functools import reduce\n\ndef gcd_list(nums):\n    return reduce(gcd, nums, 0)\n\ndef can_measure_water(x, y, target):\n    \"\"\"Two jugs of sizes x and y: a target amount is reachable iff it is a multiple of gcd(x, y)\n    and fits in both jugs combined.\"\"\"\n    if target > x + y:\n        return False\n    if target == 0:\n        return True\n    return target % gcd(x, y) == 0\n```\n\n#### Recursive form and a sanity check\n\nThe recursive version is one line, `gcd(a, b) = b == 0 ? a : gcd(b, a % b)`, and its depth is only $O(\\log \\min(a, b))$, so recursion is safe. A quick check of any implementation: `gcd(a, b) * lcm(a, b) == a * b` for positive a and b, and `gcd(a, 0) == a`. If the inputs are in the wrong order (a < b), the first step simply swaps them, because `a % b = a`.\n\n#### Complexity\n\nEuclid's algorithm takes $O(\\log \\min(a, b))$ iterations: every two steps the smaller number at least halves (if $b \\le a/2$, then $a \\bmod b < b \\le a/2$; otherwise $a \\bmod b = a - b < a/2$). Consecutive Fibonacci numbers are the worst case (Lamé's theorem).\n\n#### Edge cases and bugs\n\n- `a * b / gcd` overflows even when the LCM fits; divide first.\n- Negative inputs: `%` in C++ can return negatives; take absolute values.\n- LCM of many numbers grows fast; check the problem's bounds or use modular arithmetic.\n\n#### Variants\n\n- Extended Euclid: finds x, y with `ax + by = gcd(a, b)` (modular inverses, linear Diophantine equations).\n- Binary GCD (Stein's algorithm) uses shifts instead of division.\n- Max points on a line: reduce slopes `(dy / g, dx / g)` with a consistent sign.\n- Count lattice points on a segment: `gcd(|dx|, |dy|) + 1`.\n\nConnects to: number theory extras (extended Euclid), modular arithmetic, fractions, geometry basics."
    }
   },
   {
@@ -14496,9 +14724,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A prime is a number greater than 1 whose only divisors are 1 and itself, like 2, 3, 5 and 7. To test one number, you only need to try divisors up to its square root, because divisors come in pairs. To find all primes up to a limit, the Sieve of Eratosthenes crosses out the multiples of each prime, like crossing off every second, then every third seat in a row.",
+    "interview": [
+     "**Trial division**: check divisors from 2 to √n: **O(√n)**. Skip even numbers after 2 for a 2x speedup.",
+     "**Sieve of Eratosthenes**: mark multiples of each prime p starting at p²: **O(n log log n)** time, O(n) memory.",
+     "**Factorization** by trial division: divide out each factor while it divides, up to √n; any remainder > 1 is a prime. O(√n).",
+     "**Smallest prime factor (SPF) sieve**: factorize many numbers up to N in O(log x) each.",
+     "Counts: about n / ln n primes up to n; there are 25 primes below 100 and 78,498 below 10⁶.",
+     "1 is not prime; 2 is the only even prime."
+    ],
+    "questions": [
+     {
+      "q": "Why is it enough to test divisors up to √n?",
+      "a": "If n = a · b with both factors larger than √n, their product would exceed n. So any composite n has a factor at most √n, and if none divides n, it's prime."
+     },
+     {
+      "q": "How does the Sieve of Eratosthenes work, and what is its complexity?",
+      "a": "Mark every number as prime, then for each number still marked prime, mark its multiples as composite, starting from its square. It runs in O(n log log n) time and O(n) memory."
+     },
+     {
+      "q": "Why does the sieve start crossing out multiples at p²?",
+      "a": "Any smaller multiple k · p with k < p has a prime factor smaller than p, so it was already crossed out when that smaller prime was processed."
+     },
+     {
+      "q": "How do you factorize a number with trial division?",
+      "a": "For d from 2 while d · d ≤ n, divide n by d as many times as possible, recording the count. If n is still greater than 1 at the end, the remaining value is a prime factor. It's O(√n)."
+     },
+     {
+      "q": "How do you factorize many numbers up to 10^6 quickly?",
+      "a": "Precompute the smallest prime factor of every number with a sieve. Then factorize any x by repeatedly dividing by spf[x], which takes O(log x) steps per number."
+     }
+    ],
+    "deep": "#### Intuition\n\nIf n = a × b with a ≤ b, then a ≤ √n, so a composite number always has a divisor no larger than its square root. The sieve reverses the question: instead of testing each number, every prime announces all its multiples as composite. Starting at p² is enough because smaller multiples of p have a smaller prime factor that already marked them.\n\n#### Worked example: sieve up to 30\n\n| prime p | crosses out (starting at p²) |\n|---|---|\n| 2 | 4 6 8 10 12 14 16 18 20 22 24 26 28 30 |\n| 3 | 9 15 21 27 (12, 18, 24, 30 already crossed) |\n| 5 | 25 (30 already crossed) |\n| 7 | 7² = 49 > 30: stop |\n\nPrimes: 2 3 5 7 11 13 17 19 23 29.\n\n#### Code\n\n```cpp\nvector<int> sieve(int n) {                          // all primes <= n\n    vector<bool> composite(n + 1, false);\n    vector<int> primes;\n    for (int p = 2; p <= n; p++) {\n        if (composite[p]) continue;\n        primes.push_back(p);\n        for (long long m = 1LL * p * p; m <= n; m += p) composite[m] = true;\n    }\n    return primes;\n}\n\nvector<pair<long long, int>> factorize(long long n) {   // {prime, exponent}\n    vector<pair<long long, int>> f;\n    for (long long d = 2; d * d <= n; d++) {\n        if (n % d) continue;\n        int e = 0;\n        while (n % d == 0) { n /= d; e++; }\n        f.push_back({d, e});\n    }\n    if (n > 1) f.push_back({n, 1});                  // leftover prime factor > sqrt\n    return f;\n}\n```\n\n```python\ndef is_prime(n):\n    if n < 2:\n        return False\n    if n % 2 == 0:\n        return n == 2\n    d = 3\n    while d * d <= n:\n        if n % d == 0:\n            return False\n        d += 2\n    return True\n\ndef smallest_prime_factors(limit):\n    spf = list(range(limit + 1))\n    for p in range(2, int(limit ** 0.5) + 1):\n        if spf[p] == p:                       # p is prime\n            for m in range(p * p, limit + 1, p):\n                if spf[m] == m:\n                    spf[m] = p\n    return spf\n\ndef factor_with_spf(x, spf):\n    out = []\n    while x > 1:\n        out.append(spf[x])\n        x //= spf[x]\n    return out\n```\n\n#### Choosing the tool\n\nFor one or a few numbers up to about $10^{12}$, trial division up to $\\sqrt{n}$ is enough ($10^6$ steps). For all primes up to $10^7$, use the sieve. For factorizing many numbers up to $10^7$, build the smallest-prime-factor table once. For single 64-bit numbers near $10^{18}$, trial division is too slow and you need Miller-Rabin (and Pollard's rho to factor), which interviews rarely require.\n\n#### Complexity\n\n- Trial division test and factorization: $O(\\sqrt{n})$.\n- Sieve: $O(n \\log \\log n)$ time (the sum of $n/p$ over primes), $O(n)$ memory; $10^7$ is fine in C++.\n- SPF factorization: $O(\\log x)$ per number after an $O(n \\log \\log n)$ sieve.\n\n#### Edge cases and bugs\n\n- `i * i <= n` overflows for large n with 32-bit ints; use 64-bit.\n- Forgetting the leftover prime after trial division (for 14, after dividing by 2 the remainder 7 is prime).\n- 0 and 1 are not prime.\n\n#### Variants\n\n- Count primes below n (sieve), segmented sieve for ranges near $10^{12}$.\n- Miller-Rabin for primality of 64-bit numbers in $O(k \\log^3 n)$.\n- Linear sieve (each composite marked once) gives SPF in $O(n)$.\n- Ugly numbers (only factors 2, 3, 5): three pointers or a heap.\n\nConnects to: GCD and LCM, modular arithmetic, number theory extras."
    }
   },
   {
@@ -14523,9 +14780,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Modular arithmetic keeps only the remainder after dividing by a fixed number m, like a clock that wraps around after 12. Adding and multiplying work the same way on remainders as on full numbers, so you can reduce after every step and keep numbers small. That's why problems with huge answers ask for the result modulo 1,000,000,007.",
+    "interview": [
+     "`(a + b) mod m = ((a mod m) + (b mod m)) mod m`; same for `−` and `×`. **Division is different**: multiply by a modular inverse.",
+     "**1e9 + 7** is prime and < 2³⁰, so the sum of two residues fits in 32 bits and the product of two fits in 64 bits.",
+     "**Negative numbers**: C++ and Java `%` keeps the dividend's sign (−7 % 3 = −1); normalize with `((a % m) + m) % m`. Python's `%` is already non-negative for positive m.",
+     "Reduce after **every** multiplication; don't accumulate a big product first.",
+     "Multiplying two 64-bit residues (m near 10¹⁸) needs `__int128` or a mulmod routine.",
+     "Congruences: `a ≡ b (mod m)` means m divides a − b; useful for cycle detection, divisibility and hashing."
+    ],
+    "questions": [
+     {
+      "q": "Why can you take the modulus after every addition and multiplication?",
+      "a": "The remainder of a sum or product depends only on the remainders of the operands: (a + b) mod m = ((a mod m) + (b mod m)) mod m, and likewise for products. Reducing early doesn't change the final result and keeps numbers small."
+     },
+     {
+      "q": "Why is 1e9 + 7 the usual modulus?",
+      "a": "It's prime, which makes modular inverses exist for every non-multiple, and it's just under 2^30, so two residues add without overflowing a 32-bit int and multiply without overflowing a 64-bit integer."
+     },
+     {
+      "q": "How do you handle negative numbers under a modulus in C++ or Java?",
+      "a": "The % operator keeps the sign of the dividend, so −7 % 3 is −1. Normalize with ((a % m) + m) % m to get a result in [0, m)."
+     },
+     {
+      "q": "Can you divide under a modulus?",
+      "a": "Not with ordinary division. You multiply by the modular inverse of the divisor, which exists when the divisor and the modulus are coprime; for a prime modulus p, the inverse of b is b^(p − 2) mod p."
+     },
+     {
+      "q": "How do you check whether a very long decimal string is divisible by 7?",
+      "a": "Process digits left to right keeping a running remainder: r = (r · 10 + digit) mod 7. The number is divisible by 7 if the final remainder is 0. This never builds the huge number itself."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe remainder of a sum or product depends only on the remainders of the operands. So you can throw away the multiples of m at any time without changing the final remainder, which keeps every intermediate value small enough for fixed-width integers.\n\n#### Worked example: (123456789 × 987654321 + 555) mod 1000000007\n\nIn 64-bit: 123456789 × 987654321 = 121932631112635269, which fits (below 9.2 × 10¹⁸). Its remainder mod 1000000007 is 259106859. Adding 555 gives 259107414, still below m. The final answer is **259107414**. Had both factors been close to $10^{18}$, the product would overflow 64 bits, which is why values are always reduced below m before multiplying.\n\n#### Code\n\n```cpp\nconst long long MOD = 1'000'000'007;\n\nlong long addMod(long long a, long long b) { return ((a + b) % MOD + MOD) % MOD; }\nlong long subMod(long long a, long long b) { return ((a - b) % MOD + MOD) % MOD; }\nlong long mulMod(long long a, long long b) { return (a % MOD) * (b % MOD) % MOD; }\n\n// Product of all elements, reduced at every step.\nlong long productMod(const vector<long long>& v) {\n    long long p = 1;\n    for (long long x : v) p = mulMod(p, ((x % MOD) + MOD) % MOD);\n    return p;\n}\n\n// Safe product for moduli up to about 9e18.\nunsigned long long mulMod64(unsigned long long a, unsigned long long b, unsigned long long m) {\n    return (unsigned __int128)a * b % m;\n}\n```\n\n```python\nMOD = 10**9 + 7\n\ndef sum_of_products_of_pairs(nums):\n    \"\"\"Sum over i < j of nums[i] * nums[j], mod MOD, in O(n).\"\"\"\n    total = square_sum = 0\n    for x in nums:\n        total = (total + x) % MOD\n        square_sum = (square_sum + x * x) % MOD\n    inv2 = pow(2, MOD - 2, MOD)                # dividing by 2 means multiplying by its inverse\n    return (total * total - square_sum) % MOD * inv2 % MOD\n```\n\n#### Which operations are safe\n\n| Operation | Rule under mod m |\n|---|---|\n| addition | `(a + b) % m` |\n| subtraction | `((a - b) % m + m) % m` |\n| multiplication | `(a % m) * (b % m) % m` (64-bit intermediate) |\n| exponentiation | fast power, reducing after each multiplication |\n| division by b | multiply by the inverse of b (needs gcd(b, m) = 1) |\n| comparison (<, max, min) | **not preserved**: compare before reducing, or avoid |\n\nThe last row matters in DP: taking `max` of values that were already reduced mod m gives meaningless answers. Problems that ask for a count mod m never also ask for a maximum over counts for this reason.\n\n#### Complexity\n\nEach modular operation is $O(1)$ for word-sized moduli.\n\n#### Edge cases and bugs\n\n- Negative intermediate values after subtraction in C++ and Java.\n- Overflow from multiplying before reducing, or from `int` instead of `long long`.\n- Dividing with `/` under a modulus: wrong; use the modular inverse (only when the divisor is coprime with m).\n- Comparing values after reduction: a larger true value can have a smaller residue.\n\n#### Variants\n\n- Modular exponentiation, modular inverse, nCr mod p.\n- Checking divisibility of large numbers digit by digit (running remainder), subarray sums divisible by k.\n- Rolling hashes (polynomial hashing mod a large prime).\n\nConnects to: fast exponentiation, modular inverse and nCr mod p, counting DP and modulo, rolling hash."
    }
   },
   {
@@ -14545,9 +14831,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Fast exponentiation computes a number raised to a huge power with only a few dozen multiplications. It uses repeated squaring: x², then x⁴, x⁸ and so on, and multiplies together just the squares that the exponent's binary digits call for. Raising a number to the power of a billion takes about 30 squarings instead of a billion multiplications.",
+    "interview": [
+     "Write n in binary: xⁿ = ∏ x^(2ᵏ) over set bits k. Iteratively: `while (n) { if (n & 1) res = res·x; x = x·x; n >>= 1; }`. **O(log n)** multiplications.",
+     "Do every multiplication **mod m** when a modulus is given.",
+     "Negative exponents (real numbers): compute x^|n| and take the reciprocal; careful with `n = INT_MIN` (use a 64-bit copy).",
+     "Works for any associative multiplication: **matrix power** computes linear recurrences (Fibonacci in O(log n)), and repeated function composition.",
+     "Python: `pow(x, n, m)` does it natively."
+    ],
+    "questions": [
+     {
+      "q": "How does binary exponentiation compute x^n in O(log n)?",
+      "a": "It repeatedly squares x to get x, x², x⁴, x⁸, … and multiplies into the result the powers that correspond to set bits of n. Since n has about log₂ n bits, it needs O(log n) multiplications."
+     },
+     {
+      "q": "How do you compute x^n mod m without overflow?",
+      "a": "Reduce x mod m first, and reduce after every multiplication, both when multiplying into the result and when squaring. With m below about 3 · 10^9, products of two residues fit in 64 bits."
+     },
+     {
+      "q": "How do you handle negative exponents?",
+      "a": "Compute the power of the reciprocal: x^(−n) = (1/x)^n. Convert n to a 64-bit value before negating, because negating the smallest 32-bit integer overflows."
+     },
+     {
+      "q": "How can fast exponentiation compute the nth Fibonacci number in O(log n)?",
+      "a": "The matrix [[1, 1], [1, 0]] raised to the nth power equals [[F(n + 1), F(n)], [F(n), F(n − 1)]]. Matrix multiplication is associative, so binary exponentiation applies, costing O(log n) 2×2 multiplications."
+     }
+    ],
+    "deep": "#### Intuition\n\n$x^{13} = x^8 \\cdot x^4 \\cdot x^1$ because $13 = 1101_2$. Squaring repeatedly gives $x, x^2, x^4, x^8, \\dots$, one new power per step, and the exponent's bits say which of them to multiply into the result. That turns $n - 1$ multiplications into about $2 \\log_2 n$.\n\n#### Worked example: 3¹³\n\n| step | n (binary) | lowest bit | result | x (current square) |\n|---|---|---|---|---|\n| 1 | 1101 | 1 | 1 × 3 = 3 | 3² = 9 |\n| 2 | 110 | 0 | 3 | 9² = 81 |\n| 3 | 11 | 1 | 3 × 81 = 243 | 81² = 6561 |\n| 4 | 1 | 1 | 243 × 6561 = 1594323 | |\n\n3¹³ = 1,594,323.\n\n#### Code\n\n```cpp\nlong long powMod(long long x, long long n, long long m) {    // x^n mod m, n >= 0\n    long long result = 1 % m;\n    x %= m;\n    if (x < 0) x += m;\n    while (n > 0) {\n        if (n & 1) result = result * x % m;    // this bit is set: include the current square\n        x = x * x % m;                         // next square\n        n >>= 1;\n    }\n    return result;\n}\n\ndouble myPow(double x, long long n) {          // n may be negative\n    if (n < 0) { x = 1 / x; n = -n; }\n    double result = 1;\n    while (n > 0) {\n        if (n & 1) result *= x;\n        x *= x;\n        n >>= 1;\n    }\n    return result;\n}\n```\n\n```python\ndef fib_matrix(n, mod=10**9 + 7):\n    \"\"\"n-th Fibonacci number with 2x2 matrix exponentiation: O(log n).\"\"\"\n    def mul(A, B):\n        return [[(A[0][0] * B[0][0] + A[0][1] * B[1][0]) % mod, (A[0][0] * B[0][1] + A[0][1] * B[1][1]) % mod],\n                [(A[1][0] * B[0][0] + A[1][1] * B[1][0]) % mod, (A[1][0] * B[0][1] + A[1][1] * B[1][1]) % mod]]\n    result, base = [[1, 0], [0, 1]], [[1, 1], [1, 0]]\n    while n:\n        if n & 1:\n            result = mul(result, base)\n        base = mul(base, base)\n        n >>= 1\n    return result[0][1]            # [[F(n+1), F(n)], [F(n), F(n-1)]]\n```\n\n#### Recursive version\n\nThe same idea written recursively: `pow(x, n) = pow(x, n / 2)²`, times `x` if n is odd, with `pow(x, 0) = 1`. Compute the half power once and square it; calling the function twice for the two halves turns $O(\\log n)$ into $O(n)$. The iterative version above avoids recursion entirely and is the one to write in interviews.\n\n#### Complexity\n\n$O(\\log n)$ multiplications. Matrix power of a $k \\times k$ matrix costs $O(k^3 \\log n)$.\n\n#### Edge cases and bugs\n\n- `m = 1`: every result is 0; `1 % m` handles it.\n- Negative exponent with `n = INT_MIN`: `-n` overflows in 32 bits; store n in a 64-bit variable first.\n- Forgetting to reduce `x` before the loop: the first square may overflow.\n- Floating-point powers lose precision for large n; integer problems should stay in integers.\n\n#### Variants\n\n- Modular inverse via Fermat: `powMod(a, p - 2, p)`.\n- Linear recurrences (tribonacci, tiling counts) with matrix exponentiation.\n- Count paths of length k in a graph: the adjacency matrix to the power k.\n- \"Super pow\" with a huge exponent given as digits: process digit by digit using $a^{10k + d} = (a^k)^{10} \\cdot a^d$.\n\nConnects to: divide and conquer, modular arithmetic, modular inverse, DP on numbers."
    }
   },
   {
@@ -14570,9 +14880,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Under a modulus you can't divide normally, but you can multiply by a special number that undoes multiplication, called the modular inverse. For a prime modulus p, the inverse of a is a raised to the power p − 2, thanks to Fermat's little theorem. With inverses of factorials precomputed, binomial coefficients like \"n choose r\" can be answered instantly.",
+    "interview": [
+     "**Fermat**: for prime p and a not divisible by p, `a^(p-1) ≡ 1`, so `a⁻¹ ≡ a^(p-2) (mod p)`: O(log p).",
+     "Non-prime modulus: inverse exists iff `gcd(a, m) = 1`; compute it with the **extended Euclidean algorithm**.",
+     "**nCr mod p**: precompute `fact[i]` and `invFact[i]` up to N in O(N): `invFact[N] = fact[N]^(p-2)`, then `invFact[i-1] = invFact[i] · i`. Then `C(n, r) = fact[n] · invFact[r] · invFact[n-r]`: O(1) per query.",
+     "Requires n < p (true for p = 1e9+7 and n up to 10⁶ or so). For n ≥ p use Lucas's theorem.",
+     "Inverses of 1..n in O(n): `inv[i] = −(p / i) · inv[p mod i] mod p`."
+    ],
+    "questions": [
+     {
+      "q": "How do you compute a modular inverse modulo a prime p?",
+      "a": "By Fermat's little theorem, a^(p − 1) ≡ 1 (mod p) when p doesn't divide a, so a · a^(p − 2) ≡ 1 and the inverse is a^(p − 2) mod p, computed with fast exponentiation in O(log p)."
+     },
+     {
+      "q": "How do you answer many nCr mod p queries quickly?",
+      "a": "Precompute factorials fact[i] and inverse factorials invFact[i] up to the largest n: compute invFact[N] with one modular exponentiation, then invFact[i − 1] = invFact[i] · i. Each query is fact[n] · invFact[r] · invFact[n − r] mod p, in O(1)."
+     },
+     {
+      "q": "What if the modulus isn't prime?",
+      "a": "An inverse of a exists only when gcd(a, m) = 1, and it can be found with the extended Euclidean algorithm, which solves a · x + m · y = 1. Fermat's shortcut doesn't apply."
+     },
+     {
+      "q": "Why must n be smaller than p for the factorial method?",
+      "a": "If n ≥ p, then n! contains the factor p and is 0 mod p, so its inverse doesn't exist. For such cases, Lucas's theorem splits n and r into base-p digits."
+     }
+    ]
    }
   },
   {
@@ -14597,9 +14930,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Combinatorics counts arrangements and selections, such as how many ways to choose 3 people from 10. In code you usually build a table, Pascal's triangle, where each entry is the sum of the two above it. Catalan numbers are another famous sequence that counts things like valid bracket strings and different shapes of binary trees.",
+    "interview": [
+     "**Pascal**: `C(n, k) = C(n-1, k-1) + C(n-1, k)`, `C(n, 0) = C(n, n) = 1`: O(n²) table, no division, works with any modulus.",
+     "Direct: `C(n, k) = n! / (k! (n-k)!)`; multiplicatively `res = res · (n - i) / (i + 1)` for i < k stays exact in integers (divide at each step), O(k).",
+     "**Catalan**: `C_n = C(2n, n) / (n + 1)`: 1, 1, 2, 5, 14, 42, 132…; recurrence `C_{n+1} = Σ C_i · C_{n-i}`.",
+     "Catalan counts: valid parentheses strings with n pairs, structurally different BSTs with n keys, polygon triangulations, monotone lattice paths not crossing the diagonal.",
+     "Grid paths: `C(R + C − 2, R − 1)`. Stars and bars: ways to split n identical items into k groups = `C(n + k − 1, k − 1)`.",
+     "Use 64-bit; C(60, 30) ≈ 1.18 × 10¹⁷ fits, C(70, 35) doesn't."
+    ],
+    "questions": [
+     {
+      "q": "How do you compute binomial coefficients with Pascal's triangle?",
+      "a": "Use C(n, k) = C(n − 1, k − 1) + C(n − 1, k) with C(n, 0) = C(n, n) = 1, filling a table row by row. It avoids division, so it works under any modulus, in O(n²) time."
+     },
+     {
+      "q": "What are Catalan numbers, and what do they count?",
+      "a": "The sequence 1, 1, 2, 5, 14, 42, … given by C_n = C(2n, n)/(n + 1). They count valid strings of n pairs of parentheses, structurally different binary search trees with n nodes, and triangulations of a polygon with n + 2 sides, among many others."
+     },
+     {
+      "q": "How do you count structurally unique BSTs with n nodes?",
+      "a": "Choose each value i as the root: the left subtree has i − 1 nodes and the right has n − i, so count(n) = Σ count(i − 1) · count(n − i), with count(0) = 1. That's the Catalan recurrence, O(n²) with DP."
+     },
+     {
+      "q": "How can you compute C(n, k) exactly without overflow from factorials?",
+      "a": "Build the result step by step: start with 1 and for i from 0 to k − 1 multiply by (n − i) and then divide by (i + 1). After each step the value is C(n, i + 1), an integer, so the division is exact and intermediate values stay small."
+     }
+    ]
    }
   },
   {
@@ -14628,9 +14985,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Randomized algorithms use random choices to be fair, fast or simple. Shuffling a deck fairly, picking a random item from a stream too long to store, or choosing items in proportion to their weights all have small, exact recipes. The key is making every outcome equally likely (or exactly as likely as it should be), not just random-looking.",
+    "interview": [
+     "**Fisher-Yates shuffle**: for i from n − 1 down to 1, swap `a[i]` with `a[rand(0..i)]`. Every permutation is equally likely; O(n). Swapping with `rand(0..n-1)` each time is biased.",
+     "**Reservoir sampling** (one item from a stream of unknown length): keep the i-th item with probability 1/i. Each item ends up chosen with probability 1/n. For k items: replace a random slot with probability k/i.",
+     "**Weighted pick**: prefix sums of weights, draw `r` in [1, total], binary search the first prefix ≥ r: O(log n) per pick.",
+     "**rand7 → rand10**: `(rand7() − 1) · 7 + rand7()` is uniform on 1..49; reject values above 40, return `(x − 1) % 10 + 1`. Expected about 2.45 calls to rand7 per result.",
+     "**Random pick with blacklist**, **random point in a circle** (rejection sampling or `sqrt` of a uniform radius).",
+     "Randomized quickselect and quicksort avoid worst cases on adversarial input."
+    ],
+    "questions": [
+     {
+      "q": "How does the Fisher-Yates shuffle produce every permutation with equal probability?",
+      "a": "For i from the last index down to 1, it swaps a[i] with a uniformly random index from 0 to i. This makes n · (n − 1) · … · 1 = n! equally likely choice sequences, and each corresponds to exactly one permutation."
+     },
+     {
+      "q": "How do you choose one item uniformly from a stream whose length you don't know?",
+      "a": "Reservoir sampling: keep the first item, and when the i-th item arrives, replace the kept item with it with probability 1/i. By induction, after n items each has probability 1/n of being kept."
+     },
+     {
+      "q": "How do you pick an index with probability proportional to its weight?",
+      "a": "Build prefix sums of the weights, draw a uniform integer r from 1 to the total, and binary search for the first prefix sum at least r. Each index covers a range of length equal to its weight. Setup is O(n) and each pick O(log n)."
+     },
+     {
+      "q": "How do you build rand10 from rand7?",
+      "a": "Combine two calls into a uniform number from 1 to 49 with (rand7() − 1) · 7 + rand7(). Accept it if it's at most 40 and return (x − 1) mod 10 + 1; otherwise try again. Rejection keeps the result uniform, with about 2.45 calls to rand7 per result on average."
+     },
+     {
+      "q": "Why is swapping each element with a random position anywhere in the array biased?",
+      "a": "It produces n^n equally likely sequences of swaps, and n^n isn't divisible by n! in general, so the permutations can't all be equally likely. For n = 3, 27 outcomes are spread over 6 permutations."
+     }
+    ],
+    "deep": "#### Intuition\n\nFairness is about counting outcomes. Fisher-Yates makes $n \\cdot (n-1) \\cdots 1 = n!$ equally likely choices, one per permutation. Reservoir sampling keeps the current choice correct at every step: after seeing $i$ items, each is the kept one with probability $1/i$. Rejection sampling builds a uniform range from a smaller one by throwing away the uneven remainder.\n\n#### Worked example: reservoir sampling over 3 items\n\n| item | keep it with probability | P(each earlier item still kept) |\n|---|---|---|\n| 1 | 1 | item 1: 1 |\n| 2 | 1/2 | item 1: 1 × 1/2 = 1/2; item 2: 1/2 |\n| 3 | 1/3 | items 1 and 2: 1/2 × 2/3 = 1/3; item 3: 1/3 |\n\nEach item ends up with probability 1/3, without knowing the length in advance.\n\n#### Code\n\n```cpp\nvoid fisherYates(vector<int>& a, mt19937& rng) {\n    for (int i = (int)a.size() - 1; i > 0; i--) {\n        uniform_int_distribution<int> pick(0, i);          // position among 0..i\n        swap(a[i], a[pick(rng)]);\n    }\n}\n\nclass WeightedPicker {\n    vector<long long> prefix;\n    mt19937_64 rng{42};\npublic:\n    explicit WeightedPicker(const vector<int>& w) {\n        long long s = 0;\n        for (int x : w) prefix.push_back(s += x);\n    }\n    int pick() {\n        uniform_int_distribution<long long> d(1, prefix.back());\n        long long r = d(rng);                              // a point in [1, total]\n        return lower_bound(prefix.begin(), prefix.end(), r) - prefix.begin();\n    }\n};\n```\n\n```python\nimport random\n\ndef reservoir_sample(stream, k, rng=random):\n    \"\"\"k items chosen uniformly from an iterable of unknown length.\"\"\"\n    sample = []\n    for i, item in enumerate(stream, 1):\n        if i <= k:\n            sample.append(item)\n        else:\n            j = rng.randrange(i)          # 0 .. i-1\n            if j < k:\n                sample[j] = item          # the new item enters with probability k / i\n    return sample\n\ndef rand10_from_rand7(rand7):\n    while True:\n        x = (rand7() - 1) * 7 + rand7()   # uniform 1..49\n        if x <= 40:\n            return (x - 1) % 10 + 1       # 40 values: each of 1..10 four times\n```\n\n#### Why the naive shuffle is biased\n\nSwapping each position with a random position in **0..n−1** makes $n^n$ equally likely sequences of choices. Since $n^n$ is not divisible by $n!$ in general (for $n = 3$: 27 versus 6), some permutations must come up more often than others.\n\n#### Complexity\n\nShuffle and reservoir sampling: $O(n)$ time, $O(1)$ and $O(k)$ extra space. Weighted pick: $O(n)$ setup, $O(\\log n)$ per pick. rand10: expected $O(1)$ (about 2.45 calls).\n\n#### Edge cases and bugs\n\n- `rand() % n` is slightly biased when `RAND_MAX + 1` isn't a multiple of n; use `<random>` distributions.\n- Weighted pick with zero weights: they must never be chosen, which `lower_bound` on strictly increasing parts guarantees only if you draw from [1, total].\n- Seeding: a fixed seed makes tests reproducible; a time-based seed avoids predictability.\n\n#### Variants\n\n- Random pick index for a target value in a stream (reservoir over matching items).\n- Shuffle a linked list (reservoir-style or copy to an array).\n- Random point in non-overlapping rectangles (weighted by area, then uniform inside).\n- Monte Carlo estimates, randomized hashing (anti-hash protection).\n\nConnects to: quickselect, custom hashing, probability basics (quant), prefix sums with binary search.",
+    "signals": [
+     "shuffle fairly, or sample uniformly at random",
+     "pick one or k items from a stream of unknown length",
+     "choose an index with probability proportional to a weight",
+     "build a uniform generator from a different uniform generator"
+    ],
+    "template": "```cpp\n// Randomized building blocks with a proper generator.\nstruct Random {\n    mt19937_64 rng{random_device{}()};\n    long long uniform(long long lo, long long hi) {           // inclusive range\n        return uniform_int_distribution<long long>(lo, hi)(rng);\n    }\n    template <class T> void shuffle(vector<T>& a) {          // Fisher-Yates\n        for (int i = (int)a.size() - 1; i > 0; i--) swap(a[i], a[uniform(0, i)]);\n    }\n    template <class T> T reservoirOne(const vector<T>& stream) {   // one uniform item\n        T kept{};\n        long long seen = 0;\n        for (const T& x : stream)\n            if (uniform(1, ++seen) == 1) kept = x;           // keep with probability 1/seen\n        return kept;\n    }\n};\n```"
    }
   },
   {
@@ -14650,9 +15043,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Most geometry questions in coding interviews reduce to a single tool, the cross product, which tells you whether you turn left, turn right or go straight when walking from one point to another and on to a third. With it you can check whether points lie on one line or whether segments cross, and wrap a set of points in the tightest fence, called the convex hull. Using integers instead of decimals avoids rounding errors.",
+    "interview": [
+     "**Cross product** of vectors (x1, y1) and (x2, y2): `x1·y2 − y1·x2`. For points A, B, C: `cross(B − A, C − A)` > 0 means a left (counter-clockwise) turn, < 0 right, 0 collinear.",
+     "**Max points on a line**: for each point, count others by reduced slope `(dy/g, dx/g)` with a normalized sign: O(n²). Avoid floating-point slopes.",
+     "**Segment intersection**: orientations of each segment's endpoints relative to the other must differ (plus collinear overlap cases).",
+     "**Convex hull** (Andrew's monotone chain): sort points, build lower and upper hulls popping while the turn isn't counter-clockwise: O(n log n).",
+     "**Polygon area** (shoelace): half the absolute sum of cross products of consecutive vertices.",
+     "Use 64-bit integers for cross products of 32-bit coordinates."
+    ],
+    "questions": [
+     {
+      "q": "How does the cross product tell you the orientation of three points?",
+      "a": "Compute cross(B − A, C − A) = (Bx − Ax)(Cy − Ay) − (By − Ay)(Cx − Ax). Positive means the path A → B → C turns counter-clockwise (left), negative means clockwise (right), and zero means the points are collinear."
+     },
+     {
+      "q": "How do you find the maximum number of points on one line?",
+      "a": "For each point, group every other point by the direction to it, stored as a reduced fraction (dy/g, dx/g) with a fixed sign convention, and count duplicates of the same point separately. The largest group plus duplicates and the point itself gives the best line through it. That's O(n²)."
+     },
+     {
+      "q": "What is the monotone chain convex hull algorithm?",
+      "a": "Sort the points by x then y. Build the lower hull left to right, popping the last point while it doesn't make a counter-clockwise turn with the new point, then build the upper hull right to left the same way. Joining them gives the hull in O(n log n)."
+     },
+     {
+      "q": "How do you compute a polygon's area from its vertices?",
+      "a": "Use the shoelace formula: sum the cross products x_i · y_(i+1) − x_(i+1) · y_i over consecutive vertices (wrapping around) and take half the absolute value. With integer coordinates, twice the area is an integer."
+     }
+    ]
    }
   },
   {
@@ -14674,9 +15091,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A couple of number theory tools show up in harder problems. The extended Euclidean algorithm not only finds the greatest common divisor of a and b but also numbers x and y with a·x + b·y equal to it, which gives modular inverses for any modulus. Euler's totient counts how many numbers up to n share no common factor with n.",
+    "interview": [
+     "**Extended Euclid**: returns (g, x, y) with `a·x + b·y = g = gcd(a, b)`, recursively from `(b, a mod b)`: `x = y', y = x' − (a / b)·y'`. O(log min(a, b)).",
+     "**Modular inverse** of a mod m (when gcd(a, m) = 1): x from `a·x + m·y = 1`, normalized to [0, m).",
+     "**Linear Diophantine** `a·x + b·y = c` has integer solutions iff gcd(a, b) divides c.",
+     "**Euler's totient** φ(n) = n · ∏(1 − 1/p) over distinct primes p dividing n: O(√n) with factorization; a sieve computes φ for all n up to N.",
+     "**Euler's theorem**: `a^φ(m) ≡ 1 (mod m)` when gcd(a, m) = 1 (Fermat's theorem is the prime case).",
+     "Chinese remainder theorem: combine congruences with coprime moduli."
+    ],
+    "questions": [
+     {
+      "q": "What does the extended Euclidean algorithm compute?",
+      "a": "Besides g = gcd(a, b), it finds integers x and y with a · x + b · y = g. It follows Euclid's recursion and, on the way back, updates the coefficients: if b · x′ + (a mod b) · y′ = g, then x = y′ and y = x′ − (a / b) · y′."
+     },
+     {
+      "q": "How do you find a modular inverse when the modulus isn't prime?",
+      "a": "If gcd(a, m) = 1, run the extended Euclidean algorithm to get a · x + m · y = 1. Then a · x ≡ 1 (mod m), so x mod m (normalized to be non-negative) is the inverse. If the gcd isn't 1, no inverse exists."
+     },
+     {
+      "q": "What is Euler's totient function, and how do you compute it?",
+      "a": "φ(n) counts the integers from 1 to n that are coprime to n. Factor n into distinct primes and compute n · ∏(1 − 1/p), for example φ(12) = 12 · (1/2) · (2/3) = 4, corresponding to 1, 5, 7 and 11."
+     },
+     {
+      "q": "When does a · x + b · y = c have integer solutions?",
+      "a": "Exactly when gcd(a, b) divides c. A solution is obtained by scaling the extended Euclid coefficients by c / gcd(a, b), and all others differ by multiples of (b/g, −a/g)."
+     }
+    ]
    }
   },
   {
@@ -14696,9 +15137,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A segment tree answers questions about ranges of an array, such as their sum or minimum, even while the array keeps changing. It splits the array in halves again and again and stores an answer for every piece, like a tournament bracket that records the winner of every sub-bracket. Any range is covered by a few of those pieces, so both updates and questions take only logarithmic time.",
+    "interview": [
+     "Each node stores the aggregate (sum, min, max, gcd…) of a segment; children cover the two halves; leaves are single elements.",
+     "**Build** O(n), **point update** O(log n) (update the leaf and its ancestors), **range query** O(log n) (combine O(log n) fully covered nodes).",
+     "Works for any **associative** operation with an identity (0 for sum, +∞ for min).",
+     "Array layout: size 4n for the recursive version; the iterative bottom-up version uses 2n.",
+     "Compared with prefix sums: supports updates. Compared with a Fenwick tree: more general (min, max, custom merges, lazy range updates), more code.",
+     "Advanced: lazy propagation (range updates), persistent and dynamic (sparse) segment trees, merge sort trees."
+    ],
+    "questions": [
+     {
+      "q": "What does a segment tree store, and what operations does it support?",
+      "a": "Each node stores an aggregate, such as the sum or minimum, of a contiguous segment, with children covering its two halves. It supports point updates and range queries in O(log n) after an O(n) build."
+     },
+     {
+      "q": "Why is a range query O(log n)?",
+      "a": "At each level of the tree, at most two nodes are partially covered by the query range, and the recursion only continues into those. Fully covered nodes are returned immediately, so the total work is proportional to the height, O(log n)."
+     },
+     {
+      "q": "When would you choose a segment tree over a Fenwick tree?",
+      "a": "When the operation isn't invertible, like minimum or maximum, when nodes need to merge richer information (such as the maximum subarray sum of a segment), or when you need range updates with lazy propagation. Fenwick trees are simpler for prefix sums with point updates."
+     },
+     {
+      "q": "What operations can a segment tree aggregate?",
+      "a": "Any associative operation with an identity element: sum, product, minimum, maximum, gcd, bitwise AND/OR/XOR, or a custom merge of structured data. Associativity lets segments be combined in any grouping."
+     },
+     {
+      "q": "How much memory does a recursive segment tree need?",
+      "a": "Up to 4n nodes for an array of n elements, because the tree's height is the ceiling of log₂ n and the array layout reserves space for a full binary tree. The iterative bottom-up version needs exactly 2n entries."
+     }
+    ],
+    "deep": "#### Intuition\n\nPrefix sums answer range sums in O(1) but need O(n) to update. A segment tree precomputes answers for $O(n)$ well-chosen segments (halves, quarters, …). Any range can be split into at most about $2 \\log n$ of these, and changing one element only affects the $\\log n$ segments that contain it.\n\n#### Worked example: range sums over `2 1 5 3 4`\n\nTree of segments (sum in brackets):\n\n```\n[0,4]=15\n├── [0,2]=8\n│   ├── [0,1]=3\n│   │   ├── [0,0]=2\n│   │   └── [1,1]=1\n│   └── [2,2]=5\n└── [3,4]=7\n    ├── [3,3]=3\n    └── [4,4]=4\n```\n\nQuery sum(1, 3): covered by [1,1] (1) + [2,2] (5) + [3,3] (3) = 9. Update a[2] = 0: change [2,2], [0,2] and [0,4] only.\n\n#### Code\n\n```cpp\nclass SegmentTree {                               // range sum, point assignment\n    int n;\n    vector<long long> t;\n    void build(const vector<int>& a, int node, int l, int r) {\n        if (l == r) { t[node] = a[l]; return; }\n        int m = (l + r) / 2;\n        build(a, 2 * node, l, m);\n        build(a, 2 * node + 1, m + 1, r);\n        t[node] = t[2 * node] + t[2 * node + 1];\n    }\n    void update(int node, int l, int r, int pos, long long val) {\n        if (l == r) { t[node] = val; return; }\n        int m = (l + r) / 2;\n        if (pos <= m) update(2 * node, l, m, pos, val);\n        else update(2 * node + 1, m + 1, r, pos, val);\n        t[node] = t[2 * node] + t[2 * node + 1];\n    }\n    long long query(int node, int l, int r, int ql, int qr) const {\n        if (qr < l || r < ql) return 0;               // disjoint: identity\n        if (ql <= l && r <= qr) return t[node];        // fully covered\n        int m = (l + r) / 2;\n        return query(2 * node, l, m, ql, qr) + query(2 * node + 1, m + 1, r, ql, qr);\n    }\npublic:\n    explicit SegmentTree(const vector<int>& a) : n(a.size()), t(4 * max(1, (int)a.size()), 0) {\n        if (n) build(a, 1, 0, n - 1);\n    }\n    void set(int pos, long long val) { update(1, 0, n - 1, pos, val); }\n    long long sum(int l, int r) const { return query(1, 0, n - 1, l, r); }\n};\n```\n\n```python\nclass MinSegmentTree:\n    \"\"\"Iterative bottom-up segment tree for range minimum with point updates.\"\"\"\n    def __init__(self, a):\n        self.n = len(a)\n        self.t = [float(\"inf\")] * self.n + list(a)\n        for i in range(self.n - 1, 0, -1):\n            self.t[i] = min(self.t[2 * i], self.t[2 * i + 1])\n\n    def update(self, i, value):\n        i += self.n\n        self.t[i] = value\n        while i > 1:\n            i //= 2\n            self.t[i] = min(self.t[2 * i], self.t[2 * i + 1])\n\n    def query(self, l, r):                 # inclusive l..r\n        res = float(\"inf\")\n        l += self.n\n        r += self.n + 1\n        while l < r:\n            if l & 1:\n                res = min(res, self.t[l])\n                l += 1\n            if r & 1:\n                r -= 1\n                res = min(res, self.t[r])\n            l //= 2\n            r //= 2\n        return res\n```\n\n#### Choosing a range structure\n\n| Need | Structure |\n|---|---|\n| static array, range sums | prefix sums, $O(1)$ query |\n| static array, range min or max | sparse table, $O(1)$ query |\n| point updates, range sums | Fenwick tree (short code) |\n| point updates, range min, max or custom merges | segment tree |\n| range updates and range queries | segment tree with lazy propagation |\n\nStart from the simplest structure that supports the required operations; interviewers value knowing when a segment tree is **not** needed.\n\n#### Complexity\n\nBuild $O(n)$; update and query $O(\\log n)$; memory $O(n)$ (4n or 2n entries).\n\n#### Edge cases and bugs\n\n- Array size 2n is not enough for the recursive layout with arbitrary n; use 4n.\n- Returning the wrong identity for disjoint segments (0 for min is wrong).\n- Off-by-one in inclusive versus half-open query ranges.\n- Integer overflow in sums.\n\n#### Variants\n\n- Range minimum and maximum, gcd, count of elements satisfying a property, maximum subarray sum per segment (store four values per node).\n- Lazy propagation for range updates.\n- Segment tree over values (after coordinate compression) to count smaller elements.\n- Segment tree beats, persistent segment trees (advanced).\n\nConnects to: Fenwick tree, lazy propagation, prefix sums, sparse table."
    }
   },
   {
@@ -14720,9 +15190,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Lazy propagation lets a segment tree update a whole range at once without touching every element. When an update covers an entire segment, the tree changes that segment's stored answer and leaves a note saying \"my children still owe this update\", like a manager who records a team-wide raise without updating each payslip yet. The note is passed down only when someone later asks about a smaller piece.",
+    "interview": [
+     "Each node has a **lazy tag** for a pending update to its whole segment.",
+     "**Range update**: for a fully covered node, apply the update to its value and tag, then stop; otherwise **push down** its tag to the children and recurse.",
+     "**Query**: push down tags on the way when splitting.",
+     "Range add + range sum: value += add × segment length; range assign + range min, etc.",
+     "Update and query both **O(log n)**.",
+     "Composing tags (assign after add, add after assign) must be defined carefully when mixing operations."
+    ],
+    "questions": [
+     {
+      "q": "What problem does lazy propagation solve?",
+      "a": "Updating every element in a range of a segment tree would cost O(n). Lazy propagation applies the update to the O(log n) nodes that fully cover the range and stores a pending tag for their children, making range updates O(log n)."
+     },
+     {
+      "q": "When are lazy tags pushed down?",
+      "a": "Whenever an operation needs to go below a node that has a pending tag, because a query or update only partly covers it. The tag is applied to both children's values and merged into their tags, then cleared at the node."
+     },
+     {
+      "q": "How does a range-add tag affect a node storing a range sum?",
+      "a": "Adding v to every element of a segment of length len increases its sum by v · len, so the node's value is updated immediately, and v is added to its lazy tag for the children."
+     },
+     {
+      "q": "What is tricky about supporting both \"assign\" and \"add\" range updates?",
+      "a": "The tags must compose in the right order: an assignment overrides any earlier pending add, while an add after an assignment modifies the assigned value. The node needs a representation (for example, an optional assign value plus an add value) and a correct rule for combining them."
+     }
+    ]
    }
   },
   {
@@ -14744,9 +15238,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A Fenwick tree, or binary indexed tree, keeps running totals that can be updated quickly. Each position stores the sum of a block of the array whose size is decided by the position's lowest binary 1 bit. Adding to an element or asking for a prefix total hops through only about log n blocks.",
+    "interview": [
+     "1-indexed array `bit`; `bit[i]` covers `(i − (i & −i), i]`.",
+     "**Add** at i: `for (; i <= n; i += i & -i) bit[i] += v`. **Prefix sum** up to i: `for (; i > 0; i -= i & -i) s += bit[i]`. Both **O(log n)**.",
+     "Range sum `[l, r]` = prefix(r) − prefix(l − 1). Build in O(n log n) with adds, or O(n) with a linear pass.",
+     "Needs an **invertible** operation for range queries (sum, XOR); prefix max works only with non-decreasing updates.",
+     "**Counting inversions**: compress values, scan from the right, add 1 at each value, and query how many smaller values are already present.",
+     "Variants: range update + point query (Fenwick over the difference array), range update + range query (two trees), 2D Fenwick."
+    ],
+    "questions": [
+     {
+      "q": "How does a Fenwick tree compute prefix sums and handle updates in O(log n)?",
+      "a": "Position i stores the sum of the i & −i elements ending at i. A prefix sum adds bit[i] and jumps to i − (i & −i), and an update adds to bit[i] and jumps to i + (i & −i); either way the number of jumps is at most the number of bits, O(log n)."
+     },
+     {
+      "q": "What does i & −i mean in a Fenwick tree?",
+      "a": "It's the lowest set bit of i, which is the length of the block that bit[i] covers. For example, 12 is 1100 in binary, so bit[12] covers the 4 elements from 9 to 12."
+     },
+     {
+      "q": "How do you count inversions with a Fenwick tree?",
+      "a": "Compress the values to ranks 1..n. Scan the array from right to left; for each value, query the Fenwick tree for how many smaller ranks have been added (they are to its right and smaller), then add 1 at its rank. The total over all elements is the inversion count, in O(n log n)."
+     },
+     {
+      "q": "What can't a basic Fenwick tree do that a segment tree can?",
+      "a": "Arbitrary range minimum or maximum queries with updates, because those operations can't be undone by subtraction to isolate a range. Fenwick trees work best for sums, counts and XOR."
+     }
+    ]
    }
   },
   {
@@ -14766,9 +15284,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A sparse table answers \"what is the minimum in this range?\" instantly for an array that never changes. It precomputes the minimum of every block whose length is a power of two, starting at every position. Any range is covered by two such blocks that may overlap, and because overlapping doesn't matter for a minimum, one comparison gives the answer.",
+    "interview": [
+     "`st[k][i]` = min of `a[i .. i + 2ᵏ − 1]`; `st[k][i] = min(st[k-1][i], st[k-1][i + 2^(k-1)])`. Build **O(n log n)** time and space.",
+     "Query `[l, r]`: `k = floor(log2(r − l + 1))`, answer `min(st[k][l], st[k][r − 2ᵏ + 1])`: **O(1)**.",
+     "Works in O(1) only for **idempotent** operations (min, max, gcd, AND, OR) where overlap is harmless; sums need a non-overlapping O(log n) decomposition.",
+     "**Static arrays only**: no updates.",
+     "Uses: LCA via Euler tour + RMQ, range min/max queries in bulk, sliding window extremes (though a deque is simpler)."
+    ],
+    "questions": [
+     {
+      "q": "How does a sparse table answer range minimum queries in O(1)?",
+      "a": "It stores the minimum of every block of length 2^k starting at every index. For a query [l, r], take the largest k with 2^k ≤ r − l + 1; the two blocks starting at l and ending at r cover the range, possibly overlapping, and the answer is the smaller of their minimums."
+     },
+     {
+      "q": "Why doesn't the O(1) query work for sums?",
+      "a": "The two blocks can overlap, and an overlapping element would be counted twice in a sum. Minimum, maximum, gcd and bitwise AND/OR are idempotent, so double-counting doesn't change them."
+     },
+     {
+      "q": "What are the build cost and limitations of a sparse table?",
+      "a": "Building takes O(n log n) time and memory. It supports no updates: changing one element would affect O(n) entries, so it's only for static arrays."
+     },
+     {
+      "q": "How is a sparse table used to find lowest common ancestors?",
+      "a": "Record an Euler tour of the tree with the depth of each visited node. The LCA of u and v is the shallowest node between their first occurrences in the tour, which is a range minimum query answered in O(1) by a sparse table."
+     }
+    ]
    }
   },
   {
@@ -14788,9 +15329,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Coordinate compression replaces large or scattered values by their rank among all values, keeping only their order. The values 1000, 7 and 5000000 become 2, 1 and 3. That lets you use arrays, Fenwick trees or segment trees indexed by value, even when the original values are huge or negative.",
+    "interview": [
+     "Collect all values that matter (including query endpoints), **sort and deduplicate**, then map each value to its index with binary search (`lower_bound`) or a hash map.",
+     "**O(n log n)**; ranks range over 0..k−1 for k distinct values.",
+     "Preserves order (and equality), which is all that comparisons, counting and ordering need; distances between values are lost.",
+     "Uses: Fenwick tree over values (count smaller elements, inversions), sweep lines with large coordinates, 2D grids from sparse points, segment trees over time.",
+     "When distances matter (covered length), keep the original coordinates in the sorted array and use differences between neighbors."
+    ],
+    "questions": [
+     {
+      "q": "What is coordinate compression, and why is it useful?",
+      "a": "Mapping each value to its rank among the sorted distinct values. It turns huge, negative or sparse values into small indices from 0 to k − 1, so they can index arrays, Fenwick trees or segment trees, while preserving their relative order."
+     },
+     {
+      "q": "How do you implement it?",
+      "a": "Copy all relevant values, sort them and remove duplicates, then find each value's rank with a binary search (lower_bound) or by building a map from value to index. The total cost is O(n log n)."
+     },
+     {
+      "q": "What information is lost, and when does that matter?",
+      "a": "The gaps between values are lost: ranks 1 and 2 might have been 5 and 5,000,000. It matters for questions about lengths or distances, such as total covered length, where you must keep the sorted original values and use differences between consecutive ones."
+     },
+     {
+      "q": "Why must query values be included when compressing?",
+      "a": "If a later query uses a value that wasn't in the compressed set, it has no rank. Including every value that can appear, from the data and from the queries, before sorting guarantees a consistent mapping."
+     }
+    ]
    }
   },
   {
