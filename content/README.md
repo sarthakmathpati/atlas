@@ -90,6 +90,8 @@ article), and headings inside code fences are ignored.
   `java.util` imports for Java (a Java block holds types, or members that get wrapped in a class;
   top-level `public` is fine). Start a block with `// sketch` (or `# sketch`) when it is
   deliberately partial. Run the snippets against their worked examples before committing.
+  Keep code lines within 100 characters (the reading column fits about 80 before it scrolls),
+  and never put a URL in content: the artifact build rejects unknown URLs.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. If you must, add the old id to

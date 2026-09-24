@@ -285,7 +285,8 @@ void transfer(BankAccount& from, BankAccount& to, long long x) {
 int main() {
     BankAccount a;
     vector<thread> ts;
-    for (int i = 0; i < 8; ++i) ts.emplace_back([&] { for (int k = 0; k < 10000; ++k) a.deposit(1); });
+    for (int i = 0; i < 8; ++i)
+        ts.emplace_back([&] { for (int k = 0; k < 10000; ++k) a.deposit(1); });
     for (auto& t : ts) t.join();
     cout << a.get() << "\n";                    // 80000
 }
@@ -658,7 +659,7 @@ public:
     void lock() {
         while (true) {
             if (!locked.exchange(true, memory_order_acquire)) return;   // test-and-set
-            while (locked.load(memory_order_relaxed)) {}                // test: spin on a cached read
+            while (locked.load(memory_order_relaxed)) {}  // test: spin on a cached read
         }
     }
     void unlock() { locked.store(false, memory_order_release); }
@@ -933,7 +934,8 @@ void writer(int v) {
 int main() {
     vector<thread> ts;
     atomic<long long> seen{0};
-    for (int i = 0; i < 4; ++i) ts.emplace_back([&] { for (int k = 0; k < 1000; ++k) seen += reader(); });
+    for (int i = 0; i < 4; ++i)
+        ts.emplace_back([&] { for (int k = 0; k < 1000; ++k) seen += reader(); });
     ts.emplace_back([] { for (int k = 1; k <= 1000; ++k) writer(k); });
     for (auto& t : ts) t.join();
     cout << "final value " << value << "\n";   // final value 1000
@@ -1202,7 +1204,8 @@ pthread_mutex_t lockX;
 void initLock() {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
-    pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);   // holder inherits waiters' priority
+    // holder inherits waiters' priority
+    pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
     pthread_mutex_init(&lockX, &attr);
     pthread_mutexattr_destroy(&attr);
 }

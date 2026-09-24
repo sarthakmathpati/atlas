@@ -427,7 +427,7 @@ final class Money {                              // final: no mutable subclass c
 
 final class Invoice {
     private final List<Money> items;
-    Invoice(List<Money> items) { this.items = List.copyOf(items); }   // defensive, unmodifiable copy
+    Invoice(List<Money> items) { this.items = List.copyOf(items); }  // defensive, unmodifiable copy
     List<Money> items() { return items; }        // safe to return: callers cannot modify it
 }
 ```
@@ -538,9 +538,9 @@ public:
     Vec2 operator-() const { return {-x, -y}; }                             // unary minus
     double& operator[](int i) { return i == 0 ? x : y; }                     // must be a member
 
-    friend Vec2 operator+(Vec2 a, const Vec2& b) { a += b; return a; }       // symmetric, non-member
+    friend Vec2 operator+(Vec2 a, const Vec2& b) { a += b; return a; }  // symmetric, non-member
     friend bool operator==(const Vec2&, const Vec2&) = default;              // C++20
-    friend ostream& operator<<(ostream& os, const Vec2& v) {                 // friend: reads x and y
+    friend ostream& operator<<(ostream& os, const Vec2& v) {  // friend: reads x and y
         return os << "(" << v.x << ", " << v.y << ")";
     }
 };

@@ -507,7 +507,8 @@ int twice(int x) { return 2 * x; }                  // overloading: chosen at co
 string twice(const string& s) { return s + s; }
 
 template <typename T>
-T biggest(const vector<T>& v) { return *max_element(v.begin(), v.end()); }  // one template, many types
+// one template, many types
+T biggest(const vector<T>& v) { return *max_element(v.begin(), v.end()); }
 
 int main() {
     Dog d; Cat c;
@@ -964,7 +965,8 @@ class Shape {
 
 class Circle extends Shape {
     @Override
-    public Circle copy() { return new Circle(); }   // wider access, covariant return, fewer exceptions: all allowed
+    // wider access, covariant return, fewer exceptions: all allowed
+    public Circle copy() { return new Circle(); }
     // private Shape copy() {...}                 // error: reduces visibility
     // Shape copy() throws Exception {...}        // error: broader checked exception
 }

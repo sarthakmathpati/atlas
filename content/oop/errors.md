@@ -59,7 +59,7 @@ int main() {
     try {
         parsePort("99999");
     } catch (const invalid_argument& e) {
-        cout << e.what() << "\n";                                       // bad port '99999' (code -2)
+        cout << e.what() << "\n";  // bad port '99999' (code -2)
     }
     cout << tryParsePort("http").value_or(80) << "\n";                  // 80
 }
@@ -100,7 +100,7 @@ struct Bank {
     // Strong guarantee: do the throwing work on copies, then commit with no-throw swaps.
     void transferStrong(const string& a, const string& b, long long x) {
         auto newBalances = balances;                       // may throw: nothing changed yet
-        newBalances.at(a) -= x;                            // may throw (missing key): nothing changed
+        newBalances.at(a) -= x;  // may throw (missing key): nothing changed
         newBalances.at(b) += x;
         auto newAudit = audit;
         newAudit.push_back(a + "->" + b);                  // may throw: nothing changed
@@ -333,12 +333,12 @@ struct Account {
     long long balance = 0;
 
     void withdraw(long long amount) {
-        if (amount <= 0)                                     // validation: callers can get this wrong
+        if (amount <= 0)  // validation: callers can get this wrong
             throw invalid_argument("amount must be positive, got " + to_string(amount));
         if (amount > balance)
             throw runtime_error("insufficient funds");
         balance -= amount;
-        assert(balance >= 0);                                // assertion: our invariant, a bug if false
+        assert(balance >= 0);  // assertion: our invariant, a bug if false
     }
 };
 

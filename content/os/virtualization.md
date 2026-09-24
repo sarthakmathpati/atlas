@@ -26,18 +26,18 @@ A virtual machine is a whole pretend computer running as software on a real one,
 #### Type 1 vs type 2
 
 ```text
-   Type 1 (bare metal)                 Type 2 (hosted)
-+-------+-------+-------+          +-------+-------+
-| app   | app   | app   |          | app   | app   |
-| guest | guest | guest |          | guest | guest |   +--------------+
-|  OS   |  OS   |  OS   |          |  OS   |  OS   |   | host apps    |
-+-------+-------+-------+          +---------------+   |              |
-|      hypervisor       |          |  hypervisor app   |              |
-+-----------------------+          +----------------------------------+
-|       hardware        |          |             host OS              |
-+-----------------------+          +----------------------------------+
-                                   |             hardware             |
-                                   +----------------------------------+
+   Type 1 (bare metal)         Type 2 (hosted)
++-------+-------+-------+      +-------+-------+
+| app   | app   | app   |      | app   | app   |
+| guest | guest | guest |      | guest | guest |
+|  OS   |  OS   |  OS   |      |  OS   |  OS   | +-----+
++-------+-------+-------+      +-------+-------+ |host |
+|      hypervisor       |      |  hypervisor   | |apps |
++-----------------------+      +---------------+-+-----+
+|       hardware        |      |        host OS        |
++-----------------------+      +-----------------------+
+                               |       hardware        |
+                               +-----------------------+
 ```
 
 | | type 1 | type 2 |

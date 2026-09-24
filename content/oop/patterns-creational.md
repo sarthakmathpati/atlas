@@ -646,7 +646,9 @@ struct Circle : Shape {
 struct Polygon : Shape {
     vector<pair<int, int>> points;                        // owned: copied by vector's copy ctor
     unique_ptr<Shape> clone() const override { return make_unique<Polygon>(*this); }
-    string describe() const override { return "polygon with " + to_string(points.size()) + " points"; }
+    string describe() const override {
+        return "polygon with " + to_string(points.size()) + " points";
+    }
 };
 
 class Registry {                                          // prototype registry

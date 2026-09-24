@@ -155,7 +155,7 @@ int main() {
             readyToWrite = false;
             cv.notify_all();
             lk.unlock();
-            for (int x : out) written += x;               // "write to disk" without holding the lock
+            for (int x : out) written += x;  // "write to disk" without holding the lock
             lk.lock();
         }
     });
@@ -381,7 +381,8 @@ int main() {
     for (int i = 0; i < n; ++i) {
         char buf[16];
         ssize_t got = read(ready[i].data.fd, buf, sizeof buf);
-        cout << (ready[i].data.fd == b[0] ? "pipe b" : "pipe a") << ": " << string(buf, got) << "\n";
+        const char* name = ready[i].data.fd == b[0] ? "pipe b" : "pipe a";
+        cout << name << ": " << string(buf, got) << "\n";
     }
     cout << n << " of 2 ready\n";                    // pipe b: hello / 1 of 2 ready
     close(ep);

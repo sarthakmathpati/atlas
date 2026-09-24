@@ -492,7 +492,7 @@ def tlb_hit_ratio(addresses, entries, page_size=4096):
 sequential = [4 * i for i in range(100_000)]                   # walking an int array
 strided = [4096 * (i % 64) for i in range(100_000)]           # one access per page, 64 pages
 print(round(tlb_hit_ratio(sequential, 16), 4))                 # 0.999: 1 miss per 1,024 ints
-print(round(tlb_hit_ratio(strided, 16), 4))                    # 0.0: 64 pages cycling through 16 entries
+print(round(tlb_hit_ratio(strided, 16), 4))  # 0.0: 64 pages cycling through 16 entries
 ```
 
 Sequential access misses once per page (1 in 1,024 `int`s). The strided pattern touches 64 pages in a cycle with only 16 entries, so LRU evicts each translation just before it is needed again: every access misses.
@@ -502,13 +502,15 @@ Sequential access misses once per page (1 in 1,024 `int`s). The strided pattern 
 long long sumRows(const vector<int>& m, int n) {
     long long s = 0;
     for (int r = 0; r < n; ++r)
-        for (int c = 0; c < n; ++c) s += m[size_t(r) * n + c];   // sequential: TLB and cache friendly
+        // sequential: TLB and cache friendly
+        for (int c = 0; c < n; ++c) s += m[size_t(r) * n + c];
     return s;
 }
 long long sumCols(const vector<int>& m, int n) {
     long long s = 0;
     for (int c = 0; c < n; ++c)
-        for (int r = 0; r < n; ++r) s += m[size_t(r) * n + c];   // stride of n ints: many more misses
+        // stride of n ints: many more misses
+        for (int r = 0; r < n; ++r) s += m[size_t(r) * n + c];
     return s;
 }
 ```
@@ -579,7 +581,8 @@ The walk: CR3 → level-4 table entry 254 → level-3 table entry 72 → level-2
 int main() {
     uint64_t va = 0x00007f1234567abcULL;
     for (int level = 4, shift = 39; level >= 1; --level, shift -= 9)
-        printf("level %d index %llu\n", level, (unsigned long long)((va >> shift) & 0x1ff));   // 9 bits each
+        // 9 bits each
+        printf("level %d index %llu\n", level, (unsigned long long)((va >> shift) & 0x1ff));
     printf("offset 0x%llx\n", (unsigned long long)(va & 0xfff));
     // level 4 index 254, level 3 index 72, level 2 index 418, level 1 index 359, offset 0xabc
 }
@@ -1245,14 +1248,14 @@ void recurse(int n) {
     char buffer[1024];                       // 1 KB per frame
     buffer[0] = static_cast<char>(n);
     depth = max(depth, n);
-    if (n < 1000) recurse(n + 1);            // about 1 MB in total: fine; a million levels would overflow
+    if (n < 1000) recurse(n + 1);  // about 1 MB in total: fine; a million levels would overflow
 }
 
 int main() {
     auto p = fine();
     recurse(1);
     cout << *p << " " << depth << "\n";      // 42 1000
-    vector<int> big(10'000'000);             // 40 MB: the vector object is on the stack, its data on the heap
+    vector<int> big(10'000'000);  // 40 MB: the vector object is on the stack, its data on the heap
     cout << big.size() << "\n";
 }
 ```
@@ -1338,7 +1341,9 @@ class Arena {
     alignas(16) unsigned char mem[4096];
     Block* head;
 public:
-    Arena() : head(reinterpret_cast<Block*>(mem)) { *head = {sizeof mem - sizeof(Block), true, nullptr}; }
+    Arena() : head(reinterpret_cast<Block*>(mem)) {
+        *head = {sizeof mem - sizeof(Block), true, nullptr};     // one big free block
+    }
 
     void* alloc(size_t n) {
         n = (n + 15) & ~size_t(15);                              // keep 16-byte alignment
@@ -1353,7 +1358,7 @@ public:
             b->free = false;
             return b + 1;                                        // memory right after the header
         }
-        return nullptr;                                          // real malloc would call brk or mmap
+        return nullptr;  // real malloc would call brk or mmap
     }
 
     void release(void* p) {

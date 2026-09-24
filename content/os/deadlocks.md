@@ -193,7 +193,8 @@ vector<int> findCycle(const vector<vector<int>>& waitsFor) {
 }
 
 int main() {
-    // P0 waits for P1, P1 for P2, P2 for P0 (deadlocked); P3 waits for P0 (blocked, not in the cycle).
+    // P0 waits for P1, P1 for P2, P2 for P0 (deadlocked);
+    // P3 waits for P0 (blocked, but not in the cycle).
     auto c = findCycle({{1}, {2}, {0}, {0}});
     for (int p : c) cout << "P" << p << " ";          // P0 P1 P2
     cout << "\n";
@@ -462,7 +463,8 @@ vector<int> safeSequence(Vec work, const vector<Vec>& alloc, const vector<Vec>& 
         progress = false;
         for (int i = 0; i < n; ++i) {
             if (done[i] || !lessEq(need[i], work)) continue;
-            for (size_t j = 0; j < work.size(); ++j) work[j] += alloc[i][j];   // i finishes, releases
+            // i finishes, releases
+            for (size_t j = 0; j < work.size(); ++j) work[j] += alloc[i][j];
             done[i] = true;
             seq.push_back(i);
             progress = true;

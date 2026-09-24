@@ -328,17 +328,17 @@ A UML class diagram is a standard drawing of the classes in a system and how the
 #### The class box
 
 ```text
-+---------------------------+
-|        Account            |   name (italic if abstract)
-+---------------------------+
-| - id: long                |   attributes: visibility name: type
-| - balance: double         |
-| # owner: Customer         |
-+---------------------------+
-| + deposit(x: double): void|   operations: visibility name(params): return
-| + withdraw(x: double): bool
-| + getBalance(): double    |
-+---------------------------+
++------------------------------+
+|           Account            |   name (italic if abstract)
++------------------------------+
+| - id: long                   |   attributes: visibility name: type
+| - balance: double            |
+| # owner: Customer            |
++------------------------------+
+| + deposit(x: double): void   |   operations: visibility name(params): return
+| + withdraw(x: double): bool  |
+| + getBalance(): double       |
++------------------------------+
 ```
 
 #### The relationship arrows

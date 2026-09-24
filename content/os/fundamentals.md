@@ -165,7 +165,8 @@ int main() {
     const int N = 1'000'000;
     auto t0 = chrono::steady_clock::now();
     long sum = 0;
-    for (int i = 0; i < N; ++i) sum += syscall(SYS_getpid);   // a real trap into the kernel each time
+    // a real trap into the kernel each time
+    for (int i = 0; i < N; ++i) sum += syscall(SYS_getpid);
     auto t1 = chrono::steady_clock::now();
     for (int i = 0; i < N; ++i) sum += i & 1;                 // plain user-mode work
     auto t2 = chrono::steady_clock::now();

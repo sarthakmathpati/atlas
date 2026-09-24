@@ -97,7 +97,8 @@ def metrics(rows):
     return out, [round(sum(r[i] for r in out) / n, 2) for i in (1, 2, 3)]
 
 
-print(metrics([("P1", 0, 5, 0, 5), ("P2", 1, 3, 5, 8), ("P3", 2, 1, 8, 9)])[1])   # [6.33, 3.33, 3.33]
+# [6.33, 3.33, 3.33]
+print(metrics([("P1", 0, 5, 0, 5), ("P2", 1, 3, 5, 8), ("P3", 2, 1, 8, 9)])[1])
 ```
 
 #### Which criteria for which system
@@ -480,7 +481,9 @@ vector<pair<string, int>> roundRobin(vector<Job> jobs, int q) {    // returns (i
     vector<pair<string, int>> done;
     int t = 0;
     size_t next = 0;
-    auto admit = [&] { while (next < jobs.size() && jobs[next].arrival <= t) ready.push_back(next++); };
+    auto admit = [&] {
+        while (next < jobs.size() && jobs[next].arrival <= t) ready.push_back(next++);
+    };
     admit();
     while (done.size() < jobs.size()) {
         if (ready.empty()) { t = jobs[next].arrival; admit(); continue; }   // CPU idle
@@ -488,7 +491,7 @@ vector<pair<string, int>> roundRobin(vector<Job> jobs, int q) {    // returns (i
         int run = min(q, rem[i]);
         t += run;
         rem[i] -= run;
-        admit();                                  // arrivals up to now join before the preempted job
+        admit();  // arrivals up to now join before the preempted job
         if (rem[i] == 0) done.push_back({jobs[i].id, t});
         else ready.push_back(i);
     }
@@ -746,7 +749,9 @@ vector<int> simulate(const vector<P>& ps, bool shortest, bool preemptive, string
             int best = -1;
             for (int i = 0; i < n; ++i) {
                 if (ps[i].arrival > t || rem[i] == 0) continue;
-                auto key = [&](int j) { return shortest ? pair{rem[j], ps[j].arrival} : pair{ps[j].arrival, j}; };
+                auto key = [&](int j) {
+                    return shortest ? pair{rem[j], ps[j].arrival} : pair{ps[j].arrival, j};
+                };
                 if (best == -1 || key(i) < key(best)) best = i;
             }
             cur = best;
@@ -760,7 +765,8 @@ vector<int> simulate(const vector<P>& ps, bool shortest, bool preemptive, string
 
 int main() {
     vector<P> ps = {{"P1", 0, 5}, {"P2", 1, 3}, {"P3", 2, 1}, {"P4", 4, 2}};
-    for (auto [name, sh, pre] : {tuple{"FCFS", false, false}, {"SJF", true, false}, {"SRTF", true, true}}) {
+    auto runs = {tuple{"FCFS", false, false}, {"SJF", true, false}, {"SRTF", true, true}};
+    for (auto [name, sh, pre] : runs) {
         string g;
         auto fin = simulate(ps, sh, pre, g);
         double wt = 0;

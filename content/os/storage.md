@@ -153,10 +153,11 @@ string locate(long long offset, long long block = 4096) {
     idx -= 12;
     if (idx < per) return "single indirect " + to_string(idx);
     idx -= per;
-    if (idx < per * per) return "double indirect " + to_string(idx / per) + "/" + to_string(idx % per);
+    if (idx < per * per)
+        return "double indirect " + to_string(idx / per) + "/" + to_string(idx % per);
     idx -= per * per;
-    return "triple indirect " + to_string(idx / (per * per)) + "/" + to_string(idx / per % per) + "/" +
-           to_string(idx % per);
+    return "triple indirect " + to_string(idx / (per * per)) + "/" +
+           to_string(idx / per % per) + "/" + to_string(idx % per);
 }
 
 int main() {
@@ -349,7 +350,8 @@ int movement(int head, const vector<int>& order) {
 vector<int> sstf(int head, vector<int> q) {
     vector<int> order;
     while (!q.empty()) {
-        auto it = min_element(q.begin(), q.end(), [&](int a, int b) { return abs(a - head) < abs(b - head); });
+        auto it = min_element(q.begin(), q.end(),
+                              [&](int a, int b) { return abs(a - head) < abs(b - head); });
         head = *it;
         order.push_back(head);
         q.erase(it);
@@ -374,7 +376,7 @@ int main() {
     cout << "SSTF " << movement(53, sstf(53, q)) << "\n";             // 236
     cout << "LOOK " << movement(53, look(53, q, true)) << "\n";       // 208
     auto scan = look(53, q, true);
-    scan.insert(scan.begin() + 2, 0);                                 // SCAN also travels to cylinder 0
+    scan.insert(scan.begin() + 2, 0);  // SCAN also travels to cylinder 0
     cout << "SCAN " << movement(53, scan) << "\n";                    // 236
 }
 ```

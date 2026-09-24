@@ -46,7 +46,8 @@ public:
 class FreeAbove : public ShippingStrategy {        // a strategy can wrap another
     double threshold; const ShippingStrategy& fallback; double orderValue;
 public:
-    FreeAbove(double t, const ShippingStrategy& f, double v) : threshold(t), fallback(f), orderValue(v) {}
+    FreeAbove(double t, const ShippingStrategy& f, double v)
+        : threshold(t), fallback(f), orderValue(v) {}
     double cost(double w) const override { return orderValue >= threshold ? 0 : fallback.cost(w); }
 };
 
@@ -69,7 +70,8 @@ int main() {
     cout << c.total(1200, 2) << "\n";             // 1200
     // The lightest strategy is a function: sort with a custom comparator.
     vector<string> names = {"Ravi", "Al", "Christina"};
-    sort(names.begin(), names.end(), [](const string& a, const string& b) { return a.size() < b.size(); });
+    sort(names.begin(), names.end(),
+         [](const string& a, const string& b) { return a.size() < b.size(); });
     cout << names[0] << "\n";                     // Al
 }
 ```
@@ -176,7 +178,7 @@ public:
     void unsubscribe(int id) { listeners.erase(id); }
     void setPrice(double p) {
         price = p;
-        auto snapshot = listeners;                      // copy: listeners may unsubscribe while notified
+        auto snapshot = listeners;  // copy: listeners may unsubscribe while notified
         for (auto& [id, l] : snapshot) l(symbol, price);   // push model: send the new price
     }
     explicit Stock(string s) : symbol(std::move(s)) {}
@@ -189,7 +191,9 @@ private:
 
 int main() {
     Stock infy("INFY");
-    int chart = infy.subscribe([](const string& s, double p) { cout << "chart " << s << " " << p << "\n"; });
+    int chart = infy.subscribe([](const string& s, double p) {
+        cout << "chart " << s << " " << p << "\n";
+    });
     double highest = 0;
     infy.subscribe([&highest](const string&, double p) { highest = max(highest, p); });
     infy.setPrice(1500);                                // both listeners run
@@ -554,7 +558,7 @@ The template method pattern fixes the order of steps in a process and lets subcl
 class Exporter {
 public:
     virtual ~Exporter() = default;
-    string exportRows(const vector<pair<string, int>>& rows) {    // the template method (non-virtual)
+    string exportRows(const vector<pair<string, int>>& rows) {  // the template method (non-virtual)
         string out = header();
         for (const auto& [k, v] : rows) out += row(k, v);
         out += footer();                                           // hook: default does nothing
@@ -698,7 +702,7 @@ public:
     bool hasNext() const { return !st.empty(); }
     int next() {
         TreeNode* n = st.top(); st.pop();
-        pushLeft(n->right);                  // the successor is the leftmost node of the right subtree
+        pushLeft(n->right);  // the successor is the leftmost node of the right subtree
         return n->val;
     }
 };
@@ -1060,7 +1064,9 @@ struct Evaluator : Visitor {                        // operation 1
 struct Printer : Visitor {                          // operation 2, added without touching Expr
     string out;
     void visit(const Num& n) override { out += to_string(n.value); }
-    void visit(const Add& a) override { out += "("; a.l->accept(*this); out += " + "; a.r->accept(*this); out += ")"; }
+    void visit(const Add& a) override {
+        out += "("; a.l->accept(*this); out += " + "; a.r->accept(*this); out += ")";
+    }
     void visit(const Mul& m) override { m.l->accept(*this); out += " * "; m.r->accept(*this); }
 };
 

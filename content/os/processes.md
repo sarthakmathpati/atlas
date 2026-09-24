@@ -646,7 +646,8 @@ struct Shared { sem_t lock; long counter; };
 
 int main() {
     auto* s = static_cast<Shared*>(mmap(nullptr, sizeof(Shared), PROT_READ | PROT_WRITE,
-                                        MAP_SHARED | MAP_ANONYMOUS, -1, 0));   // survives fork, shared
+                                        // survives fork, shared
+                                        MAP_SHARED | MAP_ANONYMOUS, -1, 0));
     sem_init(&s->lock, /*pshared=*/1, 1);
     s->counter = 0;
     for (int p = 0; p < 4; ++p) {

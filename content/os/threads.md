@@ -50,7 +50,7 @@ int main() {
         ts.emplace_back([] { for (int j = 0; j < 1000; ++j) ++counter; });
     for (auto& t : ts) t.join();
     printf("after 4 threads: %d\n", counter.load());          // 4000: every thread saw one counter
-    fflush(stdout);                                           // don't let fork copy unprinted output
+    fflush(stdout);  // don't let fork copy unprinted output
 
     pid_t pid = fork();
     if (pid == 0) {
@@ -217,7 +217,8 @@ int main() {
     };
     auto t0 = chrono::steady_clock::now();
     vector<future<int>> results;
-    for (int i = 0; i < 4; ++i) results.push_back(async(launch::async, work, i));   // 4 kernel threads
+    // 4 kernel threads
+    for (int i = 0; i < 4; ++i) results.push_back(async(launch::async, work, i));
     int sum = 0;
     for (auto& r : results) sum += r.get();
     auto ms = chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now() - t0).count();

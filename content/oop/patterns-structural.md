@@ -354,7 +354,11 @@ print(shop.place_order("asha", "pen", 2))            # txn-asha-40
 
 ```cpp
 class Amplifier { public: string on() { return "amp on"; } };
-class Projector { public: string on() { return "projector on"; } string input(const string& s) { return "input " + s; } };
+class Projector {
+public:
+    string on() { return "projector on"; }
+    string input(const string& s) { return "input " + s; }
+};
 class Lights { public: string dim(int pct) { return "lights " + to_string(pct) + "%"; } };
 
 class HomeTheater {                                  // facade over three devices
@@ -735,7 +739,8 @@ int main() {
     AdvancedRemote r1(tv); Remote r2(radio);
     r1.volumeUp(); r1.mute();
     r2.volumeUp(); r2.volumeUp(); r2.volumeUp();
-    cout << tv.name() << " " << tv.volume() << ", " << radio.name() << " " << radio.volume() << "\n";
+    cout << tv.name() << " " << tv.volume() << ", "
+         << radio.name() << " " << radio.volume() << "\n";
     // TV 0, radio 50
 }
 ```
