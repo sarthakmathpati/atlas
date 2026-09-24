@@ -2,7 +2,8 @@
 // storage notices (quota, retries, read-only) into toasts.
 import { useEffect } from "react";
 import { hydrateActivity } from "@/stores/activityStore";
-import { hydrateConceptStates } from "@/stores/conceptStateStore";
+import { useClockStore, tickClock } from "@/stores/clockStore";
+import { hydrateConceptStates, refreshAllConcepts } from "@/stores/conceptStateStore";
 import { detachAll, hydrateAll } from "@/stores/hydrate";
 import { hydrateProfile, useProfileStore } from "@/stores/profileStore";
 import { toast } from "@/stores/toastStore";
@@ -38,6 +39,24 @@ export function StoreHydrator() {
       detachAll();
     };
   }, [repository]);
+
+  // A new day: statuses can turn fading and new problems become due.
+  useEffect(() => {
+    const check = () => tickClock();
+    const id = setInterval(check, 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const unsubscribe = useClockStore.subscribe((state, prev) => {
+      if (state.today !== prev.today) refreshAllConcepts();
+    });
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      unsubscribe();
+    };
+  }, []);
 
   return null;
 }

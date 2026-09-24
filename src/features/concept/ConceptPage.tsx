@@ -3,7 +3,7 @@
 // where it sits, what it covers, its content when written, connections and linked problems.
 import { ArrowUpRight, BookOpenText, Map as MapIcon, Sparkles } from "lucide-react";
 import { lazy, Suspense, useState, type ReactNode } from "react";
-import { conceptHref, problemHref, routeHref, useRoute } from "@/app/router";
+import { conceptHref, routeHref, useRoute } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -11,11 +11,13 @@ import { Chip, DifficultyChip, ImportanceChip, StatusChip } from "@/components/u
 import { EmptyState, Skeleton } from "@/components/ui/Misc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
-import { leetCodeUrl } from "@/data/problems.seed";
-import { seedProblemsByConcept } from "@/data/seed";
+import { problemLabel, problemsForConcept, problemUrl } from "@/lib/problems/catalog";
 import { conceptById, dependentsOf, hasCoreContent, subjectById, topicById } from "@/data/syllabus";
 import type { Concept } from "@/lib/types";
 import { useConceptStatus } from "@/stores/conceptStateStore";
+import { useProblemStore } from "@/stores/problemStore";
+import { ProblemStatusGlyph } from "../problems/parts";
+import { problemPageHref } from "../problems/problemUi";
 import { NotFoundPage } from "../placeholder/pages";
 
 const MarkdownView = lazy(() => import("@/components/ui/MarkdownView"));
@@ -103,12 +105,13 @@ export default function ConceptPage() {
   const route = useRoute();
   const concept = route.id ? conceptById.get(route.id) : undefined;
   const status = useConceptStatus(route.id ?? "");
+  const problemStates = useProblemStore((s) => s.states);
   if (!concept) return <NotFoundPage />;
 
   const topic = topicById.get(concept.topicId);
   const subject = subjectById.get(concept.subjectId);
   const unlocks = dependentsOf.get(concept.id) ?? [];
-  const problems = seedProblemsByConcept.get(concept.id) ?? [];
+  const problems = problemsForConcept(concept.id, problemStates);
   const { content } = concept;
 
   return (
@@ -205,33 +208,46 @@ export default function ConceptPage() {
               <p className="text-base text-muted">No problems are linked to this concept yet.</p>
             ) : (
               <ul className="divide-y divide-rule">
-                {problems.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0"
-                  >
-                    <a
-                      href={problemHref(p.id)}
-                      className="min-w-0 flex-1 text-base text-text hover:underline"
+                {problems.map((p) => {
+                  const state = problemStates[p.id];
+                  const url = problemUrl(p, state);
+                  return (
+                    <li
+                      key={p.id}
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0"
                     >
-                      {p.number ? `${p.number}. ` : ""}
-                      {p.title}
-                    </a>
-                    <DifficultyChip difficulty={p.difficulty} />
-                    {p.slug && (
+                      <ProblemStatusGlyph state={state} />
                       <a
-                        href={leetCodeUrl(p.slug)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
+                        href={problemPageHref(p)}
+                        className="min-w-0 flex-1 text-base text-text hover:underline"
                       >
-                        LeetCode
-                        <ArrowUpRight size={14} aria-hidden="true" />
-                        <span className="sr-only">(opens in a new tab)</span>
+                        {problemLabel(p)}
                       </a>
-                    )}
-                  </li>
-                ))}
+                      {state?.srs.retired && (
+                        <Chip
+                          className="text-success"
+                          title="Solved alone three times at long intervals"
+                        >
+                          Mastered
+                        </Chip>
+                      )}
+                      {p.custom && <Chip>Mine</Chip>}
+                      <DifficultyChip difficulty={p.difficulty} />
+                      {url && /leetcode\./.test(url) && (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
+                        >
+                          LeetCode
+                          <ArrowUpRight size={14} aria-hidden="true" />
+                          <span className="sr-only">(opens in a new tab)</span>
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Section>

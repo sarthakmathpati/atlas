@@ -37,6 +37,13 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
       disconnect() {}
     };
   }
+  // CodeMirror measures text ranges; jsdom doesn't lay out, so report empty boxes.
+  const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
+  const emptyRect = () => new DOMRect(0, 0, 0, 0);
+  if (typeof Range !== "undefined") {
+    if (!Range.prototype.getClientRects) Range.prototype.getClientRects = emptyRects;
+    if (!Range.prototype.getBoundingClientRect) Range.prototype.getBoundingClientRect = emptyRect;
+  }
   if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => undefined;
   if (!Element.prototype.scrollTo) Element.prototype.scrollTo = () => undefined;
 }

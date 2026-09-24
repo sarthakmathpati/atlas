@@ -6,8 +6,9 @@ import type { ReactNode } from "react";
 import { useServicesState } from "@/app/providers/servicesContext";
 import { BottomSheet, Drawer } from "@/components/ui/Dialog";
 import { useIsMobile } from "@/components/ui/hooks";
-import { seedProblemById } from "@/data/seed";
+import { problemInfo } from "@/lib/problems/catalog";
 import { conceptById } from "@/data/syllabus";
+import { useProblemStore } from "@/stores/problemStore";
 import { useUiStore } from "@/stores/uiStore";
 import type { Route } from "../router";
 
@@ -22,7 +23,7 @@ function contextFor(route: Route): ContextChip {
     if (concept) return { label: concept.name, icon: BookOpen };
   }
   if ((route.name === "problem" || route.name === "design") && route.id) {
-    const problem = seedProblemById.get(route.id);
+    const problem = problemInfo(route.id, useProblemStore.getState().states[route.id]);
     if (problem) return { label: problem.title, icon: ListChecks };
   }
   return { label: "General", icon: Globe };

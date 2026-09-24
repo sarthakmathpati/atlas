@@ -5,6 +5,9 @@ import { useMediaQuery } from "@/components/ui/hooks";
 import { PageSkeleton } from "@/components/ui/Misc";
 import { CommandPalette } from "@/features/palette/CommandPalette";
 import { getSearchIndex } from "@/features/palette/docs";
+import { CsvImportDialog } from "@/features/problems/CsvImportDialog";
+import { QuickAddDialog } from "@/features/problems/QuickAddDialog";
+import { useReviewQueue } from "@/features/review/useReviewQueue";
 import { useUiStore } from "@/stores/uiStore";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { PAGES } from "../routes";
@@ -44,6 +47,8 @@ export function AppShell() {
   const collapsed = collapsedPref ?? !wide;
   const mainRef = useRef<HTMLElement>(null);
   const Page = PAGES[route.name];
+  const reviewCount = useReviewQueue().count;
+  const badges = { review: reviewCount };
 
   useGlobalShortcuts();
   usePrebuiltSearchIndex();
@@ -62,7 +67,7 @@ export function AppShell() {
       >
         Skip to content
       </button>
-      <Sidebar route={route} collapsed={collapsed} />
+      <Sidebar route={route} collapsed={collapsed} badges={badges} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
         <main
@@ -84,12 +89,14 @@ export function AppShell() {
             </Suspense>
           </ErrorBoundary>
         </main>
-        <BottomTabs route={route} />
+        <BottomTabs route={route} badges={badges} />
       </div>
       <MoreSheet route={route} />
       <AskClaudePanel route={route} />
       <ShortcutsDialog />
       <CommandPalette />
+      <QuickAddDialog />
+      <CsvImportDialog />
       <FocusTimerController />
     </div>
   );

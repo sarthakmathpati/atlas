@@ -12,17 +12,25 @@ export interface TimerControls {
   pause: () => void;
   toggle: () => void;
   reset: () => void;
+  /** Stops the timer and puts `ms` on the clock. */
+  set: (ms: number) => void;
 }
 
 interface UseTimerOptions {
   /** Makes it a countdown of this length. */
   countdownMs?: number;
   onFinish?: () => void;
+  /** Time already on the clock (for example restored from a saved draft). */
+  initialMs?: number;
 }
 
-export function useTimer({ countdownMs, onFinish }: UseTimerOptions = {}): TimerControls {
+export function useTimer({
+  countdownMs,
+  onFinish,
+  initialMs = 0,
+}: UseTimerOptions = {}): TimerControls {
   const [running, setRunning] = useState(false);
-  const [accumulated, setAccumulated] = useState(0);
+  const [accumulated, setAccumulated] = useState(initialMs);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const finish = useLatest(onFinish);
@@ -73,7 +81,15 @@ export function useTimer({ countdownMs, onFinish }: UseTimerOptions = {}): Timer
 
   const toggle = useCallback(() => (running ? pause() : start()), [running, pause, start]);
 
-  return { running, elapsedMs, remainingMs, start, pause, toggle, reset };
+  const set = useCallback((ms: number) => {
+    finished.current = false;
+    setRunning(false);
+    setStartedAt(null);
+    setAccumulated(Math.max(0, ms));
+    setNow(Date.now());
+  }, []);
+
+  return { running, elapsedMs, remainingMs, start, pause, toggle, reset, set };
 }
 
 /** 754_000 → "12:34"; an hour or more → "1:02:34". */
