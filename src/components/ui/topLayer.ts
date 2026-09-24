@@ -29,3 +29,10 @@ export const layerStack: symbol[] = [];
 export function isTopLayer(token: symbol): boolean {
   return layerStack[layerStack.length - 1] === token;
 }
+
+/** Browsers without the Popover API (and test DOMs) get plain fixed-position layers instead. */
+export const SUPPORTS_POPOVER =
+  typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype;
+
+/** The `popover` attribute value to use, or undefined where it isn't supported. */
+export const POPOVER_MANUAL: "manual" | undefined = SUPPORTS_POPOVER ? "manual" : undefined;

@@ -64,6 +64,9 @@ function Layer({
       } catch {
         dialog.setAttribute("open", "");
       }
+      // Opening moves focus to the first focusable element; a field marked data-autofocus (the
+      // search input, a name field) should get it instead.
+      dialog.querySelector<HTMLElement>("[data-autofocus]")?.focus();
     } else if (!open && dialog.open) {
       dialog.close();
       const target = returnFocus.current;

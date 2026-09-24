@@ -37,7 +37,7 @@ function ActivityChip() {
       <a
         href="#/dashboard"
         aria-label={label}
-        className="hidden h-8 items-center gap-2.5 rounded-control px-2 text-sm text-muted tabular-nums transition-colors hover:bg-surface-sunken hover:text-text sm:inline-flex"
+        className="hidden h-8 items-center gap-2.5 rounded-control px-2 text-sm whitespace-nowrap text-muted tabular-nums transition-colors hover:bg-surface-sunken hover:text-text sm:inline-flex"
       >
         <span className="inline-flex items-center gap-1">
           <Timer size={14} aria-hidden="true" />
@@ -129,7 +129,7 @@ export function TopBar() {
         size="sm"
         icon={Sparkles}
         onClick={() => setAskOpen(true)}
-        className="hidden text-muted hover:text-text md:inline-flex"
+        className="text-muted hover:text-text max-md:hidden"
         aria-keyshortcuts="a"
       >
         Ask Claude

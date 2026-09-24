@@ -80,6 +80,25 @@ interface SidebarProps {
 export function Sidebar({ route, collapsed, badges = {} }: SidebarProps) {
   const setCollapsed = useUiStore((s) => s.setSidebarCollapsed);
   const isActive = (item: NavItem) => item.routes.includes(route.name);
+  const toggle = (
+    <button
+      type="button"
+      onClick={() => setCollapsed(!collapsed)}
+      aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      aria-expanded={!collapsed}
+      className={cx(
+        "flex h-9 items-center gap-3 rounded-control text-base text-muted transition-colors hover:bg-surface-sunken hover:text-text",
+        collapsed ? "w-10 justify-center" : "px-2.5",
+      )}
+    >
+      {collapsed ? (
+        <PanelLeftOpen size={18} strokeWidth={1.75} aria-hidden="true" />
+      ) : (
+        <PanelLeftClose size={18} strokeWidth={1.75} aria-hidden="true" />
+      )}
+      {!collapsed && <span>Collapse</span>}
+    </button>
+  );
   return (
     <nav
       aria-label="Main"
@@ -123,25 +142,13 @@ export function Sidebar({ route, collapsed, badges = {} }: SidebarProps) {
         )}
       >
         <NavLink item={SETTINGS_ITEM} active={isActive(SETTINGS_ITEM)} collapsed={collapsed} />
-        <Tooltip content={collapsed ? "Expand sidebar" : "Collapse sidebar"} placement="right">
-          <button
-            type="button"
-            onClick={() => setCollapsed(!collapsed)}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-expanded={!collapsed}
-            className={cx(
-              "flex h-9 items-center gap-3 rounded-control text-base text-muted transition-colors hover:bg-surface-sunken hover:text-text",
-              collapsed ? "w-10 justify-center" : "px-2.5",
-            )}
-          >
-            {collapsed ? (
-              <PanelLeftOpen size={18} strokeWidth={1.75} aria-hidden="true" />
-            ) : (
-              <PanelLeftClose size={18} strokeWidth={1.75} aria-hidden="true" />
-            )}
-            {!collapsed && <span>Collapse</span>}
-          </button>
-        </Tooltip>
+        {collapsed ? (
+          <Tooltip content="Expand sidebar" placement="right">
+            {toggle}
+          </Tooltip>
+        ) : (
+          toggle
+        )}
       </div>
     </nav>
   );

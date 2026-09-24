@@ -6,6 +6,7 @@ import { SearchIndex, type SearchDoc } from "@/lib/search/searchIndex";
 import type { MistakeTag } from "@/lib/types";
 
 const DIFFICULTY = { easy: "Easy", medium: "Medium", hard: "Hard" } as const;
+const IMPORTANCE_BOOST = { must: 1.3, important: 1.1, advanced: 1 } as const;
 
 export function buildSeedDocs(): SearchDoc[] {
   const docs: SearchDoc[] = [];
@@ -18,6 +19,7 @@ export function buildSeedDocs(): SearchDoc[] {
       text: s.description,
       keywords: `${s.id} ${s.shortName}`,
       href: routeHref("/map", undefined, { subject: s.id }),
+      boost: 1.3,
     });
   }
   for (const t of topics) {
@@ -28,6 +30,7 @@ export function buildSeedDocs(): SearchDoc[] {
       subtitle: subjectById.get(t.subjectId)?.shortName,
       keywords: t.id,
       href: routeHref("/map", undefined, { topic: t.id }),
+      boost: 1.15,
     });
   }
   for (const c of concepts) {
@@ -40,6 +43,7 @@ export function buildSeedDocs(): SearchDoc[] {
       text: [c.scope, c.content.simple].filter(Boolean).join(" "),
       keywords: `${subjectById.get(c.subjectId)?.shortName ?? ""} ${c.isPattern ? "pattern" : ""}`,
       href: conceptHref(c.id),
+      boost: IMPORTANCE_BOOST[c.importance],
     });
   }
   for (const p of SEED_PROBLEMS) {

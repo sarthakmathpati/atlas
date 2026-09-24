@@ -43,6 +43,9 @@ function summarize(summary: ImportSummary): string {
     added += t.added;
     updated += t.updated;
   }
+  if (added === 0 && updated === 0 && summary.attemptsTrimmed === 0) {
+    return "nothing new, your data already matches it";
+  }
   const parts = [`${added} added`, `${updated} updated`];
   if (summary.attemptsTrimmed > 0) parts.push(`${summary.attemptsTrimmed} old attempts trimmed`);
   return parts.join(", ");
@@ -130,7 +133,7 @@ function ImportDialog({
           ? `${pending.name}, exported ${relativeDay(pending.preview.exportedAt)}.`
           : undefined
       }
-      size="sm"
+      size="md"
       footer={
         step === "choose" ? (
           <>

@@ -36,6 +36,7 @@ import { useConceptStatus } from "@/stores/conceptStateStore";
 import { toast } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { exportBackup } from "../settings/backup";
+import { markSetupStep } from "../today/setupSteps";
 import { getSearchIndex, mistakeTagDocs } from "./docs";
 import { pushRecent, readRecents, type RecentItem } from "./recents";
 
@@ -266,16 +267,32 @@ export function CommandPalette() {
 
   const runAction = (action: PaletteAction) => {
     close();
+    markSetupStep("search");
     void action.run();
   };
 
   const openHit = (hit: SearchHit | RecentItem) => {
     close();
+    markSetupStep("search");
     setRecents(pushRecent(hit));
     navigate(hit.href);
   };
 
   const hasResults = matchedActions.length > 0 || groups.length > 0;
+
+  // Keep the top result selected as results change, so Enter always opens the best match.
+  const firstValue =
+    (q
+      ? (matchedActions[0]?.id ?? groups[0]?.hits[0]?.id)
+      : recents[0]
+        ? `recent:${recents[0].id}`
+        : actions[0]?.id) ?? "";
+  const [selected, setSelected] = useState(firstValue);
+  const [selectedFor, setSelectedFor] = useState(firstValue);
+  if (selectedFor !== firstValue) {
+    setSelectedFor(firstValue);
+    setSelected(firstValue);
+  }
 
   const actionRows = (list: PaletteAction[]) =>
     list.map((a) => {
@@ -310,7 +327,14 @@ export function CommandPalette() {
       size="md"
       className="mt-[10vh] max-md:mt-4"
     >
-      <Command label="Search and commands" shouldFilter={false} loop className={HEADING}>
+      <Command
+        label="Search and commands"
+        shouldFilter={false}
+        loop
+        value={selected}
+        onValueChange={setSelected}
+        className={HEADING}
+      >
         <div className="flex items-center gap-3 border-b border-rule px-4">
           <Search size={18} aria-hidden="true" className="shrink-0 text-muted" />
           <Command.Input
@@ -318,7 +342,7 @@ export function CommandPalette() {
             onValueChange={setQuery}
             placeholder="Search concepts, problems and pages"
             className="h-13 min-w-0 flex-1 bg-transparent text-md text-text outline-none placeholder:text-faint"
-            autoFocus
+            data-autofocus
           />
           <button
             type="button"

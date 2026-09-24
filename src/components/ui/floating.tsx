@@ -21,7 +21,7 @@ import {
 import { createPortal } from "react-dom";
 import { cx } from "./cx";
 import { useLatest } from "./hooks";
-import { isTopLayer, layerStack, showInTopLayer } from "./topLayer";
+import { isTopLayer, layerStack, POPOVER_MANUAL, showInTopLayer } from "./topLayer";
 
 interface FloatingPanelProps extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
   anchor: HTMLElement | null;
@@ -114,7 +114,7 @@ export function FloatingPanel({
         panelRef.current = el;
         refs.setFloating(el);
       }}
-      popover="manual"
+      popover={POPOVER_MANUAL}
       className={cx("atlas-float", passive && "pointer-events-none")}
       style={{ ...floatingStyles, zIndex: 60 } as CSSProperties}
     >

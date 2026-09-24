@@ -3,7 +3,7 @@ import { CircleAlert, CircleCheck, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useToastStore, type ToastItem } from "@/stores/toastStore";
 import { cx } from "./cx";
-import { showInTopLayer } from "./topLayer";
+import { POPOVER_MANUAL, showInTopLayer } from "./topLayer";
 
 function ToastView({ toast }: { toast: ToastItem }) {
   const dismiss = useToastStore((s) => s.dismiss);
@@ -75,7 +75,7 @@ export function Toaster() {
   return (
     <div
       ref={ref}
-      popover="manual"
+      popover={POPOVER_MANUAL}
       aria-live="polite"
       className="pointer-events-none fixed top-auto right-4 bottom-4 left-4 z-[70] m-0 flex w-auto flex-col items-stretch gap-2 overflow-visible border-0 bg-transparent p-0 text-text sm:left-auto sm:w-96 max-md:bottom-[calc(72px+env(safe-area-inset-bottom,0px))]"
     >

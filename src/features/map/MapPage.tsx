@@ -1,11 +1,12 @@
 // Map (F2). The zoomable canvas arrives in phase 4; until then the page shows the whole map as a
 // picture (from the precomputed layout) and the full list view, and understands the same links
 // the canvas will: #/map?subject=<id>, #/map?topic=<id> and #/map?focus=<conceptId>.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { navigate, useRoute } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
 import { conceptById, subjectById, topicById } from "@/data/syllabus";
+import { markSetupStep } from "../today/setupSteps";
 import { MapListView, type ListTarget } from "./MapListView";
 import { MapPreview } from "./MapPreview";
 
@@ -44,6 +45,8 @@ export default function MapPage() {
     const s = subjectOf(target);
     if (s && !open.has(s)) setOpen(new Set(open).add(s));
   }
+
+  useEffect(() => markSetupStep("map"), []);
 
   const toggle = (id: string) => {
     setOpen((prev) => {

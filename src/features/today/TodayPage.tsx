@@ -17,6 +17,7 @@ import { daysBetween, localDate } from "@/lib/time";
 import { useMinutesOn } from "@/stores/activityStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
+import { setupStepDone } from "./setupSteps";
 
 function greeting(hour: number): string {
   if (hour < 5) return "Working late";
@@ -95,7 +96,7 @@ export default function TodayPage() {
         },
         {
           id: "map",
-          done: false,
+          done: setupStepDone("map"),
           title: "Look around the syllabus",
           detail: `${syllabus.counts.subjects} subjects and ${syllabus.counts.concepts} concepts, from arrays to options pricing, in learning order.`,
           action: (
@@ -106,7 +107,7 @@ export default function TodayPage() {
         },
         {
           id: "search",
-          done: false,
+          done: setupStepDone("search"),
           title: "Jump anywhere with search",
           detail: "Find any concept, problem or page by typing a few letters.",
           action: (

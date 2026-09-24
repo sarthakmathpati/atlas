@@ -119,9 +119,7 @@ export function DiffView({
         role="region"
         aria-label={`Changes from ${beforeLabel} to ${afterLabel}`}
       >
-        <table
-          className={cx("atlas-code w-full min-w-max border-collapse whitespace-pre", markStyle)}
-        >
+        <table className={cx("atlas-code w-full border-collapse whitespace-pre", markStyle)}>
           <tbody>
             {unified
               ? rows.map((row, i) => {

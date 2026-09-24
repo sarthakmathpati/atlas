@@ -9,6 +9,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeView } from "./code/CodeView";
 import { cx } from "./cx";
+import { normalizeDisplayMath } from "./markdown";
 
 function textOf(node: Element | Text): string {
   if (node.type === "text") return node.value;
@@ -69,7 +70,7 @@ export default function MarkdownView({ children, className, compact }: MarkdownV
         rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: "ignore" }]]}
         components={components}
       >
-        {children}
+        {normalizeDisplayMath(children)}
       </ReactMarkdown>
     </div>
   );

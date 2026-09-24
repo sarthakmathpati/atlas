@@ -19,6 +19,8 @@ export interface SearchDoc {
   num?: string;
   /** In-app link. */
   href: string;
+  /** Ranking weight (default 1): must-know concepts rank above optional ones on equal matches. */
+  boost?: number;
 }
 
 export interface SearchHit {
@@ -55,13 +57,15 @@ export class SearchIndex {
     this.mini = new MiniSearch<SearchDoc>({
       idField: "id",
       fields: ["title", "keywords", "num", "text"],
-      storeFields: ["kind", "title", "subtitle", "href"],
+      storeFields: ["kind", "title", "subtitle", "href", "boost"],
       searchOptions: {
         boost: { title: 4, num: 6, keywords: 2, text: 0.6 },
         prefix: true,
         // Typo tolerance for longer words: "dijsktra" still finds Dijkstra.
         fuzzy: (term) => (term.length >= 4 ? 0.25 : false),
         combineWith: "AND",
+        boostDocument: (_id, _term, stored) =>
+          typeof stored?.boost === "number" ? stored.boost : 1,
       },
     });
     this.mini.addAll(docs);
