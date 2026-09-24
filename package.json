@@ -12,6 +12,7 @@
     "build:syllabus": "node scripts/build-syllabus.mjs",
     "build:layout": "node scripts/build-layout.mjs",
     "build:data": "npm run build:syllabus && npm run build:layout",
+    "check:content-code": "node scripts/check-content-code.mjs",
     "build": "npm run build:data && vite build",
     "build:artifact": "npm run build:data && vite build --config vite.artifact.config.ts && node scripts/check-artifact.mjs",
     "release:artifact": "npm run build:artifact && node scripts/release-artifact.mjs",

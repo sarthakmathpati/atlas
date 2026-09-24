@@ -3182,9 +3182,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Big-O describes how the work an algorithm does grows as the input grows. It is like asking how the time to read a book grows with its number of pages, not how fast you read one page. Big-O is an upper bound, Big-Omega is a lower bound, and Big-Theta means both at once.",
+    "interview": [
+     "$f(n) = O(g(n))$ means that for large enough $n$, $f(n) \\le c \\cdot g(n)$ for some constant $c$: an **upper bound** on growth.",
+     "$\\Omega$ is a **lower bound**; $\\Theta$ is a **tight bound** (both $O$ and $\\Omega$). In interviews, \"O(n)\" usually means the tight bound.",
+     "Drop constants and lower-order terms: $3n^2 + 10n + 7$ is $O(n^2)$, because the largest term dominates for big $n$.",
+     "Common order, slowest growth first: $1 < \\log n < \\sqrt{n} < n < n \\log n < n^2 < 2^n < n!$.",
+     "Bounds are about a **case** (worst, average, best), which you should name: quicksort is $O(n^2)$ worst case but $\\Theta(n \\log n)$ on average.",
+     "Use one variable per independent input: two arrays of sizes $n$ and $m$ give $O(n + m)$ or $O(n \\cdot m)$, never just $O(n)$."
+    ],
+    "questions": [
+     {
+      "q": "What does it mean for an algorithm to be O(n log n)?",
+      "a": "Its running time grows at most proportionally to n log n once the input is large enough. Formally there is a constant c such that the step count is at most c · n log n for all big n. It says nothing about small inputs or the exact constant."
+     },
+     {
+      "q": "Why can you drop constants and lower-order terms?",
+      "a": "Big-O describes growth for large n. A constant factor such as 3 in 3n² does not change how the cost scales, and a lower term such as 10n becomes negligible next to n² as n grows. Only the dominant term decides which algorithms stay feasible."
+     },
+     {
+      "q": "What is the difference between Big-O, Big-Omega and Big-Theta?",
+      "a": "Big-O is an upper bound, Big-Omega is a lower bound, and Big-Theta is a tight bound that holds in both directions. An algorithm that always does about 5n steps is O(n), Ω(n) and Θ(n); it is also O(n²), but that bound is loose."
+     },
+     {
+      "q": "Is O(2^n) the same as O(3^n)?",
+      "a": "No. 3^n / 2^n = 1.5^n grows without bound, so no constant can cover the gap. Different log bases are equivalent (they differ by a constant factor), but different exponential bases are not."
+     },
+     {
+      "q": "Your function takes two arrays of sizes n and m and loops over both, one after the other. What is its complexity?",
+      "a": "O(n + m). Keep both variables, because either array can be the larger one. If the loops were nested, it would be O(n · m)."
+     }
+    ],
+    "deep": "#### Intuition\n\nComplexity analysis ignores the details that change from machine to machine (clock speed, language, compiler) and keeps only the **shape of growth**. If one algorithm does $n$ steps and another does $n^2$, then at $n = 10^5$ the first does $10^5$ steps and the second $10^{10}$. No constant factor can rescue the second one.\n\n#### The formal definitions\n\n- $f(n) = O(g(n))$ if there are constants $c > 0$ and $n_0$ such that $f(n) \\le c \\cdot g(n)$ for every $n \\ge n_0$.\n- $f(n) = \\Omega(g(n))$ if $f(n) \\ge c \\cdot g(n)$ for every $n \\ge n_0$.\n- $f(n) = \\Theta(g(n))$ if both hold (with possibly different constants).\n\nSo $5n + 3 = O(n)$ (take $c = 6$, $n_0 = 3$), and it is also $O(n^2)$, because an upper bound can be loose. It is $\\Theta(n)$ but not $\\Theta(n^2)$. When an interviewer asks \"what is the complexity\", give the tightest bound you can justify.\n\n#### Worked example: simplifying\n\n| Expression | Dominant term | Big-O |\n|---|---|---|\n| $4n^2 + 100n + 7$ | $4n^2$ | $O(n^2)$ |\n| $n \\log n + 50n$ | $n \\log n$ | $O(n \\log n)$ |\n| $2^n + n^{10}$ | $2^n$ | $O(2^n)$ |\n| $\\log_2 n$ vs $\\log_{10} n$ | differ by a constant | both $O(\\log n)$ |\n| $n + m$ (two inputs) | neither dominates | $O(n + m)$ |\n\nThe base of a logarithm never matters inside Big-O, because $\\log_a n = \\log_b n / \\log_b a$ and $1/\\log_b a$ is a constant. The base of an exponent does matter: $4^n = (2^n)^2$ is not $O(2^n)$.\n\n#### Reading code\n\n```cpp\n// O(n): one pass, constant work per element.\nlong long sumAll(const vector<int>& a) {\n    long long total = 0;\n    for (int x : a) total += x;\n    return total;\n}\n\n// O(n^2): every pair (i, j) with i < j, about n^2 / 2 pairs.\nint countEqualPairs(const vector<int>& a) {\n    int n = a.size(), count = 0;\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++)\n            if (a[i] == a[j]) count++;\n    return count;\n}\n```\n\n```python\ndef sum_all(a):\n    total = 0\n    for x in a:            # n iterations, O(1) each -> O(n)\n        total += x\n    return total\n\ndef count_equal_pairs(a):\n    n, count = len(a), 0\n    for i in range(n):     # about n^2 / 2 pairs -> O(n^2)\n        for j in range(i + 1, n):\n            if a[i] == a[j]:\n                count += 1\n    return count\n```\n\nThe $n^2 / 2$ becomes $O(n^2)$ because the $1/2$ is a constant.\n\n#### Pitfalls\n\n- **Hidden costs in library calls.** `s = s + c` in a loop copies the string each time in many languages, turning an $O(n)$ loop into $O(n^2)$. `list.insert(0, x)` in Python and `vector::erase` from the front are $O(n)$ each.\n- **Confusing the variable.** A loop over the digits of $n$ is $O(\\log n)$, not $O(n)$.\n- **Saying \"O(n) best case\".** Big-O and \"best case\" are separate ideas: you can give an upper bound on the best case, a lower bound on the worst case, and so on. Name the case, then the bound.\n- **Constants still matter in practice.** Two $O(n \\log n)$ sorts can differ by 3x. Big-O decides which algorithms are feasible; constants decide which feasible one is fastest.\n\nConnects to: analyzing loops, recursion complexity, constraints to complexity."
    }
   },
   {
@@ -3206,9 +3235,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "To find a loop's cost, count how many times its body runs and multiply by the cost of one run. A loop that halves its counter each time is like tearing a phone book in half again and again: after a few dozen tears you are down to one page. That halving loop costs log n, while a plain loop costs n.",
+    "interview": [
+     "Sequential blocks **add**: $O(n) + O(n^2) = O(n^2)$. Nested loops **multiply** when the inner count does not depend on the outer variable.",
+     "A counter that multiplies or divides by a constant each step runs $O(\\log n)$ times.",
+     "Triangular nesting (`j` from `i` to `n`) still gives $\\sum i = n(n+1)/2 = O(n^2)$.",
+     "An inner loop that grows by doubling, `for (j = 1; j < n; j *= 2)` inside a loop over `i`, gives $O(n \\log n)$.",
+     "Harmonic nesting, `for (j = i; j <= n; j += i)`, gives $n(1 + 1/2 + \\dots + 1/n) = O(n \\log n)$; the sieve of Eratosthenes is $O(n \\log \\log n)$.",
+     "Two pointers that each only move forward are $O(n)$ in total, even with a nested `while`: count total pointer moves, not loop nesting."
+    ],
+    "questions": [
+     {
+      "q": "What is the complexity of a loop where i starts at n and is halved each iteration until it reaches 0?",
+      "a": "O(log n). After k halvings the value is n / 2^k, which drops below 1 once k exceeds log₂ n. Any loop that multiplies or divides its counter by a constant runs a logarithmic number of times."
+     },
+     {
+      "q": "A loop runs i from 1 to n, and inside it j runs over the multiples of i up to n. What is the total cost?",
+      "a": "O(n log n). The inner loop runs about n / i times, so the total is n(1 + 1/2 + … + 1/n), and the harmonic series grows like ln n. The nesting looks quadratic, but the inner work shrinks fast."
+     },
+     {
+      "q": "How do you analyze a nested while loop where the inner pointer never moves backwards?",
+      "a": "Count the total movement of each pointer instead of multiplying loop bounds. If each pointer moves forward at most n times over the whole run, the total work is O(n). This is why two-pointer and sliding-window solutions are linear."
+     },
+     {
+      "q": "What is the cost of for (i = 1; i * i <= n; i++)?",
+      "a": "O(√n), because the loop stops once i exceeds √n. Trial division for primality uses exactly this bound."
+     },
+     {
+      "q": "Two loops run one after another, one O(n) and one O(n log n). What is the total?",
+      "a": "O(n log n). Sequential costs add, and n + n log n is dominated by n log n."
+     }
+    ],
+    "deep": "#### Intuition\n\nA loop's cost is the **sum of the costs of its iterations**. Most of the time every iteration costs the same, so you multiply. When the cost changes per iteration, write the sum and simplify it.\n\n#### The common shapes\n\n| Loop shape | Iterations | Cost |\n|---|---|---|\n| `for i in 0..n` | $n$ | $O(n)$ |\n| `for i in 0..n: for j in 0..n` | $n^2$ | $O(n^2)$ |\n| `for i in 0..n: for j in i..n` | $n(n+1)/2$ | $O(n^2)$ |\n| `i = n; while i > 0: i /= 2` | $\\lfloor \\log_2 n \\rfloor + 1$ | $O(\\log n)$ |\n| `for i in 0..n: j = 1; while j < n: j *= 2` | $n \\log n$ | $O(n \\log n)$ |\n| `for i in 1..n: for j = i; j <= n; j += i` | $\\sum n/i$ | $O(n \\log n)$ |\n| `for i = 1; i * i <= n; i++` | $\\sqrt{n}$ | $O(\\sqrt{n})$ |\n\n#### Worked example: the harmonic loop\n\n```cpp\n// For each i, visit its multiples i, 2i, 3i, ... up to n.\nlong long harmonic(int n) {\n    long long steps = 0;\n    for (int i = 1; i <= n; i++)\n        for (int j = i; j <= n; j += i)\n            steps++;\n    return steps;\n}\n```\n\n```python\ndef harmonic(n):\n    steps = 0\n    for i in range(1, n + 1):\n        for j in range(i, n + 1, i):   # about n / i steps\n            steps += 1\n    return steps\n```\n\nFor $i = 1$ the inner loop runs $n$ times, for $i = 2$ about $n/2$, for $i = 3$ about $n/3$, and so on. The total is\n\n$$n \\left(1 + \\tfrac{1}{2} + \\tfrac{1}{3} + \\dots + \\tfrac{1}{n}\\right) \\approx n \\ln n$$\n\nso the loop is $O(n \\log n)$, not $O(n^2)$ as the nesting might suggest. For $n = 10^6$ that is about $1.4 \\times 10^7$ steps.\n\n#### Worked example: amortized pointer moves\n\n```cpp\n// Longest run of equal values: the inner while looks nested,\n// but i and j only move forward, so the total work is O(n).\nint longestRun(const vector<int>& a) {\n    int n = a.size(), best = 0, i = 0;\n    while (i < n) {\n        int j = i;\n        while (j < n && a[j] == a[i]) j++;\n        best = max(best, j - i);\n        i = j;\n    }\n    return best;\n}\n```\n\nCount how far each pointer travels in total: `j` goes from 0 to $n$ once, and `i` jumps along behind it. The total is $O(n)$.\n\n#### Method\n\n1. Find the variable that controls each loop and how it changes (add, multiply, divide).\n2. Count iterations: additive change gives about $n/\\text{step}$, multiplicative change gives $\\log n$.\n3. If the inner count depends on the outer variable, write the sum ($\\sum i$, $\\sum n/i$, $\\sum \\log i$) and simplify.\n4. Add the cost of the work inside, including library calls (a `find` on a vector is $O(n)$, a `set::insert` is $O(\\log n)$).\n5. Keep only the dominant term.\n\n#### Pitfalls\n\n- A `while` loop nested in a `for` is not automatically $O(n^2)$; count total moves.\n- A loop to `n` that calls `s.substr(...)` or copies a list each time hides another factor of $n$.\n- $\\sum_{i=1}^{n} \\log i = \\log n! = \\Theta(n \\log n)$, not $O(\\log n)$.\n- A loop from 1 to $n$ stepping by 2 is still $O(n)$: the step is a constant.\n\nConnects to: Big-O notation, amortized analysis, two pointers, sieve of Eratosthenes."
    }
   },
   {
@@ -3230,9 +3288,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A recursive function's cost is the total work done across all of its calls. Picture the calls as a family tree: each call has children, and you add up the work on every level of the tree. A recurrence is just a short equation that describes that tree.",
+    "interview": [
+     "Write the recurrence: $T(n) = a \\cdot T(n/b) + f(n)$ for $a$ subproblems of size $n/b$ plus $f(n)$ work to split and combine.",
+     "**Recursion tree**: work per level times number of levels. Merge sort does $O(n)$ per level over $\\log n$ levels, so $O(n \\log n)$.",
+     "**Master theorem**: compare $f(n)$ with $n^{\\log_b a}$. Smaller: $\\Theta(n^{\\log_b a})$. Equal: $\\Theta(n^{\\log_b a} \\log n)$. Bigger (and regular): $\\Theta(f(n))$.",
+     "Branching recursion without memo: roughly $O(\\text{branches}^{\\text{depth}})$; naive Fibonacci is $O(2^n)$ (more precisely $O(\\varphi^n)$).",
+     "With memoization: number of distinct states times work per state.",
+     "Recursion also costs **stack space** equal to the maximum depth."
+    ],
+    "questions": [
+     {
+      "q": "What is the recurrence for merge sort and how do you solve it?",
+      "a": "T(n) = 2T(n/2) + O(n). The recursion tree has log n levels and each level does O(n) total merging work, so T(n) = O(n log n). The Master theorem's equal-work case gives the same answer."
+     },
+     {
+      "q": "State the three cases of the Master theorem in words.",
+      "a": "Compare the combine work f(n) with n^(log_b a), the number of leaves. If the leaves dominate, the answer is n^(log_b a); if they are equal, multiply by log n; if f(n) dominates (and shrinks geometrically down the tree), the answer is f(n)."
+     },
+     {
+      "q": "Why is naive recursive Fibonacci exponential, and how does memoization fix it?",
+      "a": "Each call spawns two more and the same values are recomputed again and again, giving about φ^n ≈ 1.618^n calls. Memoization stores each fib(k) the first time it is computed, so there are only n + 1 distinct calls with O(1) work each, which is O(n)."
+     },
+     {
+      "q": "What is the complexity of T(n) = T(n − 1) + O(n)?",
+      "a": "O(n²). Unrolling gives n + (n − 1) + … + 1 = n(n + 1)/2. This is quicksort's worst case, when every pivot is the smallest or largest element."
+     },
+     {
+      "q": "How do you estimate the complexity of a memoized recursive function?",
+      "a": "Multiply the number of distinct states by the work done per state, ignoring cached calls. For example, a memo over (i, j) with i, j < n and an O(n) loop inside is O(n³)."
+     }
+    ],
+    "deep": "#### Intuition\n\nEvery recursive call does some local work and then makes more calls. Draw the calls as a tree, write the work done at each node, and add it up level by level. The **recurrence** is the compact way to write that tree.\n\n#### The recursion tree method\n\nTake merge sort: $T(n) = 2T(n/2) + cn$.\n\n| Level | Calls | Size of each | Work per level |\n|---|---|---|---|\n| 0 | 1 | $n$ | $cn$ |\n| 1 | 2 | $n/2$ | $cn$ |\n| 2 | 4 | $n/4$ | $cn$ |\n| … | … | … | … |\n| $\\log_2 n$ | $n$ | 1 | $cn$ |\n\nThere are $\\log_2 n + 1$ levels, each doing $cn$ work, so $T(n) = \\Theta(n \\log n)$.\n\nBinary search: $T(n) = T(n/2) + c$. One call per level, $\\log n$ levels, $\\Theta(\\log n)$.\n\n#### The Master theorem\n\nFor $T(n) = a \\, T(n/b) + f(n)$ with $a \\ge 1$, $b > 1$, let $k = \\log_b a$ (the number of leaves is $n^k$):\n\n1. If $f(n) = O(n^{k - \\epsilon})$, the leaves dominate: $T(n) = \\Theta(n^k)$.\n2. If $f(n) = \\Theta(n^k)$, every level costs the same: $T(n) = \\Theta(n^k \\log n)$.\n3. If $f(n) = \\Omega(n^{k + \\epsilon})$ and $a f(n/b) \\le c f(n)$ for some $c < 1$, the root dominates: $T(n) = \\Theta(f(n))$.\n\n| Recurrence | $k$ | Case | Result |\n|---|---|---|---|\n| $2T(n/2) + n$ (merge sort) | 1 | 2 | $n \\log n$ |\n| $T(n/2) + 1$ (binary search) | 0 | 2 | $\\log n$ |\n| $2T(n/2) + 1$ (tree traversal) | 1 | 1 | $n$ |\n| $4T(n/2) + n$ | 2 | 1 | $n^2$ |\n| $3T(n/2) + n$ (Karatsuba) | 1.585 | 1 | $n^{1.585}$ |\n| $2T(n/2) + n^2$ | 1 | 3 | $n^2$ |\n\n#### Recurrences the Master theorem does not cover\n\n- $T(n) = T(n-1) + O(1)$: a chain of $n$ calls, $O(n)$ (factorial, linked-list recursion).\n- $T(n) = T(n-1) + O(n)$: $n + (n-1) + \\dots$, $O(n^2)$ (selection sort written recursively, quicksort's worst case).\n- $T(n) = 2T(n-1) + O(1)$: the tree doubles each level for $n$ levels, $O(2^n)$ (Tower of Hanoi, naive subsets).\n\n#### Worked example: Fibonacci with and without memo\n\n```cpp\n// Naive: T(n) = T(n-1) + T(n-2) + O(1), exponential (about 1.618^n calls).\nlong long fibNaive(int n) {\n    if (n < 2) return n;\n    return fibNaive(n - 1) + fibNaive(n - 2);\n}\n\n// Memoized: n + 1 distinct states, O(1) work each -> O(n) time, O(n) space.\nlong long fibMemo(int n, vector<long long>& memo) {\n    if (n < 2) return n;\n    if (memo[n] != -1) return memo[n];\n    return memo[n] = fibMemo(n - 1, memo) + fibMemo(n - 2, memo);\n}\n```\n\n```python\nfrom functools import lru_cache\n\ndef fib_naive(n):\n    return n if n < 2 else fib_naive(n - 1) + fib_naive(n - 2)\n\n@lru_cache(maxsize=None)\ndef fib_memo(n):\n    return n if n < 2 else fib_memo(n - 1) + fib_memo(n - 2)\n```\n\nFor memoized recursion, use **states times work per state**, not the tree: each state is computed once.\n\n#### Pitfalls\n\n- Forgetting the non-recursive work: slicing a list in each call (`a[1:]` in Python) adds $O(n)$ per call.\n- Assuming \"two recursive calls\" means $O(2^n)$. Merge sort makes two calls but on halves, which gives $n \\log n$.\n- Ignoring stack depth: a recursion of depth $10^5$ can overflow the stack in C++ and hits Python's default limit of 1000.\n\nConnects to: divide and conquer, memoization, merge sort, binary search."
    }
   },
   {
@@ -3252,9 +3339,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Space complexity measures how much extra memory an algorithm needs as the input grows. It is like counting the scratch paper you use while doing a sum, not the paper the question was printed on. Recursion uses hidden scratch paper too: every call waiting on the stack takes some memory.",
+    "interview": [
+     "**Auxiliary space** is extra memory beyond the input; interviewers usually mean this when they ask about space.",
+     "**Recursion stack** counts: a recursion of depth $d$ uses $O(d)$ space even without any arrays. DFS on a skewed tree is $O(n)$.",
+     "**In-place** means $O(1)$ extra space (sometimes allowing $O(\\log n)$ of stack, as in quicksort).",
+     "Output space is usually not counted, but say so: \"O(1) extra space besides the output\".",
+     "Common costs: hash map of $n$ items $O(n)$; 2D DP table $O(nm)$, often reducible to $O(m)$ with rolling rows.",
+     "Trade-off: extra space often buys time (hash set for $O(1)$ lookups, memo tables)."
+    ],
+    "questions": [
+     {
+      "q": "What is auxiliary space, and why do interviewers usually ask about it instead of total space?",
+      "a": "Auxiliary space is the extra memory an algorithm uses beyond its input. The input has to exist anyway, so the useful comparison between two solutions is how much additional memory each needs."
+     },
+     {
+      "q": "A recursive DFS on a binary tree uses no arrays. What is its space complexity?",
+      "a": "O(h), where h is the tree's height, because each active call sits on the stack. For a balanced tree that is O(log n); for a skewed tree it is O(n)."
+     },
+     {
+      "q": "What does in-place mean for an algorithm?",
+      "a": "It transforms the input using only O(1) extra memory (some definitions allow O(log n) stack, as in quicksort). Reversing an array with two pointers and heap sort are in place; merge sort on arrays is not, because it needs an O(n) buffer."
+     },
+     {
+      "q": "How can you reduce the space of a 2D DP where each row depends only on the previous row?",
+      "a": "Keep only two rows, or even one row updated in the right direction, which cuts space from O(n·m) to O(m). You lose the ability to reconstruct the path unless you store choices separately."
+     },
+     {
+      "q": "Does allocating a new array of size n inside a loop that runs n times use O(n²) space?",
+      "a": "No, if each array is discarded before the next is made. Space measures peak memory in use at once, which is O(n). It does cost O(n²) time to allocate and fill them."
+     }
+    ],
+    "deep": "#### Intuition\n\nTime counts steps; space counts the **peak** memory in use at once. Memory that is freed and reused does not add up: a loop that creates a temporary array of size $n$ in each iteration uses $O(n)$ space at any moment, even though it allocates $O(n^2)$ over the whole run.\n\n#### What counts\n\n1. **Input**: usually excluded. If you modify it in place, say so, because some interviewers consider destroying the input a trade-off.\n2. **Auxiliary data structures**: arrays, hash maps, heaps, queues you create.\n3. **Call stack**: each active recursive call holds its local variables and return address. Peak depth times frame size.\n4. **Output**: usually excluded (you cannot avoid producing it), but mention it.\n\n#### Worked example: three ways to reverse an array\n\n```cpp\n// O(n) extra: builds a copy.\nvector<int> reversedCopy(const vector<int>& a) {\n    return vector<int>(a.rbegin(), a.rend());\n}\n\n// O(1) extra: swaps in place with two pointers.\nvoid reverseInPlace(vector<int>& a) {\n    int i = 0, j = (int)a.size() - 1;\n    while (i < j) swap(a[i++], a[j--]);\n}\n\n// O(n) extra: in place, but recursion depth n / 2 uses the stack.\nvoid reverseRecursive(vector<int>& a, int i, int j) {\n    if (i >= j) return;\n    swap(a[i], a[j]);\n    reverseRecursive(a, i + 1, j - 1);\n}\n```\n\n```python\ndef reversed_copy(a):\n    return a[::-1]                  # O(n) extra\n\ndef reverse_in_place(a):\n    i, j = 0, len(a) - 1\n    while i < j:                    # O(1) extra\n        a[i], a[j] = a[j], a[i]\n        i, j = i + 1, j - 1\n```\n\nAll three take $O(n)$ time; only the second uses $O(1)$ extra space.\n\n#### Recursion depth examples\n\n| Algorithm | Peak depth | Stack space |\n|---|---|---|\n| Binary search (recursive) | $\\log n$ | $O(\\log n)$ |\n| DFS on a balanced tree | $\\log n$ | $O(\\log n)$ |\n| DFS on a skewed tree or linked list | $n$ | $O(n)$ |\n| Merge sort | $\\log n$ | $O(\\log n)$ stack plus $O(n)$ buffer |\n| Quicksort (recurse on the smaller side first) | $\\log n$ | $O(\\log n)$ |\n\n#### Reducing space\n\n- **Rolling arrays in DP**: if row $i$ depends only on row $i-1$, keep two rows (or one) instead of the whole table.\n- **Two pointers instead of a hash set** when the input is sorted.\n- **Iterative instead of recursive** to avoid deep stacks (explicit stack still costs memory, but on the heap, which is much larger).\n- **Reuse the input** as storage (marking visited cells, sign tricks) when mutation is allowed.\n\n#### Pitfalls\n\n- Saying \"O(1) space\" for a recursive DFS. The stack is real memory.\n- Python slicing (`a[1:]`) creates a copy; passing slices through recursion adds $O(n)$ per level.\n- Strings are immutable in Java and Python: building one by repeated concatenation creates many temporary copies.\n- A 2D `vector<vector<int>>` of $10^4 \\times 10^4$ ints is 400 MB. Check memory limits (usually 256 MB) against table sizes.\n\nConnects to: recursion fundamentals, space optimization in DP, in-place array tricks."
    }
   },
   {
@@ -3276,9 +3392,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Amortized analysis averages the cost of an operation over a long sequence of operations. It is like a gym membership: one day you pay a big fee, but spread over the year it is a small cost per visit. A dynamic array occasionally copies everything to grow, yet each append still costs O(1) on average.",
+    "interview": [
+     "Amortized cost is the **worst-case total** of a sequence of operations divided by the number of operations; no randomness is involved (unlike average case).",
+     "Dynamic array (`vector`, `ArrayList`, Python `list`) doubles capacity when full: $n$ appends cost $n + (1 + 2 + 4 + \\dots + n) < 3n$, so **O(1) amortized** per append.",
+     "Growing by a constant (+10 each time) instead of doubling gives $O(n^2)$ total, $O(n)$ per append.",
+     "**Aggregate method**: bound the total work of $n$ operations directly. Examples: monotonic stack (each element pushed and popped once), two pointers.",
+     "A single operation can still be slow ($O(n)$ on a resize); say \"O(1) amortized\" rather than \"O(1)\" when latency spikes matter."
+    ],
+    "questions": [
+     {
+      "q": "Why is appending to a dynamic array O(1) amortized?",
+      "a": "When the array is full it doubles its capacity and copies everything, but these copies have sizes 1, 2, 4, …, n, which sum to less than 2n. Over n appends the total work is under 3n, so each append costs O(1) on average over the sequence."
+     },
+     {
+      "q": "What goes wrong if a dynamic array grows by a fixed 100 slots instead of doubling?",
+      "a": "Resizes happen every 100 appends and copy 100, 200, 300, … elements, which sums to O(n²/100) = O(n²). Each append then costs O(n) amortized. Growth must be geometric for O(1) amortized appends."
+     },
+     {
+      "q": "How is amortized analysis different from average-case analysis?",
+      "a": "Amortized analysis bounds the total cost of any sequence of operations in the worst case; no randomness is assumed. Average-case analysis assumes a probability distribution over inputs and gives an expected cost."
+     },
+     {
+      "q": "In a monotonic stack solution, the inner while loop can pop many elements. Why is the algorithm still O(n)?",
+      "a": "Each element is pushed exactly once and popped at most once, so all the pops together cost at most n. Counting the total work across the run (the aggregate method) gives O(n)."
+     }
+    ],
+    "deep": "#### Intuition\n\nSome data structures do cheap work most of the time and expensive work rarely. Worst-case-per-operation analysis would call every operation expensive, which overstates the total. Amortized analysis bounds the **total** cost of any sequence of $n$ operations and divides by $n$.\n\n#### Dynamic array doubling\n\nStart with capacity 1 and double when full. Appending $n$ items triggers copies of size $1, 2, 4, \\dots$ up to at most $n$:\n\n$$1 + 2 + 4 + \\dots + 2^k < 2 \\cdot 2^k \\le 2n$$\n\nAdd the $n$ writes of the new items and the total is under $3n$, so each append is $O(1)$ amortized.\n\n| Append # | Capacity before | Copy cost | Total so far |\n|---|---|---|---|\n| 1 | 0 → 1 | 0 | 1 |\n| 2 | 1 → 2 | 1 | 3 |\n| 3 | 2 → 4 | 2 | 6 |\n| 4 | 4 | 0 | 7 |\n| 5 | 4 → 8 | 4 | 12 |\n| 6 to 8 | 8 | 0 | 15 |\n| 9 | 8 → 16 | 8 | 24 |\n\nThe total stays below $3n$ at every point. Any constant growth factor above 1 works (C++ implementations use 1.5 or 2). Growing by a fixed amount does not: copies of $10, 20, 30, \\dots$ sum to $O(n^2)$.\n\n#### The aggregate method elsewhere\n\nMonotonic stack for \"next greater element\":\n\n```cpp\nvector<int> nextGreater(const vector<int>& a) {\n    int n = a.size();\n    vector<int> ans(n, -1);\n    vector<int> st;                        // indices with no answer yet\n    for (int i = 0; i < n; i++) {\n        while (!st.empty() && a[st.back()] < a[i]) {\n            ans[st.back()] = a[i];         // each index is popped at most once\n            st.pop_back();\n        }\n        st.push_back(i);                   // each index is pushed once\n    }\n    return ans;\n}\n```\n\n```python\ndef next_greater(a):\n    ans, st = [-1] * len(a), []\n    for i, x in enumerate(a):\n        while st and a[st[-1]] < x:\n            ans[st.pop()] = x\n        st.append(i)\n    return ans\n```\n\nThe inner `while` can pop many items in one step, but across the whole run there are at most $n$ pushes and $n$ pops, so the total is $O(n)$ and each step is $O(1)$ amortized.\n\n#### Other methods (for depth)\n\n- **Accounting method**: charge each cheap operation a little extra \"credit\" that pays for later expensive ones. Charging 3 per append pays for the item and for copying it and one older item at the next resize.\n- **Potential method**: define a potential function (for the array, $2 \\cdot \\text{size} - \\text{capacity}$) and show that actual cost plus change in potential is constant.\n\n#### Amortized vs average case\n\nAverage case assumes a distribution over inputs (random pivots, random keys). Amortized is a **guarantee** for every sequence: no bad input can make $n$ appends cost more than $3n$. Hash tables mix both: resizing is amortized, while $O(1)$ lookups rely on keys hashing evenly.\n\n#### Pitfalls\n\n- A shrink policy that halves at half-full can thrash (grow, shrink, grow) around the boundary; shrinking at a quarter full avoids it.\n- Amortized $O(1)$ still allows one $O(n)$ spike, which matters for real-time systems.\n\nConnects to: dynamic arrays, monotonic stack, union-find, hash table resizing."
    }
   },
   {
@@ -3300,9 +3440,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The input limits in a problem quietly tell you which algorithm is expected. A computer does roughly 10^8 simple steps per second, so you can work backwards from n to the slowest complexity that still fits. It is like knowing a trip must take under an hour: that tells you whether to walk, cycle or drive.",
+    "interview": [
+     "Budget: about $10^8$ simple operations per second in C++ (Java somewhat less, Python about $10^7$). Typical limits are 1 to 2 seconds.",
+     "$n \\le 10$: $O(n!)$, permutations. $n \\le 20$: $O(2^n)$ or $O(2^n \\cdot n)$, subsets and bitmask DP. $n \\le 40$: meet in the middle, $O(2^{n/2})$.",
+     "$n \\le 500$: $O(n^3)$, interval DP or Floyd-Warshall. $n \\le 5000$: $O(n^2)$, 2D DP.",
+     "$n \\le 10^5$ to $10^6$: $O(n \\log n)$ or $O(n)$: sorting, heaps, binary search, two pointers, hashing.",
+     "$n$ up to $10^9$ or $10^{18}$: $O(\\log n)$ or $O(1)$: binary search on the answer, math, fast exponentiation.",
+     "Use it in both directions: pick the target complexity first, then look for a pattern that achieves it; and sanity-check your idea before coding."
+    ],
+    "questions": [
+     {
+      "q": "The array length is up to 10^5. Is an O(n²) solution acceptable?",
+      "a": "No. n² is 10^10 operations, far beyond the roughly 10^8 per second a typical time limit allows. Aim for O(n log n) or O(n), for example sorting, hashing, two pointers or a heap."
+     },
+     {
+      "q": "What does a constraint of n ≤ 20 suggest?",
+      "a": "Exponential work over subsets is fine: 2^20 is about a million, so O(2^n · n) passes. It hints at bitmask DP, backtracking over subsets, or brute force over all choices."
+     },
+     {
+      "q": "What complexity is expected when n can be as large as 10^18?",
+      "a": "Anything linear is impossible, so the solution must be O(log n) or O(1) (at most O(√n) up to about 10^12). Think binary search on the answer, fast exponentiation, or a closed-form formula."
+     },
+     {
+      "q": "The interviewer doesn't state the input size. What should you do?",
+      "a": "Ask. The size decides whether a brute force is acceptable or which complexity to target. If they leave it open, state the brute-force complexity, then say you will aim for a better bound and explain why."
+     },
+     {
+      "q": "Why does n ≤ 500 often hint at O(n³)?",
+      "a": "500³ is 1.25 × 10^8, which fits in about a second in C++. Setters pick this limit for interval DP, Floyd-Warshall or triple loops, where O(n²) is not known and O(n⁴) would be too slow."
+     }
+    ],
+    "deep": "#### Intuition\n\nProblem setters choose limits so that the intended solution passes and slower ones do not. Reading $n \\le 2 \\cdot 10^5$ is a strong hint that $O(n^2)$ ($4 \\cdot 10^{10}$ steps) is too slow and $O(n \\log n)$ (about $3.6 \\cdot 10^6$) is expected. In interviews the constraints are often unstated, so ask for them: \"How large can the array be?\"\n\n#### The table\n\n| Largest $n$ | Feasible complexity | Typical techniques |\n|---|---|---|\n| 10 to 11 | $O(n!)$, $O(n! \\cdot n)$ | permutations, brute force |\n| 15 to 20 | $O(2^n \\cdot n)$, $O(3^n)$ at 15 | subsets, bitmask DP, backtracking |\n| 40 | $O(2^{n/2} \\cdot n)$ | meet in the middle |\n| 100 to 500 | $O(n^3)$ | interval DP, Floyd-Warshall, triple loops |\n| 1,000 to 5,000 | $O(n^2)$, $O(n^2 \\log n)$ at 1,000 | 2D DP, all pairs |\n| $10^5$ to $10^6$ | $O(n \\log n)$, $O(n)$ | sorting, heaps, segment trees, two pointers, hashing, linear DP |\n| $10^7$ to $10^8$ | $O(n)$ with small constants | a single pass, sieve |\n| $10^9$ to $10^{18}$ | $O(\\log n)$, $O(\\sqrt{n})$ at $10^{12}$, $O(1)$ | binary search on the answer, math, matrix power |\n\n#### Worked example: sizing a solution\n\nSuppose the task is \"count pairs $(i, j)$ with $a_i + a_j = k$\" and $n \\le 10^5$.\n\n1. Brute force over all pairs: $n^2 / 2 = 5 \\cdot 10^9$. Too slow.\n2. Target: $O(n \\log n)$ or $O(n)$.\n3. Candidates: sort plus two pointers ($O(n \\log n)$), or a hash map of counts ($O(n)$).\n\n```cpp\nlong long countPairs(const vector<int>& a, int k) {\n    unordered_map<long long, long long> seen;  // value -> how many times seen\n    long long pairs = 0;\n    for (int x : a) {\n        auto it = seen.find((long long)k - x);\n        if (it != seen.end()) pairs += it->second;\n        seen[x]++;\n    }\n    return pairs;\n}\n```\n\n```python\nfrom collections import Counter\n\ndef count_pairs(a, k):\n    seen, pairs = Counter(), 0\n    for x in a:\n        pairs += seen[k - x]\n        seen[x] += 1\n    return pairs\n```\n\nThe constraint pointed straight at hashing.\n\n#### Other limits worth reading\n\n- **Value ranges**: values up to $10^9$ mean sums can overflow 32-bit ints (use `long long`); values up to $10^6$ allow counting arrays instead of hash maps.\n- **Sum of lengths**: \"the total length of all strings is at most $10^5$\" allows per-string work proportional to its length.\n- **Number of queries**: $q \\le 10^5$ queries on $n \\le 10^5$ items rules out $O(n)$ per query; you need preprocessing (prefix sums, segment trees).\n- **Small second dimension**: a grid $10^3 \\times 10^3$ has $10^6$ cells, so BFS over cells is fine.\n\n#### Pitfalls\n\n- Python is roughly 10 to 50 times slower than C++ for loops; an $O(n^2)$ at $n = 5000$ (25 million steps) is tight in Python.\n- Hidden logarithms and constants: $O(n \\log^2 n)$ at $n = 10^6$ is about $4 \\cdot 10^8$.\n- Recursion depth limits apply even when time is fine.\n\nConnects to: Big-O notation, pattern recognition, reading the problem."
    }
   },
   {
@@ -3322,9 +3491,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The same algorithm can be fast on one input and slow on another. Looking for your keys can take a second if they are on the hook, or an hour if they are in the last place you check. Best, average and worst case describe the lucky input, the typical input and the unluckiest input.",
+    "interview": [
+     "**Worst case**: the maximum cost over all inputs of size $n$; the default when a bound is stated without qualification.",
+     "**Average case**: expected cost under an assumed input distribution (or over the algorithm's own random choices).",
+     "**Best case**: rarely useful; almost any algorithm can be fast on a lucky input.",
+     "Quicksort: $O(n \\log n)$ average, $O(n^2)$ worst (already sorted input with a first-element pivot); random pivots make the worst case very unlikely.",
+     "Hash table lookup: $O(1)$ average, $O(n)$ worst when many keys collide in one bucket.",
+     "Insertion sort: $O(n)$ best (already sorted), $O(n^2)$ worst and average."
+    ],
+    "questions": [
+     {
+      "q": "What input makes quicksort with a first-element pivot run in O(n²)?",
+      "a": "An already sorted (or reverse sorted) array. Every partition splits off only the pivot, so the recursion goes n levels deep with n, n − 1, n − 2, … comparisons. Choosing a random pivot or the median of three avoids this in practice."
+     },
+     {
+      "q": "Why are hash table lookups O(1) on average but O(n) in the worst case?",
+      "a": "With a good hash function and a bounded load factor, keys spread evenly and each bucket holds a constant number of items on average. If many keys land in the same bucket, a lookup must scan them all, which is O(n) in the worst case."
+     },
+     {
+      "q": "Is average case the same as amortized cost?",
+      "a": "No. Average case assumes a distribution over inputs or random choices and gives an expected cost. Amortized cost is a worst-case guarantee on the total of a sequence of operations, with no randomness involved."
+     },
+     {
+      "q": "Which case should you quote in an interview?",
+      "a": "The worst case by default, and name the average case when it differs and matters, as with quicksort and hash maps. Say which one you mean, for example \"O(1) average, O(n) worst case\"."
+     }
+    ]
    }
   },
   {
@@ -3344,9 +3537,37 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "An array stores items side by side in one block of memory, like numbered lockers in a row. Because every locker has the same size, you can jump straight to locker 500 without walking past the first 499. Adding or removing in the middle is slow, because everything after it has to shift over.",
+    "interview": [
+     "Contiguous memory: `a[i]` is at `base + i * size`, so indexing is **O(1)** and scans are cache-friendly (fast in practice).",
+     "Access and update by index: O(1). Search in an unsorted array: O(n). Insert or delete in the middle: O(n) because of shifting; at the end of a dynamic array: O(1) amortized.",
+     "Static arrays have a fixed size; dynamic arrays (`vector`, `ArrayList`, Python `list`) grow by reallocating and copying.",
+     "In-place updates overwrite the input to save memory; ask whether modifying the input is allowed.",
+     "Common bugs: off-by-one at the ends, reading `a[i + 1]` on the last element, and changing an array's length while iterating over it."
+    ],
+    "questions": [
+     {
+      "q": "Why is accessing an array element by index O(1)?",
+      "a": "The elements are stored contiguously and all have the same size, so the address of a[i] is base + i × size. The machine computes it with one multiplication and addition, no matter how large the array is."
+     },
+     {
+      "q": "Why is inserting into the middle of an array O(n)?",
+      "a": "Every element after the insertion point must shift one slot to make room. In the worst case (inserting at the front) that is all n elements."
+     },
+     {
+      "q": "How do you remove elements from an array in place without extra memory?",
+      "a": "Use a write index. Scan with a read index, and copy each element you keep to the write position, then advance it. After one pass the first w slots hold the kept elements, in O(n) time and O(1) space."
+     },
+     {
+      "q": "Why does loop order matter for performance on a 2D array in C++?",
+      "a": "C++ stores 2D arrays row by row. Iterating along a row reads consecutive memory and uses the cache well, while iterating down a column jumps by a whole row each step and causes many cache misses. Both are O(n·m), but the row-order loop can be several times faster."
+     },
+     {
+      "q": "What is the difference between a static array and a dynamic array?",
+      "a": "A static array has a fixed size chosen at creation. A dynamic array keeps spare capacity and reallocates to a larger block (usually double) when full, which makes appends O(1) amortized."
+     }
+    ],
+    "deep": "#### Intuition\n\nAn array is the simplest data structure and the one every other structure is built on. It is a single block of memory with equal-sized slots, so the machine can compute where element $i$ lives with one multiplication. This is why indexing is $O(1)$, and why arrays are the fastest structure to scan: neighboring elements share cache lines, so the CPU loads several at once.\n\n#### Operations and their costs\n\n| Operation | Static array | Dynamic array (end) |\n|---|---|---|\n| Read or write `a[i]` | $O(1)$ | $O(1)$ |\n| Append | not possible | $O(1)$ amortized |\n| Insert or delete at index $i$ | $O(n - i)$ shifts | $O(n - i)$ shifts |\n| Search unsorted | $O(n)$ | $O(n)$ |\n| Search sorted | $O(\\log n)$ with binary search | $O(\\log n)$ |\n\n#### Traversal patterns\n\nMost array problems are one of a handful of traversals:\n\n1. **Left to right** with running state (sum, maximum, count).\n2. **Right to left**, when the answer for $i$ depends on what comes after it (suffix maximum, next greater element).\n3. **Two passes**, one in each direction, when the answer needs both sides (product of everything except self, trapping rain water).\n4. **Two indices** moving through the array (see two pointers).\n\n#### Worked example: in-place compaction\n\nRemove every occurrence of a value and return the new length, using $O(1)$ extra space. Keep a write index `w`; copy each kept element to `a[w]`.\n\n| i | a[i] | keep? | array after | w |\n|---|---|---|---|---|\n| 0 | 3 | no (value 3) | 3 2 2 3 | 0 |\n| 1 | 2 | yes | 2 2 2 3 | 1 |\n| 2 | 2 | yes | 2 2 2 3 | 2 |\n| 3 | 3 | no | 2 2 2 3 | 2 |\n\nThe answer is 2 and the first two slots hold `2 2`.\n\n```cpp\nint removeValue(vector<int>& a, int val) {\n    int w = 0;                       // next slot to write a kept element\n    for (int i = 0; i < (int)a.size(); i++)\n        if (a[i] != val) a[w++] = a[i];\n    return w;                        // a[0..w-1] holds the kept elements\n}\n```\n\n```python\ndef remove_value(a, val):\n    w = 0\n    for x in a:\n        if x != val:\n            a[w] = x\n            w += 1\n    return w\n```\n\nTime $O(n)$, one pass. Space $O(1)$: the input is reused as the output.\n\n#### Memory layout details\n\n- A 2D array in C and C++ is stored **row by row** (row-major). Looping over rows in the outer loop and columns in the inner loop reads memory in order and is much faster than the reverse.\n- `vector<vector<int>>` stores each row separately; a flat `vector<int>` of size `rows * cols` indexed by `r * cols + c` is more cache-friendly.\n- Python lists store references to objects, so a list of ints is not contiguous ints; the `array` module and NumPy are.\n\n#### Edge cases and bugs\n\n- Empty array: loops that read `a[0]` first will crash.\n- One element: two-index loops such as `i < n - 1` may never run.\n- Deleting while iterating forward skips elements; iterate backwards or use a write index.\n- Integer overflow when summing large values; use `long long` in C++.\n\n#### Variants\n\nCircular arrays (index with `i % n`), sparse arrays (hash map of index to value), and bit arrays (one bit per slot) all reuse the same indexing idea.\n\nConnects to: two pointers, prefix sums, dynamic arrays and amortized analysis, cache locality."
    }
   },
   {
@@ -3368,9 +3589,46 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Kadane's algorithm finds the contiguous stretch of numbers with the largest sum in one pass. Imagine walking along a road collecting coins and paying tolls: if your running total ever becomes a debt, you are better off starting fresh from the next spot. You remember the best total you ever held.",
+    "interview": [
+     "For each index, the best subarray **ending here** is either the element alone or the element added to the best subarray ending at the previous index: `cur = max(x, cur + x)`.",
+     "Track the global best as `best = max(best, cur)`. Time **O(n)**, space **O(1)**.",
+     "Initialize with the first element (not 0) so an all-negative array returns its largest element.",
+     "Circular variant: answer is `max(maxSubarray, total - minSubarray)`, except when every element is negative (then just `maxSubarray`).",
+     "Product variant: track both the maximum and minimum product ending here, because a negative number swaps them.",
+     "To return the subarray itself, record the start index whenever you restart."
+    ],
+    "questions": [
+     {
+      "q": "What is the key recurrence in Kadane's algorithm?",
+      "a": "The best subarray ending at index i is max(a[i], best ending at i − 1 plus a[i]). If the previous best is negative, it only hurts, so you restart at a[i]. The overall answer is the largest of these values."
+     },
+     {
+      "q": "How do you handle an array where every number is negative?",
+      "a": "Initialize both the running sum and the answer with the first element instead of 0. Then the algorithm returns the largest (least negative) element, which is the correct maximum for a non-empty subarray."
+     },
+     {
+      "q": "How do you find the maximum circular subarray sum?",
+      "a": "Either the best subarray doesn't wrap, which is normal Kadane, or it wraps, which means it is the whole array minus some middle subarray, so total − minimum subarray. Take the larger of the two, except when all numbers are negative, where the wrap case would wrongly pick the empty subarray."
+     },
+     {
+      "q": "Why does maximum product subarray need both a maximum and a minimum?",
+      "a": "Multiplying by a negative number turns the smallest (most negative) product into the largest. Keeping both the max and min product ending at each index lets you recover the best product after a sign flip."
+     },
+     {
+      "q": "How is Kadane's algorithm related to prefix sums?",
+      "a": "The sum of a[i..j] is prefix[j + 1] − prefix[i], so the best subarray ending at j subtracts the smallest prefix seen before it. Kadane tracks the same thing implicitly with a running sum that resets when it goes negative."
+     }
+    ],
+    "deep": "#### Intuition\n\nA brute force tries every start and end, $O(n^2)$ with running sums. Kadane's insight is that the best subarray ending at index $i$ only depends on the best subarray ending at $i - 1$: either you extend it by $a_i$, or it had a negative total and you drop it and start a new subarray at $i$. That is a one-variable dynamic program.\n\n$$\\text{cur}_i = \\max(a_i,\\ \\text{cur}_{i-1} + a_i), \\qquad \\text{answer} = \\max_i \\text{cur}_i$$\n\n#### Worked example\n\nArray: `-2 1 -3 4 -1 2 1 -5 4`\n\n| i | a[i] | cur = max(a[i], cur + a[i]) | best |\n|---|---|---|---|\n| 0 | -2 | -2 | -2 |\n| 1 | 1 | max(1, -1) = 1 | 1 |\n| 2 | -3 | max(-3, -2) = -2 | 1 |\n| 3 | 4 | max(4, 2) = 4 | 4 |\n| 4 | -1 | 3 | 4 |\n| 5 | 2 | 5 | 5 |\n| 6 | 1 | 6 | 6 |\n| 7 | -5 | 1 | 6 |\n| 8 | 4 | 5 | 6 |\n\nThe answer is 6, from the subarray `4 -1 2 1`.\n\n#### Code\n\n```cpp\n// Returns the maximum subarray sum (the array must be non-empty).\nlong long maxSubarray(const vector<int>& a) {\n    long long cur = a[0], best = a[0];\n    for (int i = 1; i < (int)a.size(); i++) {\n        cur = max((long long)a[i], cur + a[i]);  // extend or restart\n        best = max(best, cur);\n    }\n    return best;\n}\n\n// Circular: the best wraps around exactly when it equals total minus the minimum subarray.\nlong long maxCircularSubarray(const vector<int>& a) {\n    long long curMax = 0, curMin = 0, best = a[0], worst = a[0], total = 0;\n    for (int x : a) {\n        curMax = max((long long)x, curMax + x);\n        best = max(best, curMax);\n        curMin = min((long long)x, curMin + x);\n        worst = min(worst, curMin);\n        total += x;\n    }\n    return best < 0 ? best : max(best, total - worst);  // all negative: no wrap\n}\n```\n\n```python\ndef max_subarray(a):\n    cur = best = a[0]\n    for x in a[1:]:\n        cur = max(x, cur + x)\n        best = max(best, cur)\n    return best\n\ndef max_product_subarray(a):\n    hi = lo = best = a[0]\n    for x in a[1:]:\n        if x < 0:\n            hi, lo = lo, hi               # a negative swaps the roles\n        hi = max(x, hi * x)\n        lo = min(x, lo * x)\n        best = max(best, hi)\n    return best\n```\n\nTime $O(n)$, space $O(1)$ for all three.\n\n#### Edge cases and bugs\n\n- **All negative**: initializing `best = 0` returns 0, which is wrong if an empty subarray is not allowed. Start from `a[0]`.\n- **Circular with all negatives**: `total - worst` would be 0 (the empty subarray); guard with `best < 0`.\n- **Overflow**: sums of $10^5$ values up to $10^9$ need 64-bit integers.\n- **Product with zeros**: a zero resets both `hi` and `lo` to 0, which the `max(x, hi * x)` form handles.\n\n#### Variants\n\n- Return the indices: when `cur` restarts at `i`, set `start = i`; when `best` improves, save `(start, i)`.\n- Maximum sum with at most one deletion: two states, \"no deletion yet\" and \"one deletion used\".\n- Maximum sum rectangle in a 2D matrix: fix a pair of rows, compress columns into sums, run Kadane: $O(r^2 c)$.\n- Kadane is also the stock-profit problem in disguise: the best profit is the maximum subarray of daily price differences.\n\nConnects to: dynamic programming (1D), prefix sums (answer = max of prefix[j] − min prefix before j), best time to buy and sell stock.",
+    "signals": [
+     "a contiguous subarray whose sum (or product) should be as large as possible",
+     "\"maximum sum of consecutive elements\"",
+     "gains and losses over time where you pick one best stretch",
+     "a circular array where the best stretch may wrap around",
+     "stock profit from one buy and one later sell (maximum of daily differences)"
+    ],
+    "template": "```cpp\n// Kadane: best value of a contiguous subarray in O(n) time, O(1) space.\nlong long kadane(const vector<int>& a) {\n    long long cur = a[0];   // best subarray ending at the current index\n    long long best = a[0];  // best seen anywhere\n    for (int i = 1; i < (int)a.size(); i++) {\n        // Either extend the previous subarray or start fresh here.\n        cur = max((long long)a[i], cur + a[i]);\n        best = max(best, cur);\n        // Variant hooks: track start/end indices here, or keep a second\n        // state (min, or \"one deletion used\") updated from the same values.\n    }\n    return best;\n}\n```"
    }
   },
   {
@@ -3390,9 +3648,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The Dutch national flag algorithm sorts an array that holds only three kinds of values in one pass. Picture sorting red, white and blue socks on a line: reds get tossed to the left end, blues to the right end, and whites stay in the middle. Three markers track where each group ends.",
+    "interview": [
+     "Three pointers: `low` (next slot for 0s), `mid` (current element), `high` (next slot for 2s).",
+     "Invariant: `[0, low)` are 0s, `[low, mid)` are 1s, `(high, n-1]` are 2s, `[mid, high]` is unknown.",
+     "If `a[mid] == 0`: swap with `low`, advance both. If 1: advance `mid`. If 2: swap with `high`, decrement `high` only (the swapped-in value is unexamined).",
+     "One pass, **O(n)** time, **O(1)** space, not stable.",
+     "Generalizes to three-way partition around a pivot (less, equal, greater), which fixes quicksort on many duplicates."
+    ],
+    "questions": [
+     {
+      "q": "What invariant does the Dutch national flag algorithm maintain?",
+      "a": "Everything before low is 0, everything from low to mid − 1 is 1, everything after high is 2, and mid to high is still unexamined. Each step shrinks the unexamined zone by one, so the loop ends after at most n steps."
+     },
+     {
+      "q": "Why don't you advance mid after swapping a 2 with a[high]?",
+      "a": "The value swapped in from the high end hasn't been examined yet; it might be a 0 or a 2 that needs moving. When swapping a 0 with a[low], the incoming value is already known to be a 1 (or it is the same element), so advancing mid is safe."
+     },
+     {
+      "q": "Why is three-way partitioning useful in quicksort?",
+      "a": "With many equal keys, a two-way partition can put all duplicates on one side and degrade to O(n²). Three-way partitioning groups every element equal to the pivot in the middle, so the recursion only continues on the strictly smaller and strictly larger parts."
+     },
+     {
+      "q": "How would you solve \"sort colors\" with counting instead, and why prefer the one-pass version?",
+      "a": "Count the 0s, 1s and 2s, then overwrite the array with that many of each: two passes, O(1) space. The one-pass version touches each element once and generalizes to partitioning around any pivot, which is why interviewers ask for it."
+     }
+    ],
+    "deep": "#### Intuition\n\nA counting sort would count the 0s, 1s and 2s and rewrite the array in two passes. The Dutch national flag algorithm (Dijkstra's) does it in one pass by growing three regions at once. The key is the invariant: at every moment the array is split into four zones.\n\n```\n[ 0 0 0 | 1 1 1 | ? ? ? ? | 2 2 2 ]\n  0..low-1  low..mid-1  mid..high  high+1..n-1\n```\n\nEach step shrinks the unknown zone `[mid, high]` by one.\n\n#### The three cases\n\n- `a[mid] == 0`: it belongs at the left. Swap it with `a[low]`, which is a 1 (or `mid == low`), then advance both `low` and `mid`.\n- `a[mid] == 1`: already in the right zone; advance `mid`.\n- `a[mid] == 2`: swap with `a[high]` and shrink `high`. Do **not** advance `mid`, because the value that just arrived from `high` hasn't been looked at.\n\n#### Worked example\n\nArray: `2 0 2 1 1 0`\n\n| step | array | low | mid | high | action |\n|---|---|---|---|---|---|\n| 0 | 2 0 2 1 1 0 | 0 | 0 | 5 | a[mid]=2, swap with high |\n| 1 | 0 0 2 1 1 2 | 0 | 0 | 4 | a[mid]=0, swap with low |\n| 2 | 0 0 2 1 1 2 | 1 | 1 | 4 | a[mid]=0, swap with low |\n| 3 | 0 0 2 1 1 2 | 2 | 2 | 4 | a[mid]=2, swap with high |\n| 4 | 0 0 1 1 2 2 | 2 | 2 | 3 | a[mid]=1, advance |\n| 5 | 0 0 1 1 2 2 | 2 | 3 | 3 | a[mid]=1, advance |\n| 6 | 0 0 1 1 2 2 | 2 | 4 | 3 | mid > high, stop |\n\n#### Code\n\n```cpp\nvoid sortColors(vector<int>& a) {\n    int low = 0, mid = 0, high = (int)a.size() - 1;\n    while (mid <= high) {\n        if (a[mid] == 0) swap(a[low++], a[mid++]);\n        else if (a[mid] == 1) mid++;\n        else swap(a[mid], a[high--]);   // don't advance mid: new value unseen\n    }\n}\n\n// Three-way partition around a pivot value: < pivot, == pivot, > pivot.\npair<int, int> partition3(vector<int>& a, int pivot) {\n    int low = 0, mid = 0, high = (int)a.size() - 1;\n    while (mid <= high) {\n        if (a[mid] < pivot) swap(a[low++], a[mid++]);\n        else if (a[mid] == pivot) mid++;\n        else swap(a[mid], a[high--]);\n    }\n    return {low, high};  // a[low..high] equals the pivot\n}\n```\n\n```python\ndef sort_colors(a):\n    low, mid, high = 0, 0, len(a) - 1\n    while mid <= high:\n        if a[mid] == 0:\n            a[low], a[mid] = a[mid], a[low]\n            low += 1\n            mid += 1\n        elif a[mid] == 1:\n            mid += 1\n        else:\n            a[mid], a[high] = a[high], a[mid]\n            high -= 1\n```\n\nTime $O(n)$: every step either advances `mid` or shrinks `high`, so there are at most $n$ steps. Space $O(1)$.\n\n#### Edge cases and bugs\n\n- Advancing `mid` after swapping with `high` skips an unexamined element: the classic bug.\n- Using `mid < high` instead of `mid <= high` leaves the last unknown element unprocessed.\n- Empty array: `high = -1`, the loop never runs. Fine.\n\n#### Variants\n\n- **Quicksort with many duplicates**: two-way partitioning degrades to $O(n^2)$ when all keys are equal; three-way partitioning puts every copy of the pivot in the middle and recurses only on the strict sides.\n- **Move zeros to the end** or **partition by parity** are the two-region version (one boundary pointer).\n- **K colors**: for small k, counting sort is simpler; for large k, sort normally.\n\nConnects to: quick sort partitioning, same-direction two pointers, counting sort.",
+    "signals": [
+     "only three distinct values (or three categories) to arrange in one pass",
+     "partitioning around a pivot into less, equal and greater",
+     "\"sort colors\" or grouping items by a small number of classes in place",
+     "O(1) extra space and a single pass required"
+    ],
+    "template": "```cpp\n// Three-way partition: [0, low) < pivot, [low, mid) == pivot, (high, n-1] > pivot.\nvoid threeWayPartition(vector<int>& a, int pivot) {\n    int low = 0, mid = 0, high = (int)a.size() - 1;\n    while (mid <= high) {                  // [mid, high] is still unknown\n        if (a[mid] < pivot) {\n            swap(a[low++], a[mid++]);      // goes left; incoming value already known\n        } else if (a[mid] > pivot) {\n            swap(a[mid], a[high--]);       // goes right; re-check the incoming value\n        } else {\n            mid++;                         // equal: stays in the middle\n        }\n    }\n}\n```"
    }
   },
   {
@@ -3414,9 +3703,41 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "When an array of size n holds numbers from 1 to n, every number has a home: value v belongs at index v − 1. Cyclic sort keeps swapping each number into its home seat, like guests taking their assigned chairs at a dinner. Afterwards, any seat with the wrong guest reveals a missing or duplicated number.",
+    "interview": [
+     "Applies when values lie in a known range like `[1, n]` or `[0, n]` and the array has about n slots.",
+     "Loop: while `a[i]` is in range and `a[a[i] - 1] != a[i]`, swap `a[i]` into its home. Then move on.",
+     "**O(n)** time (each swap places at least one number permanently), **O(1)** extra space; modifies the input.",
+     "After sorting, scan: index `i` with `a[i] != i + 1` means `i + 1` is missing and `a[i]` is a duplicate.",
+     "Solves first missing positive (ignore values outside `[1, n]`), find all duplicates, find the missing number, find the corrupt pair.",
+     "Check `a[a[i] - 1] != a[i]` (not `a[i] != i + 1`) or duplicates cause an infinite loop."
+    ],
+    "questions": [
+     {
+      "q": "When can you use cyclic sort?",
+      "a": "When the array's values fall in a known range that matches its indices, such as 1 to n for an array of length n. Each value then has a fixed home index, so you can place values by swapping instead of comparing, in O(n) time."
+     },
+     {
+      "q": "Why is cyclic sort O(n) even though it has a while loop inside a for loop?",
+      "a": "Every swap moves one value into its home, and a value at home is never moved again. So the total number of swaps over the whole run is at most n, and the loops together do O(n) work."
+     },
+     {
+      "q": "What condition prevents an infinite loop when the array has duplicates?",
+      "a": "Swap only while a[a[i] − 1] != a[i], that is, while the home slot doesn't already hold this value. If you test a[i] != i + 1 instead, two equal values keep swapping with each other forever."
+     },
+     {
+      "q": "How does cyclic sort find the first missing positive?",
+      "a": "Place every value in 1 to n at its home and ignore the rest. Then the first index i whose value isn't i + 1 gives the answer i + 1; if every slot is correct, the answer is n + 1."
+     }
+    ],
+    "deep": "#### Intuition\n\nIf the values are exactly the indices shifted by one, the sorted array is known in advance: `a[i] = i + 1`. Instead of comparing, you place each number directly where it belongs. A number that finds its home already occupied by an equal value is a duplicate, and a home that stays empty marks a missing value.\n\n#### Worked example\n\nArray: `3 4 -1 1` (first missing positive), $n = 4$.\n\n| i | array before | action |\n|---|---|---|\n| 0 | 3 4 -1 1 | a[0]=3 belongs at 2; swap with a[2] |\n| 0 | -1 4 3 1 | -1 is out of range; move on |\n| 1 | -1 4 3 1 | 4 belongs at 3; swap with a[3] |\n| 1 | -1 1 3 4 | 1 belongs at 0; swap with a[0] |\n| 1 | 1 -1 3 4 | -1 out of range; move on |\n| 2, 3 | 1 -1 3 4 | already home |\n\nScan: index 1 holds -1, not 2, so the first missing positive is **2**.\n\n#### Code\n\n```cpp\nvoid cyclicSort(vector<int>& a) {\n    int n = a.size();\n    for (int i = 0; i < n; i++) {\n        // Keep swapping until a[i] is out of range or its home already holds it.\n        while (a[i] >= 1 && a[i] <= n && a[a[i] - 1] != a[i])\n            swap(a[i], a[a[i] - 1]);\n    }\n}\n\nint firstMissingPositive(vector<int> a) {\n    cyclicSort(a);\n    for (int i = 0; i < (int)a.size(); i++)\n        if (a[i] != i + 1) return i + 1;\n    return (int)a.size() + 1;\n}\n\nvector<int> findDuplicates(vector<int> a) {  // values in [1, n], each appears once or twice\n    cyclicSort(a);\n    vector<int> dups;\n    for (int i = 0; i < (int)a.size(); i++)\n        if (a[i] != i + 1) dups.push_back(a[i]);\n    return dups;\n}\n```\n\n```python\ndef cyclic_sort(a):\n    n = len(a)\n    for i in range(n):\n        while 1 <= a[i] <= n and a[a[i] - 1] != a[i]:\n            j = a[i] - 1\n            a[i], a[j] = a[j], a[i]\n\ndef first_missing_positive(a):\n    a = list(a)\n    cyclic_sort(a)\n    for i, x in enumerate(a):\n        if x != i + 1:\n            return i + 1\n    return len(a) + 1\n```\n\nIn Python, compute `j` before swapping: `a[i], a[a[i] - 1] = ...` evaluates the target index after `a[i]` has changed and breaks.\n\n#### Complexity\n\nEach swap puts one value into its final home, and a value at home is never moved again, so there are at most $n$ swaps in total. With the $n$ outer iterations, time is $O(n)$ and extra space is $O(1)$.\n\n#### Edge cases and bugs\n\n- **Infinite loop with duplicates**: the condition `a[i] != i + 1` keeps swapping two equal values forever. Compare against the home slot instead: `a[a[i] - 1] != a[i]`.\n- **Out-of-range values** (0, negatives, values above n) must be skipped, not used as indices.\n- **Range `[0, n-1]`**: the home of `v` is `v` itself; adjust the offset.\n\n#### Variants\n\n- Missing number in `[0, n]` with one value missing: cyclic sort, or XOR, or the sum formula.\n- Set mismatch (one duplicate, one missing): after sorting, the bad index gives both.\n- If the input must not change, use XOR, sums, or Floyd's cycle detection (find the duplicate number).\n\nConnects to: in-place array tricks (sign marking), XOR tricks, fast and slow pointers.",
+    "signals": [
+     "an array of length n whose values are in the range 1 to n (or 0 to n)",
+     "find the missing, duplicated or first missing positive number",
+     "O(1) extra space and O(n) time with values that map to indices",
+     "\"each number appears once or twice\""
+    ],
+    "template": "```cpp\n// Cyclic sort: put each value v in [1, n] at index v - 1, then scan for mismatches.\nvector<int> mismatches(vector<int> a) {\n    int n = a.size();\n    for (int i = 0; i < n; i++) {\n        // Skip values with no home (out of range) and values already home.\n        while (a[i] >= 1 && a[i] <= n && a[a[i] - 1] != a[i])\n            swap(a[i], a[a[i] - 1]);\n    }\n    vector<int> missing;\n    for (int i = 0; i < n; i++)\n        if (a[i] != i + 1) missing.push_back(i + 1);  // a[i] is a duplicate or junk\n    return missing;\n}\n```"
    }
   },
   {
@@ -3443,9 +3764,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A matrix is a grid of numbers, like seats in a cinema with rows and columns. Most matrix problems are about visiting the seats in a particular order: row by row, around the edges in a spiral, or along the diagonals. Rotating a matrix is just two simple moves: flip it along its diagonal, then mirror each row.",
+    "interview": [
+     "Cell `(r, c)` in an `R × C` matrix; row-major index `r * C + c`. Always check `0 <= r < R` and `0 <= c < C`.",
+     "**Spiral**: keep four boundaries (`top`, `bottom`, `left`, `right`), walk each side, shrink it, and stop when they cross.",
+     "**Diagonals**: cells on the same main-direction diagonal share `r - c`; on the same anti-diagonal they share `r + c`.",
+     "**Transpose**: swap `a[r][c]` with `a[c][r]` for `c > r` (square matrices in place).",
+     "**Rotate 90° clockwise in place**: transpose, then reverse each row. Counter-clockwise: transpose, then reverse each column (or reverse rows first).",
+     "All of these are **O(R × C)** time; in-place rotation is **O(1)** extra space."
+    ],
+    "questions": [
+     {
+      "q": "How do you rotate an n × n matrix 90 degrees clockwise in place?",
+      "a": "Transpose it (swap a[r][c] with a[c][r] for c > r), then reverse each row. The transpose maps (r, c) to (c, r) and the reversal maps that to (c, n − 1 − r), which is exactly the clockwise rotation. It takes O(n²) time and O(1) extra space."
+     },
+     {
+      "q": "What identifies cells on the same diagonal and anti-diagonal?",
+      "a": "Cells on the same top-left-to-bottom-right diagonal have equal r − c, and cells on the same anti-diagonal have equal r + c. These keys let you group diagonal cells or check queen attacks in O(1)."
+     },
+     {
+      "q": "What is the usual bug in spiral traversal, and how do you avoid it?",
+      "a": "When one row or one column remains, the walk back along the bottom row or up the left column repeats cells already printed. Check top <= bottom before walking the bottom row and left <= right before walking the left column."
+     },
+     {
+      "q": "Why does the transpose loop start from c = r + 1?",
+      "a": "Each off-diagonal pair should be swapped exactly once. Looping over all c swaps every pair twice, which restores the original matrix, and swapping diagonal cells with themselves is wasted work."
+     },
+     {
+      "q": "How would you rotate a matrix counter-clockwise?",
+      "a": "Transpose, then reverse each column (equivalently, reverse each row first and then transpose). You can also rotate clockwise three times, but that triples the work."
+     }
+    ],
+    "deep": "#### Intuition\n\nMatrix problems test careful index handling more than clever ideas. Most bugs come from off-by-one boundaries, so name the boundaries explicitly and update them at the end of each step.\n\n#### Spiral order\n\nKeep four walls. Walk right along `top`, down along `right`, left along `bottom`, up along `left`, moving each wall inward after its side is done.\n\n```\n1  2  3  4\n5  6  7  8\n9 10 11 12\n```\n\n| step | walk | output | walls after (top, bottom, left, right) |\n|---|---|---|---|\n| 1 | top row, left to right | 1 2 3 4 | 1, 2, 0, 3 |\n| 2 | right column, down | 8 12 | 1, 2, 0, 2 |\n| 3 | bottom row, right to left | 11 10 9 | 1, 1, 0, 2 |\n| 4 | left column, up | 5 | 1, 1, 1, 2 |\n| 5 | top row again | 6 7 | 2, 1, 1, 2: stop |\n\n```cpp\nvector<int> spiralOrder(const vector<vector<int>>& m) {\n    vector<int> out;\n    if (m.empty()) return out;\n    int top = 0, bottom = (int)m.size() - 1, left = 0, right = (int)m[0].size() - 1;\n    while (top <= bottom && left <= right) {\n        for (int c = left; c <= right; c++) out.push_back(m[top][c]);\n        top++;\n        for (int r = top; r <= bottom; r++) out.push_back(m[r][right]);\n        right--;\n        if (top <= bottom) {                       // a row is left to walk back along\n            for (int c = right; c >= left; c--) out.push_back(m[bottom][c]);\n            bottom--;\n        }\n        if (left <= right) {                       // a column is left to walk up\n            for (int r = bottom; r >= top; r--) out.push_back(m[r][left]);\n            left++;\n        }\n    }\n    return out;\n}\n```\n\nThe two `if` guards matter for single-row or single-column leftovers; without them the middle row of a 3 × 1 matrix is printed twice.\n\n#### Rotate by 90 degrees in place\n\nClockwise rotation sends `(r, c)` to `(c, n - 1 - r)`. Transposing sends `(r, c)` to `(c, r)`, and reversing each row then sends `(c, r)` to `(c, n - 1 - r)`. Composing the two gives the rotation.\n\n```cpp\nvoid rotateClockwise(vector<vector<int>>& m) {\n    int n = m.size();\n    for (int r = 0; r < n; r++)\n        for (int c = r + 1; c < n; c++) swap(m[r][c], m[c][r]);  // transpose\n    for (auto& row : m) reverse(row.begin(), row.end());          // mirror\n}\n```\n\n```python\ndef rotate_clockwise(m):\n    n = len(m)\n    for r in range(n):\n        for c in range(r + 1, n):\n            m[r][c], m[c][r] = m[c][r], m[r][c]\n    for row in m:\n        row.reverse()\n\ndef spiral_order(m):\n    out = []\n    while m:\n        out += m.pop(0)                    # top row\n        m = [list(row) for row in zip(*m)][::-1]  # rotate the rest counter-clockwise\n    return out\n```\n\nThe Python spiral is a neat trick, but it rebuilds the remaining matrix after every row, which costs $O(n^3)$ for an $n \\times n$ matrix; in an interview, prefer the boundary version.\n\n#### Diagonals\n\n- Main-direction diagonals (top-left to bottom-right): `r - c` is constant; there are `R + C - 1` of them. Use `r - c + (C - 1)` as a bucket index.\n- Anti-diagonals: `r + c` is constant, from 0 to `R + C - 2`. \"Diagonal traverse\" walks anti-diagonals, alternating direction.\n- N-Queens uses exactly these keys to check attacks in O(1).\n\n#### Complexity\n\nEvery traversal visits each cell once: $O(R \\cdot C)$ time. Rotation and transpose in place use $O(1)$ extra space. Transposing a non-square matrix needs a new $C \\times R$ matrix.\n\n#### Edge cases and bugs\n\n- Empty matrix or empty rows: check before reading `m[0].size()`.\n- Single row, single column, and 1 × 1 matrices break spiral loops without the guards.\n- Transpose loop must start at `c = r + 1`; starting at 0 swaps every pair twice and undoes itself.\n\n#### Variants\n\nSet matrix zeroes (use the first row and column as markers for O(1) space), search a sorted matrix (staircase from the top-right), and game of life (encode old and new states in the same cell).\n\nConnects to: grids as graphs, N-Queens, searching a 2D matrix, 2D prefix sums."
    }
   },
   {
@@ -3465,9 +3815,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The Boyer-Moore vote finds an element that appears more than half the time, using only one counter. Imagine a crowd where each person from different teams pairs off with a rival and both leave; if one team has a strict majority, its members are the ones left standing. The algorithm simulates that pairing in one pass.",
+    "interview": [
+     "Keep a `candidate` and a `count`. If `count == 0`, take the current element as the candidate. Then add 1 if the element equals the candidate, otherwise subtract 1.",
+     "If a majority (more than n/2) exists, the final candidate is it. **O(n)** time, **O(1)** space.",
+     "If a majority is not guaranteed, make a second pass to verify the candidate's count.",
+     "For elements appearing more than n/3 times: keep **two** candidates and two counters; at most two such elements exist. Always verify in a second pass.",
+     "Generalization: more than n/k needs k − 1 candidates (the Misra-Gries summary)."
+    ],
+    "questions": [
+     {
+      "q": "Why does the Boyer-Moore vote find the majority element?",
+      "a": "Each decrement cancels one copy of the candidate against one different element. A majority element has more copies than all other elements combined, so it cannot be cancelled completely and must be the candidate at the end."
+     },
+     {
+      "q": "When do you need a second pass?",
+      "a": "Whenever the problem doesn't guarantee that a majority exists. The algorithm always returns some candidate, and with no majority that candidate can be any value, so count its occurrences to confirm."
+     },
+     {
+      "q": "How many elements can appear more than n/3 times, and how do you find them?",
+      "a": "At most two, since three such elements would need more than n elements in total. Keep two candidates with counters, cancel triples of distinct values, then verify both candidates with a counting pass."
+     },
+     {
+      "q": "What are the alternatives, and why is Boyer-Moore preferred?",
+      "a": "A hash map of counts is O(n) time but O(n) space, and sorting then taking the middle is O(n log n). Boyer-Moore is O(n) time with O(1) space and works on a stream in one pass."
+     }
+    ],
+    "deep": "#### Intuition\n\nCancel out pairs of different elements. Each cancellation removes one majority element at most and one other element, so the majority (more than half) can never be fully cancelled. The candidate and counter simulate this: the counter is how many uncancelled copies of the candidate remain.\n\n#### Worked example\n\nArray: `2 2 1 1 1 2 2`\n\n| i | x | candidate | count |\n|---|---|---|---|\n| 0 | 2 | 2 | 1 |\n| 1 | 2 | 2 | 2 |\n| 2 | 1 | 2 | 1 |\n| 3 | 1 | 2 | 0 |\n| 4 | 1 | 1 | 1 |\n| 5 | 2 | 1 | 0 |\n| 6 | 2 | 2 | 1 |\n\nFinal candidate 2, which appears 4 times out of 7: the majority.\n\n#### Code\n\n```cpp\nint majorityElement(const vector<int>& a) {   // assumes a majority exists\n    int candidate = 0, count = 0;\n    for (int x : a) {\n        if (count == 0) candidate = x;\n        count += (x == candidate) ? 1 : -1;\n    }\n    return candidate;\n}\n\n// Every value appearing more than n / 3 times (at most two of them).\nvector<int> majorityThird(const vector<int>& a) {\n    int c1 = 0, c2 = 1, n1 = 0, n2 = 0;       // distinct placeholder candidates\n    for (int x : a) {\n        if (x == c1) n1++;\n        else if (x == c2) n2++;\n        else if (n1 == 0) { c1 = x; n1 = 1; }\n        else if (n2 == 0) { c2 = x; n2 = 1; }\n        else { n1--; n2--; }                   // cancel a triple of distinct values\n    }\n    vector<int> out;\n    int k1 = count(a.begin(), a.end(), c1), k2 = count(a.begin(), a.end(), c2);\n    if (k1 > (int)a.size() / 3) out.push_back(c1);\n    if (c2 != c1 && k2 > (int)a.size() / 3) out.push_back(c2);\n    return out;\n}\n```\n\n```python\ndef majority_element(a):\n    candidate, count = None, 0\n    for x in a:\n        if count == 0:\n            candidate = x\n        count += 1 if x == candidate else -1\n    return candidate\n\ndef majority_third(a):\n    c1, c2, n1, n2 = None, None, 0, 0\n    for x in a:\n        if x == c1:\n            n1 += 1\n        elif x == c2:\n            n2 += 1\n        elif n1 == 0:\n            c1, n1 = x, 1\n        elif n2 == 0:\n            c2, n2 = x, 1\n        else:\n            n1, n2 = n1 - 1, n2 - 1\n    return [c for c in (c1, c2) if c is not None and a.count(c) > len(a) // 3]\n```\n\n#### Why the n/3 version works\n\nEach \"cancel\" step removes three distinct values at once. A value appearing more than $n/3$ times cannot be removed completely, because there are fewer than $n/3$ cancel steps that could involve it. So any such value survives as a candidate, but survivors are not guaranteed to be frequent, which is why the verification pass is required.\n\n#### Complexity\n\nTime $O(n)$ (two passes when verifying), space $O(1)$. Compare with a hash map count: $O(n)$ time and $O(n)$ space, or sorting and taking the middle element: $O(n \\log n)$.\n\n#### Edge cases and bugs\n\n- Returning the candidate without verification when a majority is not guaranteed.\n- In the n/3 version, checking `n1 == 0` before `x == c2` can put the same value in both slots; test for equality with both candidates first.\n- Initializing both candidates to the same placeholder (such as 0 and 0) can merge them.\n\nConnects to: frequency counting with hash maps, streaming algorithms (heavy hitters), quickselect (the median is the majority if one exists).",
+    "signals": [
+     "an element that appears more than half (or more than a third) of the time",
+     "O(1) extra space for finding a dominant value",
+     "a stream of votes or events where you can't store counts for every value",
+     "\"at most k − 1 values can exceed n / k occurrences\""
+    ],
+    "template": "```cpp\n// Boyer-Moore vote: returns the only possible majority candidate; verify if not guaranteed.\nint majorityCandidate(const vector<int>& a) {\n    int candidate = 0, count = 0;\n    for (int x : a) {\n        if (count == 0) candidate = x;         // previous block fully cancelled\n        count += (x == candidate) ? 1 : -1;    // pair x against the candidate\n    }\n    return candidate;\n}\n\nbool isMajority(const vector<int>& a, int c) {\n    return 2 * count(a.begin(), a.end(), c) > (int)a.size();\n}\n```"
    }
   },
   {
@@ -3487,9 +3868,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Next permutation rearranges numbers into the next larger ordering, like the next word in a dictionary made from the same letters. You look from the right for the first place where you can make the number a little bigger. Then you bump that spot up by the smallest possible amount and put the rest in the smallest order.",
+    "interview": [
+     "Step 1: from the right, find the first index `i` with `a[i] < a[i + 1]` (the pivot). The suffix after it is non-increasing.",
+     "If there is no pivot, the array is the largest permutation: reverse it to get the smallest and stop.",
+     "Step 2: from the right, find the first `j` with `a[j] > a[i]` (the smallest larger value in the suffix) and swap them.",
+     "Step 3: reverse the suffix after `i` so it becomes increasing (its smallest arrangement).",
+     "**O(n)** time, **O(1)** space. Handles duplicates correctly with strict comparisons as above. `std::next_permutation` implements it."
+    ],
+    "questions": [
+     {
+      "q": "Describe the three steps of the next permutation algorithm.",
+      "a": "Find the rightmost index i where a[i] < a[i + 1]. Find the rightmost j with a[j] > a[i] and swap them. Then reverse everything after i. If no such i exists, reverse the whole array."
+     },
+     {
+      "q": "Why can you reverse the suffix instead of sorting it?",
+      "a": "The suffix after the pivot is non-increasing, and the swap keeps it non-increasing. Reversing a non-increasing sequence makes it non-decreasing, which is its sorted order, in O(n)."
+     },
+     {
+      "q": "What happens when the array is already the largest permutation, such as 3 2 1?",
+      "a": "No pivot exists, because the whole array is non-increasing. The algorithm reverses it to 1 2 3, the smallest permutation, which is what std::next_permutation does (it also returns false)."
+     },
+     {
+      "q": "How would you find the kth permutation of 1 to n directly?",
+      "a": "Use the factorial number system: the first element's index is (k − 1) / (n − 1)!, then recurse on the remaining elements with the remainder. That builds it in O(n²) (or O(n log n) with a Fenwick tree), instead of calling next permutation k times."
+     }
+    ],
+    "deep": "#### Intuition\n\nThink of the array as a number. To get the very next larger number, change the rightmost digit you can. The suffix that is already in decreasing order is at its maximum; no rearrangement of it alone can make the number larger. So you must increase the digit just before that suffix, by as little as possible, and then make the suffix as small as possible.\n\n#### Worked example\n\nArray: `1 3 5 4 2`\n\n1. Scan from the right for a drop: `2 < 4`, `4 < 5`, `5 > 3`. The pivot is `a[1] = 3`; the suffix `5 4 2` is decreasing.\n2. From the right, the first value greater than 3 is `4` (index 3). Swap: `1 4 5 3 2`.\n3. Reverse the suffix after index 1: `5 3 2` becomes `2 3 5`. Result: `1 4 2 3 5`.\n\nCheck: every permutation starting with `1 3` is smaller, and `1 4 2 3 5` is the smallest one starting with `1 4`.\n\n#### Code\n\n```cpp\nvoid nextPermutation(vector<int>& a) {\n    int n = a.size(), i = n - 2;\n    while (i >= 0 && a[i] >= a[i + 1]) i--;          // find the pivot\n    if (i >= 0) {\n        int j = n - 1;\n        while (a[j] <= a[i]) j--;                    // smallest value larger than a[i]\n        swap(a[i], a[j]);\n    }\n    reverse(a.begin() + i + 1, a.end());             // smallest arrangement of the suffix\n}\n```\n\n```python\ndef next_permutation(a):\n    i = len(a) - 2\n    while i >= 0 and a[i] >= a[i + 1]:\n        i -= 1\n    if i >= 0:\n        j = len(a) - 1\n        while a[j] <= a[i]:\n            j -= 1\n        a[i], a[j] = a[j], a[i]\n    a[i + 1:] = reversed(a[i + 1:])\n```\n\nWhen there is no pivot, `i` ends at -1 and the whole array is reversed, which wraps from the largest permutation to the smallest.\n\n#### Why reversing works\n\nAfter the swap, the suffix is still non-increasing: the new value at `j` is the old `a[i]`, which is smaller than everything to its left in the suffix and at least as large as everything to its right. Reversing a non-increasing sequence gives a non-decreasing one, the smallest arrangement, without sorting.\n\n#### Complexity\n\nEach of the three steps scans at most $n$ elements: $O(n)$ time, $O(1)$ space.\n\n#### Edge cases and bugs\n\n- Using `>` instead of `>=` in the pivot search breaks on duplicates (`1 5 1` → `5 1 1`).\n- Forgetting the wrap-around case (no pivot).\n- Sorting the suffix instead of reversing works but costs $O(n \\log n)$.\n\n#### Variants\n\n- **Previous permutation**: flip every comparison.\n- **Next greater number with the same digits**: run it on the digit list and check for 32-bit overflow.\n- **Kth permutation**: don't call next permutation k times; build it digit by digit with factorials in $O(n^2)$.\n\nConnects to: permutations (backtracking), two pointers (reversal), greedy reasoning."
    }
   },
   {
@@ -3509,9 +3914,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "In-place tricks let you rearrange or annotate an array without making a copy. Rotating a line of people by k spots can be done by reversing the whole line and then reversing the two groups. When values double as indices, you can leave a mark at an index by flipping the sign of the number stored there.",
+    "interview": [
+     "**Rotate right by k** with three reversals: reverse all, reverse the first `k`, reverse the rest (take `k %= n` first). O(n) time, O(1) space.",
+     "**Sign marking**: when values are in `[1, n]`, visit value `v` and negate `a[v - 1]` to record \"v was seen\". A slot already negative means a duplicate; a slot still positive means a missing value.",
+     "**Index encoding**: add `n` (or multiply) to store a second value in the same slot, then recover with `/ n` and `% n` (build array from permutation in place).",
+     "**Write index**: compact kept elements to the front (remove element, move zeroes).",
+     "Use `abs(a[i])` when reading after marking. Restore the array if the caller needs it unchanged."
+    ],
+    "questions": [
+     {
+      "q": "How do you rotate an array right by k positions in O(1) extra space?",
+      "a": "Set k = k mod n, reverse the whole array, then reverse the first k elements and reverse the remaining n − k. The first reversal moves the last k elements to the front (backwards), and the two partial reversals fix their order."
+     },
+     {
+      "q": "How can you find all duplicates in an array with values from 1 to n without extra space?",
+      "a": "For each value v (use its absolute value), look at index v − 1. If a[v − 1] is already negative, v is a duplicate; otherwise negate it. This uses the sign bit as a visited flag, in O(n) time and O(1) extra space."
+     },
+     {
+      "q": "How do you store two numbers in one array slot?",
+      "a": "If both values are below n, store old + new × n: then old = slot % n and new = slot / n. This lets you build a permuted array in place, for example a[i] = a[a[i]], without a copy."
+     },
+     {
+      "q": "What must you be careful about with sign marking?",
+      "a": "Read values with abs() because earlier steps may have negated them, and it only works when 0 isn't a possible value (negating 0 changes nothing). Also mention that the input is modified, and restore the signs if the caller needs the original."
+     }
+    ]
    }
   },
   {
@@ -3536,9 +3964,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A prefix sum array stores the running total up to each position. It is like the odometer in a car: to know how far you drove between two towns, subtract the reading at the first town from the reading at the second. After one pass to build it, any range sum takes a single subtraction.",
+    "interview": [
+     "Define `P[0] = 0` and `P[i + 1] = P[i] + a[i]`, so `P` has length `n + 1` and `P[i]` is the sum of the first `i` elements.",
+     "Sum of `a[l..r]` (inclusive) is `P[r + 1] - P[l]`. Build **O(n)**, each query **O(1)**.",
+     "The extra leading 0 removes the special case for ranges starting at index 0.",
+     "Only works for **static** arrays; with updates between queries, use a Fenwick tree or segment tree (O(log n) each).",
+     "Works for any invertible operation: sums, XOR, counts of a property (number of vowels in a range). Not for min or max (no inverse).",
+     "Use 64-bit integers for sums of large values."
+    ],
+    "questions": [
+     {
+      "q": "How do you compute the sum of a[l..r] in O(1) after preprocessing?",
+      "a": "Build P with P[0] = 0 and P[i + 1] = P[i] + a[i]. Then the sum of a[l..r] inclusive is P[r + 1] − P[l]. Building takes O(n) and every query is one subtraction."
+     },
+     {
+      "q": "Why use a prefix array of length n + 1 with a leading zero?",
+      "a": "The leading zero represents the empty prefix, so ranges starting at index 0 use the same formula (P[r + 1] − P[0]) with no special case. It removes a common source of off-by-one bugs."
+     },
+     {
+      "q": "When do prefix sums stop being a good choice?",
+      "a": "When the array is updated between queries: one update changes O(n) prefix values. A Fenwick tree or segment tree supports both updates and range sums in O(log n)."
+     },
+     {
+      "q": "Can you use prefix sums for range minimum queries?",
+      "a": "No, because minimum has no inverse: knowing the minimum of a[0..r] and of a[0..l − 1] doesn't tell you the minimum of a[l..r]. Use a sparse table (static) or a segment tree instead."
+     },
+     {
+      "q": "How would you count the vowels in many substrings quickly?",
+      "a": "Build a prefix count array where P[i + 1] = P[i] + 1 if s[i] is a vowel, else P[i]. Each query is then P[r + 1] − P[l] in O(1)."
+     }
+    ],
+    "deep": "#### Intuition\n\nAnswering \"what is the sum from index l to r?\" by looping costs $O(n)$ per question. With $10^5$ questions on an array of $10^5$ values, that is $10^{10}$ steps. A prefix sum array does the looping once, then every question is a subtraction:\n\n$$\\text{sum}(l, r) = \\sum_{i=l}^{r} a_i = P[r + 1] - P[l]$$\n\nbecause $P[r+1]$ adds up everything through $r$ and $P[l]$ is the part before $l$ that you don't want.\n\n#### Worked example\n\nArray `a`: `3 1 4 1 5 9`\n\n| i | 0 | 1 | 2 | 3 | 4 | 5 | 6 |\n|---|---|---|---|---|---|---|---|\n| a[i] | 3 | 1 | 4 | 1 | 5 | 9 | |\n| P[i] | 0 | 3 | 4 | 8 | 9 | 14 | 23 |\n\nSum of `a[2..4]` = `4 + 1 + 5` = `P[5] - P[2]` = `14 - 4` = **10**.\n\n#### Code\n\n```cpp\nclass RangeSum {\n    vector<long long> P;  // P[i] = a[0] + ... + a[i-1]\npublic:\n    explicit RangeSum(const vector<int>& a) : P(a.size() + 1, 0) {\n        for (int i = 0; i < (int)a.size(); i++) P[i + 1] = P[i] + a[i];\n    }\n    long long query(int l, int r) const { return P[r + 1] - P[l]; }  // inclusive\n};\n\n// Pivot index: left sum equals right sum, using the total instead of a second array.\nint pivotIndex(const vector<int>& a) {\n    long long total = accumulate(a.begin(), a.end(), 0LL), left = 0;\n    for (int i = 0; i < (int)a.size(); i++) {\n        if (left == total - left - a[i]) return i;\n        left += a[i];\n    }\n    return -1;\n}\n```\n\n```python\nfrom itertools import accumulate\n\nclass RangeSum:\n    def __init__(self, a):\n        self.P = [0] + list(accumulate(a))\n\n    def query(self, l, r):          # inclusive\n        return self.P[r + 1] - self.P[l]\n```\n\nBuild $O(n)$ time and $O(n)$ space; each query $O(1)$.\n\n#### Prefix counts\n\nPrefix sums work for any quantity you can add up, including indicator values. To answer \"how many vowels are in `s[l..r]`?\", let `P[i + 1] = P[i] + (s[i] is a vowel)`. Several properties give several prefix arrays (or one array of counts per character: 26 prefix arrays answer \"how many of each letter\" in O(26) per query).\n\n#### Edge cases and bugs\n\n- **Off by one**: mixing inclusive and exclusive ends. Stick to `P` of length `n + 1` and the formula `P[r + 1] - P[l]`.\n- **Overflow**: $10^5$ values of $10^9$ sum to $10^{14}$; `int` overflows.\n- **Updates**: if the array changes, every later prefix changes: $O(n)$ per update. Switch to a Fenwick tree.\n- **Negative numbers** are fine for range sums; they only break sliding-window tricks, not prefix sums.\n\n#### Variants\n\n- Running totals left and right (pivot index, product except self).\n- Prefix sums on a circular array: double the array or handle the wrap with the total.\n- Prefix sums plus binary search: with non-negative values, `P` is non-decreasing, so \"the shortest prefix with sum at least X\" is a binary search.\n- Prefix sums plus a hash map: count subarrays with a given sum (next concept).\n\nConnects to: prefix sum with hash map, 2D prefix sums, difference arrays, Fenwick tree.",
+    "signals": [
+     "many range sum (or range count) queries on an array that doesn't change",
+     "\"sum of elements between indices i and j\"",
+     "balancing a left side against a right side (pivot index, equal halves)",
+     "counting how often a property occurs inside many substrings or subarrays"
+    ],
+    "template": "```cpp\n// Prefix sums: P[i] = sum of the first i elements; sum(l..r) = P[r + 1] - P[l].\nvector<long long> buildPrefix(const vector<int>& a) {\n    vector<long long> P(a.size() + 1, 0);\n    for (int i = 0; i < (int)a.size(); i++) P[i + 1] = P[i] + a[i];\n    return P;\n}\n\nlong long rangeSum(const vector<long long>& P, int l, int r) {  // inclusive l..r\n    return P[r + 1] - P[l];\n}\n```"
    }
   },
   {
@@ -3561,9 +4025,46 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A subarray adds up to K exactly when the running total now, minus the running total at some earlier point, equals K. So as you walk the array, you ask: \"have I seen the running total minus K before?\" A hash map remembers every running total you have passed, like a notebook of odometer readings.",
+    "interview": [
+     "Subarray `a[i..j]` has sum `K` iff `P[j + 1] - P[i] = K`, that is, an earlier prefix equals `current - K`.",
+     "**Count subarrays with sum K**: map `prefix → count`, seeded with `{0: 1}`; add `count[cur - K]` before inserting `cur`. **O(n)** time and space.",
+     "**Longest subarray with sum K**: map `prefix → first index`, seeded with `{0: -1}`; never overwrite an earlier index.",
+     "**Divisible by K**: store `prefix mod K` (normalized to be non-negative); equal remainders give a divisible subarray.",
+     "Works with **negative numbers**, unlike the sliding window.",
+     "Binary arrays: map 0 to -1, then \"equal zeros and ones\" is \"sum 0\"."
+    ],
+    "questions": [
+     {
+      "q": "How do you count subarrays whose sum is exactly K in O(n)?",
+      "a": "Keep a running prefix sum and a hash map from prefix values to how many times each occurred, starting with {0: 1}. At each index, add the count of cur − K (earlier prefixes that leave exactly K), then record cur. Each step is O(1) on average."
+     },
+     {
+      "q": "Why does the map start with {0: 1}?",
+      "a": "It represents the empty prefix before the first element. Without it, a subarray starting at index 0 whose sum is K would be missed, because it corresponds to cur − K = 0."
+     },
+     {
+      "q": "Why can't you use a sliding window when the array has negative numbers?",
+      "a": "A sliding window relies on the sum growing when the window expands and shrinking when it contracts. Negative numbers break that monotonicity, so you can't decide which end to move. The prefix-sum map doesn't need monotonicity."
+     },
+     {
+      "q": "How do you count subarrays whose sum is divisible by K?",
+      "a": "Two prefixes with the same remainder mod K bound a subarray whose sum is divisible by K. Count remainders in a map starting with {0: 1}, and at each step add the count of the current remainder. Normalize negative remainders in C++ and Java."
+     },
+     {
+      "q": "For the longest subarray with sum K, why store the first index of each prefix?",
+      "a": "The subarray length is j − i, so for a fixed end j you want the earliest i with the right prefix value. Storing the first occurrence (and never overwriting it) gives the longest possible subarray."
+     }
+    ],
+    "deep": "#### Intuition\n\nPrefix sums turn \"sum of a subarray\" into \"difference of two prefixes\". So counting subarrays with sum $K$ becomes counting pairs of prefixes $(P_i, P_j)$ with $i < j$ and $P_j - P_i = K$. That is the two-sum problem on the prefix array, solved in one pass with a hash map: at each position, look up how many earlier prefixes equal $P_j - K$.\n\n#### Worked example: count subarrays with sum 3\n\nArray `1 2 1 2 1`, $K = 3$. Map starts as `{0: 1}` (the empty prefix).\n\n| j | a[j] | cur | need cur − 3 | count[need] | total | map after |\n|---|---|---|---|---|---|---|\n| 0 | 1 | 1 | -2 | 0 | 0 | {0:1, 1:1} |\n| 1 | 2 | 3 | 0 | 1 | 1 | {0:1, 1:1, 3:1} |\n| 2 | 1 | 4 | 1 | 1 | 2 | … 4:1 |\n| 3 | 2 | 6 | 3 | 1 | 3 | … 6:1 |\n| 4 | 1 | 7 | 4 | 1 | 4 | … 7:1 |\n\nFour subarrays: `1 2`, `2 1`, `1 2`, `2 1`.\n\n#### Code\n\n```cpp\nint countSubarraysWithSum(const vector<int>& a, int k) {\n    unordered_map<long long, int> seen{{0, 1}};  // prefix value -> how many times\n    long long cur = 0;\n    int count = 0;\n    for (int x : a) {\n        cur += x;\n        auto it = seen.find(cur - k);\n        if (it != seen.end()) count += it->second;  // look up before inserting\n        seen[cur]++;\n    }\n    return count;\n}\n\nint longestSubarrayWithSum(const vector<int>& a, long long k) {\n    unordered_map<long long, int> first{{0, -1}};  // prefix value -> earliest index\n    long long cur = 0;\n    int best = 0;\n    for (int j = 0; j < (int)a.size(); j++) {\n        cur += a[j];\n        auto it = first.find(cur - k);\n        if (it != first.end()) best = max(best, j - it->second);\n        first.emplace(cur, j);                      // emplace keeps the earliest index\n    }\n    return best;\n}\n```\n\n```python\nfrom collections import defaultdict\n\ndef count_subarrays_divisible_by_k(a, k):\n    seen = defaultdict(int)\n    seen[0] = 1\n    cur = count = 0\n    for x in a:\n        cur = (cur + x) % k        # Python's % is already non-negative for k > 0\n        count += seen[cur]\n        seen[cur] += 1\n    return count\n\ndef longest_subarray_with_sum(a, k):\n    first = {0: -1}\n    cur = best = 0\n    for j, x in enumerate(a):\n        cur += x\n        if cur - k in first:\n            best = max(best, j - first[cur - k])\n        first.setdefault(cur, j)\n    return best\n```\n\nTime $O(n)$ on average (hash operations), space $O(n)$ for the map.\n\n#### Divisibility\n\nA subarray sum is divisible by $K$ exactly when two prefixes have the same remainder mod $K$. So count remainders and add `seen[r]` at each step. In C++ and Java, `%` can return a negative number for negative sums; normalize with `((cur % k) + k) % k`.\n\n#### Edge cases and bugs\n\n- **Forgetting the seed** `{0: 1}` misses subarrays that start at index 0.\n- **Inserting before looking up** counts the empty subarray when $K = 0$.\n- **Overwriting the first index** in the longest-subarray version gives shorter answers.\n- **Sliding window does not work** here when values can be negative: shrinking the window can increase the sum.\n\n#### Variants\n\n- Contiguous array (equal 0s and 1s): replace 0 with -1, find the longest subarray with sum 0.\n- Continuous subarray sum of length at least 2 that is a multiple of k: store the first index of each remainder and check `j - first[r] >= 2`.\n- Count submatrices with sum K: fix two rows, compress to a 1D array of column sums, then apply this pattern: $O(r^2 c)$.\n- Subarrays with XOR equal to K: same idea with `cur ^ K`.\n\nConnects to: 1D prefix sums, complement lookup (two sum), sliding window (the non-negative case).",
+    "signals": [
+     "count subarrays whose sum equals K (values may be negative)",
+     "longest subarray with a given sum, or equal numbers of two kinds (0 and 1)",
+     "a subarray sum divisible by K or a multiple of K",
+     "\"continuous subarray\" with an exact target rather than a bound",
+     "subarrays with a given XOR"
+    ],
+    "template": "```cpp\n// Prefix sum + hash map: count subarrays ending at each index whose sum is K.\nlong long countWithSum(const vector<int>& a, long long K) {\n    unordered_map<long long, long long> seen;  // prefix value -> occurrences (or first index)\n    seen[0] = 1;                               // the empty prefix\n    long long cur = 0, answer = 0;\n    for (int x : a) {\n        cur += x;                              // or: (cur + x) % K normalized, cur ^ x, ...\n        auto it = seen.find(cur - K);          // earlier prefixes that leave exactly K\n        if (it != seen.end()) answer += it->second;\n        seen[cur]++;                           // insert after the lookup\n    }\n    return answer;\n}\n```"
    }
   },
   {
@@ -3585,9 +4086,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A 2D prefix sum stores, for every cell, the total of the rectangle from the top-left corner to that cell. It is like knowing the number of houses in every block measured from one corner of a city map. Any rectangle's total then comes from four lookups: the big corner rectangle, minus two strips, plus the overlap you subtracted twice.",
+    "interview": [
+     "`P[r + 1][c + 1] = a[r][c] + P[r][c + 1] + P[r + 1][c] - P[r][c]`, with a zero row and zero column at the start.",
+     "Sum of rectangle `(r1, c1)` to `(r2, c2)` inclusive: `P[r2+1][c2+1] - P[r1][c2+1] - P[r2+1][c1] + P[r1][c1]` (inclusion-exclusion).",
+     "Build **O(R × C)**, each query **O(1)**.",
+     "Uses: immutable range sum 2D, counting cells with a property in a rectangle, matrix block sum, largest square with sum below a limit (with binary search).",
+     "For \"count submatrices with sum K\", fix two rows and run the 1D prefix-sum-with-hash-map on column sums: **O(R² × C)**."
+    ],
+    "questions": [
+     {
+      "q": "What is the formula for the sum of a submatrix using a 2D prefix table?",
+      "a": "With P[r][c] holding the sum of the rectangle above and left of (r, c), the sum of rows r1..r2 and columns c1..c2 is P[r2+1][c2+1] − P[r1][c2+1] − P[r2+1][c1] + P[r1][c1]. The last term adds back the corner that was subtracted twice."
+     },
+     {
+      "q": "How do you build the 2D prefix table?",
+      "a": "P[r+1][c+1] = a[r][c] + P[r][c+1] + P[r+1][c] − P[r][c], filling row by row. It takes O(R·C) time, and the zero row and column avoid boundary checks."
+     },
+     {
+      "q": "How would you count submatrices whose sum equals K?",
+      "a": "Fix a pair of rows, compress the columns between them into a 1D array of sums, and count subarrays with sum K using a prefix sum hash map. Over all row pairs that is O(R²·C)."
+     },
+     {
+      "q": "How do you handle queries that reach beyond the matrix, as in \"matrix block sum\"?",
+      "a": "Clamp the corners to the valid range first (r1 = max(0, r − k), r2 = min(R − 1, r + k), and the same for columns), then apply the usual formula."
+     }
+    ],
+    "deep": "#### Intuition\n\nInclusion-exclusion does all the work. The prefix value at a corner covers everything above and to the left. To isolate a rectangle, remove the strip above it and the strip to its left; the top-left corner region was removed twice, so add it back once.\n\n```\nP[r2+1][c2+1]  -  P[r1][c2+1]  -  P[r2+1][c1]  +  P[r1][c1]\n   (whole)         (strip above)   (strip left)    (overlap)\n```\n\n#### Worked example\n\nMatrix:\n\n```\n1 2 3\n4 5 6\n7 8 9\n```\n\nPrefix table `P` (with the zero row and column):\n\n| | c=0 | 1 | 2 | 3 |\n|---|---|---|---|---|\n| r=0 | 0 | 0 | 0 | 0 |\n| 1 | 0 | 1 | 3 | 6 |\n| 2 | 0 | 5 | 12 | 21 |\n| 3 | 0 | 12 | 27 | 45 |\n\nSum of the bottom-right 2 × 2 block (rows 1 to 2, columns 1 to 2) = `P[3][3] - P[1][3] - P[3][1] + P[1][1]` = `45 - 6 - 12 + 1` = **28** = 5 + 6 + 8 + 9.\n\n#### Code\n\n```cpp\nclass MatrixSum {\n    vector<vector<long long>> P;\npublic:\n    explicit MatrixSum(const vector<vector<int>>& a) {\n        int R = a.size(), C = R ? a[0].size() : 0;\n        P.assign(R + 1, vector<long long>(C + 1, 0));\n        for (int r = 0; r < R; r++)\n            for (int c = 0; c < C; c++)\n                P[r + 1][c + 1] = a[r][c] + P[r][c + 1] + P[r + 1][c] - P[r][c];\n    }\n    long long query(int r1, int c1, int r2, int c2) const {  // inclusive corners\n        return P[r2 + 1][c2 + 1] - P[r1][c2 + 1] - P[r2 + 1][c1] + P[r1][c1];\n    }\n};\n```\n\n```python\nclass MatrixSum:\n    def __init__(self, a):\n        R, C = len(a), len(a[0]) if a else 0\n        self.P = [[0] * (C + 1) for _ in range(R + 1)]\n        for r in range(R):\n            for c in range(C):\n                self.P[r + 1][c + 1] = (a[r][c] + self.P[r][c + 1]\n                                        + self.P[r + 1][c] - self.P[r][c])\n\n    def query(self, r1, c1, r2, c2):\n        P = self.P\n        return P[r2 + 1][c2 + 1] - P[r1][c2 + 1] - P[r2 + 1][c1] + P[r1][c1]\n```\n\nBuild $O(RC)$ time and space, query $O(1)$.\n\n#### Counting submatrices with sum K\n\nFix a top row `t` and a bottom row `b`. The column sums between them form a 1D array; a submatrix between those rows is a subarray of it. Apply the prefix-sum-with-hash-map count on that array. With $R \\le C$, loop over row pairs: $O(R^2 C)$.\n\n#### Edge cases and bugs\n\n- Getting the signs wrong in the query: it is minus, minus, plus.\n- Forgetting the extra zero row and column leads to special cases at the borders.\n- Clamping queries that extend past the matrix (matrix block sum): clamp `r1, c1` to 0 and `r2, c2` to the last index first.\n\n#### Variants\n\n- **2D difference array**: the reverse operation, for adding a value to many rectangles and reading the final grid once.\n- **Maximum sum rectangle**: fix two rows, run Kadane on column sums.\n- **Largest square with sum at most a limit**: prefix sums plus binary search on the side length.\n\nConnects to: 1D prefix sums, prefix sum with hash map, difference arrays, Kadane's algorithm.",
+    "signals": [
+     "many sum queries over rectangles of a fixed grid",
+     "\"sum of the submatrix\" or \"block sum around every cell\"",
+     "counting cells with a property inside rectangles",
+     "submatrices with a target sum (fix two rows, then 1D)"
+    ],
+    "template": "```cpp\n// 2D prefix sums with a zero border; rectangle sums by inclusion-exclusion.\nstruct Prefix2D {\n    vector<vector<long long>> P;\n    explicit Prefix2D(const vector<vector<int>>& a) {\n        int R = a.size(), C = R ? a[0].size() : 0;\n        P.assign(R + 1, vector<long long>(C + 1, 0));\n        for (int r = 0; r < R; r++)\n            for (int c = 0; c < C; c++)\n                P[r + 1][c + 1] = a[r][c] + P[r][c + 1] + P[r + 1][c] - P[r][c];\n    }\n    // Inclusive corners (r1, c1) top-left and (r2, c2) bottom-right.\n    long long sum(int r1, int c1, int r2, int c2) const {\n        return P[r2 + 1][c2 + 1] - P[r1][c2 + 1] - P[r2 + 1][c1] + P[r1][c1];\n    }\n};\n```"
    }
   },
   {
@@ -3609,9 +4141,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A difference array records where values start and stop changing instead of the values themselves. It is like marking a bus route with \"+3 people get on here\" and \"3 people get off there\": one pass adding up those marks tells you how full the bus is at every stop. Adding to a whole range costs only two marks.",
+    "interview": [
+     "To add `v` to every element of `[l, r]`: `D[l] += v; D[r + 1] -= v` (size `n + 1`). **O(1)** per update.",
+     "After all updates, a prefix sum over `D` rebuilds the array: **O(n)** once.",
+     "Inverse of prefix sums: prefix sums answer range **queries**, difference arrays apply range **updates**.",
+     "Only works when all updates come before all reads; interleaved updates and queries need a Fenwick tree or a segment tree with lazy propagation.",
+     "Uses: flight bookings, car pooling (is capacity ever exceeded?), counting how many intervals cover each point, 2D range additions."
+    ],
+    "questions": [
+     {
+      "q": "How does a difference array add v to every element in [l, r] in O(1)?",
+      "a": "It stores changes between neighbors. Adding v to D[l] raises everything from l onward, and subtracting v from D[r + 1] cancels it after r. A prefix sum over D then rebuilds the updated array."
+     },
+     {
+      "q": "What is the relationship between prefix sums and difference arrays?",
+      "a": "They are inverses. Taking the prefix sum of a difference array gives the original array, and taking differences of a prefix array gives the original back. Prefix sums make range queries cheap; difference arrays make range updates cheap."
+     },
+     {
+      "q": "When is a difference array not enough?",
+      "a": "When updates and queries are interleaved, because reading a value needs a full O(n) prefix pass. Use a Fenwick tree (range update, point query) or a segment tree with lazy propagation instead."
+     },
+     {
+      "q": "How would you check whether a car ever carries more passengers than its capacity, given many trips?",
+      "a": "Add each trip's passengers at its start stop and subtract them at its end stop in a difference array, then sweep the stops with a running sum. If the running load ever exceeds the capacity, the answer is no. That is O(trips + stops)."
+     }
+    ],
+    "deep": "#### Intuition\n\nIf you add 5 to every element from index 2 to 6, the only places where the array's **change from the previous element** is affected are index 2 (it jumps up by 5) and index 7 (it drops back by 5). A difference array stores exactly those changes: $D[i] = a[i] - a[i-1]$. A range update touches two entries, and a running sum over $D$ reconstructs every value.\n\n#### Worked example\n\nLength 6, starting from zeros. Updates: add 2 to `[1, 3]`, add 3 to `[2, 5]`, add -1 to `[0, 1]`.\n\n| D after | 0 | 1 | 2 | 3 | 4 | 5 | 6 |\n|---|---|---|---|---|---|---|---|\n| `+2 [1,3]`: `D[1] += 2`, `D[4] -= 2` | 0 | 2 | 0 | 0 | -2 | 0 | 0 |\n| `+3 [2,5]`: `D[2] += 3`, `D[6] -= 3` | 0 | 2 | 3 | 0 | -2 | 0 | -3 |\n| `-1 [0,1]`: `D[0] -= 1`, `D[2] += 1` | -1 | 2 | 4 | 0 | -2 | 0 | -3 |\n| running sum (the result) | -1 | 1 | 5 | 5 | 3 | 3 | |\n\nCheck a few cells directly: index 1 is covered by `+2` and `-1`, giving 1; index 2 by `+2` and `+3`, giving 5; index 4 only by `+3`, giving 3. Every update writes **two** entries; forgetting the closing entry (`D[r + 1] -= v`) is the classic bug, and it lets an update leak past the end of its range.\n\n#### Code\n\n```cpp\n// Apply range additions {l, r, v} to an array of n zeros, then read it once.\nvector<long long> applyRangeAdds(int n, const vector<array<int, 3>>& updates) {\n    vector<long long> D(n + 1, 0);\n    for (auto [l, r, v] : updates) {\n        D[l] += v;\n        D[r + 1] -= v;              // r + 1 <= n thanks to the extra slot\n    }\n    vector<long long> a(n);\n    long long run = 0;\n    for (int i = 0; i < n; i++) a[i] = (run += D[i]);\n    return a;\n}\n\n// Car pooling: trips {passengers, from, to}; can a car of this capacity serve all?\nbool carPooling(const vector<array<int, 3>>& trips, int capacity) {\n    vector<int> D(1001, 0);         // stops 0..1000\n    for (auto [p, from, to] : trips) { D[from] += p; D[to] -= p; }  // off at `to`\n    int load = 0;\n    for (int x : D) if ((load += x) > capacity) return false;\n    return true;\n}\n```\n\n```python\ndef apply_range_adds(n, updates):\n    D = [0] * (n + 1)\n    for l, r, v in updates:\n        D[l] += v\n        D[r + 1] -= v\n    out, run = [], 0\n    for i in range(n):\n        run += D[i]\n        out.append(run)\n    return out\n```\n\nUpdates $O(1)$ each; reconstruction $O(n)$. Total $O(n + q)$ instead of $O(nq)$.\n\n#### Edge cases and bugs\n\n- Forgetting `D[r + 1] -= v`, or allocating `D` of size `n` so that `r + 1 = n` is out of bounds.\n- Half-open intervals (passengers leave at `to`) use `D[to] -= p`, not `D[to + 1]`: read the problem.\n- Large coordinates (up to $10^9$) need coordinate compression or a sorted event list (the sweep line) instead of an array.\n\n#### Variants\n\n- **2D difference array**: to add `v` to a rectangle, update four corners (`+v`, `-v`, `-v`, `+v`), then take a 2D prefix sum.\n- **Sweep line**: the same idea with events sorted by coordinate instead of an array indexed by position.\n- **Range update, range query online**: Fenwick tree with two arrays, or a lazy segment tree.\n\nConnects to: 1D prefix sums, sweep line, intervals, lazy propagation.",
+    "signals": [
+     "many \"add v to every element from l to r\" updates, then read the final array once",
+     "counting how many intervals cover each point",
+     "capacity or occupancy over time from start and end events",
+     "bookings or reservations applied to ranges of days or seats"
+    ],
+    "template": "```cpp\n// Difference array: O(1) range additions, then one O(n) pass to materialize.\nstruct RangeAdder {\n    vector<long long> D;\n    explicit RangeAdder(int n) : D(n + 1, 0) {}\n    void add(int l, int r, long long v) {  // inclusive [l, r]\n        D[l] += v;\n        D[r + 1] -= v;\n    }\n    vector<long long> build() const {       // prefix sum of the differences\n        vector<long long> a(D.size() - 1);\n        long long run = 0;\n        for (int i = 0; i < (int)a.size(); i++) a[i] = (run += D[i]);\n        return a;\n    }\n};\n```"
    }
   },
   {
@@ -3633,9 +4196,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "The running-total idea works for other operations too, such as multiplying or XOR-ing values as you go. For the product of everything except one element, multiply what is on its left by what is on its right, like a relay race where each runner knows the combined time of everyone before and after. XOR is its own undo, so XOR prefixes answer range questions just like sums do.",
+    "interview": [
+     "**Product of array except self** without division: `left[i]` = product of `a[0..i-1]`, `right[i]` = product of `a[i+1..n-1]`, answer `left[i] * right[i]`. **O(n)** time.",
+     "O(1) extra space version: fill the output with left products, then sweep from the right with a running product.",
+     "Division is avoided because of zeros (and because interviewers usually forbid it).",
+     "**Prefix XOR**: `X[0] = 0`, `X[i + 1] = X[i] ^ a[i]`; XOR of `a[l..r]` is `X[r + 1] ^ X[l]`, because `x ^ x = 0`.",
+     "Count subarrays with XOR equal to K: map of prefix XOR counts, look up `cur ^ K` (same shape as sum K).",
+     "Prefix products can overflow quickly; products of a range with zeros need care (count zeros separately)."
+    ],
+    "questions": [
+     {
+      "q": "How do you compute the product of all elements except self without division in O(n)?",
+      "a": "For each index, the answer is the product of everything to its left times everything to its right. Fill the output left to right with running left products, then sweep right to left multiplying by a running right product. That is O(n) time and O(1) extra space besides the output."
+     },
+     {
+      "q": "Why not just divide the total product by a[i]?",
+      "a": "A zero in the array makes the total 0 and division by a zero element impossible, so you would need special cases for one zero and for two or more zeros. The prefix and suffix approach handles zeros naturally, and interviewers often forbid division anyway."
+     },
+     {
+      "q": "How do you answer XOR queries over ranges quickly?",
+      "a": "Build X with X[0] = 0 and X[i + 1] = X[i] XOR a[i]. The XOR of a[l..r] is X[r + 1] XOR X[l], because the shared prefix cancels itself out (x XOR x = 0)."
+     },
+     {
+      "q": "How do you count subarrays whose XOR equals K?",
+      "a": "Walk the array keeping the prefix XOR and a map of how many times each prefix XOR occurred, starting with {0: 1}. A subarray ending here has XOR K exactly when an earlier prefix equals cur XOR K, so add that count, then record cur."
+     }
+    ]
    }
   },
   {
@@ -3664,9 +4251,38 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A hash table turns a key into an array index with a hash function, so it can jump straight to where the value lives. It works like a coat check: your coat's ticket number tells the attendant exactly which hook to go to. When too many coats share hooks, the attendant gets a bigger rack and rehangs everything.",
+    "interview": [
+     "A **hash function** maps a key to an integer; `index = hash(key) mod capacity` picks a **bucket** in an array.",
+     "Insert, lookup and delete are **O(1) on average**, **O(n) worst case** when many keys collide.",
+     "**Load factor** = items / buckets. When it passes a threshold (0.75 in Java's `HashMap`, 1.0 by default for C++ `unordered_map`, about 2/3 for Python's `dict`), the table **resizes** (roughly doubles) and rehashes every key: O(n) once, O(1) amortized per insert.",
+     "A good hash function is deterministic, fast, and spreads keys evenly. Equal keys must have equal hashes (override `hashCode` with `equals` in Java).",
+     "Keys should be immutable: changing a key after insertion leaves it in the wrong bucket.",
+     "Iteration order is unspecified in most hash maps (Python dicts keep insertion order since 3.7; Java's `LinkedHashMap` does too)."
+    ],
+    "questions": [
+     {
+      "q": "How does a hash table achieve O(1) average lookups?",
+      "a": "It hashes the key to an integer and reduces it modulo the number of buckets to get an array index. With an even hash and a bounded load factor, each bucket holds O(1) entries on average, so a lookup inspects a constant number of items."
+     },
+     {
+      "q": "What is the load factor and why does it trigger resizing?",
+      "a": "The load factor is the number of stored items divided by the number of buckets, which equals the average bucket size. As it grows, chains get longer (or probes more frequent), so tables resize, usually doubling, when it passes a threshold such as 0.75, keeping operations O(1)."
+     },
+     {
+      "q": "Why is resizing O(1) amortized even though it rehashes every key?",
+      "a": "Doubling means a resize of cost n happens only after about n/2 inserts since the last one. Spreading that cost over those inserts adds a constant per insert, the same argument as for dynamic arrays."
+     },
+     {
+      "q": "What makes a good hash function?",
+      "a": "It is deterministic, fast to compute, uses every part of the key, and spreads typical keys evenly across buckets. Equal keys must hash equally; unequal keys should rarely collide."
+     },
+     {
+      "q": "Why must hash map keys be immutable?",
+      "a": "The bucket is chosen from the key's hash at insertion time. If the key changes afterwards, its hash changes too, and lookups search the wrong bucket, so the entry is effectively lost."
+     }
+    ],
+    "deep": "#### Intuition\n\nAn array gives $O(1)$ access if you know the index. A hash table manufactures that index from the key: compute `hash(key)`, reduce it modulo the number of buckets, and look there. Collisions (two keys landing in the same bucket) are unavoidable, so each bucket must hold several entries (chaining) or the table must probe for another slot (open addressing).\n\n#### The pieces\n\n1. **Hash function**: turns a key into a number. For strings, a polynomial hash $h = \\sum s_i \\cdot p^{i}$ mixes every character; for integers, the identity or a bit mixer.\n2. **Compression**: `hash mod capacity` (or `hash & (capacity - 1)` when capacity is a power of two, which is why Java also mixes the high bits into the low ones).\n3. **Buckets**: an array of lists (chaining) or of single slots (open addressing).\n4. **Load factor** $\\alpha = n / m$: the average number of items per bucket. Expected chain length is $\\alpha$, so keeping $\\alpha$ bounded keeps operations $O(1)$.\n5. **Resizing**: when $\\alpha$ exceeds the threshold, allocate about twice as many buckets and reinsert every key (their indices change because the modulus changes).\n\n#### Worked example\n\nCapacity 4, hash = the integer itself, threshold 0.75. Insert 5, 9, 2, then 13.\n\n| insert | bucket = key mod 4 | buckets | load |\n|---|---|---|---|\n| 5 | 1 | [ ], [5], [ ], [ ] | 0.25 |\n| 9 | 1 | [ ], [5, 9], [ ], [ ] | 0.5 |\n| 2 | 2 | [ ], [5, 9], [2], [ ] | 0.75 |\n| 13 | 1 | would make 1.0: resize to 8 first | |\n\nAfter resizing to 8 buckets: 5 → 5, 9 → 1, 2 → 2, 13 → 5. Buckets 1: [9], 2: [2], 5: [5, 13]. Load 0.5.\n\n#### A minimal chained hash map\n\n```cpp\nclass IntHashMap {\n    vector<list<pair<int, int>>> buckets;\n    int count = 0;\n    size_t bucketOf(int key) const { return hash<int>{}(key) % buckets.size(); }\n    void rehash() {\n        vector<list<pair<int, int>>> old = std::move(buckets);\n        buckets.assign(old.size() * 2, {});\n        for (auto& chain : old)\n            for (auto& [k, v] : chain) buckets[bucketOf(k)].push_back({k, v});\n    }\npublic:\n    IntHashMap() : buckets(8) {}\n    void put(int key, int value) {\n        for (auto& [k, v] : buckets[bucketOf(key)])\n            if (k == key) { v = value; return; }       // update existing key\n        buckets[bucketOf(key)].push_back({key, value});\n        if (++count > 3 * (int)buckets.size() / 4) rehash();  // load factor 0.75\n    }\n    optional<int> get(int key) const {\n        for (auto& [k, v] : buckets[bucketOf(key)])\n            if (k == key) return v;\n        return nullopt;\n    }\n};\n```\n\n```python\nclass IntHashMap:\n    def __init__(self):\n        self.buckets = [[] for _ in range(8)]\n        self.count = 0\n\n    def _bucket(self, key):\n        return self.buckets[hash(key) % len(self.buckets)]\n\n    def put(self, key, value):\n        bucket = self._bucket(key)\n        for pair in bucket:\n            if pair[0] == key:\n                pair[1] = value\n                return\n        bucket.append([key, value])\n        self.count += 1\n        if self.count > 0.75 * len(self.buckets):\n            old = [p for b in self.buckets for p in b]\n            self.buckets = [[] for _ in range(2 * len(self.buckets))]\n            for k, v in old:\n                self._bucket(k).append([k, v])\n\n    def get(self, key):\n        for k, v in self._bucket(key):\n            if k == key:\n                return v\n        return None\n```\n\n#### Complexity\n\nWith a good hash and bounded load factor, each operation inspects $O(1 + \\alpha)$ entries on average: $O(1)$. Resizing costs $O(n)$ but happens after $\\Theta(n)$ inserts, so it is $O(1)$ amortized. The worst case, every key in one bucket, is $O(n)$ per operation.\n\n#### Pitfalls\n\n- Using a mutable object (a Python list, a Java object whose fields change) as a key.\n- Overriding `equals` without `hashCode` in Java: equal objects land in different buckets.\n- Iterating over a hash map and expecting sorted order.\n- In C++, `map[key]` inserts a default value when the key is missing; use `find` or `count` to test membership.\n\nConnects to: collision handling, amortized analysis, frequency counting, ordered maps."
    }
   },
   {
@@ -3688,9 +4304,37 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A collision happens when two different keys land on the same spot in a hash table. With chaining, each spot holds a small list, like several coats hanging on one hook. With open addressing, the newcomer walks along to the next free hook instead.",
+    "interview": [
+     "**Separate chaining**: each bucket is a list (or tree). Simple, tolerates load factors above 1, deletion is easy. Used by Java `HashMap` and C++ `unordered_map`.",
+     "**Open addressing**: all entries live in the array; on a collision, **probe** another slot: linear (`i + 1`), quadratic (`i + k²`), or double hashing (`i + k·h2(key)`). Used by Python `dict`.",
+     "Open addressing needs load factor well below 1 (often at most 0.5 to 0.7), is cache-friendly, and needs **tombstones** for deletion so probe chains stay intact.",
+     "Linear probing suffers **primary clustering**: runs of filled slots grow and slow everything down.",
+     "**Worst case O(n)**: many keys in one chain or one probe run. Java 8 turns long chains (more than 8) into balanced trees, giving O(log n) worst case per bucket."
+    ],
+    "questions": [
+     {
+      "q": "Compare separate chaining and open addressing.",
+      "a": "Chaining stores colliding entries in a per-bucket list; it is simple, handles high load factors and deletes easily, but chasing list pointers is cache-unfriendly. Open addressing keeps every entry in the array and probes for a free slot; it is cache-friendly and compact, but needs a low load factor and tombstones for deletion."
+     },
+     {
+      "q": "Why can't open addressing just clear a slot on deletion?",
+      "a": "Other keys may have probed past that slot when they were inserted. Clearing it makes lookups stop early and miss them. A tombstone marks the slot as deleted, so searches continue past it while inserts can reuse it."
+     },
+     {
+      "q": "What is primary clustering?",
+      "a": "With linear probing, filled slots form contiguous runs. Any key hashing into a run lands at its end and makes it longer, so runs grow faster and faster, and probe counts rise sharply as the load factor approaches 1."
+     },
+     {
+      "q": "When is a hash table lookup O(n), and how do libraries defend against it?",
+      "a": "When many keys collide in one bucket, from a poor hash function or adversarial input. Libraries randomize hash seeds (Python strings, Rust), and Java 8 converts long bucket chains into balanced trees so a bucket costs O(log n) in the worst case."
+     },
+     {
+      "q": "Why does the birthday paradox matter for hash tables?",
+      "a": "It shows collisions appear long before a table is full: with m buckets, a collision becomes likely after about √m insertions. So collision handling is required even at low load factors."
+     }
+    ],
+    "deep": "#### Intuition\n\nBy the pigeonhole principle, if there are more possible keys than buckets, some keys must share a bucket. Even with fewer keys than buckets, the birthday paradox says collisions start early: with 365 buckets, 23 random keys already have a 50% chance of a collision. So every hash table needs a collision strategy.\n\n#### Separate chaining\n\nEach bucket stores a list of entries. Insert appends to the list (after checking for the key), lookup scans it. The expected list length is the load factor $\\alpha$, so operations cost $O(1 + \\alpha)$.\n\n- Pros: simple; performance degrades gracefully as $\\alpha$ grows past 1; deletion just removes from a list.\n- Cons: pointer-heavy lists are cache-unfriendly; extra memory per entry.\n\n#### Open addressing\n\nThe table is one array of slots. To insert key $k$, try slot $h(k)$; if taken, try the next slot in a **probe sequence** until a free one appears. Lookups follow the same sequence until they find the key or an empty slot.\n\n| Probing | Sequence | Trade-off |\n|---|---|---|\n| Linear | $h, h+1, h+2, \\dots$ | best cache use; primary clustering |\n| Quadratic | $h, h+1, h+4, h+9, \\dots$ | less clustering; may not visit every slot |\n| Double hashing | $h, h + h_2, h + 2h_2, \\dots$ | spreads well; second hash cost |\n\nExpected probes for an unsuccessful search with linear probing are about $\\frac{1}{2}\\left(1 + \\frac{1}{(1-\\alpha)^2}\\right)$: 2.5 at $\\alpha = 0.5$, but 50.5 at $\\alpha = 0.9$. That is why open-addressing tables resize early.\n\n#### Deletion and tombstones\n\nSimply emptying a slot breaks lookups for keys that probed past it. Mark the slot as a **tombstone** instead: lookups skip it, inserts may reuse it. Too many tombstones slow lookups down, so tables rebuild periodically.\n\n#### Worked example: linear probing\n\nCapacity 7, `h(k) = k mod 7`. Insert 10, 17, 3, 24.\n\n| key | h | probes | slot |\n|---|---|---|---|\n| 10 | 3 | 3 | 3 |\n| 17 | 3 | 3 taken, 4 | 4 |\n| 3 | 3 | 3, 4 taken, 5 | 5 |\n| 24 | 3 | 3, 4, 5 taken, 6 | 6 |\n\nNow delete 17 by emptying slot 4. A lookup for 3 starts at slot 3 (10), then finds slot 4 empty and wrongly stops. With a tombstone in slot 4 the search continues to slot 5 and finds 3.\n\n```cpp\nclass LinearProbingSet {\n    enum State { EMPTY, FULL, DELETED };\n    vector<int> keys;\n    vector<State> state;\npublic:\n    explicit LinearProbingSet(int capacity) : keys(capacity), state(capacity, EMPTY) {}\n    bool contains(int key) const {\n        int n = keys.size(), i = ((key % n) + n) % n;\n        for (int step = 0; step < n && state[i] != EMPTY; step++, i = (i + 1) % n)\n            if (state[i] == FULL && keys[i] == key) return true;  // tombstones are skipped\n        return false;\n    }\n    bool insert(int key) {                  // no resizing, for brevity\n        if (contains(key)) return false;\n        int n = keys.size(), i = ((key % n) + n) % n;\n        for (int step = 0; step < n; step++, i = (i + 1) % n)\n            if (state[i] != FULL) { keys[i] = key; state[i] = FULL; return true; }\n        return false;                       // table full\n    }\n    void erase(int key) {\n        int n = keys.size(), i = ((key % n) + n) % n;\n        for (int step = 0; step < n && state[i] != EMPTY; step++, i = (i + 1) % n)\n            if (state[i] == FULL && keys[i] == key) { state[i] = DELETED; return; }\n    }\n};\n```\n\n```python\nEMPTY, DELETED = object(), object()\n\nclass LinearProbingSet:\n    def __init__(self, capacity):\n        self.slots = [EMPTY] * capacity\n\n    def _probe(self, key):\n        n = len(self.slots)\n        i = hash(key) % n\n        for _ in range(n):\n            yield i\n            i = (i + 1) % n\n\n    def contains(self, key):\n        for i in self._probe(key):\n            if self.slots[i] is EMPTY:\n                return False\n            if self.slots[i] == key:\n                return True\n        return False\n\n    def erase(self, key):\n        for i in self._probe(key):\n            if self.slots[i] is EMPTY:\n                return\n            if self.slots[i] == key:\n                self.slots[i] = DELETED   # tombstone keeps probe chains intact\n                return\n```\n\n#### Worst case\n\nIf an adversary (or bad luck) sends keys that all hash to one bucket, a chained table degenerates into a linked list and open addressing into a linear scan: $O(n)$ per operation, $O(n^2)$ for $n$ inserts. Defenses: randomized (seeded) hash functions, and tree-shaped buckets as in Java 8.\n\n#### Variants\n\nRobin Hood hashing (steal slots from entries closer to home to even out probe lengths), cuckoo hashing (two tables, $O(1)$ worst-case lookup), and Swiss tables (Google's SIMD-probed open addressing, behind `absl::flat_hash_map`).\n\nConnects to: hash table internals, custom hashing and anti-hash tests, the birthday paradox."
    }
   },
   {
@@ -3712,9 +4356,46 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Frequency counting means tallying how many times each item appears, like counting votes by making a mark next to each candidate's name. Once you have the tally, many questions become easy: which item is most common, do two words use the same letters, which items appear exactly once. Grouping works the same way, with a list for each key instead of a count.",
+    "interview": [
+     "Build a map `item → count` in one pass: **O(n)** time, **O(k)** space for k distinct items.",
+     "For a small fixed alphabet (lowercase letters), use an array of 26 ints: faster and O(1) space.",
+     "**Anagram check**: equal count arrays (or equal sorted strings, O(n log n)).",
+     "**Group by a key**: map `key → list`, where the key is a canonical form (sorted word, count tuple, normalized shape).",
+     "Top k frequent: count, then use a heap (O(n log k)) or bucket sort by frequency (O(n)).",
+     "In C++ `unordered_map<int,int>` defaults counts to 0 on `[]`; Python has `collections.Counter` and `defaultdict(list)`."
+    ],
+    "questions": [
+     {
+      "q": "How do you check whether two strings are anagrams in O(n)?",
+      "a": "Count the characters of one string and subtract the counts of the other; they are anagrams if every count ends at zero (and the lengths match). For lowercase letters an array of 26 counters is enough, so the extra space is O(1)."
+     },
+     {
+      "q": "How do you group anagrams, and what key would you use?",
+      "a": "Map a canonical key to a list of words. The key can be the sorted letters (O(L log L) per word) or a tuple of 26 letter counts (O(L) per word). Words with the same key are anagrams of each other."
+     },
+     {
+      "q": "How do you find the k most frequent elements faster than sorting?",
+      "a": "Count frequencies with a hash map, then either keep a min-heap of size k (O(n log k)) or bucket the elements by frequency, since frequencies are between 1 and n, and read the buckets from the top (O(n))."
+     },
+     {
+      "q": "When is an array better than a hash map for counting?",
+      "a": "When the keys come from a small known range, such as 26 lowercase letters or values up to 10^6. Array indexing has no hashing cost, is cache-friendly, and uses fixed memory."
+     },
+     {
+      "q": "How do you find the first non-repeating character in a string?",
+      "a": "Count every character in one pass, then scan the string again in order and return the first character whose count is 1. That is O(n) time and O(alphabet) space."
+     }
+    ],
+    "deep": "#### Intuition\n\nMany problems ask about **how often** things occur, not where. Replacing a nested comparison (\"is this equal to any other element?\") by a count lookup turns $O(n^2)$ into $O(n)$. The key design decision is the **key**: what should be considered the same?\n\n#### Worked example: group anagrams\n\nWords: `eat tea tan ate nat bat`. Key = the letters sorted.\n\n| word | key | groups after |\n|---|---|---|\n| eat | aet | aet: [eat] |\n| tea | aet | aet: [eat, tea] |\n| tan | ant | ant: [tan] |\n| ate | aet | aet: [eat, tea, ate] |\n| nat | ant | ant: [tan, nat] |\n| bat | abt | abt: [bat] |\n\nResult: `[eat, tea, ate]`, `[tan, nat]`, `[bat]`.\n\n#### Code\n\n```cpp\nbool isAnagram(const string& s, const string& t) {\n    if (s.size() != t.size()) return false;\n    array<int, 26> count{};                 // lowercase letters only\n    for (char c : s) count[c - 'a']++;\n    for (char c : t) if (--count[c - 'a'] < 0) return false;\n    return true;\n}\n\nvector<vector<string>> groupAnagrams(const vector<string>& words) {\n    unordered_map<string, vector<string>> groups;\n    for (const string& w : words) {\n        string key = w;\n        sort(key.begin(), key.end());       // canonical form: sorted letters\n        groups[key].push_back(w);\n    }\n    vector<vector<string>> out;\n    for (auto& [key, list] : groups) out.push_back(std::move(list));\n    return out;\n}\n\n// Top k frequent with bucket sort: frequencies are at most n.\nvector<int> topKFrequent(const vector<int>& a, int k) {\n    unordered_map<int, int> freq;\n    for (int x : a) freq[x]++;\n    vector<vector<int>> bucket(a.size() + 1);\n    for (auto& [x, f] : freq) bucket[f].push_back(x);\n    vector<int> out;\n    for (int f = a.size(); f >= 1 && (int)out.size() < k; f--)\n        for (int x : bucket[f]) if ((int)out.size() < k) out.push_back(x);\n    return out;\n}\n```\n\n```python\nfrom collections import Counter, defaultdict\n\ndef is_anagram(s, t):\n    return Counter(s) == Counter(t)\n\ndef group_anagrams(words):\n    groups = defaultdict(list)\n    for w in words:\n        count = [0] * 26\n        for c in w:\n            count[ord(c) - ord('a')] += 1\n        groups[tuple(count)].append(w)   # count tuple: O(len) key instead of sorting\n    return list(groups.values())\n\ndef top_k_frequent(a, k):\n    return [x for x, _ in Counter(a).most_common(k)]\n```\n\n#### Complexity\n\nCounting is $O(n)$ time. Group anagrams with sorted keys is $O(n \\cdot L \\log L)$ for $n$ words of length $L$; with count tuples it is $O(n \\cdot (L + 26))$. Space is $O(n \\cdot L)$ for the groups.\n\n#### Choosing the key\n\n- Anagrams: sorted letters or letter counts.\n- Same \"shape\" (isomorphic strings): the pattern of first occurrences, such as `paper → 0 1 0 2 3`.\n- Shifted strings (`abc`, `bcd`): the differences between consecutive letters mod 26.\n- Points on the same line through a point: the reduced slope `(dy/g, dx/g)` with a sign convention.\n\n#### Edge cases and bugs\n\n- Unicode or uppercase input breaks `c - 'a'` indexing; ask about the alphabet, or use a map.\n- Reading a missing key with `map[key]` in C++ inserts it; that is fine for counting, not for membership tests.\n- Comparing two `Counter`s is correct, but comparing two `dict` counts after deleting zero entries matters in some languages.\n\n#### Variants\n\nFirst unique character (count, then scan in order), ransom note (count the magazine, spend it on the note), sort characters by frequency, valid sudoku (sets per row, column and box), and sliding-window counts for substrings.\n\nConnects to: hash table internals, window with counts, top k elements, anagrams and character counts.",
+    "signals": [
+     "how many times each value or character appears",
+     "anagrams, permutations of letters, or \"same characters in a different order\"",
+     "grouping items that share a canonical form",
+     "most frequent, least frequent, unique or duplicated elements",
+     "comparing two collections as multisets"
+    ],
+    "template": "```cpp\n// Frequency counting and grouping by a canonical key.\ntemplate <class T, class KeyFn>\nunordered_map<string, vector<T>> groupBy(const vector<T>& items, KeyFn keyOf) {\n    unordered_map<string, vector<T>> groups;\n    for (const T& item : items) groups[keyOf(item)].push_back(item);  // same key, same group\n    return groups;\n}\n\nunordered_map<int, int> countAll(const vector<int>& a) {\n    unordered_map<int, int> freq;\n    for (int x : a) freq[x]++;              // missing keys start at 0\n    return freq;                            // then: max count, count == 1, compare maps...\n}\n```"
    }
   },
   {
@@ -3736,9 +4417,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Complement lookup finds pairs by remembering what you have already seen. At a party, if you need a partner whose age adds up with yours to 50, you ask whether anyone aged 50 minus your age has arrived. A hash map is the guest list that answers that question instantly.",
+    "interview": [
+     "For each `x`, check whether `target - x` is already in a hash map; if not, store `x` (with its index). **O(n)** time, **O(n)** space.",
+     "Look up **before** inserting so an element never pairs with itself.",
+     "Sorted input: two pointers from both ends give O(1) extra space instead.",
+     "Generalizes to any \"partner\" relation: `x + y = t`, `y - x = k`, `x ^ y = t`, prefix differences (subarray sum K).",
+     "Count pairs by storing counts instead of indices; watch for duplicates and `k = 0` in difference problems."
+    ],
+    "questions": [
+     {
+      "q": "How do you solve two sum in O(n)?",
+      "a": "Walk the array once with a hash map from value to index. For each x, check whether target − x is already in the map; if so, return both indices, otherwise store x. Each element is looked up and inserted once, so it is O(n) average time and O(n) space."
+     },
+     {
+      "q": "Why check the map before inserting the current element?",
+      "a": "So an element can't pair with itself. If target is 6 and x is 3, inserting first would find the same 3. Checking first still handles two different 3s correctly, because the earlier one is already in the map."
+     },
+     {
+      "q": "When would you prefer two pointers over a hash map for pair sums?",
+      "a": "When the array is already sorted or you need O(1) extra space, or when extending to 3Sum and 4Sum where skipping duplicates on sorted data is easier. The hash map is better when you must return original indices of unsorted input."
+     },
+     {
+      "q": "How do you count pairs with a given difference k without double counting?",
+      "a": "For each x, add the counts of x − k and x + k seen so far, then record x. When k is 0 both lookups are the same value, so only add it once."
+     },
+     {
+      "q": "How is \"subarray sum equals K\" a complement lookup?",
+      "a": "A subarray sum is a difference of two prefix sums. For the current prefix cur, you need an earlier prefix equal to cur − K, which is the complement, so you count earlier prefixes in a hash map."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe brute force checks every pair: $O(n^2)$. But for each $x$ there is exactly one partner value $y = t - x$ that completes the pair, so the question becomes \"have I seen $y$ before?\", a single hash lookup. Walking left to right and remembering what you have seen covers every pair once, when its second element arrives.\n\n#### Worked example\n\n`nums = [2, 7, 11, 15]`, target 9.\n\n| i | x | need 9 − x | in map? | map after |\n|---|---|---|---|---|\n| 0 | 2 | 7 | no | {2: 0} |\n| 1 | 7 | 2 | yes, index 0 | answer (0, 1) |\n\n#### Code\n\n```cpp\nvector<int> twoSum(const vector<int>& nums, int target) {\n    unordered_map<int, int> indexOf;             // value -> index where it was seen\n    for (int i = 0; i < (int)nums.size(); i++) {\n        auto it = indexOf.find(target - nums[i]);\n        if (it != indexOf.end()) return {it->second, i};\n        indexOf[nums[i]] = i;                    // insert after the lookup\n    }\n    return {};\n}\n\n// Count pairs (i < j) whose values differ by exactly k (|nums[i] - nums[j]| == k).\nlong long countPairsWithDiff(const vector<int>& nums, int k) {\n    unordered_map<long long, long long> seen;\n    long long pairs = 0;\n    for (int x : nums) {\n        auto a = seen.find((long long)x - k);\n        if (a != seen.end()) pairs += a->second;\n        if (k != 0) {                             // x + k is a different partner only if k != 0\n            auto b = seen.find((long long)x + k);\n            if (b != seen.end()) pairs += b->second;\n        }\n        seen[x]++;\n    }\n    return pairs;\n}\n```\n\n```python\ndef two_sum(nums, target):\n    index_of = {}\n    for i, x in enumerate(nums):\n        if target - x in index_of:\n            return [index_of[target - x], i]\n        index_of[x] = i\n    return []\n```\n\nTime $O(n)$ average, space $O(n)$.\n\n#### Hash map or two pointers?\n\n| | Hash map | Sort + two pointers |\n|---|---|---|\n| Time | $O(n)$ average | $O(n \\log n)$ (O(n) if already sorted) |\n| Extra space | $O(n)$ | $O(1)$ (plus sort) |\n| Returns original indices | yes | only if you sort (value, index) pairs |\n| Extends to 3Sum and kSum | awkward with duplicates | natural |\n\n#### Edge cases and bugs\n\n- **Pairing an element with itself**: `[3]` with target 6 must fail; look up first, then insert.\n- **Duplicates**: `[3, 3]` with target 6 works with lookup-then-insert, because the first 3 is in the map when the second arrives.\n- **k = 0 in difference problems**: `x - k` and `x + k` are the same value; counting both doubles the pairs.\n- **Overflow**: `target - x` with extreme ints; use 64-bit.\n\n#### Variants\n\n- Two sum on a stream (data structure design): store counts, answer `find(t)` by scanning distinct values.\n- Two sum in a BST: inorder traversal plus two pointers, or a set during DFS.\n- Pairs whose sum is divisible by k: count remainders, pair `r` with `(k - r) % k`.\n- Subarray sum equals K: complement lookup on prefix sums.\n- Four sum count across four arrays: count sums of two arrays, look up the negated sums of the other two ($O(n^2)$).\n\nConnects to: prefix sum with hash map, opposite-ends pointers, kSum.",
+    "signals": [
+     "find two elements that add up to (or differ by) a target",
+     "\"have I seen the value that completes this pair?\"",
+     "unsorted input where the original indices must be returned",
+     "pair counts with a sum, difference, XOR or remainder condition",
+     "matching items across two lists (sum of two arrays equals a target)"
+    ],
+    "template": "```cpp\n// Complement lookup: for each x, ask whether its partner was seen earlier.\nvector<int> findPair(const vector<int>& a, long long target) {\n    unordered_map<long long, int> seen;          // value -> index (or count)\n    for (int i = 0; i < (int)a.size(); i++) {\n        long long partner = target - a[i];       // or a[i] - k, a[i] ^ t, (k - r) % k ...\n        auto it = seen.find(partner);\n        if (it != seen.end()) return {it->second, i};\n        seen[a[i]] = i;                          // record after looking up\n    }\n    return {};\n}\n```"
    }
   },
   {
@@ -3758,9 +4475,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A hash set answers one question fast: \"have I seen this before?\" It is like a guest list at a door where the bouncer can check any name instantly. That makes it the tool for removing duplicates, spotting repeats, and finding runs of consecutive numbers.",
+    "interview": [
+     "`insert`, `contains`, `erase` in **O(1)** average; stores keys only, no values.",
+     "**Deduplication**: insert everything, or check `contains` before adding. Contains duplicate: return true when an insert finds the key already present.",
+     "**Longest consecutive sequence** in O(n): put all values in a set; start counting only at values `x` where `x - 1` is **not** in the set, then walk `x + 1, x + 2, …`. Each value is visited at most twice.",
+     "Set operations: intersection by probing the smaller set in the larger (O(min(n, m))).",
+     "For small bounded values, a boolean array or bitset is faster than a hash set."
+    ],
+    "questions": [
+     {
+      "q": "How do you find the length of the longest consecutive sequence in an unsorted array in O(n)?",
+      "a": "Put every value in a hash set. For each value x that has no x − 1 in the set, it starts a run, so count upward x + 1, x + 2, … while they exist. Each value is part of exactly one run and is visited at most twice, which gives O(n) average time."
+     },
+     {
+      "q": "Why does the longest consecutive sequence solution only start counting at x when x − 1 is missing?",
+      "a": "Starting from every value would recount each run from every member, which is O(n²) for one long run. Starting only at run beginnings means each run is walked once."
+     },
+     {
+      "q": "How do you compute the intersection of two arrays efficiently?",
+      "a": "Put the smaller array into a hash set, then scan the larger one and keep the elements found in the set (removing them to avoid repeats if the result should be distinct). That is O(n + m) time and O(min(n, m)) space."
+     },
+     {
+      "q": "When would you use a bitset instead of a hash set?",
+      "a": "When keys are small non-negative integers with a known bound, such as values up to 10^6. A bitset uses one bit per possible value, has no hashing cost, and supports fast bulk operations such as AND and OR."
+     }
+    ]
    }
   },
   {
@@ -3780,9 +4520,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "A hash map finds a key instantly but keeps keys in no useful order. An ordered map keeps keys sorted, like a dictionary on a shelf, so it can answer \"what is the nearest word before this one?\" It pays a little for that: each operation takes log n time instead of constant time.",
+    "interview": [
+     "Hash map (`unordered_map`, `HashMap`, `dict`): O(1) average operations, no order.",
+     "Ordered map (`std::map`, Java `TreeMap`): balanced BST (red-black tree), **O(log n)** worst case per operation, keys in sorted order.",
+     "Ordered maps answer **floor/ceiling** and range queries: C++ `lower_bound` (first key ≥ x), `upper_bound` (first key > x), `prev(it)` for floor; Java `floorKey`, `ceilingKey`, `headMap`, `tailMap`.",
+     "Use an ordered map for: sorted iteration, nearest key, smallest or largest key, sliding windows needing min and max with deletions (multiset), calendars and intervals.",
+     "Python has no built-in ordered map; use `bisect` on a sorted list (O(n) insert) or `sortedcontainers.SortedList` where allowed."
+    ],
+    "questions": [
+     {
+      "q": "When would you choose a TreeMap or std::map over a hash map?",
+      "a": "When you need keys in sorted order or nearest-key queries: the smallest key, the largest key, the first key at least x, or all keys in a range. A hash map can't do these without scanning everything."
+     },
+     {
+      "q": "What are lower_bound and upper_bound on a std::map?",
+      "a": "lower_bound(x) returns an iterator to the first key not less than x (the ceiling), and upper_bound(x) returns the first key strictly greater than x. The floor, the largest key at most x, is the element before upper_bound(x), if there is one."
+     },
+     {
+      "q": "Why are ordered map operations O(log n)?",
+      "a": "They are implemented as self-balancing binary search trees, usually red-black trees, whose height stays O(log n). Every search, insert or delete walks one root-to-leaf path."
+     },
+     {
+      "q": "How would you keep the minimum and maximum of a sliding window that supports removing arbitrary elements?",
+      "a": "Use an ordered multiset (std::multiset or a TreeMap of counts). Insert new elements, erase one copy of the element leaving the window, and read the first and last keys, each in O(log n)."
+     }
+    ]
    }
   },
   {
@@ -3804,9 +4567,32 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Some keys, such as pairs of numbers, need you to tell the hash map how to turn them into a hash. A predictable hash function can also be attacked: someone who knows it can pick keys that all land in the same bucket, like sending every letter to one mailbox. Mixing in a random seed makes that trick impossible.",
+    "interview": [
+     "C++ `unordered_map` has no hash for `pair` or `vector`; supply a hasher struct, or encode the pair into one 64-bit value (`(long long)a << 32 | (unsigned)b`).",
+     "Combining hashes: avoid `h1 ^ h2` (symmetric: `(a, b)` and `(b, a)` collide, and `(x, x)` gives 0); use a multiplier or a mixing function.",
+     "**Anti-hash tests**: libstdc++ reduces integer hashes (the identity) modulo a prime bucket count; inputs built from multiples of that prime make every key collide, turning O(1) into O(n) and a solution into O(n²).",
+     "Defense: a randomized, well-mixed hash such as splitmix64 seeded from the clock, or switch to an ordered map.",
+     "In Java and Python, tuples and records already hash all fields; Python randomizes string hashes per process for the same security reason."
+    ],
+    "questions": [
+     {
+      "q": "How do you use a pair as a key in C++'s unordered_map?",
+      "a": "Provide a hash functor that combines both fields, for example by mixing first * a large odd constant with second, or pack the pair into one 64-bit integer when both fit in 32 bits. std::map works with pairs directly because pairs are comparable."
+     },
+     {
+      "q": "Why is combining two hashes with XOR a bad idea?",
+      "a": "XOR is symmetric, so (a, b) and (b, a) get the same hash, and any pair (x, x) hashes to 0. Structured data such as grid coordinates then collides heavily. Multiply one hash by a constant or use a proper mixing function before combining."
+     },
+     {
+      "q": "What is an anti-hash test?",
+      "a": "An input crafted so that all keys fall into the same bucket of a known, deterministic hash function, such as integers that are multiples of the bucket count used by libstdc++. Each operation then scans a long chain and the whole run becomes O(n²)."
+     },
+     {
+      "q": "How do you protect a solution against anti-hash inputs?",
+      "a": "Use a hash with good bit mixing (splitmix64) plus a random seed chosen at runtime, so an attacker can't predict collisions. Alternatively use an ordered map, which is O(log n) worst case regardless of input."
+     }
+    ]
    }
   },
   {
@@ -3826,9 +4612,46 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Opposite-ends pointers start one finger at each end of an array and move them toward each other. Think of two people searching a sorted bookshelf for two books whose prices add up to a budget: if the total is too high, the person on the expensive end steps inward; if too low, the cheap end steps inward. Each step rules out a whole row of pairs at once.",
+    "interview": [
+     "Start `l = 0`, `r = n - 1`; loop `while (l < r)`; decide which pointer to move using a property that makes the other choice useless.",
+     "**Sorted pair sum**: sum too small → `l++`; too big → `r--`. **O(n)** time, **O(1)** space.",
+     "**Palindrome check**: compare `s[l]` and `s[r]`, move both inward (skip non-alphanumerics when asked).",
+     "**Container with most water**: area is `min(h[l], h[r]) * (r - l)`; move the **shorter** side, because keeping it can only give smaller areas.",
+     "Correctness argument: every skipped pair is provably no better than one already considered.",
+     "Requires sorted data or a monotonic property; sort first (O(n log n)) if needed and indices aren't required."
+    ],
+    "questions": [
+     {
+      "q": "Why does the two-pointer method find a pair with a given sum in a sorted array?",
+      "a": "If a[l] + a[r] is too small, a[l] plus any element at or before r is also too small, so l can be discarded; symmetrically, if it's too large, r can be discarded. Each step removes one candidate and never removes an index that belongs to a valid pair, so the search is O(n) and complete."
+     },
+     {
+      "q": "In \"container with most water\", why do you move the shorter wall?",
+      "a": "The area is limited by the shorter wall. Keeping the shorter wall and moving the taller one inward can only reduce the width without raising the limiting height, so every such container is worse. Moving the shorter wall is the only move that might find a larger area."
+     },
+     {
+      "q": "How do you count pairs with a sum less than K in a sorted array?",
+      "a": "Use two pointers from both ends. If a[l] + a[r] < K, then a[l] pairs with every index from l + 1 to r, so add r − l and move l right; otherwise move r left. That is O(n) after sorting."
+     },
+     {
+      "q": "What must you watch for if the problem needs original indices but the array is unsorted?",
+      "a": "Sorting loses the positions, so sort pairs of (value, original index) and report the stored indices. Or use a hash map instead, which works on unsorted data in O(n)."
+     },
+     {
+      "q": "How would you check whether a string can become a palindrome by deleting at most one character?",
+      "a": "Move two pointers inward while the characters match. At the first mismatch, check whether either s[l + 1..r] or s[l..r − 1] is a palindrome. That is O(n) because the second check runs once."
+     }
+    ],
+    "deep": "#### Intuition\n\nA brute force over pairs is $O(n^2)$. On sorted data, the pair $(l, r)$ tells you something about many other pairs at once. If $a_l + a_r$ is too large, then $a_r$ paired with anything at index $\\ge l$ is also too large (the array is sorted), so $r$ can never be part of an answer: drop it. Each step eliminates one index, so at most $n$ steps.\n\n#### Worked example: pair with sum 10\n\nSorted: `1 3 4 6 8 11`\n\n| l | r | a[l] + a[r] | action |\n|---|---|---|---|\n| 0 (1) | 5 (11) | 12 | too big: r-- |\n| 0 (1) | 4 (8) | 9 | too small: l++ |\n| 1 (3) | 4 (8) | 11 | too big: r-- |\n| 1 (3) | 3 (6) | 9 | too small: l++ |\n| 2 (4) | 3 (6) | 10 | found |\n\n#### Code\n\n```cpp\n// Sorted pair sum: indices of two values adding up to target, or {-1, -1}.\npair<int, int> pairWithSum(const vector<int>& a, long long target) {\n    int l = 0, r = (int)a.size() - 1;\n    while (l < r) {\n        long long s = (long long)a[l] + a[r];\n        if (s == target) return {l, r};\n        if (s < target) l++;         // a[l] is too small for every remaining partner\n        else r--;                    // a[r] is too big for every remaining partner\n    }\n    return {-1, -1};\n}\n\n// Container with most water: move the shorter wall.\nlong long maxArea(const vector<int>& h) {\n    int l = 0, r = (int)h.size() - 1;\n    long long best = 0;\n    while (l < r) {\n        best = max(best, (long long)min(h[l], h[r]) * (r - l));\n        if (h[l] < h[r]) l++;\n        else r--;\n    }\n    return best;\n}\n```\n\n```python\ndef is_palindrome(s):\n    l, r = 0, len(s) - 1\n    while l < r:\n        if not s[l].isalnum():\n            l += 1\n        elif not s[r].isalnum():\n            r -= 1\n        elif s[l].lower() != s[r].lower():\n            return False\n        else:\n            l, r = l + 1, r - 1\n    return True\n\ndef max_area(h):\n    l, r, best = 0, len(h) - 1, 0\n    while l < r:\n        best = max(best, min(h[l], h[r]) * (r - l))\n        if h[l] < h[r]:\n            l += 1\n        else:\n            r -= 1\n    return best\n```\n\nTime $O(n)$, space $O(1)$.\n\n#### Why moving the shorter wall is safe\n\nWith walls at $l$ and $r$ and $h_l \\le h_r$, any container using $l$ with a right wall $r' < r$ has width smaller than $r - l$ and height at most $h_l$. So its area is below the current one. Wall $l$ has nothing better to offer, and discarding it loses no answer.\n\n#### Edge cases and bugs\n\n- `l <= r` instead of `l < r` pairs an element with itself.\n- Sum overflow with large values: use 64-bit.\n- Forgetting to move a pointer in some branch causes an infinite loop.\n- If the input isn't sorted and you sort it, you lose original indices; sort `(value, index)` pairs.\n\n#### Variants\n\n- **Two sum less than K**, **count pairs with sum below K**: when `a[l] + a[r] < K`, all pairs `(l, l+1..r)` qualify, so add `r - l` and move `l`.\n- **Valid palindrome with one deletion**: on the first mismatch, try skipping either side once.\n- **Reverse in place**, **squares of a sorted array** (fill the output from the back with the larger absolute value).\n- **3Sum and kSum**: fix elements, then run this on the rest.\n\nConnects to: kSum, binary search, palindromes, trapping rain water.",
+    "signals": [
+     "a sorted array and a pair (or triple) with a target sum",
+     "comparing elements from both ends: palindromes, reversal, symmetric checks",
+     "maximize an area or distance between two chosen positions",
+     "\"squares of a sorted array\" or merging from both ends toward the middle",
+     "O(1) extra space required on sorted input"
+    ],
+    "template": "```cpp\n// Opposite-ends two pointers on a sorted array (or a sequence with a monotonic rule).\nint twoPointersFromEnds(const vector<int>& a, long long target) {\n    int l = 0, r = (int)a.size() - 1, found = 0;\n    while (l < r) {\n        long long s = (long long)a[l] + a[r];  // evaluate the current pair\n        if (s == target) {\n            found++;                           // record, then move both (skip duplicates if needed)\n            l++;\n            r--;\n        } else if (s < target) {\n            l++;                               // a[l] can't reach the target with anyone left\n        } else {\n            r--;                               // a[r] overshoots with everyone left\n        }\n    }\n    return found;\n}\n```"
    }
   },
   {
@@ -3848,9 +4671,42 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Same-direction pointers use a fast reader and a slow writer moving the same way through an array. The reader looks at every item, and the writer only moves when there is something worth keeping, like a librarian scanning a shelf and sliding the good books to the front. The kept items end up packed at the start, with no extra array needed.",
+    "interview": [
+     "`read` visits every index; `write` marks the next position of the output. Invariant: `a[0..write-1]` is the answer so far.",
+     "**Remove duplicates from a sorted array**: keep `a[read]` when it differs from `a[write - 1]`.",
+     "**Move zeroes**: swap non-zeros to `write` (keeps their order), or copy then fill zeros.",
+     "**Partition by a predicate** (evens first, Lomuto partition): swap matching elements to `write`.",
+     "**O(n)** time, **O(1)** space; stable when copying in order.",
+     "\"Allow at most k copies\" generalizes the duplicate check to `a[read] != a[write - k]`."
+    ],
+    "questions": [
+     {
+      "q": "How do you remove duplicates from a sorted array in place?",
+      "a": "Keep a write index starting at 1. For each element from index 1 onward, if it differs from a[write − 1], the last kept value, copy it to a[write] and advance. The first write elements are the unique values, in O(n) time and O(1) space."
+     },
+     {
+      "q": "How do you move all zeroes to the end while keeping the other elements in order?",
+      "a": "Scan with a read pointer and keep a write pointer at the next slot for a non-zero. When a[read] is non-zero, swap it with a[write] and advance write. Non-zeros keep their relative order and zeros collect at the end."
+     },
+     {
+      "q": "How do you allow at most two copies of each value in a sorted array?",
+      "a": "Keep x if fewer than two elements have been written or if a[write − 2] != x. Because the kept prefix is sorted, a[write − 2] == x means the last two kept values are both x."
+     },
+     {
+      "q": "Why can the write pointer never overwrite unread data?",
+      "a": "It only advances when the read pointer advances, so write ≤ read at every step. Everything at or after read hasn't been overwritten yet."
+     }
+    ],
+    "deep": "#### Intuition\n\nFiltering an array into a new array is easy: append what you keep. Doing it in place is the same thing with the output living in the front of the input. The write pointer never passes the read pointer, so you never overwrite something you haven't read yet.\n\n#### Worked example: remove duplicates (sorted)\n\n`1 1 2 3 3 3 4`, `write = 1` (the first element is always kept).\n\n| read | a[read] | a[write − 1] | keep? | array prefix | write |\n|---|---|---|---|---|---|\n| 1 | 1 | 1 | no | 1 | 1 |\n| 2 | 2 | 1 | yes | 1 2 | 2 |\n| 3 | 3 | 2 | yes | 1 2 3 | 3 |\n| 4 | 3 | 3 | no | 1 2 3 | 3 |\n| 5 | 3 | 3 | no | 1 2 3 | 3 |\n| 6 | 4 | 3 | yes | 1 2 3 4 | 4 |\n\nResult length 4.\n\n#### Code\n\n```cpp\n// Sorted input; keep at most k copies of each value (k = 1 removes duplicates).\nint keepAtMostK(vector<int>& a, int k) {\n    int write = 0;\n    for (int x : a)\n        if (write < k || a[write - k] != x) a[write++] = x;\n    return write;\n}\n\n// Move zeroes to the end, keeping the order of non-zero elements.\nvoid moveZeroes(vector<int>& a) {\n    int write = 0;\n    for (int read = 0; read < (int)a.size(); read++)\n        if (a[read] != 0) swap(a[write++], a[read]);\n}\n```\n\n```python\ndef keep_at_most_k(a, k):\n    write = 0\n    for x in a:\n        if write < k or a[write - k] != x:\n            a[write] = x\n            write += 1\n    return write\n\ndef move_zeroes(a):\n    write = 0\n    for read in range(len(a)):\n        if a[read] != 0:\n            a[write], a[read] = a[read], a[write]\n            write += 1\n```\n\nTime $O(n)$, space $O(1)$.\n\n#### Why `a[write - k]` works\n\nIn sorted input, the kept prefix is sorted too. If `x` equals `a[write - k]`, then the last `k` kept elements are all equal to `x` (they lie between `a[write - k]` and `x`), so adding another would exceed `k` copies.\n\n#### Swap or copy?\n\n- Copying (`a[write++] = a[read]`) is simpler when you don't care what is left after `write`.\n- Swapping keeps every element in the array (a permutation), which move-zeroes and partitioning need.\n- Swapping with `write == read` is harmless.\n\n#### Edge cases and bugs\n\n- Empty array: return 0 without reading `a[0]`.\n- Comparing `a[read]` with `a[read - 1]` instead of the last **kept** element breaks the at-most-k version.\n- The approach needs **sorted** input for duplicates; unsorted duplicate removal needs a hash set.\n\n#### Variants\n\n- Lomuto partition in quicksort is this pattern with the predicate `a[read] < pivot`.\n- Remove element, squares of sorted array (from the ends instead), string compression (read runs, write counts).\n- Backspace string compare: process from the right with a skip counter, or use the write pointer as a stack top.\n- Linked lists: the same idea with `prev` and `cur` node pointers.\n\nConnects to: array basics (in-place compaction), Dutch national flag, sliding window, quick sort.",
+    "signals": [
+     "modify the array in place and return the new length",
+     "remove, filter or compact elements while keeping their order",
+     "move certain values (zeros, a given value) to one end",
+     "sorted input with duplicates to remove or limit",
+     "partition elements by a condition with O(1) extra space"
+    ],
+    "template": "```cpp\n// Same-direction pointers: compact the elements to keep into the front of the array.\ntemplate <class Keep>\nint compact(vector<int>& a, Keep keep) {\n    int write = 0;                               // a[0..write-1] is the result so far\n    for (int read = 0; read < (int)a.size(); read++) {\n        if (keep(a, read, write)) {              // decide using a[read] and the kept prefix\n            swap(a[write], a[read]);             // or a[write] = a[read] if the tail doesn't matter\n            write++;\n        }\n    }\n    return write;                                // new logical length\n}\n// Example: remove duplicates in sorted input:\n// compact(a, [](auto& v, int r, int w) { return w == 0 || v[w - 1] != v[r]; });\n```"
    }
   },
   {
@@ -3870,9 +4726,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Fast and slow pointers move through a sequence at different speeds, like two runners on a track where one runs twice as fast. If the track is a loop, the fast runner eventually laps the slow one and they meet. If the track has an end, the fast runner reaches it when the slow runner is exactly halfway.",
+    "interview": [
+     "Slow moves 1 step, fast moves 2. If they ever meet, there is a **cycle** (Floyd's tortoise and hare); if fast reaches the end, there isn't.",
+     "**Middle of a list**: when fast reaches the end, slow is at the middle. For even length, the loop condition decides first or second middle.",
+     "**Cycle start**: after they meet, reset one pointer to the head and move both one step at a time; they meet at the cycle's entrance.",
+     "Works on any **function iteration** `x → f(x)`: happy number (sum of squared digits), find the duplicate number (index → value).",
+     "**O(n)** time, **O(1)** space, versus O(n) space for a visited hash set."
+    ],
+    "questions": [
+     {
+      "q": "How does Floyd's algorithm detect a cycle with O(1) memory?",
+      "a": "Move one pointer one step at a time and another two steps at a time. Without a cycle, the fast pointer reaches the end. With a cycle, both pointers eventually circle it, and the gap between them shrinks by one per step, so they must meet."
+     },
+     {
+      "q": "After slow and fast meet, how do you find where the cycle begins?",
+      "a": "Move one pointer back to the start and advance both one step at a time; they meet at the cycle's entrance. The distance from the start to the entrance equals the distance from the meeting point forward to the entrance, modulo the cycle length."
+     },
+     {
+      "q": "How do you find the middle of a linked list in one pass?",
+      "a": "Advance slow by one and fast by two until fast reaches the end. Slow is then at the middle. With while (fast && fast->next), slow ends at the second middle for even lengths; with while (fast->next && fast->next->next), at the first middle."
+     },
+     {
+      "q": "How does \"find the duplicate number\" become a cycle problem?",
+      "a": "With n + 1 values in the range 1 to n, treat each index i as a node pointing to a[i]. Two indices point to the duplicated value, so the path from index 0 runs into a cycle whose entrance is the duplicate, found by Floyd's algorithm without modifying the array."
+     },
+     {
+      "q": "Why is the happy number problem a cycle detection problem?",
+      "a": "Repeatedly summing squared digits either reaches 1 or falls into a loop, because the values quickly drop below a few hundred and must repeat. Fast and slow pointers tell the two cases apart without storing seen values."
+     }
+    ],
+    "deep": "#### Intuition\n\nIn a sequence that eventually repeats (a linked list with a cycle, or repeated application of a function), a visited set detects the repeat but costs memory. Two pointers at different speeds detect it with none: once both are inside the cycle, the gap between them shrinks by one each step, so they must meet within one lap.\n\n#### Worked example: happy number\n\nIs 19 happy? The next value is the sum of the squares of the digits.\n\n| step | slow | fast |\n|---|---|---|\n| 0 | 19 | 19 |\n| 1 | 82 | 68 |\n| 2 | 68 | 1 |\n\nFast reaches 1, so 19 is happy. For an unhappy number such as 2, the sequence falls into the cycle `4 → 16 → 37 → 58 → 89 → 145 → 42 → 20 → 4`, and slow and fast meet on a value other than 1.\n\n#### Code\n\n```cpp\nint nextValue(int n) {\n    int s = 0;\n    for (; n > 0; n /= 10) s += (n % 10) * (n % 10);\n    return s;\n}\n\nbool isHappy(int n) {\n    int slow = n, fast = nextValue(n);\n    while (fast != 1 && slow != fast) {\n        slow = nextValue(slow);\n        fast = nextValue(nextValue(fast));\n    }\n    return fast == 1;\n}\n\n// Values in [1, n] in an array of n + 1 elements: find the repeated value without\n// modifying the array. Treat i -> a[i] as a linked list; the duplicate is the cycle start.\nint findDuplicate(const vector<int>& a) {\n    int slow = a[0], fast = a[a[0]];\n    while (slow != fast) { slow = a[slow]; fast = a[a[fast]]; }\n    slow = 0;\n    while (slow != fast) { slow = a[slow]; fast = a[fast]; }\n    return slow;\n}\n```\n\n```python\ndef is_happy(n):\n    def nxt(x):\n        return sum(int(d) ** 2 for d in str(x))\n    slow, fast = n, nxt(n)\n    while fast != 1 and slow != fast:\n        slow, fast = nxt(slow), nxt(nxt(fast))\n    return fast == 1\n\ndef find_duplicate(a):\n    slow, fast = a[0], a[a[0]]\n    while slow != fast:\n        slow, fast = a[slow], a[a[fast]]\n    slow = 0\n    while slow != fast:\n        slow, fast = a[slow], a[fast]\n    return slow\n```\n\n#### Why the second phase finds the cycle start\n\nLet the distance from the start to the cycle entrance be $\\mu$ and the cycle length $\\lambda$. When they meet, slow has walked $d$ steps and fast $2d$, and the difference $d$ is a multiple of $\\lambda$. Slow is $d - \\mu$ steps into the cycle; walking $\\mu$ more steps puts it at $d$ steps into the cycle from the entrance, which is back at the entrance because $d$ is a multiple of $\\lambda$. A pointer walking $\\mu$ steps from the start also arrives at the entrance, so they meet there.\n\n#### Complexity\n\nSlow enters the cycle after $\\mu$ steps, and fast catches it within $\\lambda$ more steps: $O(\\mu + \\lambda) = O(n)$ time, $O(1)$ space.\n\n#### Edge cases and bugs\n\n- Check `fast` and `fast->next` for null before advancing two steps on a list.\n- Initializing both pointers at the start and testing `slow == fast` before moving ends the loop immediately.\n- In find-the-duplicate, index 0 is never a value, which is what makes 0 a safe \"head\" outside the cycle.\n\n#### Variants\n\n- Middle node, deleting the middle node, palindrome linked list (find middle, reverse second half, compare).\n- Circular array loop (the next index is `(i + a[i]) mod n`), with a direction check.\n- Brent's algorithm: a faster cycle finder with teleporting pointers.\n\nConnects to: fast and slow pointers on linked lists, cyclic sort, functional graphs.",
+    "signals": [
+     "detect a cycle in a linked list or in a sequence produced by repeating a function",
+     "find the middle of a list in one pass",
+     "\"happy number\" style sequences that either end or repeat",
+     "values in 1 to n that act as next pointers (find the duplicate without modifying the array)",
+     "O(1) extra space where a visited set would be the easy answer"
+    ],
+    "template": "```cpp\n// Floyd's cycle detection on any \"next\" function (list nodes, indices, numbers).\ntemplate <class T, class Next>\noptional<T> cycleStart(T start, Next next, T end) {\n    T slow = start, fast = start;\n    while (true) {\n        if (fast == end || next(fast) == end) return nullopt;  // reached the end: no cycle\n        slow = next(slow);\n        fast = next(next(fast));\n        if (slow == fast) break;                                // met inside the cycle\n    }\n    slow = start;                                               // phase 2: find the entrance\n    while (slow != fast) { slow = next(slow); fast = next(fast); }\n    return slow;\n}\n```"
    }
   },
   {
@@ -3892,9 +4784,40 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Merging two sorted lists is like combining two sorted decks of cards face up: you always take the smaller of the two top cards and place it on the output pile. When one deck runs out, you add the rest of the other deck. Every card is looked at once, so it is fast.",
+    "interview": [
+     "One pointer per sequence; repeatedly take the smaller head (use `<=` to keep it **stable**), then append the leftovers.",
+     "**O(n + m)** time; O(n + m) for the output (O(1) extra when merging in place from the back).",
+     "**Merge into the first array with spare room at its end**: fill from the back with pointers at the ends of both arrays, so nothing unread is overwritten.",
+     "Same loop answers intersection and union of sorted lists, and \"merge\" in merge sort.",
+     "K sorted sequences: use a min-heap (O(N log k)) or merge in pairs."
+    ],
+    "questions": [
+     {
+      "q": "How do you merge two sorted arrays into the first one, which has room at its end?",
+      "a": "Use three pointers from the back: the last real value of each array and the last slot. Write the larger of the two values into the slot and move that pointer. Filling from the back never overwrites unread data, and once the second array is used up, the rest of the first is already in place."
+     },
+     {
+      "q": "Why use <= rather than < when merging?",
+      "a": "With <=, equal elements from the first sequence are taken before those from the second, which keeps their original relative order. That stability is what makes merge sort stable."
+     },
+     {
+      "q": "What is the time complexity of merging two sorted sequences, and why?",
+      "a": "O(n + m). Every step outputs exactly one element, and each element is compared at most once before it is output."
+     },
+     {
+      "q": "How do you find the intersection of two sorted arrays without extra space?",
+      "a": "Walk both with two pointers. If the values are equal, record it and advance both; otherwise advance the pointer at the smaller value. That is O(n + m) time and O(1) extra space."
+     }
+    ],
+    "deep": "#### Intuition\n\nThe smallest remaining element overall is always one of the two heads, because each sequence is sorted. So repeatedly taking the smaller head produces the merged order. Each comparison outputs one element, so there are at most $n + m - 1$ comparisons.\n\n#### Worked example: merge in place from the back\n\n`a = 1 3 5 _ _ _` (3 values, room for 3 more), `b = 2 4 6`.\n\n| i (a) | j (b) | write | compare | a after |\n|---|---|---|---|---|\n| 2 (5) | 2 (6) | 5 | 6 > 5: take 6 | 1 3 5 _ _ 6 |\n| 2 (5) | 1 (4) | 4 | 5 > 4: take 5 | 1 3 5 _ 5 6 |\n| 1 (3) | 1 (4) | 3 | 4 > 3: take 4 | 1 3 5 4 5 6 |\n| 1 (3) | 0 (2) | 2 | 3 > 2: take 3 | 1 3 3 4 5 6 |\n| 0 (1) | 0 (2) | 1 | 2 > 1: take 2 | 1 2 3 4 5 6 |\n| 0 (1) | -1 | | b is empty: done | 1 2 3 4 5 6 |\n\nWhen `b` runs out first, the rest of `a` is already in place.\n\n#### Code\n\n```cpp\nvector<int> mergeSorted(const vector<int>& a, const vector<int>& b) {\n    vector<int> out;\n    out.reserve(a.size() + b.size());\n    size_t i = 0, j = 0;\n    while (i < a.size() && j < b.size())\n        out.push_back(a[i] <= b[j] ? a[i++] : b[j++]);  // <= keeps the merge stable\n    while (i < a.size()) out.push_back(a[i++]);\n    while (j < b.size()) out.push_back(b[j++]);\n    return out;\n}\n\n// a has m values followed by n free slots; b has n values.\nvoid mergeIntoFirst(vector<int>& a, int m, const vector<int>& b, int n) {\n    int i = m - 1, j = n - 1, write = m + n - 1;\n    while (j >= 0) {                                    // once b is empty, a is in place\n        if (i >= 0 && a[i] > b[j]) a[write--] = a[i--];\n        else a[write--] = b[j--];\n    }\n}\n```\n\n```python\ndef merge_sorted(a, b):\n    out, i, j = [], 0, 0\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            out.append(a[i])\n            i += 1\n        else:\n            out.append(b[j])\n            j += 1\n    out.extend(a[i:])\n    out.extend(b[j:])\n    return out\n\ndef intersect_sorted(a, b):\n    out, i, j = [], 0, 0\n    while i < len(a) and j < len(b):\n        if a[i] == b[j]:\n            out.append(a[i])\n            i, j = i + 1, j + 1\n        elif a[i] < b[j]:\n            i += 1\n        else:\n            j += 1\n    return out\n```\n\nTime $O(n + m)$. The in-place version uses $O(1)$ extra space.\n\n#### Edge cases and bugs\n\n- Filling from the front when merging in place overwrites unread values of `a`.\n- Forgetting the leftover loop drops the tail of one sequence.\n- Using `<` instead of `<=` makes the merge unstable (equal keys from `b` go first), which matters for merge sort and for sorting records.\n- Empty inputs: the loops handle them with no special case.\n\n#### Variants\n\n- Merge two sorted linked lists (a dummy head avoids special cases).\n- Merge k sorted lists with a min-heap.\n- Intersection, union, difference of sorted arrays: same loop, different emit rule.\n- Median of two sorted arrays: a merge gives O(n + m); the partition binary search gives O(log(min(n, m))).\n- Squares of a sorted array: merge the negative part (reversed) with the positive part.\n\nConnects to: merge sort, merging linked lists, k-way merge, median of two sorted arrays.",
+    "signals": [
+     "two (or more) sorted arrays or lists to combine",
+     "\"merge\", \"union\" or \"intersection\" of sorted sequences",
+     "merging into an array that has free space at its end",
+     "the combine step of a divide-and-conquer sort"
+    ],
+    "template": "```cpp\n// Merge two sorted ranges; change the emit rule for union, intersection or difference.\nvector<int> mergeTwo(const vector<int>& a, const vector<int>& b) {\n    vector<int> out;\n    size_t i = 0, j = 0;\n    while (i < a.size() && j < b.size()) {\n        if (a[i] <= b[j]) out.push_back(a[i++]);   // take the smaller head (stable)\n        else out.push_back(b[j++]);\n    }\n    out.insert(out.end(), a.begin() + i, a.end()); // leftovers are already sorted\n    out.insert(out.end(), b.begin() + j, b.end());\n    return out;\n}\n```"
    }
   },
   {
@@ -3916,9 +4839,45 @@
    "estMinutes": 25,
    "isPattern": true,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "kSum finds groups of k numbers that add up to a target. You sort the numbers, fix the first one or two, and then find the last two with a pointer at each end, like choosing a pair of items within a budget after picking the first items. Skipping equal numbers at each step keeps you from listing the same group twice.",
+    "interview": [
+     "**3Sum**: sort, fix `i`, run opposite-ends two pointers on `i + 1..n - 1` for `-a[i]`. **O(n²)** time, O(1) extra besides the output (and the sort).",
+     "**4Sum**: two nested fixed indices plus two pointers: **O(n³)**. General kSum: recursion down to 2Sum, **O(n^(k−1))**.",
+     "**Deduplication**: skip `a[i] == a[i - 1]` for fixed indices; after finding a match, move both pointers past equal values.",
+     "Pruning: stop when `a[i] > 0` (3Sum to zero), or when the smallest possible sum exceeds the target.",
+     "Use 64-bit sums in 4Sum (values up to 10⁹ overflow 32-bit).",
+     "3Sum closest: same loop, track the sum with the smallest `|sum - target|`."
+    ],
+    "questions": [
+     {
+      "q": "How do you solve 3Sum in O(n²)?",
+      "a": "Sort the array. For each index i, find pairs in the part after i that sum to −a[i] using two pointers from both ends. Each i costs O(n), so the total is O(n²) after the O(n log n) sort."
+     },
+     {
+      "q": "How do you avoid duplicate triples in 3Sum?",
+      "a": "Skip a fixed index whose value equals the previous one, because it would generate the same triples. After recording a match, move the left pointer past equal values and the right pointer past equal values before continuing."
+     },
+     {
+      "q": "What is the time complexity of general kSum with this approach?",
+      "a": "O(n^(k−1)): each fixed element adds a loop of O(n), and the innermost 2Sum is a linear two-pointer scan. So 3Sum is O(n²) and 4Sum is O(n³)."
+     },
+     {
+      "q": "Why is sorting acceptable even though the problem doesn't ask for sorted output?",
+      "a": "The answer is a set of value triples, not positions, so reordering the input loses nothing. Sorting is cheaper than the O(n²) search and enables both the two-pointer scan and simple duplicate skipping."
+     },
+     {
+      "q": "How would you find the 3Sum closest to a target?",
+      "a": "Use the same sorted two-pointer loop. At each step compare |sum − target| with the best so far, then move l if the sum is below the target and r if it's above. Return immediately on an exact match."
+     }
+    ],
+    "deep": "#### Intuition\n\nA brute force over triples is $O(n^3)$. Sorting costs only $O(n \\log n)$ and turns the inner search into the linear two-pointer scan: fix the first element, and find pairs in the rest that sum to `target - a[i]`. Sorting also puts equal values next to each other, which makes skipping duplicates a simple comparison with the neighbor.\n\n#### Worked example: 3Sum to zero\n\nSorted: `-4 -1 -1 0 1 2`\n\n| i (a[i]) | need | l, r scan | triples found |\n|---|---|---|---|\n| 0 (-4) | 4 | -1+2=1, -1+2=1, 0+2=2, 1+2=3: all too small | none |\n| 1 (-1) | 1 | -1+2=1 ✓ → skip; then 0+1=1 ✓ | [-1,-1,2], [-1,0,1] |\n| 2 (-1) | | same value as a[1]: skip | |\n| 3 (0) | 0 | 1+2=3 too big | none |\n\nResult: `[-1, -1, 2]` and `[-1, 0, 1]`.\n\n#### Code\n\n```cpp\nvector<vector<int>> threeSum(vector<int> a) {\n    sort(a.begin(), a.end());\n    vector<vector<int>> out;\n    int n = a.size();\n    for (int i = 0; i < n - 2; i++) {\n        if (i > 0 && a[i] == a[i - 1]) continue;       // same first value: same triples\n        if (a[i] > 0) break;                           // three positives can't sum to 0\n        int l = i + 1, r = n - 1;\n        while (l < r) {\n            int s = a[i] + a[l] + a[r];\n            if (s < 0) l++;\n            else if (s > 0) r--;\n            else {\n                out.push_back({a[i], a[l], a[r]});\n                while (l < r && a[l] == a[l + 1]) l++; // skip equal second values\n                while (l < r && a[r] == a[r - 1]) r--; // skip equal third values\n                l++;\n                r--;\n            }\n        }\n    }\n    return out;\n}\n```\n\n```python\ndef k_sum(a, target, k):\n    \"\"\"All unique k-tuples (as lists) from a with the given sum; a must be sorted.\"\"\"\n    def two_sum(start, t):\n        out, l, r = [], start, len(a) - 1\n        while l < r:\n            s = a[l] + a[r]\n            if s < t or (l > start and a[l] == a[l - 1]):\n                l += 1\n            elif s > t or (r < len(a) - 1 and a[r] == a[r + 1]):\n                r -= 1\n            else:\n                out.append([a[l], a[r]])\n                l, r = l + 1, r - 1\n        return out\n\n    def solve(start, t, k):\n        if k == 2:\n            return two_sum(start, t)\n        out = []\n        for i in range(start, len(a) - k + 1):\n            if i > start and a[i] == a[i - 1]:\n                continue\n            for rest in solve(i + 1, t - a[i], k - 1):\n                out.append([a[i]] + rest)\n        return out\n\n    return solve(0, target, k)\n\n# four_sums = k_sum(sorted(nums), target, 4)\n```\n\n#### Complexity\n\nSorting is $O(n \\log n)$. For 3Sum, $n$ fixed values times an $O(n)$ scan gives $O(n^2)$. Each extra level adds a factor of $n$: kSum is $O(n^{k-1})$. Extra space is $O(\\log n)$ to $O(n)$ for sorting plus the output (and $O(k)$ recursion).\n\n#### Edge cases and bugs\n\n- Deduplicating the fixed index with `a[i] == a[i + 1]` instead of `a[i - 1]` skips valid triples like `[-1, -1, 2]`.\n- Forgetting to move both pointers after a match loops forever.\n- Integer overflow in 4Sum with values near $10^9$.\n- The early `break` on `a[i] > 0` is only valid for target 0; for a general target, prune with `a[i] * k > target` style bounds carefully (negative values make it tricky).\n\n#### Variants\n\n- 3Sum closest, 3Sum smaller (count with `r - l` like pair counting).\n- 4Sum II with four separate arrays: hash map of pair sums, $O(n^2)$.\n- Valid triangle number: sort, fix the largest side, count pairs with `a[l] + a[r] > a[k]`.\n\nConnects to: opposite-ends pointers, complement lookup, sorting.",
+    "signals": [
+     "find all unique triples or quadruples with a given sum",
+     "\"no duplicate combinations\" in the output of a sum search",
+     "the sum of three values closest to a target",
+     "counting triangles or triples satisfying an inequality after sorting"
+    ],
+    "template": "```cpp\n// 3Sum skeleton: sort, fix one element, two pointers for the rest, skip duplicates.\nvector<vector<int>> threeSumTarget(vector<int> a, long long target) {\n    sort(a.begin(), a.end());\n    vector<vector<int>> res;\n    int n = a.size();\n    for (int i = 0; i + 2 < n; i++) {\n        if (i > 0 && a[i] == a[i - 1]) continue;          // dedupe the fixed element\n        int l = i + 1, r = n - 1;\n        while (l < r) {\n            long long s = (long long)a[i] + a[l] + a[r];\n            if (s < target) l++;\n            else if (s > target) r--;\n            else {\n                res.push_back({a[i], a[l], a[r]});\n                while (l < r && a[l] == a[l + 1]) l++;    // dedupe the pair\n                while (l < r && a[r] == a[r - 1]) r--;\n                l++, r--;\n            }\n        }\n    }\n    return res;\n}\n```"
    }
   },
   {
@@ -3940,9 +4899,33 @@
    "estMinutes": 25,
    "isPattern": false,
    "content": {
-    "simple": "",
-    "interview": [],
-    "questions": []
+    "simple": "Rain water trapped above a bar is limited by the tallest wall on its left and the tallest wall on its right, whichever is shorter. It is like a bathtub whose water level is set by its lower rim. Two pointers can find that level for every bar in one pass by always working on the side with the lower wall.",
+    "interview": [
+     "Water at `i` = `min(maxLeft[i], maxRight[i]) - h[i]`.",
+     "**Prefix and suffix maximum arrays**: O(n) time, O(n) space.",
+     "**Two pointers**: keep `leftMax` and `rightMax`; if `h[l] < h[r]`, the left side is bounded by `leftMax` (the right has something at least as tall), so add `leftMax - h[l]` and move `l`; otherwise handle the right. **O(n)** time, **O(1)** space.",
+     "**Monotonic stack** alternative: pop a bar when a taller bar arrives and add the water in the layer between them (computes water by horizontal layers).",
+     "2D version (trapping rain water II): min-heap over the boundary, BFS inward, O(RC log(RC))."
+    ],
+    "questions": [
+     {
+      "q": "How much water sits above bar i?",
+      "a": "min(highest bar to its left, highest bar to its right) − h[i], counting bar i itself in both maxima so the value is never negative. The lower of the two walls sets the water level."
+     },
+     {
+      "q": "How does the two-pointer solution avoid storing prefix and suffix maxima?",
+      "a": "It always processes the side whose current bar is lower. When h[l] < h[r], the right side is guaranteed to have a wall at least as high as leftMax needs, so the water at l depends only on leftMax. The symmetric argument handles the right side."
+     },
+     {
+      "q": "What are the three standard approaches and their costs?",
+      "a": "Prefix and suffix maximum arrays (O(n) time, O(n) space), two pointers (O(n) time, O(1) space), and a monotonic decreasing stack that fills water layer by layer (O(n) time, O(n) space)."
+     },
+     {
+      "q": "How does the 2D version differ?",
+      "a": "Water can escape in four directions, so the limiting wall is the lowest point on the boundary around a region. Put all border cells in a min-heap, repeatedly pop the lowest, and push its unvisited neighbors with height max(neighbor, current level), adding the difference as water. That is O(RC log(RC))."
+     }
+    ],
+    "deep": "#### Intuition\n\nFor each bar, water rises until it would spill over the lower of the two highest walls around it. Storing both maxima for every bar takes two extra arrays. The two-pointer trick needs neither: whichever side currently has the lower bar is a side whose water level is already known, so process that bar and move inward.\n\n#### Worked example\n\nHeights `0 1 0 2 1 0 1 3 2 1 2 1`\n\n| index | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n| h | 0 | 1 | 0 | 2 | 1 | 0 | 1 | 3 | 2 | 1 | 2 | 1 |\n| maxLeft | 0 | 1 | 1 | 2 | 2 | 2 | 2 | 3 | 3 | 3 | 3 | 3 |\n| maxRight | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 2 | 2 | 2 | 1 |\n| water | 0 | 0 | 1 | 0 | 1 | 2 | 1 | 0 | 0 | 1 | 0 | 0 |\n\nTotal: 6.\n\n#### Code\n\n```cpp\nlong long trap(const vector<int>& h) {\n    int l = 0, r = (int)h.size() - 1;\n    long long leftMax = 0, rightMax = 0, water = 0;\n    while (l < r) {\n        if (h[l] < h[r]) {                    // left side is the limiting side\n            leftMax = max<long long>(leftMax, h[l]);\n            water += leftMax - h[l];\n            l++;\n        } else {                              // right side is the limiting side\n            rightMax = max<long long>(rightMax, h[r]);\n            water += rightMax - h[r];\n            r--;\n        }\n    }\n    return water;\n}\n```\n\n```python\ndef trap(h):\n    l, r = 0, len(h) - 1\n    left_max = right_max = water = 0\n    while l < r:\n        if h[l] < h[r]:\n            left_max = max(left_max, h[l])\n            water += left_max - h[l]\n            l += 1\n        else:\n            right_max = max(right_max, h[r])\n            water += right_max - h[r]\n            r -= 1\n    return water\n```\n\nTime $O(n)$, space $O(1)$.\n\n#### Why the two-pointer version is correct\n\nSuppose `h[l] < h[r]`. Every bar the left pointer has already passed was lower than the right pointer's bar at that moment, and that bar sits at or to the right of the current `r` (the right pointer only moves left). Together with `h[l] < h[r]`, this means some bar at or right of `r` is at least as tall as `leftMax`. So the tallest wall on the right of `l` is at least `leftMax`, which makes `leftMax` the lower wall, and the water above `l` is exactly `leftMax - h[l]`. The right side is symmetric.\n\n#### Edge cases\n\n- Fewer than 3 bars trap nothing; the loop handles it.\n- Plateaus and equal heights: the `else` branch handles `h[l] == h[r]`.\n- Large inputs: total water can exceed 32 bits.\n\nConnects to: opposite-ends pointers, prefix maximums, monotonic stack, heaps (2D version)."
    }
   },
   {
