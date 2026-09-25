@@ -91,7 +91,10 @@ article), and headings inside code fences are ignored.
   `bits/stdc++.h`, POSIX and Linux headers, `using namespace std`, `ListNode` and `TreeNode`.
   Start a block with `// sketch` when it is deliberately partial. Run the snippets against their worked examples before committing.
   Keep code lines within 100 characters (the reading column fits about 80 before it scrolls),
-  and never put a URL in content: the artifact build rejects unknown URLs.
+  and never put a real URL in content: the artifact build rejects unknown URLs. When an example
+  needs one, use `example.com`, `example.org` or `example.net` (reserved for documentation) inside
+  code, and the documentation ranges 192.0.2.0/24, 198.51.100.0/24 and 203.0.113.0/24 for public
+  IP addresses.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. To rename a concept, change its

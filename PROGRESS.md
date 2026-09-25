@@ -13,12 +13,18 @@ scheduling, Banker's algorithm, page replacement, disk scheduling and inode numb
 by small simulators. Concept text loads per subject on demand, so the startup bundle stays small.
 Session 7 made all written content **C++ only**, as the owner asked: no Python or Java code and no
 comparisons with them in DSA, OOP or OS (and a test keeps it that way for every later subject).
-**Next up:** Phase 5 continues with CN, then DBMS (section 5.3 order: DSA, OOP, OS, CN, DBMS, SQL,
-System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles, Markets, Architecture,
-Aptitude, Engineering essentials, Career), one or two subjects per session, never two content
-sessions at once. Follow `content/README.md` → "Writing conventions", run
-`npm run check:content-code -- <subject>`, and add each finished subject to `FINISHED` in
-`tests/syllabus/content.test.ts`. Still to write in Phase 5 besides concepts: extra quant puzzles
+Session 8 finished **CN** (55 / 55 concepts, a deep article for every one, 32 of them must-know;
+250 flashcard questions, 48 C++ blocks) and **DBMS** (56 / 56 concepts, a deep article for
+every one, 24 of them must-know; 247 questions, 41 C++ blocks plus SQL checked on PostgreSQL
+16). All C++; every runnable block was executed and its output compared line by line with the
+text.
+**Next up:** Phase 5 continues with SQL, then System Design (section 5.3 order: DSA, OOP, OS,
+CN, DBMS, SQL, System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles,
+Markets, Architecture, Aptitude, Engineering essentials, Career), one or two subjects per
+session, never two content sessions at once. Follow `content/README.md` → "Writing conventions",
+run `npm run check:content-code -- <subject>`, and add each finished subject to `FINISHED` in
+`tests/syllabus/content.test.ts`. For SQL, PostgreSQL 16 is installed in the cloud environment
+(start it with `pg_ctlcluster 16 main start`) to run every query for real. Still to write in Phase 5 besides concepts: extra quant puzzles
 (section 8.2) and design prompts with rubrics (section 8.4), unless they are already complete.
 
 ## Phases (BUILD_SPEC.md section 13)
@@ -30,7 +36,7 @@ sessions at once. Follow `content/README.md` → "Writing conventions", run
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
+| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -87,8 +93,8 @@ deep for every must-know concept; signals and template for every pattern.
 | os | 65 / 65 | 29 / 29 | – |
 | conc | 0 / 20 | 0 / 9 | – |
 | arch | 0 / 19 | 0 / 4 | – |
-| cn | 0 / 55 | 0 / 32 | – |
-| dbms | 0 / 56 | 0 / 24 | – |
+| cn | 55 / 55 | 32 / 32 | – |
+| dbms | 56 / 56 | 24 / 24 | – |
 | sql | 0 / 34 | 0 / 20 | – |
 | sysd | 0 / 79 | 0 / 34 | – |
 | prob | 0 / 62 | 0 / 30 | – |
@@ -122,9 +128,9 @@ deep for every must-know concept; signals and template for every pattern.
   and each subject's text is its own chunk (DSA: 1.16 MB, 377 KB gzipped), loaded when a concept,
   flashcards, hints or the palette first need it. Other heavy chunks: CodeMirror (about 650 KB),
   Markdown with KaTeX (about 430 KB), Recharts (about 370 KB, design kit only). The artifact file
-  inlines everything: 5.9 MB after OOP and OS (limit 15 MB; OOP and OS added about 0.5 MB); at
-  this rate the remaining 15 subjects add about 4 to 5 MB, so it should stay under the limit, but
-  watch `check-artifact` after each content session. If it gets close, compress the content chunks in the artifact build.
+  inlines everything: 5.9 MB after OOP and OS, 6.23 MB after CN and DBMS (limit 15 MB; each
+  subject adds about 0.15 to 0.25 MB); at this rate the remaining 13 subjects add about 2 to 3 MB,
+  so it should stay under the limit, but watch `check-artifact` after each content session. If it gets close, compress the content chunks in the artifact build.
 - **Quant bank:** the spec table has 41 puzzles, not 40. Four prompts carry a short answer-format
   hint (for example "(Answer in minutes.)"); `q-twenty-one` has a two-part spoken answer, so it is
   self-graded against its note.
@@ -141,6 +147,52 @@ deep for every must-know concept; signals and template for every pattern.
   the shell now, because the top bar and Settings need them.
 - **Ask Claude drawer, "Explain with Claude", API key, Review my code, Dry run, Suggest with
   Claude:** each shows an honest "arrives in phase 6" message; nothing pretends to work.
+- **Phase 5 notes (session 8, CN):** all 55 concepts have simple, interview, questions and a
+  deep article (must-know articles 500 to 790 words). Code is C++ only: 48 blocks, all compiled by
+  `check:content-code`, and every runnable one executed under AddressSanitizer and UBSan with its
+  output compared line by line with the text by a scratch script (outputs that depend on the
+  machine, such as ephemeral ports, ping and handshake times, are labelled as one run). Real
+  socket demos run over loopback: ports and 4-tuples, TCP vs UDP message boundaries, the kernel
+  finishing the handshake before `accept`, TCP states read from `/proc/net/tcp` (FIN_WAIT_2,
+  CLOSE_WAIT, TIME_WAIT), a minimal HTTP server and client, a `poll` echo server, and ping over
+  a raw socket (needs root). Simulations cover CRC, switch learning, ARP, subnetting, NAT, DHCP
+  leases, longest prefix match with a trie, distance vector rounds, fragmentation, RTO
+  estimation, flow control, a Reno cwnd trace, head-of-line blocking, a DNS resolver cache,
+  REST idempotency, toy RSA and Diffie-Hellman, SHA-256 (checked against hashlib), a certificate
+  chain, a stateful firewall, CORS decisions, JWT decoding, a reverse proxy, load balancing and a
+  CDN cache. Found and fixed on the way: a wrong CRC and RSA value in first drafts, a load
+  balancer example whose numbers did not match, and a TCP-states demo whose output order depended
+  on the kernel's hash table. Nagle's classic write-write-read stall did not reproduce on the test
+  kernel (Linux ACKs small pushed segments promptly), so that article explains it with a timeline
+  and says so instead of quoting a measurement.
+- **Phase 5 notes (session 8, DBMS):** all 56 concepts have simple, interview, questions and a
+  deep article (must-know articles 450 to 720 words). All 41 C++ blocks compile and run under
+  AddressSanitizer and UBSan, and every output matches its text block exactly (a scratch script
+  compares them line by line). Simulations cover a crash mid-transfer in a file, key discovery
+  from data, relational algebra with division, anomalies, attribute closure and candidate keys, a
+  normal-form checker (1NF to BCNF), lossless vs lossy decomposition with spurious tuples, minimal
+  cover, an undo log, precedence graphs, view serializability by brute force, recoverability
+  classes, a strict 2PL lock manager, statement vs transaction snapshots, a real lost update with
+  threads and its fix, deadlock detection, timestamp ordering with the Thomas write rule, MVCC,
+  optimistic retries, write skew, WAL recovery with steal and no-force, checkpoints, shadow
+  paging, a B+ tree with splits and range scans, extendible hashing, composite index seeks,
+  three join algorithms, a tiny LSM tree, a wide-column partition, CP vs AP under a partition, a
+  G-counter CRDT, quorum overlap, range vs hash sharding, consistent hashing with virtual nodes,
+  a saga, and a connection pool. **PostgreSQL 16 is installed in the cloud environment**, so SQL
+  was run for real (`pg_ctlcluster 16 main start`, then a scratch database): every SQL block,
+  the isolation-level table (read committed, repeatable read and serializable against
+  non-repeatable reads, phantoms, lost updates and write skew, in two scripted sessions), a
+  deadlock, EXPLAIN plans for index use and misuse, views, a trigger, a procedure and a cursor,
+  and connection cost (about 9 ms to connect with password auth vs 60 µs per query). Found and
+  fixed on the way: a Thomas write rule example that could not apply (the later transaction had
+  read the item), an undefined-behavior self-insert in the extendible hashing code (caught by
+  ASan), a weak hash (plain FNV-1a) that clustered consistent-hashing positions (now with a
+  SplitMix64 finalizer, and the article says why), and several guessed numbers replaced by
+  measured ones. The concept page test now rates every flashcard of a written concept and waits
+  up to 4 s for the lazily loaded subject text, as other app tests already do. Screens reviewed:
+  deep articles with tables, code, output and math in CN and DBMS at 1280 and 390 px in light and
+  dark (emulated color scheme); no console errors, no page overflow (wide tables and code scroll
+  inside their own boxes). The artifact is now 6.23 MB (limit 15 MB).
 - **Phase 5 notes (session 7, C++ only):** the owner studies in C++ only, so DSA lost its 149
   Python blocks (each repeated a C++ block) and its language comparisons. OOP had 78 Python and
   Java blocks: repeats were removed and every other example rewritten in C++ (for example

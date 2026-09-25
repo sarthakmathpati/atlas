@@ -4,6 +4,7 @@
 //   - it must not contain http:// or https:// URLs, except:
 //       * hosts a published artifact may load from (cdnjs, jsDelivr /npm/, Tailwind CDN, jQuery CDN, Google Fonts)
 //       * claude.ai links shown as text, and leetcode.com problem links for the owner to open
+//       * example.com, example.org and example.net (reserved for documentation) in concept text
 //       * a short, reviewed list of text-only strings that bundled libraries contain
 //         (XML namespace identifiers, React's error-decoder link, license comments). None of these
 //         are ever requested; they are listed here so any NEW host fails the check and gets reviewed.
@@ -37,6 +38,11 @@ const NETWORK_ALLOWED = [
 const TEXT_LINKS = [
   { host: "claude.ai", why: "claude.ai links shown as text" },
   { host: "leetcode.com", why: "LeetCode problem links for the owner to open" },
+  // Networking and web content needs example URLs (URL anatomy, CORS origins, redirects). These
+  // domains are reserved for documentation (RFC 2606) and are only ever shown inside code.
+  { host: "example.com", why: "reserved documentation domain in concept text" },
+  { host: "example.org", why: "reserved documentation domain in concept text" },
+  { host: "example.net", why: "reserved documentation domain in concept text" },
 ];
 
 /** Strings inside bundled libraries that look like URLs but are never requested. Each entry is
