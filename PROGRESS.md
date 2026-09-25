@@ -18,7 +18,10 @@ Session 8 finished **CN** (55 / 55 concepts, a deep article for every one, 32 of
 every one, 24 of them must-know; 247 questions, 41 C++ blocks plus SQL checked on PostgreSQL
 16). All C++; every runnable block was executed and its output compared line by line with the
 text.
-**Next up:** Phase 5 continues with SQL, then System Design (section 5.3 order: DSA, OOP, OS,
+Session 9 finished **SQL** (34 / 34 concepts, a deep article for every one, 20 of them
+must-know; 146 questions, 116 SQL blocks written for MySQL 8, every one run on a real MySQL 8.0
+and PostgreSQL 16 with all 113 result tables compared cell by cell).
+**Next up:** Phase 5 continues with System Design (section 5.3 order: DSA, OOP, OS,
 CN, DBMS, SQL, System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles,
 Markets, Architecture, Aptitude, Engineering essentials, Career), one or two subjects per
 session, never two content sessions at once. Follow `content/README.md` → "Writing conventions",
@@ -36,7 +39,7 @@ run `npm run check:content-code -- <subject>`, and add each finished subject to 
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
+| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 9: SQL complete (34 / 34, 20 / 20 must-know deep, 34 deep in all); every query run on MySQL 8 and PostgreSQL 16. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -95,7 +98,7 @@ deep for every must-know concept; signals and template for every pattern.
 | arch | 0 / 19 | 0 / 4 | – |
 | cn | 55 / 55 | 32 / 32 | – |
 | dbms | 56 / 56 | 24 / 24 | – |
-| sql | 0 / 34 | 0 / 20 | – |
+| sql | 34 / 34 | 20 / 20 | – |
 | sysd | 0 / 79 | 0 / 34 | – |
 | prob | 0 / 62 | 0 / 30 | – |
 | math | 0 / 31 | 0 / 9 | – |
@@ -147,6 +150,28 @@ deep for every must-know concept; signals and template for every pattern.
   the shell now, because the top bar and Settings need them.
 - **Ask Claude drawer, "Explain with Claude", API key, Review my code, Dry run, Suggest with
   Claude:** each shows an honest "arrives in phase 6" message; nothing pretends to work.
+- **Phase 5 notes (session 9, SQL):** all 34 concepts have simple, interview, questions and a
+  deep article (must-know articles 455 to 675 words). SQL is written for **MySQL 8** (the app's
+  SQL dialect and LeetCode's), with the PostgreSQL spelling and every behavior difference pointed
+  out (collation and case, NULL sort order, integer division, `CONCAT` with NULL, `HAVING`
+  aliases, `LIMIT` in `IN` subqueries, error 1093, no `FULL OUTER JOIN`, `INTERSECT`/`EXCEPT`
+  from 8.0.31, recursive CTE column types, `RANK` as a reserved word, frames, upserts, joins in
+  `UPDATE`/`DELETE`, transactional DDL, errors inside transactions, foreign key indexes).
+  **MySQL 8.0 was installed** in the cloud environment (`apt-get update && apt-get install -y
+  mysql-server`, then `service mysql start`) next to PostgreSQL 16. A scratch checker (Python
+  with pymysql and psycopg) ran all 116 SQL blocks, per concept in a fresh database, on both
+  servers: every "Result:" table in the text (113) matches MySQL's output cell by cell, every
+  statement marked as an error fails with that error, and every result that differs on
+  PostgreSQL was reviewed and is either explained in the text or MySQL-only syntax whose
+  PostgreSQL spelling is given (those spellings were run separately). `EXPLAIN` plans and
+  timings quoted in articles are from real runs (a correlated subquery took about 39 s on MySQL
+  and 10 s on PostgreSQL without an index, about 20 ms rewritten). Examples use original tables
+  and data; LeetCode problems are only linked from the Practice tab. Fixed on the way: a wrong
+  anti-join plan claim (the two databases recognize different spellings of the left-join
+  anti-join), float output that differs from `DECIMAL`, PostgreSQL's stricter recursive CTE
+  types, and a `HAVING` example whose explanation didn't match the data. Screens reviewed: deep
+  articles with result tables at 1280 px light and 390 px dark; no console errors, no page
+  overflow.
 - **Phase 5 notes (session 8, CN):** all 55 concepts have simple, interview, questions and a
   deep article (must-know articles 500 to 790 words). Code is C++ only: 48 blocks, all compiled by
   `check:content-code`, and every runnable one executed under AddressSanitizer and UBSan with its
