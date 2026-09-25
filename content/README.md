@@ -95,6 +95,11 @@ article), and headings inside code fences are ignored.
   needs one, use `example.com`, `example.org` or `example.net` (reserved for documentation) inside
   code, and the documentation ranges 192.0.2.0/24, 198.51.100.0/24 and 203.0.113.0/24 for public
   IP addresses.
+- **SQL** (`sql` blocks): write for MySQL 8, the app's SQL dialect, and run every query on a real
+  MySQL 8 and PostgreSQL 16. Make each article's examples self-contained (create the tables they
+  use), show output as a Markdown table after a line starting "Result:" (or "Result: no rows."),
+  end a statement that must fail with a `-- error ...` comment, start a PostgreSQL-only block with
+  `-- PostgreSQL`, and say where the two databases differ. Use original tables and data.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. To rename a concept, change its

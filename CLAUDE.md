@@ -339,3 +339,10 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     203.0.113.0/24). The code-check prelude also has the socket headers (`arpa/inet.h`, `netdb.h`,
     `netinet/in.h`, `netinet/tcp.h`, `netinet/ip_icmp.h`, `ifaddrs.h`, `net/if.h`, `sys/uio.h`,
     `sys/random.h`); CN socket examples run over loopback, and ping needs root for its raw socket.
+60. **SQL content** (session 9): queries are written for MySQL 8 (the app's SQL dialect) and
+    run on a real MySQL 8.0 and PostgreSQL 16; each deep article is self-contained (it creates
+    its own tables), shows query output as a Markdown table after a line starting "Result:"
+    ("Result: no rows." for an empty result), marks statements that must fail with a trailing
+    `-- error ...` comment, and starts PostgreSQL-only blocks with `-- PostgreSQL`. Differences
+    between the two databases are stated where they matter. Examples use original tables and
+    data, never LeetCode's.
