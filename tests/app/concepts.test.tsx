@@ -6,7 +6,7 @@ import { act, cleanup, render, screen, waitFor, within } from "@testing-library/
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { App } from "@/app/App";
-import { conceptsByTopic } from "@/data/syllabus";
+import { conceptById, conceptsByTopic } from "@/data/syllabus";
 import { closeConceptDialogs } from "@/stores/conceptDialogStore";
 import { useConceptStateStore } from "@/stores/conceptStateStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -99,8 +99,13 @@ describe("map and concept screens", () => {
 
     await user.click(screen.getByRole("button", { name: "Flashcards" }));
     const dialog = await screen.findByRole("dialog", { name: "Flashcards: DBMS vs file systems" });
-    await user.click(within(dialog).getByRole("button", { name: "Show answer" }));
-    await user.click(within(dialog).getByRole("button", { name: /^Easy/ }));
+    // One card per written question; rate every card Easy to finish the session.
+    const cards = conceptById.get(DB_CONCEPT)!.written.questions;
+    expect(cards).toBeGreaterThan(0);
+    for (let i = 0; i < cards; i++) {
+      await user.click(await within(dialog).findByRole("button", { name: "Show answer" }));
+      await user.click(within(dialog).getByRole("button", { name: /^Easy/ }));
+    }
     expect(await within(dialog).findByText("Session saved")).toBeInTheDocument();
     const checks = useConceptStateStore.getState().checks[DB_CONCEPT]!;
     expect(checks.at(-1)).toMatchObject({ kind: "flashcard", score: 1 });

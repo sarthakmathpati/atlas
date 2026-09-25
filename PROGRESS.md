@@ -15,7 +15,8 @@ Session 7 made all written content **C++ only**, as the owner asked: no Python o
 comparisons with them in DSA, OOP or OS (and a test keeps it that way for every later subject).
 Session 8 finished **CN** (55 / 55 concepts, a deep article for every one, 32 of them must-know;
 all C++; 48 code blocks, every runnable one executed and its output compared with the text) and
-is writing **DBMS**.
+is writing **DBMS** (checkpoint: fundamentals, ER, relational model, normalization, transactions,
+concurrency control and recovery written; indexing, NoSQL and practical features still to go).
 **Next up:** Phase 5 continues with DBMS (section 5.3 order: DSA, OOP, OS, CN, DBMS, SQL,
 System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles, Markets, Architecture,
 Aptitude, Engineering essentials, Career), one or two subjects per session, never two content
