@@ -755,8 +755,7 @@ A chat app delivers messages between people instantly, in one-to-one and group c
 - **Send path**: the sender's server passes the message to the chat service, which assigns a **per-conversation sequence number**, stores it, acknowledges the sender ("sent"), and routes it to each recipient device's connection server (via pub-sub) or to push notifications if offline.
 - **Ordering**: per-conversation sequence numbers (from one owner per conversation, or a per-conversation counter) give everyone the same order; clients detect gaps and fetch missing messages.
 - **Storage**: messages partitioned by conversation id, clustered by sequence (a wide-column store like Cassandra, or sharded SQL); recent messages cached; media in object storage.
-- **Receipts**: store per member per conversation "delivered up to" and "read up to" watermarks instead of a row per message per reader.
-- **Multi-device sync**: each device keeps its own cursor (last sequence seen) and fetches everything newer on reconnect.
+- **Receipts and sync**: store per member per conversation "delivered up to" and "read up to" watermarks instead of a row per message per reader; each device keeps its own cursor (last sequence seen) and fetches everything newer on reconnect.
 - **Groups**: fan out to members' devices; large groups fan out asynchronously; cap group size or switch to pull for huge channels.
 
 ### deep
@@ -1227,11 +1226,184 @@ importance: must
 prereqs: [sysd.method.the-interview-framework]
 scope: "trie service, top-k caching"
 
+### simple
+Typeahead suggests complete searches while you are still typing, like "weather today" after you type "we". It must answer within about a tenth of a second for every keystroke, so suggestions are precomputed from what people search most and kept in memory. A trie, a tree of letters, finds everything that starts with the typed prefix, and each branch remembers its most popular completions.
+
+### interview
+- Requirements: top 10 suggestions per prefix within about 100 ms end to end; based on search popularity; trending queries appear within an hour; filter offensive suggestions; maybe personalization.
+- **Data structure**: a **trie** where every node stores its **top-k completions** precomputed, so a lookup costs O(prefix length) with no subtree walk. Alternatives: a sorted list of (prefix → top k) in a key-value store.
+- **Offline pipeline**: aggregate search logs (counts with time decay) in batch or streaming jobs, rebuild the trie or its top-k lists hourly, and ship snapshots to the serving fleet.
+- **Serving**: tries live in memory on suggestion servers, **sharded by prefix** (first character or two, balanced by traffic) and replicated; results for short, popular prefixes are cached at the edge or in the browser.
+- **Client**: **debounce** keystrokes (send after about 50 ms of no typing), cancel stale requests, cache results per prefix on the device.
+- Load: every keystroke is a request, so QPS is several times the search QPS; the latency budget leaves only a few milliseconds for the server itself.
+
+### deep
+#### A trie with top-k at every node
+
+```cpp
+struct Node {
+    map<char, unique_ptr<Node>> kids;
+    vector<pair<long, string>> top;                  // best completions under this prefix
+};
+
+void insert(Node* root, const string& query, long count, size_t k) {
+    Node* n = root;
+    for (char c : query) {
+        auto& child = n->kids[c];
+        if (!child) child = make_unique<Node>();
+        n = child.get();
+        n->top.push_back({count, query});             // keep the k most popular here
+        sort(n->top.rbegin(), n->top.rend());
+        if (n->top.size() > k) n->top.pop_back();
+    }
+}
+
+vector<string> suggest(Node* root, const string& prefix) {
+    Node* n = root;
+    for (char c : prefix) {
+        auto it = n->kids.find(c);
+        if (it == n->kids.end()) return {};
+        n = it->second.get();
+    }
+    vector<string> out;
+    for (auto& [count, q] : n->top) out.push_back(q);
+    return out;                                        // O(prefix length), no subtree walk
+}
+
+int main() {
+    Node root;
+    vector<pair<string, long>> counts = {                // aggregated from search logs
+        {"weather", 9000}, {"weather today", 7000}, {"web series", 3000}, {"webcam", 2500},
+        {"wedding dresses", 1800}, {"west indies", 4200}, {"what is ai", 5100}};
+    for (auto& [q, c] : counts) insert(&root, q, c, 3);
+    for (string prefix : {"w", "we", "web", "wh", "x"}) {
+        printf("%-4s ->", prefix.c_str());
+        for (auto& s : suggest(&root, prefix)) printf(" [%s]", s.c_str());
+        printf("\n");
+    }
+}
+```
+
+Output:
+
+```text
+w    -> [weather] [weather today] [what is ai]
+we   -> [weather] [weather today] [west indies]
+web  -> [web series] [webcam]
+wh   -> [what is ai]
+x    ->
+```
+
+Each node on a query's path keeps the three most popular queries passing through it, so `"we"` answers instantly with "weather", "weather today" and "west indies" without visiting the rest of the subtree. The cost moves to build time and memory: every node stores k strings (in practice ids or offsets into a query table). Building happens offline, so the serving path only walks a few pointers.
+
+#### Architecture
+
+```text
+search logs -> stream (Kafka) -> aggregator: counts per query per hour, time-decayed
+            -> filter (blocklist, spam) -> trie builder (hourly) -> snapshot in object storage
+suggestion servers (sharded by prefix, replicated) load the newest snapshot, swap atomically
+browser (debounce, local cache) -> CDN cache for short prefixes -> suggestion servers
+```
+
+#### Deep dives
+
+- **Freshness**: an hourly rebuild meets "trending within an hour"; for faster trends, keep a small real-time trie of the last hour's hot queries and merge its results at serving time.
+- **Ranking**: popularity with time decay, plus personalization (the user's own history) merged on top of the global list.
+- **Size**: 100 million distinct queries with k = 10 per node can reach tens of GB, so shard by prefix and store ids instead of strings.
+- **Safety**: filter suggestions against blocklists before they enter the trie; suggestions are shown to everyone, so moderation matters more than for results.
+
+Connects to: tries, autocomplete with tries, top K elements, search systems, data pipelines, where to cache.
+
+### questions
+Q: Why store the top suggestions at every trie node?
+A: So a prefix lookup only walks down the prefix, O(length of the prefix), and returns a precomputed list, instead of traversing the whole subtree and sorting it on every keystroke. The work moves to an offline build, and memory grows by k entries per node.
+
+Q: How do suggestions stay up to date with trending searches?
+A: Aggregate search logs continuously, rebuild the top-k lists on a schedule such as hourly, and roll new snapshots out to the servers. For faster trends, add a small real-time structure of recent hot queries and merge it with the main results.
+
+Q: How does the client keep the load manageable?
+A: It debounces keystrokes so requests are sent only after a short pause, cancels outdated requests, and caches results per prefix; short popular prefixes are also cached at the CDN or served from a precomputed list.
+
 ## sysd.classics.e-commerce-and-flash-sales
 name: "E-commerce and flash sales"
 importance: important
 prereqs: [sysd.method.the-interview-framework]
 scope: "inventory, oversell prevention"
+
+### simple
+A flash sale puts a small number of discounted items on sale at an exact moment, and a huge crowd tries to buy them in the same second. The system must never sell more items than exist, must survive a traffic spike far above normal, and must keep the rest of the shop working. The trick is to make the inventory check and decrement a single atomic step and to hold most of the crowd back in a queue.
+
+### interview
+- **Inventory**: decrement with a single **atomic conditional update**, `UPDATE inventory SET stock = stock - 1 WHERE sku = ? AND stock > 0` (0 rows means sold out), or an atomic counter in Redis (`DECR` in a Lua script that refuses below zero). Never read, check and write in separate steps.
+- **Reservation**: a successful decrement creates an order in "pending payment" with a timeout (for example 10 minutes); if payment fails or times out, the unit returns to stock.
+- **Absorbing the rush**: a million requests for 10,000 units means 99% will fail; reject them early and cheaply. Use a **virtual waiting room** or token queue in front, rate limits per user, and serve the sale page statically from a CDN.
+- **Hot row**: one SKU's stock row takes every write; move the counter to Redis, or split stock into shards (10 sub-counters of 1,000 units each).
+- **Bots and fairness**: per-account limits, CAPTCHA or proof of work, queue positions assigned at sale start.
+- **Isolation**: run the sale path on separate capacity (bulkheads) so browsing and ordinary checkout stay healthy.
+
+### deep
+#### Atomic decrements never oversell
+
+Sixteen threads make 80,000 purchase attempts on 10,000 units, each using compare-and-swap, the in-memory equivalent of the conditional `UPDATE`:
+
+```cpp
+int main() {
+    const int units = 10000, buyers = 16, attempts_each = 5000;   // 80,000 purchase attempts
+    atomic<int> stock{units}, sold{0}, rejected{0};
+    vector<thread> threads;
+    for (int b = 0; b < buyers; ++b)
+        threads.emplace_back([&] {
+            for (int i = 0; i < attempts_each; ++i) {
+                int s = stock.load();
+                // like UPDATE inventory SET stock = stock - 1 WHERE sku = ? AND stock > 0
+                while (s > 0 && !stock.compare_exchange_weak(s, s - 1)) {}
+                if (s > 0) ++sold; else ++rejected;
+            }
+        });
+    for (auto& t : threads) t.join();
+    printf("attempts %d: sold %d, sold out for %d, stock left %d\n", buyers * attempts_each,
+           sold.load(), rejected.load(), stock.load());
+}
+```
+
+Output:
+
+```text
+attempts 80000: sold 10000, sold out for 70000, stock left 0
+```
+
+Exactly 10,000 sold, however the threads interleave, and the stock never goes negative. The broken version reads the stock, checks it is positive, then writes stock minus one; two buyers who both read "1" both succeed, which is how overselling happens. In SQL, the same guarantee comes from putting the check in the `WHERE` clause of one `UPDATE`: on MySQL, with one unit left, the first such update affects 1 row and the second 0.
+
+#### Architecture
+
+```text
+users -> CDN (static sale page) -> waiting room (admits N per second, gives tokens)
+      -> sale API (token + per-user limit) -> stock counter (Redis DECR, refuses below 0)
+             | success                               | sold out -> "sold out" page
+             v
+      order queue -> order service: order "pending payment", expires in 10 min
+             -> payment -> confirmed | expired: INCR stock back
+```
+
+The waiting room turns a million simultaneous requests into a steady stream the backend can handle, and the Redis counter answers "sold out" in under a millisecond for everyone who is too late. The durable order database only sees the successful 10,000.
+
+#### Deep dives
+
+- **Consistency between Redis and the database**: Redis decides who gets a unit; the order service records it durably; a reconciliation job compares both after the sale. Replicas of the counter must not accept writes on their own.
+- **Returning stock**: expired reservations increment the counter again, so late users may still get a unit.
+- **Idempotency**: a buyer's retried "buy" carries a request id, so one person doesn't take two units by double-clicking.
+
+Connects to: rate limiting algorithms, graceful degradation and backpressure, cache stampede and hot keys, ticket booking, payment system, lost updates and locking.
+
+### questions
+Q: How do you prevent overselling during a flash sale?
+A: Make the check and the decrement one atomic operation: a conditional UPDATE that only decrements where stock is positive, or an atomic counter script in Redis that refuses to go below zero. Separate read-then-write steps let concurrent buyers all see the last unit and all buy it.
+
+Q: How do you handle a million users arriving in the same second?
+A: Serve the sale page from a CDN, put a virtual waiting room or queue in front that admits users at a rate the backend can handle, reject late requests cheaply with an in-memory sold-out check, rate limit per user and block bots, and isolate the sale path from the rest of the site.
+
+Q: What happens if a buyer reserves an item but never pays?
+A: The reservation has a timeout; when it expires or payment fails, the order is cancelled and the unit is returned to stock atomically, so another buyer can get it.
 
 ## sysd.classics.ticket-booking
 name: "Ticket booking"
@@ -1239,11 +1411,151 @@ importance: important
 prereqs: [sysd.method.the-interview-framework]
 scope: "seat locking, payments, consistency"
 
+### simple
+A ticket booking system shows a seat map, lets a buyer hold seats for a few minutes while paying, and guarantees that no seat is ever sold twice. For popular concerts, huge crowds arrive the moment sales open, so a waiting room lets them in gradually. A hold that isn't paid for in time simply expires, and the seat becomes available again.
+
+### interview
+- **Seat state**: free → held (by user, until time T) → sold. Store per show and seat; the seat map is read heavily (cache it, accept a few seconds of staleness), while holds and sales need strong consistency.
+- **Holding a seat** is a conditional update: set held only if the seat is free or its hold has expired. One statement, no race; 0 rows updated means someone else has it.
+- **Pessimistic** (`SELECT ... FOR UPDATE` on the seats) vs **optimistic** (version or state checked in the `WHERE` clause): with short, single-statement holds, the conditional update is simple and scales.
+- **Expiry**: a hold carries `hold_until`; expired holds count as free in the condition, and a background job cleans them up and updates the cached map.
+- **Payment**: charge with an idempotency key; on success mark the seats sold (only if still held by this user); on failure or timeout, release them. Payments that succeed after a hold expired must be refunded or honored by policy.
+- **Spikes**: a virtual waiting room admits users gradually; strict consistency (CP) for seat allocation, availability for browsing.
+
+### deep
+#### The hold statement
+
+```sql
+UPDATE seats
+SET status = 'held', holder = 'asha', hold_until = '2026-03-01 10:05:00'
+WHERE show_id = 7 AND seat = 'A12'
+  AND (status = 'free' OR (status = 'held' AND hold_until < '2026-03-01 10:01:00'));
+```
+
+Run on MySQL 8 with the seat free: Asha's update affects 1 row. Ravi's identical attempt a minute later (with "now" 10:01) affects 0 rows, because Asha's hold runs until 10:05. At 10:06, Ravi's attempt with "now" 10:06 succeeds, since Asha's hold has expired without payment. The database row lock taken by each `UPDATE` serializes competing attempts on the same seat, so exactly one wins. (In the application, "now" comes from the database clock, `NOW()`, not from each server's clock.)
+
+#### Flow
+
+```text
+waiting room -> seat map (cached, refreshed every few seconds)
+select seats -> hold (conditional UPDATE for each seat, in one transaction) -> 10-minute timer
+pay (idempotency key) -> provider -> webhook: success -> UPDATE ... SET status = 'sold'
+                                                          WHERE holder = 'asha' AND status = 'held'
+                                  -> failure / timeout -> release the hold
+```
+
+Holding several seats together (a row of four) uses one transaction; if any seat fails, the whole hold rolls back so users don't end up with scattered seats.
+
+Connects to: e-commerce and flash sales, payment system, lost updates and locking, optimistic concurrency control, CAP theorem in practice, rate limiting algorithms.
+
+### questions
+Q: How do you ensure a seat is never sold twice?
+A: Change seat state only through conditional updates that check the current state in the same statement: hold only if free or the hold has expired, sell only if still held by the same user. The database applies such updates one at a time per row, so exactly one competing request succeeds.
+
+Q: How do seat holds expire?
+A: Each hold records an expiry time; the hold condition treats expired holds as free, so they are reclaimed immediately, and a background job releases them and refreshes the cached seat map.
+
+Q: What if payment succeeds after the hold expired?
+A: Mark seats sold only if they are still held by that buyer; if not, the payment must be refunded (or the booking honored if seats are still free). Idempotency keys and provider webhooks make the outcome deterministic even with retries.
+
 ## sysd.classics.payment-system
 name: "Payment system"
 importance: important
 prereqs: [sysd.method.the-interview-framework]
 scope: "idempotency, ledgers, reconciliation"
+
+### simple
+A payment system moves money correctly: it charges buyers through outside providers, records every movement, and later pays sellers. Networks fail mid-payment, so every request must be safe to retry without charging twice. Every movement is written as balanced entries in a ledger, and the ledger is regularly checked against the providers' own reports.
+
+### interview
+- **Idempotency keys** on every payment request (client to us, and us to the provider): a retried request returns the first result instead of charging again.
+- **Payment state machine**: created → authorized → captured → settled, with failed, cancelled and refunded branches; transitions are conditional updates, and provider **webhooks** (asynchronous callbacks) drive them.
+- **Double-entry ledger**: every movement writes at least two entries whose amounts sum to zero (buyer −1000, seller +950, platform fee +50); balances are sums of entries; entries are append-only (corrections are new entries). The invariant "sum = 0" catches bugs.
+- **Reconciliation**: daily, match our ledger against provider settlement reports; unmatched items (a charge we don't know about, a missing payout) go to a review queue.
+- **Exactly-once effects**: at-least-once messages plus idempotent handlers; the outbox pattern for publishing payment events.
+- **Security and compliance**: never store raw card numbers (tokenize via the provider), encrypt, audit logs, strict access control.
+
+### deep
+#### Ledger, idempotency and reconciliation
+
+Amounts are integers in the smallest currency unit (paise), never floating point:
+
+```cpp
+struct Entry { string payment, account; long amount; };   // + debit, - credit (paise)
+
+int main() {
+    vector<Entry> ledger;
+    set<string> seen_keys;                                   // idempotency keys
+    auto charge = [&](const string& key, const string& buyer, long amount, long fee) {
+        if (!seen_keys.insert(key).second) {
+            printf("%s: duplicate request ignored\n", key.c_str());
+            return;
+        }
+        ledger.push_back({key, "buyer:" + buyer, -amount});  // money leaves the buyer ...
+        ledger.push_back({key, "seller:pending", amount - fee});   // ... owed to the seller
+        ledger.push_back({key, "platform:fees", fee});             // ... and our fee
+    };
+    charge("pay-1", "asha", 100000, 5000);
+    charge("pay-1", "asha", 100000, 5000);                   // client retried after a timeout
+    charge("pay-2", "ravi", 40000, 2000);
+
+    map<string, long> balance;
+    long total = 0;
+    for (auto& e : ledger) { balance[e.account] += e.amount; total += e.amount; }
+    for (auto& [acct, amt] : balance) printf("%-16s %8ld\n", acct.c_str(), amt);
+    printf("sum of all entries: %ld (must always be 0)\n", total);
+
+    // reconciliation: compare our records with the provider's settlement report
+    map<string, long> ours = {{"pay-1", 100000}, {"pay-2", 40000}};
+    map<string, long> provider = {{"pay-1", 100000}, {"pay-2", 40000}, {"pay-3", 25000}};
+    for (auto& [id, amt] : provider)
+        if (!ours.count(id)) printf("mismatch: provider charged %s (%ld) we have no record of\n",
+                                    id.c_str(), amt);
+}
+```
+
+Output:
+
+```text
+pay-1: duplicate request ignored
+buyer:asha        -100000
+buyer:ravi         -40000
+platform:fees        7000
+seller:pending     133000
+sum of all entries: 0 (must always be 0)
+mismatch: provider charged pay-3 (25000) we have no record of
+```
+
+The retried `pay-1` was ignored, so Asha was charged once. Every payment wrote three entries that sum to zero, so the ledger as a whole sums to zero: money was moved, never created or destroyed. The platform earned 7,000 in fees and owes sellers 133,000. Reconciliation found a charge in the provider's report that our system has no record of (for example, our process crashed after the provider charged but before we recorded it): that goes to investigation, and the fix is a new ledger entry or a refund, never an edit of old entries.
+
+#### Architecture
+
+```text
+checkout -> payment service (idempotency key) -> payments DB: state machine
+                -> provider API (same key) -> 200 / timeout (retry with the key)
+provider -> webhook -> payment service: authorized/captured/failed -> ledger entries
+ledger service: append-only double-entry table, balances derived
+nightly: provider settlement files -> reconciliation job -> mismatches -> review queue
+payouts: scheduled job moves seller:pending to seller:paid after the holding period
+```
+
+#### Deep dives
+
+- **Timeouts are the hard case**: a charge request that times out may or may not have succeeded. Retry with the same idempotency key, or query the provider for that key, before deciding; never create a new charge.
+- **Ordering of webhooks**: callbacks can arrive late or out of order; state transitions are guarded (only authorized → captured), so a stale callback can't move a payment backwards.
+- **Consistency**: the ledger and payment state change in one database transaction; events to other services go through an outbox.
+
+Connects to: API design (idempotency keys), idempotency and exactly-once myths, distributed transactions in practice, e-commerce and flash sales, ACID properties.
+
+### questions
+Q: How do you make sure a payment is never charged twice?
+A: Attach an idempotency key to each logical payment, store it with the result, and return the stored result for repeats; pass the same key to the payment provider. After a timeout, retry with the same key or query the provider instead of creating a new charge.
+
+Q: What is a double-entry ledger?
+A: A record where every movement of money is written as entries in two or more accounts whose amounts sum to zero, such as debiting the buyer and crediting the seller and the platform. Balances are sums of entries, entries are never edited, and the zero-sum invariant exposes errors.
+
+Q: Why is reconciliation needed?
+A: Internal records and the provider's records can diverge through crashes, lost callbacks or bugs. Regularly matching the ledger against provider settlement reports finds charges without records, missing refunds or payouts, and amount differences, which are then corrected with new entries.
 
 ## sysd.classics.leaderboard
 name: "Leaderboard"
@@ -1251,17 +1563,268 @@ importance: important
 prereqs: [sysd.method.the-interview-framework]
 scope: "sorted sets, sharding scores"
 
+### simple
+A leaderboard ranks players by score and shows the top players plus each player's own position. The top of the list is easy; the hard part is telling any one of millions of players their exact rank within seconds of a new score. A sorted structure, like a sorted set in Redis, keeps players in order so both questions are answered quickly.
+
+### interview
+- **Single node**: a Redis **sorted set**: `ZADD` (or `ZINCRBY`) to update, `ZREVRANGE 0 99 WITHSCORES` for the top 100, `ZREVRANK` for a player's rank, all O(log n). One node holds tens of millions of members comfortably.
+- **Beyond one node**: sharding by player id makes the top 100 a merge of each shard's top 100, but a player's global rank needs the count of higher scores in every shard. Alternatives: shard by **score range**, or keep a **count of players per score bucket** (a histogram or Fenwick tree) so rank = players with higher scores, computed in O(log S).
+- **Approximate ranks** for players far from the top ("top 12%") are cheap and usually enough; exact ranks for the top thousands.
+- **Write path**: validate scores server-side (from game results, not client claims), then update; batch updates for very high rates.
+- **Periods**: daily and weekly boards are separate keys (`board:2026-w10`), expired automatically.
+
+### deep
+#### Rank from score counts
+
+When scores are bounded integers, a Fenwick tree over "number of players with each score" gives any player's rank without sorting millions of players:
+
+```cpp
+class Fenwick {                                   // counts of players per score
+    vector<long> t;
+public:
+    explicit Fenwick(int n) : t(n + 1) {}
+    void add(int i, long d) { for (++i; i < (int)t.size(); i += i & -i) t[i] += d; }
+    long prefix(int i) const { long s = 0; for (++i; i > 0; i -= i & -i) s += t[i]; return s; }
+};
+
+int main() {
+    const int max_score = 100000;
+    Fenwick counts(max_score + 1);
+    unordered_map<string, int> score;
+    long players = 0;
+    auto set_score = [&](const string& p, int s) {
+        if (auto it = score.find(p); it != score.end()) counts.add(it->second, -1);
+        else ++players;
+        score[p] = s;
+        counts.add(s, +1);
+    };
+    auto rank = [&](const string& p) {            // 1 + players with a strictly higher score
+        return players - counts.prefix(score[p]) + 1;
+    };
+    uint64_t x = 88172645463325252ULL;
+    for (int i = 0; i < 1000000; ++i) {           // a million players
+        x ^= x << 13; x ^= x >> 7; x ^= x << 17;
+        set_score("p" + to_string(i), x % 50000);
+    }
+    set_score("asha", 49990);
+    set_score("ravi", 25000);
+    printf("asha: rank %ld of %ld\n", rank("asha"), players);
+    printf("ravi: rank %ld of %ld\n", rank("ravi"), players);
+    set_score("ravi", 49999);                     // a new high score
+    printf("ravi after a new score: rank %ld\n", rank("ravi"));
+}
+```
+
+Output:
+
+```text
+asha: rank 174 of 1000002
+ravi: rank 500143 of 1000002
+ravi after a new score: rank 1
+```
+
+Rank is 1 plus the number of players with a strictly higher score, so it's the total minus the prefix count up to your score: two O(log S) Fenwick operations whatever the number of players. Changing a score is a remove and an add. The same counts can be sharded (each shard keeps counts for its players, and a rank query sums the shards' counts above a score), which answers the "global rank across shards" question. Ties share a rank here; breaking them by time would need the time in the sort key.
+
+#### Architecture
+
+```text
+game servers -> score service (validate) -> Redis sorted set board:global (+ board:daily:...)
+                         |                         ZREVRANGE for the top 100 (cached a few s)
+                         +-> score events -> durable store (history, anti-cheat, rebuilds)
+very large boards: players sharded by id; per-shard score histograms for global rank
+```
+
+The top 100 is read by everyone and changes slowly relative to reads, so cache it for a second or two. The sorted set can be rebuilt from the durable score history if Redis loses data.
+
+Connects to: Redis and Memcached, Fenwick trees, top K elements, skip lists, sharding strategies, where to cache.
+
+### questions
+Q: How would you build a real-time leaderboard?
+A: Keep scores in a sorted structure such as a Redis sorted set: update with ZADD or ZINCRBY, read the top N with ZREVRANGE and a player's position with ZREVRANK, all logarithmic. Validate scores on the server and persist them durably so the board can be rebuilt.
+
+Q: How do you find a player's global rank when scores are sharded?
+A: Rank is one plus the number of players with a higher score. Each shard can report how many of its players score above a value, for example from a per-score count histogram or Fenwick tree, and the counts are summed; or shard by score range so ranks follow from range sizes.
+
+Q: When are approximate ranks acceptable?
+A: For players far from the top, an exact position among millions matters little; a percentile or a rank estimated from a score histogram is cheaper and just as meaningful. Exact ranks are kept for the top of the board where they matter.
+
 ## sysd.classics.distributed-cache
 name: "Distributed cache"
 importance: important
 prereqs: [sysd.method.the-interview-framework]
 scope: "eviction, consistent hashing, replication"
 
+### simple
+A distributed cache spreads a very large in-memory cache over many machines so services can read hot data in well under a millisecond. Each key belongs to one node, chosen by hashing, so every client knows where to look. When a node is added or dies, only the keys on that node should move, or the whole cache would go cold at once.
+
+### interview
+- **Partitioning**: consistent hashing with virtual nodes, in the client library (memcached style) or a proxy (twemproxy, Envoy), or fixed slots with redirects (Redis Cluster).
+- **Eviction**: each node has a memory limit and a policy (LRU, LFU, with TTLs); size the cluster so the working set fits.
+- **Replication and failover**: optional; a replica per shard lets reads continue and avoids a cold shard after a failure; many caches accept losing a node since the database is the source of truth.
+- **Hot keys and stampedes**: replicate hot keys, add a small local cache, coalesce concurrent misses, jitter TTLs.
+- **Consistency with the database**: cache-aside with delete on write, TTLs, leases against stale sets, or change data capture for invalidation.
+- **Operations**: monitor hit ratio, evictions, memory, latency per node; warm new nodes gradually.
+
+### deep
+#### Losing a node
+
+Ten cache nodes, 100,000 keys; node 3 fails. How many keys are still found where clients look for them?
+
+```cpp
+uint64_t mix(uint64_t x) {
+    x += 0x9E3779B97F4A7C15ULL;
+    x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
+    return x ^ (x >> 31);
+}
+
+int main() {
+    const int keys = 100000;
+    map<uint64_t, int> ring;                       // 10 nodes x 100 virtual nodes
+    for (int n = 0; n < 10; ++n)
+        for (int v = 0; v < 100; ++v) ring[mix(n * 1000 + v)] = n;
+    auto owner = [&](uint64_t h, int dead) {       // skip a failed node, keep walking
+        auto it = ring.lower_bound(h);
+        while (true) {
+            if (it == ring.end()) it = ring.begin();
+            if (it->second != dead) return it->second;
+            ++it;
+        }
+    };
+    int kept_ring = 0, kept_mod = 0;
+    for (int k = 0; k < keys; ++k) {
+        uint64_t h = mix(k + 555);
+        kept_ring += owner(h, -1) == owner(h, 3);  // node 3 fails
+        kept_mod += h % 10 == h % 9;                // modulo over the 9 survivors
+    }
+    printf("node 3 of 10 fails: keys still on their node with consistent hashing %.1f%%,"
+           " with hash %% N %.1f%%\n", 100.0 * kept_ring / keys, 100.0 * kept_mod / keys);
+}
+```
+
+Output:
+
+```text
+node 3 of 10 fails: keys still on their node with consistent hashing 89.3%, with hash % N 10.0%
+```
+
+With consistent hashing, only the keys that lived on node 3 (about a tenth) move to their next node, so the hit ratio drops by about 10% and recovers as those keys are refilled. With `hash % N`, going from 10 to 9 nodes changes the owner of about 90% of keys: nearly every lookup misses at once, and the database behind the cache receives almost all traffic, which can take it down. That is the main reason distributed caches use consistent hashing or fixed slots.
+
+#### Architecture
+
+```text
+service -> client library (ring of cache nodes, from service discovery) -> node k
+                 miss -> database -> set in cache (TTL, jitter)
+nodes: fixed memory, LRU/LFU eviction; optional replica per node for hot shards
+ops: health checks remove dead nodes from the ring; new nodes join with virtual nodes
+```
+
+Connects to: consistent hashing in design, eviction policies, cache stampede and hot keys, cache invalidation and consistency, Redis and Memcached, key-value store.
+
+### questions
+Q: Why do distributed caches use consistent hashing instead of hash modulo N?
+A: When a node is added or fails, consistent hashing moves only the keys of that node, about 1/N of them, so most lookups still hit. With modulo N almost every key maps to a different node, the cache effectively empties at once, and the database gets flooded.
+
+Q: Does a cache need replication?
+A: Not always, since the database is the source of truth and a lost node only causes misses. Replicas help when a shard's loss would overload the database, for very hot shards, or when the cache stores data that is expensive to rebuild.
+
+Q: How do you keep a distributed cache consistent with the database?
+A: Update the database first and delete the cache key after the commit, keep TTLs as a safety net, protect against stale sets with leases or version checks, and consider change data capture to invalidate keys from the database log.
+
 ## sysd.classics.distributed-message-queue
 name: "Distributed message queue"
 importance: important
 prereqs: [sysd.method.the-interview-framework, sysd.messaging.message-queues]
 scope: "partitions, offsets, consumer groups"
+
+### simple
+A distributed message queue like Kafka stores streams of messages on many machines and lets many groups of consumers read them. Each topic is split into partitions, each an append-only log; consumers remember how far they have read with a simple number, the offset. Messages stay for days, so a consumer can fall behind, crash or even rewind without losing anything.
+
+### interview
+- **Topics and partitions**: each partition is an ordered, append-only log on disk (sequential writes, the OS page cache for reads); order is guaranteed within a partition only; the producer's key picks the partition.
+- **Replication**: each partition has a leader and followers; producers write to the leader; `acks=all` waits for the in-sync replicas; if the leader dies, an in-sync follower is elected (via a controller using consensus).
+- **Consumer groups**: partitions are divided among a group's consumers (one consumer per partition); adding consumers **rebalances**; parallelism is capped by the partition count; each group reads independently.
+- **Offsets**: consumers commit the next offset to read; commit after processing gives **at-least-once** (a crash replays), commit before gives at-most-once. **Idempotent producers** (sequence numbers per producer) stop duplicates from producer retries; transactions give exactly-once within the system.
+- **Retention**: delete by time or size (days), or **log compaction** (keep the latest message per key, for changelog topics).
+- Throughput comes from batching, compression, sequential I/O and zero-copy transfers to consumers.
+
+### deep
+#### Consumer groups and replay
+
+```cpp
+int main() {
+    // a topic with 6 partitions, each an append-only log of offsets 0, 1, 2, ...
+    const int partitions = 6;
+    auto assign = [&](vector<string> consumers) {        // range assignment in a group
+        map<string, vector<int>> out;
+        for (int p = 0; p < partitions; ++p)
+            out[consumers[p * consumers.size() / partitions]].push_back(p);
+        for (auto& [c, ps] : out) {
+            printf("  %s:", c.c_str());
+            for (int p : ps) printf(" p%d", p);
+            printf("\n");
+        }
+    };
+    printf("group 'billing' with 2 consumers:\n");
+    assign({"c1", "c2"});
+    printf("c3 joins, the group rebalances:\n");
+    assign({"c1", "c2", "c3"});
+
+    // at-least-once: process, then commit the offset; a crash in between replays messages
+    vector<string> p0 = {"m0", "m1", "m2", "m3", "m4"};
+    long committed = 0;                                  // next offset to read
+    printf("c1 processes:");
+    for (long off = committed; off < 4; ++off) printf(" %s", p0[off].c_str());
+    committed = 2;                                       // committed after m1, crashed after m3
+    printf(" (committed up to offset %ld, then crashed)\nc2 takes over from offset %ld:", committed,
+           committed);
+    for (long off = committed; off < (long)p0.size(); ++off) printf(" %s", p0[off].c_str());
+    printf("  <- m2, m3 are processed twice\n");
+}
+```
+
+Output:
+
+```text
+group 'billing' with 2 consumers:
+  c1: p0 p1 p2
+  c2: p3 p4 p5
+c3 joins, the group rebalances:
+  c1: p0 p1
+  c2: p2 p3
+  c3: p4 p5
+c1 processes: m0 m1 m2 m3 (committed up to offset 2, then crashed)
+c2 takes over from offset 2: m2 m3 m4  <- m2, m3 are processed twice
+```
+
+Partitions are the unit of parallelism: two consumers split six partitions three and three; when a third joins, each gets two. Because consumers only store an offset, taking over a partition is cheap: c2 continues from the last committed offset. The price of committing after processing is visible: c1 processed m2 and m3 but crashed before committing them, so they are processed again, which is why consumers must be idempotent.
+
+#### Architecture
+
+```text
+producers --(key -> partition, batches)--> broker leader for partition p
+                                              | replicate to followers (in-sync set)
+                                              v
+brokers: segment files per partition (append-only, indexed by offset), retention by time/size
+controller (Raft-based metadata quorum): leaders, membership, topic config
+consumer group coordinator: assignments, committed offsets (stored in an internal topic)
+```
+
+#### Estimates
+
+A million messages per second at 1 KB is 1 GB/s in, times 3 for replication, and roughly 86 TB a day before replication; keeping 3 days means about 260 TB (780 TB with three copies), spread over dozens of brokers with large disks.
+
+Connects to: message queues, consensus basics, replication in practice, idempotency and exactly-once myths, publish-subscribe and event-driven architecture, data pipelines.
+
+### questions
+Q: How does a distributed log keep messages ordered?
+A: Only within a partition: each partition is an append-only log read in offset order, and messages with the same key go to the same partition. There is no total order across partitions, so related messages must share a key.
+
+Q: What happens when a consumer joins or leaves a consumer group?
+A: The group rebalances: partitions are reassigned among the current members so each partition has exactly one consumer in the group. The new owner of a partition resumes from its last committed offset.
+
+Q: How are messages kept durable when a broker fails?
+A: Each partition is replicated to several brokers; with acks set to all, a write is acknowledged only after all in-sync replicas have it. If the leader fails, the controller elects a new leader from the in-sync replicas, so acknowledged messages survive.
 
 ## sysd.classics.stock-exchange-matching-engine
 name: "Stock exchange matching engine"
@@ -1270,14 +1833,258 @@ tracks: [sde, quant]
 prereqs: [sysd.method.the-interview-framework]
 scope: "order book, price-time priority, low latency"
 
+### simple
+A matching engine is the heart of an exchange: it keeps the order book, the lists of people wanting to buy and sell at each price, and matches a new order against the best opposite orders. Better prices go first, and at the same price the earlier order goes first. It must be extremely fast and give exactly the same result every time for the same sequence of orders.
+
+### interview
+- **Order book** per instrument: bids sorted high to low, asks low to high; each **price level** holds a **FIFO queue** of resting orders. Best bid and ask are the tops.
+- **Price-time priority**: an incoming order matches the best opposite price first, and within a price the oldest order first; partial fills leave the remainder resting (limit orders) or cancelled (market or immediate-or-cancel orders).
+- **Determinism**: a single **sequencer** assigns every incoming message a sequence number, and one thread per instrument (or partition of instruments) processes them in that order; replaying the journal reproduces the exact book.
+- **Low latency**: everything in memory; no locks, no allocation, no system calls on the hot path; preallocated order pools, arrays indexed by price tick instead of trees; pinned CPU cores, kernel-bypass networking; latencies in microseconds.
+- **Recovery**: the input journal (and periodic snapshots) is persisted and replicated before or as orders are acknowledged; a hot standby replays the same sequence.
+- **Outputs**: execution reports to traders and market data (trades, book updates) published by multicast.
+
+### deep
+#### Price-time priority in code
+
+```cpp
+struct Order { long id; int qty; };
+
+struct Book {
+    map<int, deque<Order>, greater<int>> bids;           // best (highest) bid first
+    map<int, deque<Order>> asks;                          // best (lowest) ask first
+
+    template <class Side>
+    void match(Side& opposite, long id, int& qty, auto crosses) {
+        while (qty > 0 && !opposite.empty() && crosses(opposite.begin()->first)) {
+            auto& [price, queue] = *opposite.begin();
+            Order& resting = queue.front();                  // time priority: oldest first
+            int fill = min(qty, resting.qty);
+            printf("  trade %d @ %d (order %ld with resting %ld)\n", fill, price, id, resting.id);
+            qty -= fill;
+            resting.qty -= fill;
+            if (resting.qty == 0) queue.pop_front();
+            if (queue.empty()) opposite.erase(opposite.begin());
+        }
+    }
+    void buy(long id, int qty, int limit) {              // limit = INT_MAX for a market order
+        string price = limit == INT_MAX ? "market" : to_string(limit);
+        printf("buy #%ld %d @ %s\n", id, qty, price.c_str());
+        match(asks, id, qty, [&](int ask) { return ask <= limit; });
+        if (qty > 0 && limit != INT_MAX) bids[limit].push_back({id, qty});   // rest on the book
+    }
+    void sell(long id, int qty, int limit) {
+        printf("sell #%ld %d @ %d\n", id, qty, limit);
+        match(bids, id, qty, [&](int bid) { return bid >= limit; });
+        if (qty > 0) asks[limit].push_back({id, qty});
+    }
+};
+
+int main() {
+    Book book;
+    book.sell(1, 100, 101);
+    book.sell(2, 50, 100);
+    book.sell(3, 70, 100);                               // same price as #2, but later
+    book.buy(4, 80, 100);                                // fills #2 first (time priority)
+    book.buy(5, 100, INT_MAX);                           // market order walks the book
+    printf("best ask now: %d x %d\n", book.asks.begin()->first,
+           book.asks.begin()->second.front().qty);
+}
+```
+
+Output:
+
+```text
+sell #1 100 @ 101
+sell #2 50 @ 100
+sell #3 70 @ 100
+buy #4 80 @ 100
+  trade 50 @ 100 (order 4 with resting 2)
+  trade 30 @ 100 (order 4 with resting 3)
+buy #5 100 @ market
+  trade 40 @ 100 (order 5 with resting 3)
+  trade 60 @ 101 (order 5 with resting 1)
+best ask now: 101 x 40
+```
+
+Orders #2 and #3 both rest at 100, #2 first. The buy of 80 at 100 fills all 50 of #2 (earlier) and 30 of #3. The market buy of 100 then takes #3's remaining 40 at 100 and walks up to the next level, filling 60 at 101 from #1, leaving 40 at 101 as the new best ask. `std::map` keeps levels sorted (O(log P) per new level); production engines replace it with arrays indexed by price tick and intrusive linked lists of preallocated orders, making each step O(1) without allocation.
+
+#### Architecture
+
+```text
+gateways (validate, risk checks) -> sequencer (total order, journal to disk + replica)
+    -> matching engine (one thread per instrument group, in memory)
+    -> execution reports -> gateways -> traders
+    -> market data publisher (multicast: trades, book deltas)
+standby engine consumes the same sequenced stream and can take over instantly
+```
+
+Connects to: how exchanges match orders, heaps and priority queues, consensus basics, latency vs throughput trade-offs, distributed message queue.
+
+### questions
+Q: What is price-time priority?
+A: The matching rule where the best price trades first, the highest bid or lowest ask, and among orders at the same price the one that arrived earliest trades first. It rewards both aggressive prices and early orders.
+
+Q: How is an order book usually structured?
+A: Two sides, bids and asks, each organized by price level, with a first-in, first-out queue of resting orders at each level; the engine keeps the best level of each side at hand. Low-latency engines use arrays indexed by price tick and preallocated order objects.
+
+Q: Why do matching engines run single-threaded per instrument?
+A: Matching must be deterministic and strictly ordered; one thread processing a sequenced stream avoids locks and races, makes every result reproducible by replaying the journal, and is fast because everything stays in the CPU cache.
+
 ## sysd.classics.collaborative-document-editing
 name: "Collaborative document editing"
 importance: advanced
 prereqs: [sysd.method.the-interview-framework]
 scope: "operational transforms and CRDTs overview"
 
+### simple
+In a collaborative editor, several people type in the same document at once and see each other's changes within a second. Each person applies their own edits immediately, so two people's edits can be applied in different orders on different screens. The system must adjust the edits so every screen still ends up with exactly the same document.
+
+### interview
+- Edits are sent as **operations** (insert "h" at 1, delete range 5 to 8) over a real-time channel (WebSockets), applied locally first for instant feedback.
+- **Operational transformation (OT)**: when two operations are concurrent, each is **transformed** against the other (shift positions) before being applied, so all copies converge. Usually with a central server that orders operations (Google Docs style).
+- **CRDTs** (conflict-free replicated data types): every character gets a unique, ordered id, so inserts and deletes commute and merge in any order without a central server; good for offline and peer-to-peer (Yjs, Automerge). Costs: metadata per character and tombstones for deletions.
+- **Presence**: cursors and selections broadcast ephemerally, not stored.
+- **Storage**: periodic **snapshots** plus an **operation log** since the snapshot; version history from the log.
+- **Offline edits**: buffered and merged on reconnect (natural with CRDTs, via transformation against missed operations with OT). Permissions checked per document on every operation.
+
+### deep
+#### Two concurrent inserts
+
+```cpp
+struct Insert { int pos; char ch; int site; };
+
+// Shift b so it can be applied after a; ties broken by site id so everyone agrees.
+Insert transform(Insert b, const Insert& a) {
+    if (a.pos < b.pos || (a.pos == b.pos && a.site < b.site)) ++b.pos;
+    return b;
+}
+
+string apply_op(string s, const Insert& op) { s.insert(s.begin() + op.pos, op.ch); return s; }
+
+int main() {
+    string doc = "cat";
+    Insert asha{1, 'h', 1};                // "chat"
+    Insert ravi{3, 's', 2};                // "cats"
+    // each site applies its own edit first, then the other's
+    string at_asha = apply_op(apply_op(doc, asha), ravi);
+    string at_ravi = apply_op(apply_op(doc, ravi), asha);
+    printf("without transform: asha sees %s, ravi sees %s\n", at_asha.c_str(), at_ravi.c_str());
+    at_asha = apply_op(apply_op(doc, asha), transform(ravi, asha));
+    at_ravi = apply_op(apply_op(doc, ravi), transform(asha, ravi));
+    printf("with transform:    asha sees %s, ravi sees %s\n", at_asha.c_str(), at_ravi.c_str());
+}
+```
+
+Output:
+
+```text
+without transform: asha sees chast, ravi sees chats
+with transform:    asha sees chats, ravi sees chats
+```
+
+Asha inserts "h" at position 1 of "cat"; Ravi, at the same time, appends "s" at position 3. Applied naively, Ravi's insert lands at position 3 of Asha's "chat" and produces "chast", while Ravi sees "chats": the copies diverge. Transformation shifts Ravi's position past Asha's earlier insert (3 becomes 4), and both converge on "chats". Real OT also transforms deletes against inserts and deletes, and the server imposes one order on all operations, which keeps the transformation rules manageable.
+
+#### Architecture
+
+```text
+editor (local apply) --ops--> collaboration server for doc 42 (one owner per document)
+                                 orders ops, transforms, broadcasts to other editors
+                                 appends to op log -> snapshot every N ops
+presence channel: cursors, selections (not persisted)
+storage: snapshots + op log in a database; history and restore from the log
+```
+
+Routing all editors of one document to the same server (consistent hashing on the document id) gives a single place to order operations.
+
+Connects to: real-time delivery, chat application, clocks and ordering, CAP theorem in practice (CRDTs), file storage and sync, consistent hashing in design.
+
+### questions
+Q: What problem does operational transformation solve?
+A: Concurrent edits applied in different orders on different copies would produce different documents, because positions shift. OT transforms each incoming operation against the concurrent operations already applied, adjusting positions, so every copy converges to the same text.
+
+Q: How do CRDTs differ from operational transformation?
+A: CRDTs give every element a unique, ordered identity so operations commute and merge correctly in any order without transformation or a central server, which suits offline and peer-to-peer editing, at the cost of extra metadata and tombstones. OT usually relies on a server to order operations.
+
+Q: How are collaborative documents stored?
+A: As periodic snapshots plus an append-only log of operations since the last snapshot. Loading replays the log onto the snapshot, and the log provides version history and undo.
+
 ## sysd.classics.metrics-and-monitoring-system
 name: "Metrics and monitoring system"
 importance: advanced
 prereqs: [sysd.method.the-interview-framework]
 scope: "time-series ingestion"
+
+### simple
+A monitoring system collects numbers such as CPU usage and request latency from every server every few seconds, stores them as time series, draws dashboards, and alerts people when something looks wrong. With a hundred thousand servers that is millions of data points per second. It must also stay up exactly when everything else is failing, since that is when people need it most.
+
+### interview
+- **Collection**: **pull** (a scraper fetches each target's metrics endpoint, as Prometheus does: knows who is down, easy to control load) or **push** (agents send to collectors: works behind firewalls and for short jobs). Agents pre-aggregate.
+- **Ingestion**: collectors → a queue (Kafka) → writers sharded by series id; the queue absorbs spikes and lets several consumers (storage, alerting, analytics) read the same stream.
+- **Storage**: a time-series database with per-series compression (delta-of-delta timestamps, XOR floats: about 1.4 bytes per sample), time-partitioned blocks, **downsampling** (raw for days, rollups for months) and retention policies.
+- **Cardinality** is the main limit: each unique label set is a series; forbid unbounded labels like user id.
+- **Queries**: dashboards aggregate across series and time; cache and precompute popular rollups.
+- **Alerting**: rules evaluated every interval with a "for" duration to avoid flapping; notifications deduplicated, grouped and routed (paging, chat, tickets).
+- **Meta-monitoring**: run the monitoring system independently of what it monitors, with its own alerting path.
+
+### deep
+#### Scale and an alert rule
+
+```cpp
+int main() {
+    const double servers = 100000, metrics_each = 200, interval_s = 10;
+    double samples = servers * metrics_each / interval_s;
+    printf("ingest: %.0f million samples per second\n", samples / 1e6);
+    printf("raw storage at 1.4 bytes/sample: %.0f GB per day\n", samples * 86400 * 1.4 / 1e9);
+    printf("active series: %.0f million\n", servers * metrics_each / 1e6);
+
+    // alert "cpu > 90 for 3 consecutive evaluations" (evaluated every minute)
+    vector<int> cpu = {70, 95, 96, 80, 92, 93, 97, 98, 60};
+    int streak = 0;
+    for (size_t t = 0; t < cpu.size(); ++t) {
+        streak = cpu[t] > 90 ? streak + 1 : 0;
+        const char* state = streak >= 3 ? "FIRING" : streak > 0 ? "pending" : "ok";
+        printf("minute %zu: cpu %d -> %s\n", t, cpu[t], state);
+    }
+}
+```
+
+Output:
+
+```text
+ingest: 2 million samples per second
+raw storage at 1.4 bytes/sample: 242 GB per day
+active series: 20 million
+minute 0: cpu 70 -> ok
+minute 1: cpu 95 -> pending
+minute 2: cpu 96 -> pending
+minute 3: cpu 80 -> ok
+minute 4: cpu 92 -> pending
+minute 5: cpu 93 -> pending
+minute 6: cpu 97 -> FIRING
+minute 7: cpu 98 -> FIRING
+minute 8: cpu 60 -> ok
+```
+
+100,000 servers × 200 metrics every 10 seconds is 2 million samples per second and 20 million live series. Compression brings a day of raw data to about 242 GB, which is why keeping raw data for weeks and rollups for years is affordable. The alert needs CPU above 90 for three consecutive evaluations: the spike at minutes 1 and 2 stays "pending" and resets, and only the sustained run from minute 4 fires at minute 6. That "for" duration trades a little detection delay for far fewer false pages.
+
+#### Architecture
+
+```text
+agents / scrapers -> collectors -> Kafka (partitioned by series)
+    -> TSDB writers (sharded, replicated) -> blocks: raw (15 days) -> 5-min rollups (1 year)
+    -> alert evaluators (rules every 30-60 s) -> notification manager (dedupe, group, route)
+query service (fan out to shards, merge, cache) -> dashboards
+```
+
+Connects to: time-series and analytics stores, observability, SLAs, SLOs and SLIs, distributed message queue, HyperLogLog and count-min sketch, sharding strategies.
+
+### questions
+Q: What is the difference between push and pull metric collection?
+A: With pull, the monitoring system scrapes each target's metrics endpoint on a schedule, so it controls load and knows when a target is down. With push, agents send metrics to collectors, which works for short-lived jobs and targets behind firewalls. Large systems often combine both.
+
+Q: How do time-series databases keep storage small?
+A: They compress each series (delta-of-delta encoding for timestamps, XOR encoding for values), store data in time-partitioned blocks, downsample old data into rollups and delete data past its retention period.
+
+Q: Why is metric cardinality important?
+A: Every unique combination of metric name and labels is a separate series that must be indexed and stored; labels with unbounded values, such as user ids, multiply series without limit and can overwhelm memory and storage.

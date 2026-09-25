@@ -21,10 +21,9 @@ text.
 Session 9 finished **SQL** (34 / 34 concepts, a deep article for every one, 20 of them
 must-know; 146 questions, 116 SQL blocks written for MySQL 8, every one run on a real MySQL 8.0
 and PostgreSQL 16 with all 113 result tables compared cell by cell).
-Session 9 checkpoint: System Design is under way (57 / 79 concepts written: method,
-scalability, caching, data storage, distributed systems, messaging, reliability, architecture
-and building blocks; the 22 classic problems remain).
-**Next up:** Phase 5 continues with System Design (section 5.3 order: DSA, OOP, OS,
+Session 9 also finished **System Design** (79 / 79 concepts, a deep article for every one, 34
+of them must-know; 307 questions, 74 C++ simulations, each run and checked against its output).
+**Next up:** Phase 5 continues with Language core, then Concurrency (section 5.3 order: DSA, OOP, OS,
 CN, DBMS, SQL, System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles,
 Markets, Architecture, Aptitude, Engineering essentials, Career), one or two subjects per
 session, never two content sessions at once. Follow `content/README.md` → "Writing conventions",
@@ -42,7 +41,7 @@ run `npm run check:content-code -- <subject>`, and add each finished subject to 
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 9: SQL complete (34 / 34, 20 / 20 must-know deep, 34 deep in all); every query run on MySQL 8 and PostgreSQL 16. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
+| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 9: SQL complete (34 / 34, 20 / 20 must-know deep, 34 deep in all); every query run on MySQL 8 and PostgreSQL 16. System Design complete (79 / 79, 34 / 34 must-know deep, 79 deep in all); 74 C++ simulations run with sanitizers; Redis commands checked on Redis 7. 353 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -102,7 +101,7 @@ deep for every must-know concept; signals and template for every pattern.
 | cn | 55 / 55 | 32 / 32 | – |
 | dbms | 56 / 56 | 24 / 24 | – |
 | sql | 34 / 34 | 20 / 20 | – |
-| sysd | 0 / 79 | 0 / 34 | – |
+| sysd | 79 / 79 | 34 / 34 | – |
 | prob | 0 / 62 | 0 / 30 | – |
 | math | 0 / 31 | 0 / 9 | – |
 | puzzles | 0 / 21 | 0 / 8 | – |
@@ -153,6 +152,25 @@ deep for every must-know concept; signals and template for every pattern.
   the shell now, because the top bar and Settings need them.
 - **Ask Claude drawer, "Explain with Claude", API key, Review my code, Dry run, Suggest with
   Claude:** each shows an honest "arrives in phase 6" message; nothing pretends to work.
+- **Phase 5 notes (session 9, System Design):** all 79 concepts have simple, interview,
+  questions and a deep article (must-know articles 440 to 850 words). Every idea that can run
+  does: 74 C++ programs (queueing and Little's law, the Universal Scalability Law, load balancer
+  algorithms, an autoscaler, cache strategies and eviction policies, cache leases and single-flight,
+  Redis Cluster key slots, replication lag, resharding, consistent hashing, erasure coding, BM25,
+  delta-of-delta, MapReduce, quorums, a Raft-style election, fencing tokens, vector clocks, the
+  outbox, retries with jitter, dead-letter queues, five rate limiters, a circuit breaker, error
+  budgets, Snowflake ids, Bloom filters, geohash, HyperLogLog, count-min, Merkle trees, and a core
+  piece of each of the 22 classic designs, such as base 62 codes, content-defined chunking, adaptive
+  bitrate, a price-time matching engine and operational transformation). Each was compiled with
+  the checker's prelude, run under AddressSanitizer and UBSan, and its output compared with the
+  text (a scratch runner; programs were run before their articles were written, so every number
+  in the prose comes from a real run). Redis commands and `CLUSTER KEYSLOT` values were checked on
+  a real Redis 7.0 (`apt-get install redis-server`); SQL snippets (conditional updates for flash
+  sales, seat holds and trips; a dedup table) on MySQL 8. The 22 classic articles cover every
+  "must discuss" point of the matching design prompt's rubric. Fixed on the way: guessed outputs
+  in first drafts (replaced by real ones), a load-balancer "two choices" that could pick one server
+  twice, a count-min stream whose two random choices were correlated, and a URL that the artifact check
+  would have rejected (`http://payments`, reworded). The artifact is now 6.90 MB.
 - **Phase 5 notes (session 9, SQL):** all 34 concepts have simple, interview, questions and a
   deep article (must-know articles 455 to 675 words). SQL is written for **MySQL 8** (the app's
   SQL dialect and LeetCode's), with the PostgreSQL spelling and every behavior difference pointed
