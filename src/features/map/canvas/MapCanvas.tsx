@@ -21,6 +21,7 @@ import { Maximize, Minus, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "@/components/ui/Button";
 import { useMediaQuery, prefersReducedMotion } from "@/components/ui/hooks";
+import { CodeSpans } from "@/components/ui/Misc";
 import { STATUS_LABEL } from "@/components/ui/labels";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { layout } from "@/data/layout";
@@ -158,7 +159,9 @@ function Tooltip({ target }: { target: { id: string; rect: DOMRect } | null }) {
         {STATUS_LABEL[conceptStatus]}
       </p>
       {concept.scope !== concept.name && (
-        <p className="mt-1 line-clamp-2 text-xs text-muted">{concept.scope}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-muted">
+          <CodeSpans text={concept.scope} />
+        </p>
       )}
     </div>
   );

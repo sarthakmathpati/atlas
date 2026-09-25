@@ -346,3 +346,16 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     `-- error ...` comment, and starts PostgreSQL-only blocks with `-- PostgreSQL`. Differences
     between the two databases are stated where they matter. Examples use original tables and
     data, never LeetCode's.
+61. **Language core content** (session 10): C++ blocks that show undefined behavior start with
+    `// Undefined behavior: ...` and are compiled but never run; blocks that trigger a compiler
+    warning on purpose start with `// Warns: ...`. `check:content-code` does not report warnings for
+    either. The text never uses a UB program's output as evidence, only sanitizer or debug-mode
+    reports and generated assembly. The `lang.java-core` and `lang.python-core` topics are short:
+    deep articles only for must-know concepts, no comparisons with C++; their Java and Python code
+    is checked by `check:content-code` and was run on Java 21 and Python 3.11.
+62. **Concurrency content** (session 10): threaded examples must print the same output on every run:
+    force rare interleavings with barriers or latches, and print invariants instead of timing-dependent
+    splits. Anything machine-dependent (timings, litmus-test counts) is labelled as one run with the
+    range seen. Check with ThreadSanitizer from both GCC and clang: GCC 13's misreports
+    `timed_mutex` timed locks. Scope text may contain backticks; show it with `CodeSpans`
+    (`components/ui/Misc.tsx`), which renders them as inline code.

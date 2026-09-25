@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
-import { Callout, EmptyState, Skeleton } from "@/components/ui/Misc";
+import { Callout, CodeSpans, EmptyState, Skeleton } from "@/components/ui/Misc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { dependentsOf, hasCoreContent } from "@/data/syllabus";
 import { isCustomConceptId } from "@/lib/concepts/custom";
@@ -148,7 +148,7 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
     <div className="space-y-5">
       <p className="max-w-[70ch] text-base text-muted">
         <span className="font-medium text-text">Covers: </span>
-        {concept.scope}
+        <CodeSpans text={concept.scope} />
       </p>
       {!hasCoreContent(concept) ? (
         <MissingContent concept={concept} onWriteNotes={onWriteNotes} />

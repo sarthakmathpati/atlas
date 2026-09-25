@@ -8,6 +8,7 @@ import { Button, IconButton } from "@/components/ui/Button";
 import { DifficultyChip, StatusChip } from "@/components/ui/Chip";
 import { Dialog } from "@/components/ui/Dialog";
 import { Switch } from "@/components/ui/Field";
+import { CodeSpans } from "@/components/ui/Misc";
 import { MultiCombobox } from "@/components/ui/MultiCombobox";
 import { Menu } from "@/components/ui/Popover";
 import { SegmentedBar } from "@/components/ui/Progress";
@@ -21,6 +22,19 @@ import { toast, useToastStore } from "@/stores/toastStore";
 afterEach(() => {
   cleanup();
   useToastStore.setState({ toasts: [] });
+});
+
+describe("CodeSpans", () => {
+  it("shows backticked spans as inline code and leaves the rest as text", () => {
+    const { container } = render(
+      <p>
+        <CodeSpans text="pass by value vs `const T&`, and `auto`" />
+      </p>,
+    );
+    const codes = [...container.querySelectorAll("code")].map((c) => c.textContent);
+    expect(codes).toEqual(["const T&", "auto"]);
+    expect(container.textContent).toBe("pass by value vs const T&, and auto");
+  });
 });
 
 describe("SegmentedControl", () => {
