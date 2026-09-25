@@ -67,27 +67,11 @@ int countEqualPairs(const vector<int>& a) {
 }
 ```
 
-```python
-def sum_all(a):
-    total = 0
-    for x in a:            # n iterations, O(1) each -> O(n)
-        total += x
-    return total
-
-def count_equal_pairs(a):
-    n, count = len(a), 0
-    for i in range(n):     # about n^2 / 2 pairs -> O(n^2)
-        for j in range(i + 1, n):
-            if a[i] == a[j]:
-                count += 1
-    return count
-```
-
 The $n^2 / 2$ becomes $O(n^2)$ because the $1/2$ is a constant.
 
 #### Pitfalls
 
-- **Hidden costs in library calls.** `s = s + c` in a loop copies the string each time in many languages, turning an $O(n)$ loop into $O(n^2)$. `list.insert(0, x)` in Python and `vector::erase` from the front are $O(n)$ each.
+- **Hidden costs in library calls.** `s = s + c` in a loop builds a new string each time, turning an $O(n)$ loop into $O(n^2)$ (`s += c` appends in place). `v.insert(v.begin(), x)` and `v.erase(v.begin())` on a vector are $O(n)$ each.
 - **Confusing the variable.** A loop over the digits of $n$ is $O(\log n)$, not $O(n)$.
 - **Saying "O(n) best case".** Big-O and "best case" are separate ideas: you can give an upper bound on the best case, a lower bound on the worst case, and so on. Name the case, then the bound.
 - **Constants still matter in practice.** Two $O(n \log n)$ sorts can differ by 3x. Big-O decides which algorithms are feasible; constants decide which feasible one is fastest.
@@ -155,15 +139,6 @@ long long harmonic(int n) {
             steps++;
     return steps;
 }
-```
-
-```python
-def harmonic(n):
-    steps = 0
-    for i in range(1, n + 1):
-        for j in range(i, n + 1, i):   # about n / i steps
-            steps += 1
-    return steps
 ```
 
 For $i = 1$ the inner loop runs $n$ times, for $i = 2$ about $n/2$, for $i = 3$ about $n/3$, and so on. The total is
@@ -302,24 +277,13 @@ long long fibMemo(int n, vector<long long>& memo) {
 }
 ```
 
-```python
-from functools import lru_cache
-
-def fib_naive(n):
-    return n if n < 2 else fib_naive(n - 1) + fib_naive(n - 2)
-
-@lru_cache(maxsize=None)
-def fib_memo(n):
-    return n if n < 2 else fib_memo(n - 1) + fib_memo(n - 2)
-```
-
 For memoized recursion, use **states times work per state**, not the tree: each state is computed once.
 
 #### Pitfalls
 
-- Forgetting the non-recursive work: slicing a list in each call (`a[1:]` in Python) adds $O(n)$ per call.
+- Forgetting the non-recursive work: copying a vector in each call (passing it by value, or building a sub-vector) adds $O(n)$ per call.
 - Assuming "two recursive calls" means $O(2^n)$. Merge sort makes two calls but on halves, which gives $n \log n$.
-- Ignoring stack depth: a recursion of depth $10^5$ can overflow the stack in C++ and hits Python's default limit of 1000.
+- Ignoring stack depth: a recursion of depth $10^5$ or more can overflow the stack (commonly 8 MB on Linux, 1 MB on Windows).
 
 Connects to: divide and conquer, memoization, merge sort, binary search.
 
@@ -389,17 +353,6 @@ void reverseRecursive(vector<int>& a, int i, int j) {
 }
 ```
 
-```python
-def reversed_copy(a):
-    return a[::-1]                  # O(n) extra
-
-def reverse_in_place(a):
-    i, j = 0, len(a) - 1
-    while i < j:                    # O(1) extra
-        a[i], a[j] = a[j], a[i]
-        i, j = i + 1, j - 1
-```
-
 All three take $O(n)$ time; only the second uses $O(1)$ extra space.
 
 #### Recursion depth examples
@@ -422,8 +375,8 @@ All three take $O(n)$ time; only the second uses $O(1)$ extra space.
 #### Pitfalls
 
 - Saying "O(1) space" for a recursive DFS. The stack is real memory.
-- Python slicing (`a[1:]`) creates a copy; passing slices through recursion adds $O(n)$ per level.
-- Strings are immutable in Java and Python: building one by repeated concatenation creates many temporary copies.
+- Passing a `vector` or `string` by value copies it; pass `const&` (or indices) through recursion to avoid $O(n)$ per level.
+- `s = s + t` creates a temporary string every time; build strings with `+=`, `reserve`, or an `ostringstream`.
 - A 2D `vector<vector<int>>` of $10^4 \times 10^4$ ints is 400 MB. Check memory limits (usually 256 MB) against table sizes.
 
 Connects to: recursion fundamentals, space optimization in DP, in-place array tricks.
@@ -455,7 +408,7 @@ Amortized analysis averages the cost of an operation over a long sequence of ope
 
 ### interview
 - Amortized cost is the **worst-case total** of a sequence of operations divided by the number of operations; no randomness is involved (unlike average case).
-- Dynamic array (`vector`, `ArrayList`, Python `list`) doubles capacity when full: $n$ appends cost $n + (1 + 2 + 4 + \dots + n) < 3n$, so **O(1) amortized** per append.
+- Dynamic array (`std::vector`) doubles capacity when full (libstdc++ doubles; MSVC grows by 1.5×, which gives the same bound): $n$ appends cost $n + (1 + 2 + 4 + \dots + n) < 3n$, so **O(1) amortized** per append.
 - Growing by a constant (+10 each time) instead of doubling gives $O(n^2)$ total, $O(n)$ per append.
 - **Aggregate method**: bound the total work of $n$ operations directly. Examples: monotonic stack (each element pushed and popped once), two pointers.
 - A single operation can still be slow ($O(n)$ on a resize); say "O(1) amortized" rather than "O(1)" when latency spikes matter.
@@ -505,16 +458,6 @@ vector<int> nextGreater(const vector<int>& a) {
 }
 ```
 
-```python
-def next_greater(a):
-    ans, st = [-1] * len(a), []
-    for i, x in enumerate(a):
-        while st and a[st[-1]] < x:
-            ans[st.pop()] = x
-        st.append(i)
-    return ans
-```
-
 The inner `while` can pop many items in one step, but across the whole run there are at most $n$ pushes and $n$ pops, so the total is $O(n)$ and each step is $O(1)$ amortized.
 
 #### Other methods (for depth)
@@ -556,7 +499,7 @@ scope: "n ≤ 10 allows n!, 20 allows 2^n, 500 allows n^3, 5,000 allows n^2, 10^
 The input limits in a problem quietly tell you which algorithm is expected. A computer does roughly 10^8 simple steps per second, so you can work backwards from n to the slowest complexity that still fits. It is like knowing a trip must take under an hour: that tells you whether to walk, cycle or drive.
 
 ### interview
-- Budget: about $10^8$ simple operations per second in C++ (Java somewhat less, Python about $10^7$). Typical limits are 1 to 2 seconds.
+- Budget: about $10^8$ simple operations per second in C++. Typical limits are 1 to 2 seconds.
 - $n \le 10$: $O(n!)$, permutations. $n \le 20$: $O(2^n)$ or $O(2^n \cdot n)$, subsets and bitmask DP. $n \le 40$: meet in the middle, $O(2^{n/2})$.
 - $n \le 500$: $O(n^3)$, interval DP or Floyd-Warshall. $n \le 5000$: $O(n^2)$, 2D DP.
 - $n \le 10^5$ to $10^6$: $O(n \log n)$ or $O(n)$: sorting, heaps, binary search, two pointers, hashing.
@@ -602,17 +545,6 @@ long long countPairs(const vector<int>& a, int k) {
 }
 ```
 
-```python
-from collections import Counter
-
-def count_pairs(a, k):
-    seen, pairs = Counter(), 0
-    for x in a:
-        pairs += seen[k - x]
-        seen[x] += 1
-    return pairs
-```
-
 The constraint pointed straight at hashing.
 
 #### Other limits worth reading
@@ -624,7 +556,7 @@ The constraint pointed straight at hashing.
 
 #### Pitfalls
 
-- Python is roughly 10 to 50 times slower than C++ for loops; an $O(n^2)$ at $n = 5000$ (25 million steps) is tight in Python.
+- Constant factors near the limit: `unordered_map` and `set` operations cost many times a plain array access, and `endl` flushes output on every line (use `'\n'`).
 - Hidden logarithms and constants: $O(n \log^2 n)$ at $n = 10^6$ is about $4 \cdot 10^8$.
 - Recursion depth limits apply even when time is fine.
 

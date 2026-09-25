@@ -292,28 +292,6 @@ int main() {
 }
 ```
 
-```python
-import threading
-
-balance = 0
-lock = threading.Lock()
-
-
-def deposit(n):
-    global balance
-    for _ in range(n):
-        with lock:                 # acquire on entry, release on exit (even on exceptions)
-            balance += 1
-
-
-threads = [threading.Thread(target=deposit, args=(10000,)) for _ in range(8)]
-for t in threads:
-    t.start()
-for t in threads:
-    t.join()
-print(balance)   # 80000
-```
-
 #### Worked example: contention timeline
 
 Threads T1 and T2 on two cores, lock held for 5 µs, sleeping plus waking costs about 3 µs.
@@ -830,34 +808,6 @@ public:
 };
 ```
 
-```python
-import queue
-import threading
-
-q = queue.Queue(maxsize=4)          # a bounded buffer with the locking built in
-total = 0
-
-
-def producer():
-    for i in range(1, 1001):
-        q.put(i)                    # blocks while full
-    q.put(None)
-
-
-def consumer():
-    global total
-    while (item := q.get()) is not None:   # blocks while empty
-        total += item
-
-
-threads = [threading.Thread(target=producer), threading.Thread(target=consumer)]
-for t in threads:
-    t.start()
-for t in threads:
-    t.join()
-print(total)   # 500500
-```
-
 #### The deadlock from the wrong order
 
 If the producer does `wait(mutex)` then `wait(empty)` with a full buffer, it sleeps holding the mutex. Every consumer then blocks on `wait(mutex)` and can never take an item and signal `empty`. Always wait on the counting semaphore first, then take the mutex.
@@ -972,37 +922,6 @@ public:
         kv[k] = v;
     }
 };
-```
-
-```python
-import threading
-
-
-class RWLock:
-    """Reader preference, built from two locks."""
-
-    def __init__(self):
-        self._readers = 0
-        self._count_lock = threading.Lock()
-        self._rw = threading.Lock()
-
-    def acquire_read(self):
-        with self._count_lock:
-            self._readers += 1
-            if self._readers == 1:
-                self._rw.acquire()
-
-    def release_read(self):
-        with self._count_lock:
-            self._readers -= 1
-            if self._readers == 0:
-                self._rw.release()
-
-    def acquire_write(self):
-        self._rw.acquire()
-
-    def release_write(self):
-        self._rw.release()
 ```
 
 (`threading.Lock` may be released by a thread other than the one that acquired it, which the last-reader release relies on.)

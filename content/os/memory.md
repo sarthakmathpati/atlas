@@ -273,14 +273,6 @@ int main() {
 }
 ```
 
-```python
-def internal_waste(requests, block):
-    return sum(-r % block for r in requests)     # distance to the next multiple of block
-
-
-print(internal_waste([72766, 5000, 4096], 4096))  # 4154
-```
-
 #### Choosing block sizes
 
 | page size | internal waste | page table size | TLB reach |
@@ -383,21 +375,6 @@ int main() {
     }
     cout << (translate(table, 4100, true) ? "ok" : "write fault") << "\n";   // write fault
 }
-```
-
-```python
-PAGE = 4096
-table = {0: 3, 1: 7, 5: 9}
-
-
-def translate(addr):
-    page, offset = divmod(addr, PAGE)
-    if page not in table:
-        return "page fault"
-    return table[page] * PAGE + offset
-
-
-print([translate(a) for a in (20500, 4100, 100, 8200)])   # [36884, 28676, 12388, 'page fault']
 ```
 
 #### The cost and the fix
@@ -951,25 +928,6 @@ int main() {
 }
 ```
 
-```python
-def clock(refs, n):
-    frames, ref_bit, hand, faults = [None] * n, [0] * n, 0, 0
-    for page in refs:
-        if page in frames:
-            ref_bit[frames.index(page)] = 1        # hardware sets the bit on access
-            continue
-        faults += 1
-        while frames[hand] is not None and ref_bit[hand]:
-            ref_bit[hand] = 0                      # second chance
-            hand = (hand + 1) % n
-        frames[hand], ref_bit[hand] = page, 1
-        hand = (hand + 1) % n
-    return faults
-
-
-print(clock([7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2, 1, 2, 0, 1, 7, 0, 1], 3))   # 14
-```
-
 #### In real kernels
 
 Linux keeps active and inactive lists (a two-list LRU approximation, with a newer multi-generational LRU), prefers evicting clean page-cache pages over dirty or anonymous ones, and writes dirty pages back in the background so eviction rarely waits on I/O.
@@ -1154,18 +1112,6 @@ int main() {
     getline(in, line);
     cout << line << "\n";                                    // HELLO mmap
 }
-```
-
-```python
-import mmap
-
-with open("greeting.txt", "w+b") as f:
-    f.write(b"hello mmap\n")
-    f.flush()
-    with mmap.mmap(f.fileno(), 0) as m:       # MAP_SHARED by default on Unix
-        m[0:5] = m[0:5].upper()
-with open("greeting.txt") as f:
-    print(f.read().strip())                   # HELLO mmap
 ```
 
 #### read versus mmap

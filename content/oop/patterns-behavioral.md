@@ -17,7 +17,7 @@ The strategy pattern puts each way of doing a task in its own object, so you can
 ### interview
 - Intent: define a **family of algorithms**, encapsulate each one, and make them **interchangeable**; the **context** holds a strategy and delegates to it.
 - Replaces `if`/`switch` chains on "which algorithm" and follows the open/closed principle: a new algorithm is a new class.
-- In modern code a strategy is often just a **function**: a comparator passed to `sort`, a `std::function`, a Java lambda for `Comparator`, a Python callable.
+- In modern C++ a strategy is often just a **callable**: a comparator passed to `sort`, a lambda, or a `std::function` member.
 - Typical uses: pricing and discount rules, payment methods, compression formats, routing, retry and backoff policies, rate-limiting algorithms (token bucket vs sliding window).
 - **Strategy vs state**: the client picks a strategy and it rarely changes itself; a state object decides the next state on its own. **Strategy vs template method**: composition and swappable at runtime vs inheritance and fixed at compile time.
 - Cost: clients must know the strategies exist to choose one; tiny strategies may be clearer as plain functions.
@@ -25,7 +25,7 @@ The strategy pattern puts each way of doing a task in its own object, so you can
 ### deep
 #### Intuition
 
-A checkout needs a shipping cost, and the rule depends on the carrier. Writing `if carrier == "standard" ... elif "express" ...` inside `Checkout` means every new carrier edits checkout code. Moving each rule into its own object lets `Checkout` just ask "the current rule" for a price.
+A checkout needs a shipping cost, and the rule depends on the carrier. Writing `if (carrier == "standard") ... else if (carrier == "express") ...` inside `Checkout` means every new carrier edits checkout code. Moving each rule into its own object lets `Checkout` just ask "the current rule" for a price.
 
 #### Code
 
@@ -76,26 +76,6 @@ int main() {
 }
 ```
 
-```python
-def standard(weight):
-    return 40 + 10 * weight
-
-
-def express(weight):
-    return 100 + 25 * weight
-
-
-class Checkout:
-    def __init__(self, shipping):
-        self.shipping = shipping              # any callable taking a weight
-
-    def total(self, items, weight):
-        return items + self.shipping(weight)
-
-
-print(Checkout(standard).total(500, 2), Checkout(express).total(500, 2))   # 560 650
-```
-
 #### Worked example
 
 | call | strategy | computation | total |
@@ -110,9 +90,18 @@ Adding a "same day" carrier means one new class; `Checkout` is untouched.
 
 The context should not pick its own strategy with a `switch`, or the switch just moves. Choose it at the edge (from config, user input or a factory) and inject it. A map from name to strategy is a common registry:
 
-```python
-STRATEGIES = {"standard": standard, "express": express}
-print(Checkout(STRATEGIES["express"]).total(100, 1))   # 225
+```cpp
+using Shipping = function<double(double)>;           // a strategy as a plain function
+
+int main() {
+    map<string, Shipping> strategies = {             // the registry lives at the edge
+        {"standard", [](double w) { return 40 + 10 * w; }},
+        {"express", [](double w) { return 100 + 25 * w; }},
+    };
+    string fromConfig = "express";
+    Shipping ship = strategies.at(fromConfig);
+    cout << 100 + ship(1) << "\n";                   // 225
+}
 ```
 
 #### Strategy vs state vs template method
@@ -142,7 +131,7 @@ Q: What is the difference between strategy and state?
 A: Both delegate behavior to an interchangeable object. In strategy, the client chooses the algorithm and it usually does not change on its own. In state, the state objects represent the context's current condition and trigger transitions to other states themselves.
 
 Q: How are strategies usually expressed in modern languages?
-A: Often as functions or lambdas instead of classes: a comparator passed to sort, a std::function member in C++, a functional interface in Java, or any callable in Python. A class hierarchy is still useful when strategies carry configuration or several related methods.
+A: Often as lambdas or other callables instead of classes: a comparator passed to sort, or a std::function member that holds the chosen behavior. A class hierarchy is still useful when strategies carry configuration or several related methods.
 
 Q: Give an interview example where strategy fits naturally.
 A: A rate limiter that supports token bucket, fixed window and sliding window algorithms behind one RateLimiter interface, or a payment service with card, UPI and wallet payment strategies. The calling code stays the same while the algorithm is chosen by configuration.
@@ -201,29 +190,6 @@ int main() {
     infy.setPrice(1520);                                // only the tracker runs
     cout << "highest " << highest << "\n";              // highest 1520
 }
-```
-
-```python
-class Subject:
-    def __init__(self):
-        self._observers = []
-
-    def subscribe(self, fn):
-        self._observers.append(fn)
-        return lambda: self._observers.remove(fn)      # returns an unsubscribe function
-
-    def notify(self, *args):
-        for fn in list(self._observers):              # iterate over a copy
-            fn(*args)
-
-
-prices = Subject()
-log = []
-stop = prices.subscribe(lambda sym, p: log.append((sym, p)))
-prices.notify("INFY", 1500)
-stop()
-prices.notify("INFY", 1520)
-print(log)   # [('INFY', 1500)]
 ```
 
 #### Worked example
@@ -367,16 +333,18 @@ If the user typed something new now, the redo stack would be cleared, since `E` 
 
 #### Commands as closures and queues
 
-```python
-from collections import deque
-
-jobs = deque()
-log = []
-jobs.append(lambda: log.append("send email"))      # each job is a command
-jobs.append(lambda: log.append("resize image"))
-while jobs:
-    jobs.popleft()()                                # the worker executes them later
-print(log)   # ['send email', 'resize image']
+```cpp
+int main() {
+    queue<function<void()>> jobs;                    // each job is a command
+    vector<string> log;
+    jobs.push([&] { log.push_back("send email"); });
+    jobs.push([&] { log.push_back("resize image"); });
+    while (!jobs.empty()) {                          // the worker executes them later
+        jobs.front()();
+        jobs.pop();
+    }
+    for (const auto& s : log) cout << s << "\n";     // send email, resize image
+}
 ```
 
 #### Pitfalls
@@ -491,25 +459,22 @@ Each row is one class. With a `switch`, the same three cases would appear inside
 
 #### Table-driven alternative
 
-```python
-TRANSITIONS = {
-    ("idle", "coin"): "has_coin",
-    ("has_coin", "button"): "idle",
-    ("idle", "button"): "idle",
-    ("has_coin", "coin"): "has_coin",
+```cpp
+int main() {
+    map<pair<string, string>, string> transitions = {
+        {{"idle", "coin"}, "has_coin"},
+        {{"has_coin", "button"}, "idle"},
+        {{"idle", "button"}, "idle"},
+        {{"has_coin", "coin"}, "has_coin"},
+    };
+    string state = "idle", trail = "idle";
+    for (string event : {"button", "coin", "coin", "button"}) {
+        auto it = transitions.find({state, event});
+        if (it != transitions.end()) state = it->second;
+        trail += " " + state;
+    }
+    cout << trail << "\n";   // idle idle has_coin has_coin idle
 }
-
-
-def run(events, state="idle"):
-    trail = [state]
-    for e in events:
-        state = TRANSITIONS.get((state, e), state)
-        trail.append(state)
-    return trail
-
-
-print(run(["button", "coin", "coin", "button"]))
-# ['idle', 'idle', 'has_coin', 'has_coin', 'idle']
 ```
 
 Use classes when each state has real behavior; use a table when states differ mainly in where they go next.
@@ -545,10 +510,10 @@ The template method pattern fixes the order of steps in a process and lets subcl
 
 ### interview
 - Intent: define the **skeleton of an algorithm** in a base class method and let subclasses **override specific steps** without changing the overall structure.
-- The template method itself is non-overridable (`final` in Java, non-virtual in C++); steps are abstract (must override) or **hooks** with a default (may override).
+- The template method itself is non-overridable (a public non-virtual function in C++, the non-virtual interface idiom); steps are abstract (must override) or **hooks** with a default (may override).
 - "**Hollywood principle**": don't call us, we'll call you; the base class calls the subclass's steps.
 - C++'s **non-virtual interface (NVI)** idiom is the same idea: public non-virtual functions that call private or protected virtual ones, so the base can add checks before and after.
-- Examples: framework lifecycles (`setUp`/`tearDown` in unit tests, `onCreate` in Android activities), `AbstractList` in Java, data import pipelines (read, parse, validate, save).
+- Examples: framework lifecycles (`SetUp`/`TearDown` in GoogleTest fixtures, a game loop's `update` and `render` hooks), data import pipelines (read, parse, validate, save).
 - **Template method vs strategy**: inheritance and compile-time vs composition and runtime; prefer strategy when steps vary independently or need swapping.
 
 ### deep
@@ -595,47 +560,6 @@ int main() {
 }
 ```
 
-```python
-from abc import ABC, abstractmethod
-
-
-class Beverage(ABC):
-    def prepare(self):                    # the template method
-        steps = ["boil water", self.brew(), "pour into cup"]
-        if self.wants_extras():           # hook with a default
-            steps.append(self.extras())
-        return steps
-
-    @abstractmethod
-    def brew(self): ...
-
-    def wants_extras(self):
-        return True
-
-    def extras(self):
-        return "nothing extra"
-
-
-class Tea(Beverage):
-    def brew(self):
-        return "steep tea"
-
-    def extras(self):
-        return "add lemon"
-
-
-class BlackCoffee(Beverage):
-    def brew(self):
-        return "drip coffee"
-
-    def wants_extras(self):
-        return False
-
-
-print(Tea().prepare())
-print(BlackCoffee().prepare())
-```
-
 #### Worked example
 
 | step | CsvExporter | JsonExporter |
@@ -678,10 +602,10 @@ An iterator lets you walk through a collection one item at a time without knowin
 
 ### interview
 - Intent: provide **sequential access** to the elements of a collection **without exposing its internal representation**.
-- Language forms: Java `Iterator` (`hasNext`, `next`, optional `remove`) with `Iterable` powering for-each; C++ iterators (`begin`/`end`, categories from input to random access) powering range-for and algorithms; Python `__iter__`/`__next__` with `StopIteration`, and **generators** (`yield`).
-- **External** iterators (the caller asks for the next element) vs **internal** iterators (the collection calls your function for each element: `forEach`).
+- The C++ form: iterators with `*it` and `++it`, grouped into **categories** (input, forward, bidirectional, random access, contiguous). Anything with `begin()` and `end()` works in range-for and the algorithms; C++23 adds `std::generator` for lazy sequences written with `co_yield`.
+- **External** iterators (the caller asks for the next element) vs **internal** iterators (the collection calls your function for each element: `std::for_each` or a `visit(f)` member).
 - Lazy iteration lets you traverse huge or infinite sequences and compute elements on demand.
-- Pitfalls: Java's **fail-fast** iterators throw `ConcurrentModificationException` if the collection changes during iteration; C++ **iterator invalidation** (a `vector` reallocation invalidates all iterators).
+- Pitfall: **iterator invalidation**. A `vector` reallocation invalidates every iterator, and `erase` invalidates those at and after the erased element; using one is undefined behavior, not an exception.
 - Interview classic: a **BST iterator** giving in-order elements in O(1) amortized per `next()` and O(h) memory, using an explicit stack.
 
 ### deep
@@ -732,78 +656,73 @@ Each node is pushed and popped once, so n calls to `next` cost O(n) in total: O(
 | next | 6 | 7 |
 | next | 7 | empty |
 
-#### Python: generators do the bookkeeping
+#### Making a type work with range-for
 
-```python
-class Node:
-    def __init__(self, val, left=None, right=None):
-        self.val, self.left, self.right = val, left, right
+```cpp
+class Countdown {                                    // a range: from, from - 1, ..., 1
+    int from;
+public:
+    explicit Countdown(int f) : from(f) {}
+    struct iterator {
+        int cur;
+        int operator*() const { return cur; }
+        iterator& operator++() { --cur; return *this; }
+        bool operator==(const iterator&) const = default;   // != comes free in C++20
+    };
+    iterator begin() const { return {from}; }
+    iterator end() const { return {0}; }
+};
 
-
-class Tree:
-    def __init__(self, root):
-        self.root = root
-
-    def __iter__(self):                  # makes Tree usable in for loops
-        stack, node = [], self.root
-        while stack or node:
-            while node:
-                stack.append(node)
-                node = node.left
-            node = stack.pop()
-            yield node.val               # pause here until the caller asks for more
-            node = node.right
-
-
-t = Tree(Node(4, Node(2, Node(1), Node(3)), Node(6, None, Node(7))))
-print(list(t), sum(t))                   # [1, 2, 3, 4, 6, 7] 23
-```
-
-#### Java: Iterable and fail-fast
-
-```java
-class Countdown implements Iterable<Integer> {
-    private final int from;
-    Countdown(int from) { this.from = from; }
-    public Iterator<Integer> iterator() {
-        return new Iterator<>() {
-            int current = from;
-            public boolean hasNext() { return current > 0; }
-            public Integer next() {
-                if (!hasNext()) throw new NoSuchElementException();
-                return current--;
-            }
-        };
-    }
-    // for (int x : new Countdown(3)) prints 3, 2, 1
+int main() {
+    for (int x : Countdown(3)) cout << x << " ";     // 3 2 1
+    cout << "\n";
 }
 ```
 
-Removing from an `ArrayList` inside a for-each loop throws `ConcurrentModificationException`; use `iterator.remove()` or `removeIf`.
+Range-for calls `begin()` once, then dereferences and increments until the iterator equals `end()`. Adding the iterator traits (`value_type`, `difference_type`) and postfix `++` would also let standard algorithms and ranges accept it.
+
+#### Iterator invalidation
+
+```cpp
+int main() {
+    vector<int> v{1, 2, 3, 4, 5, 6};
+    // Wrong: for (auto it = v.begin(); it != v.end(); ++it) if (*it % 2 == 0) v.erase(it);
+    for (auto it = v.begin(); it != v.end();) {
+        if (*it % 2 == 0) it = v.erase(it);          // erase returns the next valid iterator
+        else ++it;
+    }
+    vector<int> w{1, 2, 3, 4, 5, 6};
+    erase_if(w, [](int x) { return x % 2 == 0; });   // C++20: the same in one line
+    for (int x : v) cout << x << " ";
+    cout << "| " << w.size() << "\n";                // 1 3 5 | 3
+}
+```
+
+Erasing from a `vector` shifts the later elements, so iterators at or after that point are invalid, and a `push_back` that reallocates invalidates all of them. Node-based containers (`list`, `map`) invalidate only iterators to the erased elements.
 
 #### Pitfalls
 
-- Modifying a collection while iterating it (fail-fast exceptions in Java, invalidated iterators in C++, skipped items in Python lists).
-- Reusing a Python generator after it is exhausted: it yields nothing the second time. `Tree` above creates a fresh generator per `for` loop, so it can be iterated many times.
+- Modifying a container while iterating it: the invalid iterator is undefined behavior, so the bug may show up only sometimes.
+- Keeping an iterator, pointer or reference into a `vector` across a `push_back`: reallocation leaves it dangling.
 - Exposing internal nodes through the iterator and letting callers mutate the structure.
 
-Connects to: composite, BST, generators, visitor, stacks.
+Connects to: composite, BST, visitor, stacks.
 
 ### questions
 Q: What is the iterator pattern?
 A: A behavioral pattern that provides a way to access the elements of a collection one after another without exposing how the collection stores them. The iterator object keeps the traversal state and offers operations like hasNext and next.
 
 Q: What is the difference between internal and external iterators?
-A: With an external iterator, the client controls the loop by repeatedly asking for the next element, as with Java's Iterator or C++ iterators. With an internal iterator, the collection controls the loop and calls a function for each element, as with forEach.
+A: With an external iterator, the client controls the loop by repeatedly asking for the next element, as with a hand-written loop over C++ iterators. With an internal iterator, the collection controls the loop and calls a function for each element, as with std::for_each or a visit member function.
 
 Q: How do you build a BST iterator with O(h) memory?
 A: Keep a stack of nodes along the path to the smallest unvisited node: push the root and all its left descendants. next pops the top, pushes the leftmost path of its right child, and returns the popped value. Each node is pushed once, so next is O(1) amortized.
 
-Q: What does fail-fast mean for Java iterators?
-A: Most Java collection iterators track a modification count and throw ConcurrentModificationException if the collection is structurally changed during iteration by anything other than the iterator's own remove. It detects bugs early instead of producing wrong results.
+Q: What is iterator invalidation?
+A: An iterator becomes invalid when the container changes in a way that moves or removes the element it refers to, and using it afterwards is undefined behavior. For a vector, a reallocating push_back invalidates every iterator and erase invalidates those at or after the erased position; list and map invalidate only iterators to erased elements.
 
-Q: How do Python generators relate to the iterator pattern?
-A: A generator function with yield automatically creates an iterator: each call to next resumes the function until the next yield. It keeps the traversal state in the function's local variables, which makes custom iterators very short.
+Q: How do you make your own class work with a range-based for loop?
+A: Give it begin and end functions that return iterators. The iterator needs dereference, prefix increment and comparison with the end iterator; the loop calls begin once and keeps dereferencing and incrementing until the iterator equals end.
 
 ## oop.patterns-behavioral.chain-of-responsibility
 name: "Chain of responsibility"
@@ -875,32 +794,38 @@ A real ATM would validate before handing out anything (multiples of 100) and con
 
 #### Middleware: every handler contributes
 
-```python
-def auth(request, next_handler):
-    if not request.get("user"):
-        return "401 unauthorized"          # stops the chain
-    return next_handler(request)
+```cpp
+struct Request { string user; vector<string> trail; };
+using Next = function<string(Request&)>;
+using Middleware = function<string(Request&, const Next&)>;
 
+string auth(Request& r, const Next& next) {
+    if (r.user.empty()) return "401 unauthorized";   // stops the chain
+    return next(r);
+}
 
-def log(request, next_handler):
-    request.setdefault("trail", []).append("logged")
-    return next_handler(request)
+string logStep(Request& r, const Next& next) {
+    r.trail.push_back("logged");
+    return next(r);
+}
 
+string endpoint(Request& r) {
+    return "200 hello " + r.user + " after " + to_string(r.trail.size()) + " step";
+}
 
-def endpoint(request):
-    return f"200 hello {request['user']} {request['trail']}"
+Next buildChain(const vector<Middleware>& handlers, Next last) {
+    Next chain = std::move(last);
+    for (auto h = handlers.rbegin(); h != handlers.rend(); ++h)   // wrap from the inside out
+        chain = [mw = *h, next = chain](Request& r) { return mw(r, next); };
+    return chain;
+}
 
-
-def build_chain(handlers, final):
-    chain = final
-    for h in reversed(handlers):            # wrap from the inside out
-        chain = (lambda h, nxt: lambda req: h(req, nxt))(h, chain)
-    return chain
-
-
-app = build_chain([log, auth], endpoint)
-print(app({"user": "asha"}))   # 200 hello asha ['logged']
-print(app({}))                 # 401 unauthorized
+int main() {
+    Next app = buildChain({logStep, auth}, endpoint);
+    Request ok{"asha", {}}, anon{"", {}};
+    cout << app(ok) << "\n";                         // 200 hello asha after 1 step
+    cout << app(anon) << "\n";                       // 401 unauthorized
+}
 ```
 
 #### Pitfalls
@@ -944,45 +869,51 @@ A mediator is a central coordinator that objects talk to instead of talking to e
 ### deep
 #### Code: a chat room
 
-```python
-class ChatRoom:                                   # the mediator
-    def __init__(self):
-        self.members = {}
-        self.muted = set()
+```cpp
+class User;
 
-    def join(self, user):
-        self.members[user.name] = user
-        user.room = self
+class ChatRoom {                                     // the mediator
+    map<string, User*> members;
+    set<string> muted;
+public:
+    void join(User& u);
+    void mute(const string& name) { muted.insert(name); }
+    void send(const string& from, const string& text, const string& to = "");
+};
 
-    def send(self, sender, text, to=None):
-        if sender in self.muted:                  # coordination rules live here
-            return
-        targets = [self.members[to]] if to else [u for n, u in self.members.items() if n != sender]
-        for user in targets:
-            user.receive(sender, text)
+class User {                                         // colleagues know only the room
+    ChatRoom* room = nullptr;
+public:
+    const string name;
+    vector<string> inbox;
+    explicit User(string n) : name(std::move(n)) {}
+    void enter(ChatRoom& r) { room = &r; }
+    void say(const string& text, const string& to = "") { room->send(name, text, to); }
+    void receive(const string& from, const string& text) { inbox.push_back(from + ": " + text); }
+};
 
+void ChatRoom::join(User& u) {
+    members[u.name] = &u;
+    u.enter(*this);
+}
 
-class User:                                       # colleagues know only the room
-    def __init__(self, name):
-        self.name, self.room, self.inbox = name, None, []
+void ChatRoom::send(const string& from, const string& text, const string& to) {
+    if (muted.count(from)) return;                   // coordination rules live here
+    for (auto& [name, user] : members)
+        if (to.empty() ? name != from : name == to) user->receive(from, text);
+}
 
-    def say(self, text, to=None):
-        self.room.send(self.name, text, to)
-
-    def receive(self, sender, text):
-        self.inbox.append(f"{sender}: {text}")
-
-
-room = ChatRoom()
-asha, ben, chen = User("asha"), User("ben"), User("chen")
-for u in (asha, ben, chen):
-    room.join(u)
-asha.say("hi all")
-ben.say("hi asha", to="asha")
-room.muted.add("chen")
-chen.say("spam")
-print(asha.inbox, ben.inbox, chen.inbox)
-# ['ben: hi asha'] ['asha: hi all'] ['asha: hi all']
+int main() {
+    ChatRoom room;
+    User asha("asha"), ben("ben"), chen("chen");
+    for (User* u : {&asha, &ben, &chen}) room.join(*u);
+    asha.say("hi all");
+    ben.say("hi asha", "asha");
+    room.mute("chen");
+    chen.say("spam");
+    cout << asha.inbox[0] << " | " << ben.inbox[0] << " | " << chen.inbox[0] << "\n";
+    // ben: hi asha | asha: hi all | asha: hi all
+}
 ```
 
 Users never hold references to each other. Muting, private messages or logging change only `ChatRoom`.
@@ -1017,7 +948,7 @@ The visitor pattern lets you add new operations to a set of classes without edit
 - Mechanism: **double dispatch**. Each element implements `accept(Visitor& v)` by calling `v.visit(*this)`, so the right overload runs for both the element's type and the visitor's type.
 - Best when the **class hierarchy is stable** and operations change often: compiler ASTs (type check, evaluate, print), document exports, reporting over a fixed set of shapes.
 - Trade-off: adding a **new operation** is easy (a new visitor); adding a **new element type** is hard (every visitor needs a new method). It is the mirror image of plain polymorphism.
-- Modern alternatives: C++17 `std::variant` with `std::visit`, pattern matching (Java 21 `switch` on sealed types, Python's `match`).
+- Modern alternative: C++17 `std::variant` with `std::visit` and an overload set of lambdas, for a closed set of types; a visitor that misses a type does not compile.
 - It often needs elements to expose state that encapsulation would otherwise hide.
 
 ### deep

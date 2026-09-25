@@ -59,25 +59,6 @@ vector<vector<int>> buildMatrix(int n, const vector<array<int, 3>>& edges) {
 }
 ```
 
-```python
-from collections import defaultdict
-
-def build_adjacency(edges, directed=False):
-    adj = defaultdict(list)          # works for any hashable vertex labels
-    for u, v in edges:
-        adj[u].append(v)
-        if not directed:
-            adj[v].append(u)
-    return adj
-
-def in_out_degrees(n, edges):
-    indeg, outdeg = [0] * n, [0] * n
-    for u, v in edges:
-        outdeg[u] += 1
-        indeg[v] += 1
-    return indeg, outdeg
-```
-
 #### Cost comparison
 
 | Operation | Adjacency list | Matrix | Edge list |
@@ -197,25 +178,6 @@ vector<int> shortestPath(const vector<vector<int>>& adj, int src, int dst) {
 }
 ```
 
-```python
-from collections import deque
-
-def bfs_levels(adj, src):
-    """Vertices grouped by distance from src."""
-    seen, levels, q = {src}, [], deque([src])
-    while q:
-        level = []
-        for _ in range(len(q)):
-            u = q.popleft()
-            level.append(u)
-            for v in adj[u]:
-                if v not in seen:
-                    seen.add(v)
-                    q.append(v)
-        levels.append(level)
-    return levels
-```
-
 #### Why mark on push, not on pop
 
 If you mark a vertex only when it is popped, it can be pushed several times by different neighbors before its first pop. The answers stay correct, but the queue can grow to $O(E)$ and time increases. Marking when pushing guarantees each vertex enters the queue once.
@@ -229,7 +191,7 @@ Each vertex is enqueued and dequeued once, and each adjacency list is scanned on
 - Disconnected graphs: unreachable vertices keep distance −1 (or ∞).
 - Source equals target: distance 0.
 - Using BFS on weighted graphs gives the fewest edges, not the least cost.
-- Using a Python list as a queue (`pop(0)` is O(n)).
+- Simulating the queue with a `vector` and `erase(begin())`, which is O(n) per pop; use `std::queue` or a head index.
 
 #### Variants
 
@@ -348,34 +310,6 @@ vector<int> dfsIterative(const vector<vector<int>>& adj, int src) {
 }
 ```
 
-```python
-def has_path(adj, src, dst):
-    seen, stack = {src}, [src]
-    while stack:
-        u = stack.pop()
-        if u == dst:
-            return True
-        for v in adj[u]:
-            if v not in seen:
-                seen.add(v)
-                stack.append(v)
-    return False
-
-def all_paths_dag(adj, src, dst):
-    """Every path from src to dst in a DAG (backtracking DFS; no visited set needed)."""
-    paths, path = [], [src]
-    def go(u):
-        if u == dst:
-            paths.append(path[:])
-            return
-        for v in adj[u]:
-            path.append(v)
-            go(v)
-            path.pop()
-    go(src)
-    return paths
-```
-
 #### Complexity
 
 Each vertex is visited once and each edge examined once (twice if undirected): $O(V + E)$. The visited array is $O(V)$, and the recursion or stack can reach depth $O(V)$. Enumerating **all** paths (backtracking) is exponential in the worst case, a different problem.
@@ -383,7 +317,7 @@ Each vertex is visited once and each edge examined once (twice if undirected): $
 #### Edge cases and bugs
 
 - Forgetting the visited set on graphs with cycles loops forever.
-- Stack overflow on long chains; Python's default limit is 1,000 frames.
+- Stack overflow on long chains (a path of 10⁵ vertices recurses 10⁵ deep); switch to an explicit stack.
 - In the iterative version, marking on pop (as above) allows duplicates on the stack; marking on push changes the visiting order slightly but also works for reachability.
 - Disconnected graphs: loop over all vertices and start DFS from each unvisited one.
 
@@ -404,7 +338,7 @@ Q: What are discovery and finish times used for?
 A: Discovery is when DFS first reaches a vertex; finish is when all vertices reachable from it are done. Reverse finish order gives a topological order in a DAG, an edge to a discovered but unfinished vertex reveals a cycle in a directed graph, and finish times drive Kosaraju's SCC algorithm.
 
 Q: When would you use iterative DFS instead of recursion?
-A: When the graph can be deep, such as a path of 10^5 vertices, which can overflow the call stack, especially in Python. An explicit stack lives on the heap and avoids the limit.
+A: When the graph can be deep, such as a path of 10^5 vertices, which can overflow the call stack. An explicit stack lives on the heap and avoids the limit.
 
 Q: Why doesn't DFS find shortest paths?
 A: DFS may reach a vertex first through a long detour, because it follows one branch to the end before trying others. Nothing guarantees the first visit is along a shortest path, unlike BFS, which explores by increasing distance.
@@ -519,27 +453,6 @@ int shortestClearPath(const vector<vector<int>>& g) {
     }
     return dist[n - 1][n - 1];
 }
-```
-
-```python
-def max_area_of_island(grid):
-    R, C = len(grid), len(grid[0])
-    seen = [[False] * C for _ in range(R)]
-
-    def area(r, c):
-        stack, total = [(r, c)], 0
-        seen[r][c] = True
-        while stack:
-            cr, cc = stack.pop()
-            total += 1
-            for nr, nc in ((cr + 1, cc), (cr - 1, cc), (cr, cc + 1), (cr, cc - 1)):
-                if 0 <= nr < R and 0 <= nc < C and grid[nr][nc] == 1 and not seen[nr][nc]:
-                    seen[nr][nc] = True
-                    stack.append((nr, nc))
-        return total
-
-    return max((area(r, c) for r in range(R) for c in range(C)
-                if grid[r][c] == 1 and not seen[r][c]), default=0)
 ```
 
 #### Marking visited: overwrite or keep a grid?
@@ -677,28 +590,6 @@ int makeConnected(int n, const vector<vector<int>>& connections) {
 }
 ```
 
-```python
-def count_components(n, edges):
-    adj = [[] for _ in range(n)]
-    for u, v in edges:
-        adj[u].append(v)
-        adj[v].append(u)
-    seen, count = [False] * n, 0
-    for s in range(n):
-        if seen[s]:
-            continue
-        count += 1
-        seen[s] = True
-        stack = [s]
-        while stack:
-            u = stack.pop()
-            for v in adj[u]:
-                if not seen[v]:
-                    seen[v] = True
-                    stack.append(v)
-    return count
-```
-
 #### Components in other shapes
 
 The same loop works on any representation: an adjacency matrix (scan row u for neighbors, $O(V^2)$ total), a grid (neighbors are adjacent cells), or an implicit graph where two items are connected when they share something (a row, a column, an email). In the last case, connecting every pair explicitly can create $O(n^2)$ edges; connecting each item to a shared key instead (or using union-find keyed by the shared value) keeps it linear.
@@ -812,27 +703,6 @@ int orangesRotting(vector<vector<int>>& g) {
     }
     return fresh == 0 ? minutes : -1;
 }
-```
-
-```python
-from collections import deque
-
-def distance_to_nearest_zero(mat):
-    R, C = len(mat), len(mat[0])
-    dist = [[-1] * C for _ in range(R)]
-    q = deque()
-    for r in range(R):
-        for c in range(C):
-            if mat[r][c] == 0:
-                dist[r][c] = 0
-                q.append((r, c))
-    while q:
-        r, c = q.popleft()
-        for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
-            if 0 <= nr < R and 0 <= nc < C and dist[nr][nc] == -1:
-                dist[nr][nc] = dist[r][c] + 1
-                q.append((nr, nc))
-    return dist
 ```
 
 #### Reversing the direction of the question
@@ -961,25 +831,6 @@ bool hasCycleDsu(int n, const vector<pair<int, int>>& edges) {
 }
 ```
 
-```python
-def valid_tree(n, edges):
-    """A graph is a tree iff it has n - 1 edges and no cycle (then it is connected)."""
-    if len(edges) != n - 1:
-        return False
-    parent = list(range(n))
-    def find(x):
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-    for u, v in edges:
-        a, b = find(u), find(v)
-        if a == b:
-            return False
-        parent[a] = b
-    return True
-```
-
 #### Why the iterative check is subtle
 
 In the iterative DFS above, a vertex is marked (given a parent) when pushed. A vertex v may already be marked by a different parent while still on the stack; seeing it again from u means two different tree paths reach v, which also forms a cycle, so reporting it is correct. The only neighbor to ignore is the actual tree parent of u.
@@ -1069,41 +920,6 @@ bool hasDirectedCycle(int n, const vector<vector<int>>& adj) {
         if (color[s] == 0 && dfs(s)) return true;
     return false;
 }
-```
-
-```python
-from collections import deque
-
-def can_finish(num_courses, prerequisites):
-    """Kahn's algorithm: all courses can be taken iff the graph has no cycle."""
-    adj = [[] for _ in range(num_courses)]
-    indeg = [0] * num_courses
-    for course, pre in prerequisites:
-        adj[pre].append(course)
-        indeg[course] += 1
-    q = deque(i for i in range(num_courses) if indeg[i] == 0)
-    taken = 0
-    while q:
-        u = q.popleft()
-        taken += 1
-        for v in adj[u]:
-            indeg[v] -= 1
-            if indeg[v] == 0:
-                q.append(v)
-    return taken == num_courses
-
-def eventual_safe_nodes(graph):
-    """Nodes from which every path ends at a terminal node (none reaches a cycle)."""
-    color = [0] * len(graph)                 # 0 unseen, 1 on path, 2 safe
-    def safe(u):
-        if color[u]:
-            return color[u] == 2
-        color[u] = 1
-        if any(not safe(v) for v in graph[u]):
-            return False                     # stays gray: part of or leads to a cycle
-        color[u] = 2
-        return True
-    return [u for u in range(len(graph)) if safe(u)]
 ```
 
 #### DFS colors or Kahn's algorithm?
@@ -1212,35 +1028,6 @@ vector<int> topoSortDfs(int n, const vector<vector<int>>& adj) {
     reverse(order.begin(), order.end());
     return order;
 }
-```
-
-```python
-from collections import defaultdict, deque
-
-def alien_order(words):
-    """Letter order of an alien language from a sorted word list ('' if invalid)."""
-    letters = {c for w in words for c in w}
-    adj, indeg = defaultdict(set), {c: 0 for c in letters}
-    for a, b in zip(words, words[1:]):
-        for x, y in zip(a, b):
-            if x != y:
-                if y not in adj[x]:
-                    adj[x].add(y)
-                    indeg[y] += 1
-                break
-        else:
-            if len(a) > len(b):
-                return ""                  # "abc" before "ab" is impossible
-    q = deque(sorted(c for c in letters if indeg[c] == 0))
-    out = []
-    while q:
-        c = q.popleft()
-        out.append(c)
-        for d in sorted(adj[c]):
-            indeg[d] -= 1
-            if indeg[d] == 0:
-                q.append(d)
-    return "".join(out) if len(out) == len(letters) else ""
 ```
 
 #### Complexity
@@ -1357,30 +1144,6 @@ bool isBipartite(const vector<vector<int>>& adj) {
     }
     return true;
 }
-```
-
-```python
-def possible_bipartition(n, dislikes):
-    """People 1..n; each dislike pair must be on different sides."""
-    adj = [[] for _ in range(n + 1)]
-    for a, b in dislikes:
-        adj[a].append(b)
-        adj[b].append(a)
-    color = [None] * (n + 1)
-    for s in range(1, n + 1):
-        if color[s] is not None:
-            continue
-        color[s] = 0
-        stack = [s]
-        while stack:
-            u = stack.pop()
-            for v in adj[u]:
-                if color[v] is None:
-                    color[v] = 1 - color[u]
-                    stack.append(v)
-                elif color[v] == color[u]:
-                    return False
-    return True
 ```
 
 #### Complexity
@@ -1502,29 +1265,6 @@ int openLock(const vector<string>& deadends, const string& target) {
     }
     return -1;
 }
-```
-
-```python
-from collections import deque
-from string import ascii_lowercase
-
-def ladder_length(begin, end, words):
-    """Number of words in the shortest transformation sequence, or 0."""
-    word_set = set(words)
-    if end not in word_set:
-        return 0
-    q, seen = deque([(begin, 1)]), {begin}
-    while q:
-        word, length = q.popleft()
-        if word == end:
-            return length
-        for i in range(len(word)):
-            for c in ascii_lowercase:
-                nxt = word[:i] + c + word[i + 1:]
-                if nxt in word_set and nxt not in seen:
-                    seen.add(nxt)
-                    q.append((nxt, length + 1))
-    return 0
 ```
 
 #### Bidirectional BFS

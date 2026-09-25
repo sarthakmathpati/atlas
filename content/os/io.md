@@ -278,19 +278,6 @@ int main() {
 }
 ```
 
-```python
-import os
-
-r, w = os.pipe()
-os.set_blocking(r, False)
-try:
-    os.read(r, 16)
-except BlockingIOError:
-    print("not ready yet")          # EAGAIN surfaces as BlockingIOError
-os.write(w, b"ping")
-print(os.read(r, 16))               # b'ping'
-```
-
 #### Worked example: 10,000 idle connections
 
 | design | threads | memory for stacks (8 MB virtual each) | who waits |
@@ -387,20 +374,6 @@ int main() {
     cout << n << " of 2 ready\n";                    // pipe b: hello / 1 of 2 ready
     close(ep);
 }
-```
-
-```python
-import os
-import selectors
-
-sel = selectors.DefaultSelector()           # epoll on Linux, kqueue on macOS
-a_r, a_w = os.pipe()
-b_r, b_w = os.pipe()
-sel.register(a_r, selectors.EVENT_READ, "pipe a")
-sel.register(b_r, selectors.EVENT_READ, "pipe b")
-os.write(b_w, b"hello")
-for key, _ in sel.select(timeout=1):
-    print(key.data, os.read(key.fd, 16))    # pipe b b'hello'
 ```
 
 #### Why epoll scales

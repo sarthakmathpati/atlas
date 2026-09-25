@@ -613,6 +613,7 @@ Rules for the `ClaudeDbRepository`:
   - A track list in parentheses after the tag, such as `(quant)` or `(sde, quant)`, sets that concept's tracks and overrides the topic's tracks. Without it, the concept inherits the topic's tracks. A subject region is shown for a track whenever at least one of its concepts belongs to that track.
   - `(pattern)` marks a DSA technique concept that problems attach to (`isPattern: true`).
   - The concept id is `<topicId>.<slug of the concept name>` (lowercase, words joined by hyphens, symbols removed). Example: `dsa.graph-basics.bfs`.
+  - `(id: some-slug)` keeps an older id after a concept is renamed, so saved progress still points at it. The content file then marks the concept `renamed: true`.
   - The text after the first colon is the **scope**: what the content for that concept must cover. The colon and scope are optional; when a bullet has no colon, the whole text is the name and the scope equals the name.
 - Concepts inside a topic are listed in a sensible learning order. Use this order for the "suggested path" inside a topic.
 
@@ -1161,7 +1162,7 @@ id: oop | tracks: sde, quant | icon: boxes
 id: oop.foundations | prereqs: none
 - [M] Classes and objects: state and behavior, instances, `this`
 - [M] Constructors and destructors: default, parameterized, copy constructors, initialization order
-- [M] Access modifiers: public, private, protected, package-private in Java
+- [M] Access modifiers: public, private, protected, friends and struct defaults in C++
 - [M] Static members: class-level vs instance-level data and methods
 - [I] Object lifecycle: creation, copying, destruction, garbage collection vs manual cleanup
 
@@ -1172,7 +1173,7 @@ id: oop.pillars | prereqs: oop.foundations
 - [M] Inheritance: single, multilevel, hierarchical, multiple; is-a relationships
 - [M] Polymorphism: compile-time (overloading, templates) vs runtime (overriding, virtual dispatch)
 - [M] Abstract class vs interface: differences, when to use each, default methods
-- [I] The diamond problem: multiple inheritance ambiguity, virtual inheritance in C++, interfaces in Java
+- [I] The diamond problem: multiple inheritance ambiguity, virtual inheritance, diamonds of interfaces
 - [I] Method overloading vs overriding: rules, return types, covariant returns
 
 #### Relationships and modeling
@@ -1186,7 +1187,7 @@ id: oop.relationships | prereqs: oop.pillars
 id: oop.language-specifics | prereqs: oop.pillars
 - [M] Shallow vs deep copy: copy constructors, clone, copy assignment
 - [I] Rule of three and five in C++: when you write one special member, write the others
-- [I] equals and hashCode in Java: the contract and what breaks when violated
+- [I] (id: equals-and-hashcode-in-java) Equality and hashing: operator== and the hash must agree, and what breaks when they don't
 - [I] Immutability: immutable objects, benefits for thread safety
 - [I] Operator overloading and friend functions: C++ specifics
 - [I] Virtual destructors: why base classes need them
@@ -1388,7 +1389,7 @@ id: conc | tracks: sde, quant | icon: git-merge
 #### Concurrency basics
 id: conc.basics | prereqs: os.threads
 - [M] Concurrency vs parallelism: interleaving vs simultaneous execution
-- [M] Creating threads: std::thread, Java threads and executors, Python threading
+- [M] Creating threads: std::thread, std::jthread, std::async and thread pools
 - [M] Data races vs race conditions: the difference and examples
 - [M] Thread safety: what makes code thread-safe, immutability, confinement
 

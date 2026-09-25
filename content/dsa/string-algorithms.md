@@ -72,26 +72,6 @@ vector<int> kmpSearch(const string& text, const string& pat) {  // start indices
 }
 ```
 
-```python
-def prefix_function(s):
-    pi = [0] * len(s)
-    for i in range(1, len(s)):
-        j = pi[i - 1]
-        while j > 0 and s[i] != s[j]:
-            j = pi[j - 1]
-        if s[i] == s[j]:
-            j += 1
-        pi[i] = j
-    return pi
-
-def kmp_search(text, pat):
-    if not pat:
-        return []
-    pi = prefix_function(pat + "\0" + text)   # separator that occurs in neither string
-    m = len(pat)
-    return [i - 2 * m for i in range(len(pi)) if pi[i] == m]
-```
-
 #### Complexity
 
 $O(n + m)$ time. The inner `while` looks quadratic, but `j` increases by at most one per step and every fallback decreases it, so total fallbacks are bounded by total increases (amortized). Space $O(m)$ for `pi`.
@@ -223,25 +203,6 @@ vector<int> rabinKarp(const string& text, const string& pat) {
             out.push_back(i);                          // verify to rule out collisions
     return out;
 }
-```
-
-```python
-def rabin_karp(text, pat, base=131, mod=(1 << 61) - 1):
-    n, m = len(text), len(pat)
-    if m == 0 or m > n:
-        return []
-    high = pow(base, m - 1, mod)
-    hp = ht = 0
-    for i in range(m):
-        hp = (hp * base + ord(pat[i])) % mod
-        ht = (ht * base + ord(text[i])) % mod
-    out = []
-    for i in range(n - m + 1):
-        if ht == hp and text[i:i + m] == pat:
-            out.append(i)
-        if i + m < n:
-            ht = ((ht - ord(text[i]) * high) * base + ord(text[i + m])) % mod
-    return out
 ```
 
 #### Complexity

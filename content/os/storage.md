@@ -47,22 +47,6 @@ int main() {
 }
 ```
 
-```python
-import os
-import stat
-
-with open("demo.txt", "w") as f:
-    f.write("hello\n")
-os.chmod("demo.txt", 0o640)
-os.link("demo.txt", "alias.txt")          # a hard link: a second name for the same inode
-st = os.stat("demo.txt")
-print(stat.filemode(st.st_mode), st.st_size, st.st_nlink,
-      st.st_ino == os.stat("alias.txt").st_ino)       # -rw-r----- 6 2 True
-os.remove("demo.txt")                     # the data survives: alias.txt still names it
-print(open("alias.txt").read().strip())   # hello
-os.remove("alias.txt")
-```
-
 #### Permissions in octal
 
 | octal | bits | meaning |
@@ -264,21 +248,6 @@ int main() {
     bm.release(b);
     cout << a << " " << b << " " << c << " " << bm.allocate() << "\n";   // 0 1 2 1
 }
-```
-
-```python
-def first_free_run(bitmap, n):
-    """bitmap: list of 1 (free) / 0 (used); returns the first start of n consecutive free blocks."""
-    run = 0
-    for i, bit in enumerate(bitmap):
-        run = run + 1 if bit else 0
-        if run == n:
-            return i - n + 1
-    return None
-
-
-bits = [0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1]
-print(first_free_run(bits, 4), first_free_run(bits, 6), first_free_run(bits, 7))   # 2 8 None
 ```
 
 #### Comparison

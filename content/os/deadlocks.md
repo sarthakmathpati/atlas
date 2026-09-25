@@ -201,31 +201,6 @@ int main() {
 }
 ```
 
-```python
-def find_cycle(waits_for):
-    color, stack = {}, []
-
-    def dfs(u):
-        color[u] = 1
-        stack.append(u)
-        for v in waits_for.get(u, []):
-            if color.get(v) == 1:
-                return stack[stack.index(v):]      # the cycle
-            if v not in color and (c := dfs(v)):
-                return c
-        color[u] = 2
-        stack.pop()
-        return None
-
-    for s in waits_for:
-        if s not in color and (c := dfs(s)):
-            return c
-    return None
-
-
-print(find_cycle({"T1": ["T2"], "T2": ["T3"], "T3": ["T1"], "T4": ["T1"]}))   # ['T1', 'T2', 'T3']
-```
-
 Note that P3 (and T4) are stuck too, because they wait on a deadlocked process, but they are not part of the cycle; aborting a process in the cycle frees them as well.
 
 #### From allocation graph to wait-for graph
@@ -337,27 +312,6 @@ int main() {
     for (auto& t : ts) t.join();
     cout << x.balance << " " << y.balance << "\n";   // 1000 1000: every transfer finished
 }
-```
-
-```python
-import threading
-
-locks = {name: threading.Lock() for name in ["db", "cache", "log"]}
-ORDER = {"db": 0, "cache": 1, "log": 2}            # the lock hierarchy
-
-
-def with_locks(names, work):
-    ordered = sorted(names, key=ORDER.__getitem__)  # always acquire in the global order
-    for n in ordered:
-        locks[n].acquire()
-    try:
-        return work()
-    finally:
-        for n in reversed(ordered):
-            locks[n].release()
-
-
-print(with_locks(["log", "db"], lambda: "done"))   # locks db, then log
 ```
 
 #### Choosing

@@ -16,21 +16,21 @@ scope: "hiding state, getters and setters, invariants"
 Encapsulation means an object keeps its data to itself and lets others change it only through its own methods. A vending machine is a good picture: you can press buttons and insert coins, but you cannot reach in and rearrange the snacks or the cash box. Because every change goes through the machine's buttons, it can make sure the rules are never broken.
 
 ### interview
-- **Encapsulation** = bundling data with the methods that operate on it **and** restricting direct access to that data (private fields, public operations).
-- Its purpose is protecting **invariants**: facts that must always hold, such as `balance >= 0`, a date that is always valid, or a list that stays sorted. Every method checks or preserves them.
-- Getters and setters for every field are not encapsulation by themselves. Prefer operations that express intent (`withdraw(amount)`) over raw setters (`setBalance(x)`), often summarized as "tell, don't ask".
-- Do not leak mutable internals: returning a reference to an internal list lets callers change it behind your back. Return a copy, an unmodifiable view or a const reference.
+- **Encapsulation** = bundling data with the member functions that operate on it **and** restricting direct access to that data (private members, public operations).
+- Its purpose is protecting **invariants**: facts that must always hold, such as `balance >= 0`, a date that is always valid, or a list that stays sorted. Every member function checks or preserves them.
+- Getters and setters for every member are not encapsulation by themselves. Prefer operations that express intent (`withdraw(amount)`) over raw setters (`setBalance(x)`), often summarized as "tell, don't ask".
+- Do not leak mutable internals: returning a non-const reference or pointer to an internal container lets callers change it behind your back. Return a copy or a `const&`.
 - Benefits: you can change the internal representation without touching callers, bugs are localized to one class, and objects are easier to use correctly.
 - Encapsulation vs abstraction: encapsulation hides and protects **state**; abstraction decides which **operations** to expose.
 
 ### deep
 #### Intuition
 
-If any code anywhere can write a field, then any code anywhere can break it, and when it breaks you have to search the whole program. If only the class's own methods can write it, a broken value has at most a handful of suspects. Encapsulation shrinks the places a bug can come from.
+If any code anywhere can write a member, then any code anywhere can break it, and when it breaks you have to search the whole program. If only the class's own functions can write it, a broken value has at most a handful of suspects. Encapsulation shrinks the places a bug can come from.
 
 #### Invariants
 
-An **invariant** is a condition that is true whenever no method of the object is running. Constructors establish it, and each public method may bend it temporarily but must restore it before returning.
+An **invariant** is a condition that is true whenever no member function of the object is running. Constructors establish it, and each public function may bend it temporarily but must restore it before returning.
 
 Examples:
 
@@ -40,13 +40,13 @@ Examples:
 
 #### Worked example
 
-A `Fraction` class keeps itself reduced, so `==` can compare fields directly.
+A `Fraction` class keeps itself reduced, so `==` can compare members directly.
 
 | call | numerator | denominator | why |
 |---|---|---|---|
 | `Fraction f(6, -8)` | -3 | 4 | the constructor moves the sign up and divides by gcd 2 |
 | `f.add(Fraction(1, 4))` | -1 | 2 | -3/4 + 1/4 = -2/4, reduced |
-| `f.denominator = 0` | - | - | does not compile: the field is private |
+| `f.den = 0` | - | - | does not compile: the member is private |
 
 #### Code
 
@@ -80,37 +80,7 @@ int main() {
 }
 ```
 
-```python
-from math import gcd
-
-
-class Fraction:
-    def __init__(self, num, den):
-        if den == 0:
-            raise ValueError("zero denominator")
-        if den < 0:
-            num, den = -num, -den
-        g = gcd(num, den)
-        self._num, self._den = num // g, den // g
-
-    def add(self, other):
-        return Fraction(self._num * other._den + other._num * self._den,
-                        self._den * other._den)
-
-    @property
-    def numerator(self):
-        return self._num
-
-    @property
-    def denominator(self):
-        return self._den
-
-
-f = Fraction(6, -8).add(Fraction(1, 4))
-print(f.numerator, f.denominator)   # -1 2
-```
-
-The Python version returns a new object instead of changing itself, which is even safer: nothing can ever observe a half-updated fraction.
+An even safer design returns a new `Fraction` from a `const` function `plus` instead of changing itself: then nobody can ever observe a half-updated fraction.
 
 #### Leaking internals
 
@@ -120,20 +90,21 @@ class Team {
 public:
     vector<string>& getMembers() { return members; }             // leak: callers can clear it
     const vector<string>& viewMembers() const { return members; } // read-only view
+    vector<string> copyMembers() const { return members; }        // the caller's own copy
     void addMember(const string& name) { if (!name.empty()) members.push_back(name); }
 };
 ```
 
-In Java, return `List.copyOf(members)` or `Collections.unmodifiableList(members)`. In Python, return a tuple or a copy.
+A `const&` is cheap but only valid while the `Team` lives; a copy costs more but is independent.
 
 #### Getters and setters
 
-A setter that assigns anything is a public field with extra steps. Add a setter only when changing that value is a real operation, and validate in it. Many good classes have no setters at all (immutable value types).
+A setter that assigns anything is a public member with extra steps. Add a setter only when changing that value is a real operation, and validate in it. Many good classes have no setters at all (immutable value types).
 
 #### Pitfalls
 
-- Public fields "for convenience" that later need validation.
-- Returning internal mutable collections or pointers.
+- Public members "for convenience" that later need validation.
+- Returning internal containers or pointers through non-const references.
 - A constructor that skips validation, so an invalid object exists from the start.
 - Checking the invariant in callers instead of in the class.
 
@@ -141,16 +112,16 @@ Connects to: access modifiers, abstraction, immutability, single responsibility 
 
 ### questions
 Q: What is encapsulation?
-A: Encapsulation bundles an object's data with the methods that operate on it and hides the data so it can change only through those methods. This lets the class guarantee its invariants and change its internal representation without affecting the code that uses it.
+A: Encapsulation bundles an object's data with the member functions that operate on it and hides the data so it can change only through those functions. This lets the class guarantee its invariants and change its internal representation without affecting the code that uses it.
 
 Q: What is a class invariant? Give an example.
-A: An invariant is a condition that is true whenever no method of the object is running. The constructor establishes it and every public method preserves it. For example, a bank account keeps balance at least zero, and a fraction keeps a positive denominator in lowest terms.
+A: An invariant is a condition that is true whenever no member function of the object is running. The constructor establishes it and every public function preserves it. For example, a bank account keeps its balance at least zero, and a fraction keeps a positive denominator in lowest terms.
 
 Q: Do getters and setters give you encapsulation?
-A: Not by themselves. A setter that assigns any value is effectively a public field. Encapsulation comes from exposing meaningful operations that validate input and keep invariants, and from not exposing a setter at all when a value should not change.
+A: Not by themselves. A setter that assigns any value is effectively a public member. Encapsulation comes from exposing meaningful operations that validate input and keep invariants, and from not exposing a setter at all when a value should not change.
 
 Q: How can a class accidentally break its own encapsulation?
-A: By returning a reference or pointer to a mutable internal object, such as its internal list, which lets callers change the state without going through the class's methods. Return a copy, an unmodifiable view or a const reference instead.
+A: By returning a non-const reference or pointer to an internal object, such as its internal vector, which lets callers change the state without going through the class's functions. Return a copy or a const reference instead.
 
 Q: How is encapsulation different from abstraction?
 A: Encapsulation is about protecting state: keeping data private and controlling how it changes. Abstraction is about design: deciding which operations to expose and hiding how they work. A well-designed class uses both.
@@ -165,10 +136,10 @@ Abstraction means showing what something does and hiding how it does it. When yo
 
 ### interview
 - **Abstraction** = modeling only what matters for the caller: a small set of operations described by what they do, with the how hidden behind them.
-- Tools: **interfaces** (a pure contract), **abstract classes** (a contract plus shared code; cannot be instantiated), and simply good public methods.
-- Callers depend on the abstraction (`Shape::area()`, `List`, `PaymentGateway`), so implementations can change or be swapped without touching them.
-- An abstract class in C++ has at least one **pure virtual** function (`virtual double area() const = 0;`); Java uses `abstract` and `interface`; Python uses `abc.ABC` with `@abstractmethod`.
-- Leaky abstractions: the hidden details sometimes show through (performance of a linked list vs array list, network failures behind a remote call). Know which details your abstraction cannot hide.
+- Tools: **interfaces** (classes with only pure virtual functions), **abstract classes** (a contract plus shared code; cannot be instantiated), templates with concepts, and simply good public functions.
+- Callers depend on the abstraction (`Shape::area()`, `PaymentGateway::charge()`), so implementations can change or be swapped without touching them.
+- A class is abstract when it has at least one **pure virtual** function (`virtual double area() const = 0;`); derived classes stay abstract until they override every one.
+- Leaky abstractions: the hidden details sometimes show through (a `list` hides that indexing is linear; a remote call can time out). Know which details your abstraction cannot hide.
 - Abstraction is a design decision (what to expose); encapsulation is the protection that keeps the rest hidden.
 
 ### deep
@@ -180,10 +151,10 @@ Humans handle complexity by ignoring most of it. You call `sort(v.begin(), v.end
 
 1. **A function**: `sqrt(x)` hides the numerical method.
 2. **A class**: `Fraction` hides the gcd bookkeeping.
-3. **An interface**: `Shape` says every shape has `area()` and `perimeter()`, with no code at all.
+3. **An interface**: `Shape` says every shape has `area()` and `name()`, with no code at all.
 4. **A module or service**: a storage layer hides whether data lives in memory, a file or a database.
 
-#### Code: an abstract base in C++ and Python
+#### Code: an abstract base
 
 ```cpp
 class Shape {                                   // abstract: cannot be instantiated
@@ -224,40 +195,8 @@ int main() {
     shapes.push_back(make_unique<Circle>(1));
     cout << totalArea(shapes) << "\n";          // 9.14159
     cout << shapes[0]->describe() << "\n";      // rect with area 6.000000
+    // Shape s;                                 // error: Shape is abstract
 }
-```
-
-```python
-from abc import ABC, abstractmethod
-import math
-
-
-class Shape(ABC):
-    @abstractmethod
-    def area(self): ...
-
-    def describe(self):
-        return f"{type(self).__name__} with area {self.area():.2f}"
-
-
-class Rect(Shape):
-    def __init__(self, w, h):
-        self.w, self.h = w, h
-
-    def area(self):
-        return self.w * self.h
-
-
-class Circle(Shape):
-    def __init__(self, r):
-        self.r = r
-
-    def area(self):
-        return math.pi * self.r ** 2
-
-
-print(sum(s.area() for s in [Rect(2, 3), Circle(1)]))  # 9.141592653589793
-# Shape() raises TypeError: can't instantiate abstract class
 ```
 
 #### Worked example: swapping an implementation
@@ -268,40 +207,40 @@ print(sum(s.area() for s in [Rect(2, 3), Circle(1)]))  # 9.141592653589793
 |---|---|
 | add `Triangle` | only the new class (and whoever constructs it) |
 | make `Circle::area` use a cached value | only `Circle` |
-| add `perimeter()` to every shape | `Shape` and each subclass: widening an abstraction costs more |
+| add `perimeter()` to every shape | `Shape` and each derived class: widening an abstraction costs more |
 
 The last row is the lesson: an abstraction is cheap to implement again and expensive to change, so keep it small.
 
 #### Choosing a good abstraction
 
 - Name operations by intent (`send(message)`), not by mechanism (`writeToSocket`).
-- Keep it minimal: every method is a promise every implementation must keep.
+- Keep it minimal: every function is a promise every implementation must keep.
 - Do not expose implementation types in signatures (return `vector<Order>` or a range, not the internal `map` iterator).
 - Accept that some abstractions leak: a remote call can fail in ways a local call cannot, so make that visible in the interface (timeouts, errors).
 
 #### Pitfalls
 
 - Abstracting too early: an interface with one implementation and no second in sight adds indirection without benefit.
-- Giant interfaces that force implementers to stub methods (see interface segregation).
-- Forgetting the virtual destructor on a C++ abstract base.
+- Giant interfaces that force implementers to stub functions (see interface segregation).
+- Forgetting the virtual destructor on an abstract base.
 
 Connects to: encapsulation, abstract class vs interface, polymorphism, dependency inversion principle.
 
 ### questions
 Q: What is abstraction in object-oriented programming?
-A: Abstraction is exposing only the essential operations of something and hiding how they are carried out. Callers work with a simple model, such as a Shape with an area method, and the details live in the implementations, which can change without affecting callers.
+A: Abstraction is exposing only the essential operations of something and hiding how they are carried out. Callers work with a simple model, such as a Shape with an area function, and the details live in the implementations, which can change without affecting callers.
 
-Q: How do you make a class abstract in C++, Java and Python?
-A: In C++, declare at least one pure virtual function with = 0. In Java, mark the class abstract or declare an interface. In Python, inherit from abc.ABC and mark methods with the abstractmethod decorator. In all three, the abstract type cannot be instantiated directly.
+Q: How do you make a class abstract in C++?
+A: Declare at least one pure virtual function with = 0. The class then cannot be instantiated, and a derived class stays abstract until it overrides every pure virtual function. A pure virtual destructor also works, but it still needs a definition.
 
 Q: What is a leaky abstraction?
-A: An abstraction whose hidden details still affect the caller. For example, a remote call looks like a local method but can time out, and a list interface hides whether indexing is constant or linear time. Good designs make the unavoidable details visible, such as by returning errors or documenting costs.
+A: An abstraction whose hidden details still affect the caller. For example, a remote call looks like a local function call but can time out, and a container interface can hide whether indexing is constant or linear time. Good designs make the unavoidable details visible, such as by returning errors or documenting costs.
 
 Q: What is the difference between abstraction and encapsulation?
 A: Abstraction is the design choice of which operations to expose and how to describe them. Encapsulation is the mechanism that hides and protects the state behind those operations. Abstraction answers what the user sees, encapsulation makes sure they cannot reach past it.
 
 Q: Why is changing an abstraction more expensive than changing an implementation?
-A: Every caller and every implementation depends on the abstraction. Changing one implementation touches one class, but adding a method to an interface forces every implementation to change, and changing a method's meaning can break every caller.
+A: Every caller and every implementation depends on the abstraction. Changing one implementation touches one class, but adding a pure virtual function to an interface forces every implementation to change, and changing a function's meaning can break every caller.
 
 ## oop.pillars.inheritance
 name: "Inheritance"
@@ -312,17 +251,17 @@ scope: "single, multilevel, hierarchical, multiple; is-a relationships"
 Inheritance lets a new class start from an existing one and add or adjust what it needs. A delivery van is a kind of vehicle: it has everything a vehicle has, like wheels and an engine, plus a cargo area. Use it only when the new thing truly is a kind of the old thing.
 
 ### interview
-- A **derived** (child, sub) class inherits the fields and methods of a **base** (parent, super) class and can add members or override behavior. It models an **is-a** relationship.
-- Forms: **single** (B from A), **multilevel** (C from B from A), **hierarchical** (B and C from A), **multiple** (C from A and B; C++ and Python yes, Java only through interfaces), and **hybrid** combinations.
-- Constructors are not inherited (C++ can opt in with `using Base::Base;`); the base part is built first, by `super(...)` in Java, `super().__init__()` in Python, or the initializer list in C++.
-- Benefits: code reuse and a common type for polymorphism. Costs: tight coupling to the parent's implementation (fragile base class problem) and deep hierarchies that are hard to follow.
+- A **derived** class inherits the members of a **base** class and can add members or override virtual functions. With `public` inheritance it models an **is-a** relationship.
+- Forms: **single** (B from A), **multilevel** (C from B from A), **hierarchical** (B and C from A), **multiple** (C from A and B), and **hybrid** combinations. C++ supports all of them.
+- Constructors are not inherited (opt in with `using Base::Base;`); the base part is built first, from the derived constructor's initializer list: `Derived(args) : Base(args) {}`.
+- Benefits: code reuse and a common type for polymorphism. Costs: tight coupling to the base's implementation (fragile base class problem) and deep hierarchies that are hard to follow.
 - Test with **substitutability**: anywhere the base is expected, the derived class must work correctly (Liskov). A square that inherits from a rectangle often fails this.
-- In C++, prefer `public` inheritance for is-a; private inheritance means "implemented in terms of", which composition usually expresses better.
+- Prefer `public` inheritance for is-a; private inheritance means "implemented in terms of", which composition usually expresses better.
 
 ### deep
 #### Intuition
 
-If `SavingsAccount` and `CheckingAccount` both need an owner, a balance and `deposit`, writing them twice invites the copies to drift apart. Inheritance puts the shared part in `Account` and lets each subclass add only its difference. More importantly, code that handles an `Account` can accept either kind.
+If `SavingsAccount` and `CheckingAccount` both need an owner, a balance and `deposit`, writing them twice invites the copies to drift apart. Inheritance puts the shared part in `Account` and lets each derived class add only its difference. More importantly, code that handles an `Account&` can accept either kind.
 
 #### The forms
 
@@ -381,40 +320,6 @@ int main() {
 }
 ```
 
-```python
-class Account:
-    def __init__(self, owner):
-        self.owner = owner
-        self.balance = 0.0
-
-    def deposit(self, x):
-        if x > 0:
-            self.balance += x
-
-    def withdraw(self, x):
-        if x <= 0 or x > self.balance:
-            return False
-        self.balance -= x
-        return True
-
-
-class OverdraftAccount(Account):
-    def __init__(self, owner, limit):
-        super().__init__(owner)          # build the base part first
-        self.limit = limit
-
-    def withdraw(self, x):
-        if x <= 0 or x > self.balance + self.limit:
-            return False
-        self.balance -= x
-        return True
-
-
-o = OverdraftAccount("Ben", 100)
-o.deposit(50)
-print(o.withdraw(120), o.balance, isinstance(o, Account))   # True -70.0 True
-```
-
 #### Worked example: when is-a fails
 
 A `Square` class inheriting `Rectangle` sounds right, since every square is a rectangle in geometry. Now take code written for rectangles:
@@ -425,38 +330,38 @@ A `Square` class inheriting `Rectangle` sounds right, since every square is a re
 | `setHeight(4)` | 5 × 4 | 4 × 4 |
 | `assert(area() == 20)` | passes | fails: 16 |
 
-The subclass is a special case mathematically but does not behave like a mutable rectangle. Inheritance must follow behavior, not taxonomy. Options: make shapes immutable, or give `Square` and `Rectangle` a common `Shape` parent instead.
+The derived class is a special case mathematically but does not behave like a mutable rectangle. Inheritance must follow behavior, not taxonomy. Options: make shapes immutable, or give `Square` and `Rectangle` a common `Shape` base instead.
 
 #### Costs
 
-- **Fragile base class**: a change inside the parent (say, `addAll` starts calling `add`) can silently break a subclass that overrides one of them.
+- **Fragile base class**: a change inside the base (say, `addAll` starts calling `add`) can silently break a derived class that overrides one of them.
 - Deep hierarchies spread one concept across many files.
-- Inheritance is fixed at compile time; you cannot swap a parent at runtime, while you can swap a composed object.
+- Inheritance is fixed at compile time; you cannot swap a base at runtime, while you can swap a composed object.
 
 #### Pitfalls
 
-- Inheriting only to reuse a few methods (use composition).
-- Forgetting to call the base constructor with the right arguments.
-- In C++, deleting a derived object through a base pointer without a virtual destructor.
-- In C++, `class D : B` is private inheritance by default.
+- Inheriting only to reuse a few functions (use composition).
+- Forgetting to pass the right arguments to the base constructor.
+- Deleting a derived object through a base pointer without a virtual destructor.
+- `class D : B` is private inheritance by default.
 
 Connects to: polymorphism, composition over inheritance, Liskov substitution principle, the diamond problem.
 
 ### questions
 Q: What is inheritance and what relationship does it model?
-A: Inheritance lets a class reuse and extend the fields and methods of another class. It models an is-a relationship: a SavingsAccount is an Account, so it can be used wherever an Account is expected.
+A: Inheritance lets a class reuse and extend the members of another class. With public inheritance it models an is-a relationship: a SavingsAccount is an Account, so it can be used wherever an Account reference or pointer is expected.
 
 Q: What types of inheritance are there?
-A: Single (one parent), multilevel (a chain such as A, B, C), hierarchical (several children of one parent), multiple (one child of several parents) and hybrid combinations. Java supports multiple inheritance only of interfaces, while C++ and Python allow multiple class inheritance.
+A: Single (one base), multilevel (a chain such as A, B, C), hierarchical (several derived classes of one base), multiple (one derived class of several bases) and hybrid combinations. C++ supports all of them, including multiple inheritance of classes with data.
 
 Q: In what order are constructors called with inheritance?
-A: The base class constructor runs first, then the derived class's members are initialized and its constructor body runs. Destruction happens in reverse, derived first and base last. In Java and Python the child calls the parent explicitly with super.
+A: The base class constructor runs first, using the arguments given in the derived class's initializer list, then the derived class's members are initialized and its constructor body runs. Destruction happens in reverse: derived first, base last.
 
 Q: Why might a Square class inheriting from Rectangle be a bad design?
-A: A mutable rectangle lets you set width and height independently, and callers rely on that. A square must keep them equal, so setting the width also changes the height and breaks code that expected the area to be width times height. The subclass is not substitutable for its parent, which violates the Liskov substitution principle.
+A: A mutable rectangle lets you set width and height independently, and callers rely on that. A square must keep them equal, so setting the width also changes the height and breaks code that expected the area to be width times height. The derived class is not substitutable for its base, which violates the Liskov substitution principle.
 
 Q: What are the main drawbacks of inheritance?
-A: It couples the child to the parent's implementation, so internal changes in the parent can break children (the fragile base class problem). Hierarchies can become deep and rigid, and the relationship is fixed at compile time. Composition is often more flexible.
+A: It couples the derived class to the base's implementation, so internal changes in the base can break derived classes (the fragile base class problem). Hierarchies can become deep and rigid, and the relationship is fixed at compile time. Composition is often more flexible.
 
 ## oop.pillars.polymorphism
 name: "Polymorphism"
@@ -465,15 +370,15 @@ prereqs: [oop.pillars.inheritance]
 scope: "compile-time (overloading, templates) vs runtime (overriding, virtual dispatch)"
 
 ### simple
-Polymorphism means one instruction can work on many kinds of things, each responding in its own way. If you tell a group of musicians to play, the pianist presses keys and the drummer hits drums, yet you only gave one instruction. Code can call the same method on different objects and each object does the right thing for its type.
+Polymorphism means one instruction can work on many kinds of things, each responding in its own way. If you tell a group of musicians to play, the pianist presses keys and the drummer hits drums, yet you only gave one instruction. Code can call the same function on different objects and each object does the right thing for its type.
 
 ### interview
-- **Compile-time (static) polymorphism**: the compiler picks the function. Function overloading, operator overloading and templates (C++) or generics (Java). No runtime cost.
-- **Runtime (dynamic) polymorphism**: the object's actual type picks the function while the program runs. Needs inheritance plus **overriding** of a `virtual` method, called through a base pointer or reference.
-- C++ implements virtual calls with a **vtable**: each polymorphic class has a table of function pointers, each object a hidden **vptr**; a call loads the slot and jumps indirectly. Cost: one or two memory loads and usually no inlining.
-- Java methods are virtual by default (not `static`, `private` or `final` ones). Python uses **duck typing**: any object with the right method works, no common base needed.
-- C++ **object slicing**: passing a derived object **by value** as the base copies only the base part and loses the override. Pass by reference or pointer.
-- Use `override` (C++) or `@Override` (Java) so a signature mismatch is a compile error instead of a silent new method.
+- **Compile-time (static) polymorphism**: the compiler picks the function. Function overloading, operator overloading and templates. No runtime cost.
+- **Runtime (dynamic) polymorphism**: the object's actual type picks the function while the program runs. Needs inheritance plus **overriding** of a `virtual` function, called through a base pointer or reference.
+- Virtual calls typically use a **vtable**: each polymorphic class has a table of function pointers, each object a hidden **vptr**; a call loads the slot and jumps indirectly. Cost: one or two memory loads and usually no inlining.
+- Only `virtual` functions dispatch at runtime. A call on an object by value, a qualified call `Base::f()`, and calls inside constructors and destructors are bound statically.
+- **Object slicing**: passing a derived object **by value** as the base copies only the base part and loses the override. Pass by reference or pointer.
+- Write `override` so a signature mismatch is a compile error instead of a silent new function; `final` stops further overriding.
 
 ### deep
 #### Intuition
@@ -485,10 +390,9 @@ A drawing program keeps a list of shapes and calls `draw()` on each. Without pol
 | | compile-time | runtime |
 |---|---|---|
 | chosen by | the compiler, from static types | the object's dynamic type |
-| C++ tools | overloading, operators, templates | `virtual` + override |
-| Java tools | overloading, generics | overriding (default) |
+| tools | overloading, operators, templates | `virtual` + `override` |
 | cost | none at runtime | an indirect call |
-| flexibility | types fixed when compiling | new subclasses plug in later |
+| flexibility | types fixed when compiling | new derived classes plug in later |
 
 #### Code
 
@@ -506,8 +410,8 @@ void speakByValue(Animal a) { cout << a.sound() << " "; }        // slicing: cop
 int twice(int x) { return 2 * x; }                  // overloading: chosen at compile time
 string twice(const string& s) { return s + s; }
 
+// One template, many types: also chosen at compile time.
 template <typename T>
-// one template, many types
 T biggest(const vector<T>& v) { return *max_element(v.begin(), v.end()); }
 
 int main() {
@@ -517,24 +421,6 @@ int main() {
     cout << "\n" << twice(21) << " " << twice(string("ab")) << " "
          << biggest(vector<int>{3, 9, 4}) << "\n";  // 42 abab 9
 }
-```
-
-```python
-class Dog:
-    def sound(self):
-        return "woof"
-
-
-class Robot:                      # unrelated class, same method name
-    def sound(self):
-        return "beep"
-
-
-def speak(thing):                 # duck typing: anything with sound() works
-    return thing.sound()
-
-
-print([speak(x) for x in (Dog(), Robot())])   # ['woof', 'beep']
 ```
 
 #### How virtual dispatch works (worked example)
@@ -552,34 +438,34 @@ For `Dog` and `Cat` above the compiler builds one table per class:
 #### Edge cases and bugs
 
 - **Missing `virtual`**: the base version runs through a base pointer (static binding).
-- **Signature mismatch**: `string sound()` without `const` in the child declares a new function and hides the base one; `override` catches it.
+- **Signature mismatch**: `string sound()` without `const` in the derived class declares a new function and hides the base one; `override` catches it.
 - **Slicing** with by-value parameters or `vector<Animal>`; store `unique_ptr<Animal>` instead.
 - **Overloading is not dynamic**: `f(Animal&)` vs `f(Dog&)` is chosen from the static type, even if the object is a Dog. Double dispatch needs the visitor pattern.
 - Default arguments of virtual functions are bound statically, from the declared type.
 
 #### Variants
 
-- **CRTP** (curiously recurring template pattern) gives static polymorphism without vtables in C++.
+- **CRTP** (curiously recurring template pattern) gives static polymorphism without vtables.
 - `std::variant` with `std::visit` handles a closed set of types without inheritance.
-- Java interfaces and Python protocols give polymorphism without sharing an implementation.
+- **Type erasure** (`std::function`, `std::any`) gives runtime polymorphism without a common base class.
 
 Connects to: inheritance, method overloading vs overriding, virtual destructors, strategy pattern, virtual function internals.
 
 ### questions
 Q: What is the difference between compile-time and runtime polymorphism?
-A: Compile-time polymorphism is resolved by the compiler from static types: function and operator overloading, templates and generics. Runtime polymorphism is resolved while the program runs from the object's actual type, through overridden virtual methods called via a base reference or pointer. The first has no runtime cost, the second lets new subclasses plug in without recompiling callers.
+A: Compile-time polymorphism is resolved by the compiler from static types: function and operator overloading and templates. Runtime polymorphism is resolved while the program runs from the object's actual type, through overridden virtual functions called via a base reference or pointer. The first has no runtime cost, the second lets new derived classes plug in without recompiling callers.
 
 Q: How does C++ implement virtual functions?
 A: Typically each class with virtual functions has a vtable, an array of function pointers, and each object stores a hidden vptr to its class's table. A virtual call loads the vptr, looks up the function's slot and calls it indirectly. The exact layout is compiler-specific.
 
 Q: What is object slicing?
-A: When a derived object is copied into a variable of the base type by value, only the base part is copied and the derived fields and overrides are lost. It happens with pass-by-value parameters and containers of base objects. Use references, pointers or smart pointers to keep polymorphic behavior.
+A: When a derived object is copied into a variable of the base type by value, only the base part is copied and the derived members and overrides are lost. It happens with pass-by-value parameters and containers of base objects. Use references, pointers or smart pointers to keep polymorphic behavior.
 
-Q: Which methods are not polymorphic in Java?
-A: Static methods (they are hidden, not overridden), private methods (not visible to subclasses) and final methods (cannot be overridden). Constructors are not inherited at all. Every other instance method is virtual by default.
+Q: Which calls are not dispatched at runtime in C++?
+A: Calls to non-virtual and static member functions, calls on an object by value rather than through a pointer or reference, calls qualified with the class name such as Base::f(), and virtual calls made inside constructors and destructors, which go to the class currently being built or destroyed.
 
-Q: What is duck typing?
-A: In dynamically typed languages like Python, an object is usable wherever its methods fit, regardless of its class: if it has a quack method, it can be treated as a duck. Polymorphism then needs no shared base class, though abstract base classes or protocols can document the expected methods.
+Q: How do templates give polymorphism without virtual functions?
+A: A template works with any type that supports the operations it uses, and the compiler generates a separate version for each type at compile time. There is no vtable and calls can be inlined, but the set of types is fixed when compiling and each instantiation adds code. C++20 concepts state the required operations explicitly.
 
 ## oop.pillars.abstract-class-vs-interface
 name: "Abstract class vs interface"
@@ -588,169 +474,156 @@ prereqs: [oop.pillars.abstraction]
 scope: "differences, when to use each, default methods"
 
 ### simple
-An interface is a list of promises, and an abstract class is a half-built product that others finish. A job description says what any accountant must be able to do, while a training program gives new accountants some ready-made tools as well as tasks to complete. A class can sign up to many job descriptions but can come out of only one training program.
+An interface is a list of promises, and an abstract class is a half-built product that others finish. A job description only says what any accountant must be able to do, while a training program also hands new accountants ready-made tools. In C++ both are classes with pure virtual functions; the difference is whether the class also carries data and working code.
 
 ### interview
-- **Abstract class**: cannot be instantiated; can have **state** (instance fields), **constructors**, concrete methods with any access level, and abstract methods. A Java class can extend **only one**.
-- **Interface** (Java): a contract. Fields are implicitly `public static final` constants; methods are implicitly `public abstract`, except **`default`** and `static` methods (Java 8) and `private` helpers (Java 9). A class can implement **many**.
-- Choose an **abstract class** for closely related types that share state and code (an "is-a" family with a common skeleton). Choose an **interface** for a capability that unrelated types can have ("can do": `Comparable`, `Runnable`, `Closeable`).
-- **Default methods** exist so interfaces can grow without breaking every implementer (Java 8 added `forEach` and `stream` to collections this way). If two interfaces give the same default, the class must override it and may call `A.super.m()`.
-- C++ has no interface keyword: an "interface" is a class with only pure virtual functions and a virtual destructor; an abstract class is any class with at least one pure virtual function. Python uses `abc.ABC` or `typing.Protocol`.
-- Prefer interfaces for types that callers depend on; use an abstract class underneath to share code between implementations.
+- C++ has no `interface` keyword. An **abstract class** is any class with at least one pure virtual function; it may also have data members, constructors and implemented member functions, and it cannot be instantiated.
+- An **interface** is a convention: an abstract class with **only** pure virtual functions, a virtual destructor and **no data** (sometimes called a pure abstract base or protocol class).
+- A class can inherit **several interfaces** safely, since they carry no state; inheriting several abstract classes with data invites the diamond problem.
+- Use an **interface** for what other code depends on (`Payable`, `Shape`); use an **abstract class** to share state and code among closely related implementations (a skeleton base, template method).
+- **Default methods**: a virtual function with a body gives implementers a default they may override, so adding one does not break them; adding a new **pure** virtual function breaks every implementer.
+- Pure virtual functions may still have a definition (called explicitly as `Base::f()`), and a pure virtual destructor must have one. For templates, C++20 **concepts** describe a compile-time interface.
 
 ### deep
 #### Intuition
 
-Both say "you cannot create me directly; someone must fill in the blanks". An interface is only the blanks, which makes it light: anything can adopt it. An abstract class also brings furniture (fields, helper methods, a constructor), which saves work but ties the subclass to it, and a class can have only one such parent.
+Both say "you cannot create me directly; someone must fill in the blanks". An interface is only the blanks, which makes it light: any class can adopt it, even a class that already has another base. An abstract class also brings furniture (data members, helper functions, a constructor), which saves work but ties the derived class to it.
 
-#### Side by side (Java)
+#### Side by side
 
-| | abstract class | interface |
+| | interface-style class | abstract class |
 |---|---|---|
-| instance fields | yes | no (only `static final` constants) |
-| constructors | yes | no |
-| method bodies | any | `default`, `static`, `private` only |
-| access of members | any | public (private helpers allowed) |
-| how many per class | one (`extends`) | many (`implements`) |
-| models | "is a kind of" | "can do" |
-| adding a method later | safe if given a body | safe only as a `default` method |
+| data members | none | allowed |
+| constructors | none needed | allowed |
+| implemented functions | none (or default bodies) | any |
+| many per class? | yes, safely | possible, but a diamond risk |
+| models | "can do" | "is a kind of" |
+| adding a function later | safe only with a default body | safe if given a body |
 
 #### Code
 
-```java
-interface Payable {                               // a capability
-    long amountDue();
-    default boolean isFree() { return amountDue() == 0; }   // default method (Java 8)
-}
-
-interface Auditable {
-    default String auditTag() { return "audit"; }
-}
-
-abstract class Employee implements Payable, Auditable {   // shared state and skeleton
-    protected final String name;
-    protected Employee(String name) { this.name = name; }
-    public abstract long monthlyPay();
-    public long amountDue() { return monthlyPay(); }
-    public String toString() { return name + ": " + amountDue(); }
-}
-
-class Salaried extends Employee {
-    private final long salary;
-    Salaried(String name, long salary) { super(name); this.salary = salary; }
-    public long monthlyPay() { return salary; }
-}
-
-class Invoice implements Payable {                // unrelated to Employee, same capability
-    private final long total;
-    Invoice(long total) { this.total = total; }
-    public long amountDue() { return total; }
-}
-
-public class Payroll {
-    public static void main(String[] args) {
-        List<Payable> bills = List.of(new Salaried("Asha", 50000), new Invoice(0));
-        long sum = 0;
-        for (Payable p : bills) sum += p.amountDue();
-        System.out.println(sum + " " + bills.get(1).isFree());   // 50000 true
-    }
-}
-```
-
-`Payroll` depends only on `Payable`. `Invoice` could never extend `Employee`, but it can be paid.
-
-#### The same split in C++ and Python
-
 ```cpp
-struct Payable {                                  // "interface": only pure virtuals
+struct Payable {                                  // interface: a capability, no data
     virtual ~Payable() = default;
     virtual long long amountDue() const = 0;
+    virtual bool isFree() const { return amountDue() == 0; }   // a default method
 };
 
-class Employee : public Payable {                 // abstract class: state + a pure virtual
+struct Auditable {                                // a second interface
+    virtual ~Auditable() = default;
+    virtual string auditTag() const = 0;
+};
+
+class Employee : public Payable, public Auditable {   // abstract class: shared state and code
 protected:
     string name;
 public:
     explicit Employee(string n) : name(std::move(n)) {}
-    virtual long long monthlyPay() const = 0;
+    virtual long long monthlyPay() const = 0;         // still abstract
     long long amountDue() const override { return monthlyPay(); }
+    string auditTag() const override { return "employee " + name; }
 };
-```
 
-```python
-from abc import ABC, abstractmethod
-from typing import Protocol
+class Salaried : public Employee {
+    long long salary;
+public:
+    Salaried(string n, long long s) : Employee(std::move(n)), salary(s) {}
+    long long monthlyPay() const override { return salary; }
+};
 
+class Invoice : public Payable {                  // unrelated to Employee, same capability
+    long long total;
+public:
+    explicit Invoice(long long t) : total(t) {}
+    long long amountDue() const override { return total; }
+};
 
-class Payable(Protocol):          # structural: any class with amount_due() fits
-    def amount_due(self) -> int: ...
+long long totalDue(const vector<const Payable*>& bills) {   // depends only on the interface
+    long long sum = 0;
+    for (const Payable* p : bills) sum += p->amountDue();
+    return sum;
+}
 
-
-class Employee(ABC):              # nominal: subclasses must inherit and implement
-    def __init__(self, name):
-        self.name = name
-
-    @abstractmethod
-    def monthly_pay(self) -> int: ...
-
-    def amount_due(self):
-        return self.monthly_pay()
-```
-
-#### Worked example: two defaults collide
-
-```java
-interface Walker { default String move() { return "walk"; } }
-interface Swimmer { default String move() { return "swim"; } }
-
-class Duck implements Walker, Swimmer {
-    public String move() {                        // required: the defaults conflict
-        return Walker.super.move() + " and " + Swimmer.super.move();
-    }
+int main() {
+    Salaried asha("Asha", 50000);
+    Invoice inv(0);
+    cout << totalDue({&asha, &inv}) << " " << inv.isFree() << " " << asha.auditTag() << "\n";
+    // 50000 1 employee Asha
 }
 ```
 
-Without the override, `Duck` does not compile. A method inherited from a superclass always beats an interface default ("class wins").
+`totalDue` depends only on `Payable`. `Invoice` could never be an `Employee`, but it can be paid.
 
-#### When to use which
+#### Worked example: two default methods collide
 
-- Start with an interface for anything other code will depend on.
-- Add an abstract class (often called a skeletal implementation, like `AbstractList`) when several implementations share real code.
-- Avoid abstract classes whose only purpose is a common type; that is an interface's job.
+```cpp
+struct Walker {
+    virtual ~Walker() = default;
+    virtual string move() const { return "walk"; }
+};
+struct Swimmer {
+    virtual ~Swimmer() = default;
+    virtual string move() const { return "swim"; }
+};
+struct Duck : Walker, Swimmer {
+    string move() const override {                // one override serves both bases
+        return Walker::move() + " and " + Swimmer::move();
+    }
+};
+```
+
+| without `Duck::move` | with `Duck::move` |
+|---|---|
+| `duck.move()` does not compile: the name is ambiguous | "walk and swim" |
+| through `Walker&` or `Swimmer&`: each base's own default | "walk and swim" through either base |
+
+#### A compile-time interface
+
+```cpp
+template <typename T>
+concept PayableLike = requires(const T& t) {
+    { t.amountDue() } -> convertible_to<long long>;
+};
+
+long long sumDue(const PayableLike auto&... items) { return (items.amountDue() + ... + 0LL); }
+```
+
+Any type with a suitable `amountDue()` works, with no base class and no virtual call, but the types must be known when compiling.
 
 Connects to: abstraction, the diamond problem, interface segregation principle, dependency inversion principle.
 
 ### questions
-Q: What are the main differences between an abstract class and an interface in Java?
-A: An abstract class can have instance fields, constructors and methods of any access level, and a class can extend only one. An interface has no instance state, only constants, and its methods are public abstract unless they are default, static or private, and a class can implement many interfaces.
+Q: What is the difference between an abstract class and an interface in C++?
+A: C++ has no interface keyword. An abstract class is any class with at least one pure virtual function, and it may also hold data, constructors and implemented functions. An interface is an abstract class by convention that has only pure virtual functions, a virtual destructor and no data, so any class can implement several of them safely.
 
 Q: When would you choose an abstract class over an interface?
-A: When closely related classes share state and implementation, such as a common constructor, fields and a template of steps. An interface is better for a capability that unrelated classes can offer and for the types other code depends on.
+A: When closely related classes share state and implementation, such as common data members, a constructor and a fixed sequence of steps. An interface is better for a capability that unrelated classes can offer and for the types other code depends on.
 
-Q: Why were default methods added to Java interfaces?
-A: So interfaces could gain new methods without breaking every class that already implemented them. Java 8 used them to add methods like forEach and stream to the collection interfaces. They also let interfaces offer convenience methods built on their abstract ones.
+Q: What happens if you add a new pure virtual function to an interface?
+A: Every class implementing it becomes abstract until it overrides the new function, so all existing implementations fail to compile. Adding a virtual function with a default body instead, or a new separate interface, extends it without breaking them.
 
-Q: What happens if a class implements two interfaces with the same default method?
-A: The class must override the method, otherwise it does not compile. Inside the override it can pick one or both versions with InterfaceName.super.method(). If a superclass provides the method, the class's inherited version wins over interface defaults.
+Q: Two base classes both provide a virtual function with the same signature and a body. What happens in a class that inherits both?
+A: Calling the function through the derived class does not compile because the name is ambiguous, although calls through a reference to either base still work. The derived class should override it once; that single override then serves both bases and can call Walker::move() or Swimmer::move() explicitly.
 
 Q: How do you express an interface in C++?
-A: With a class that has only pure virtual functions and a virtual destructor, and no data members. Classes implement it by inheriting publicly and overriding every pure virtual function. C++ allows inheriting several such interfaces.
+A: With a class that has only pure virtual functions and a virtual destructor, and no data members. Classes implement it by inheriting publicly and overriding every pure virtual function. For templates, a C++20 concept can express the same requirements at compile time.
 
 ## oop.pillars.the-diamond-problem
 name: "The diamond problem"
 importance: important
 prereqs: [oop.pillars.inheritance]
-scope: "multiple inheritance ambiguity, virtual inheritance in C++, interfaces in Java"
+scope: "multiple inheritance ambiguity, virtual inheritance, diamonds of interfaces"
 
 ### simple
-The diamond problem happens when a class inherits from two parents that share the same grandparent. It is like a child whose two parents each hand them a copy of the same family recipe book: which copy should they use, and should they even have two? Languages solve it by keeping just one shared grandparent or by forcing you to choose.
+The diamond problem happens when a class inherits from two parents that share the same grandparent. It is like a child whose two parents each hand them a copy of the same family recipe book: which copy should they use, and should they even have two? C++ lets you choose between two copies and one shared grandparent.
 
 ### interview
 - Shape: `A` at the top, `B` and `C` both derive from `A`, and `D` derives from both `B` and `C`. Draw it and it is a diamond.
-- **C++ without virtual inheritance**: `D` contains **two** `A` subobjects, so `d.x` and converting `D*` to `A*` are ambiguous; you must write `d.B::x`.
-- **C++ virtual inheritance** (`class B : virtual public A`): `D` has **one shared** `A`. The **most derived class** (`D`) constructs `A` directly; calls from `B` and `C` to `A`'s constructor are ignored. It adds a small cost (an extra pointer or offset per object and indirect access).
-- **Java** avoids it for state: a class extends one class but may implement many interfaces. Conflicting **default methods** must be overridden, choosing with `B.super.m()`.
-- **Python** allows it and resolves methods with the **MRO** (C3 linearization): for `class D(B, C)` it is `D, B, C, A, object`, and cooperative `super()` calls each class once.
+- **Without virtual inheritance**: `D` contains **two** `A` subobjects, so `d.x` and converting `D&` to `A&` are ambiguous; you must write `d.B::x`.
+- **Virtual inheritance** (`class B : virtual public A`): `D` has **one shared** `A`. The **most derived class** (`D`) constructs `A` directly; the calls from `B` and `C` to `A`'s constructor are ignored.
+- Cost: a hidden pointer or offset per object and an indirection to reach the virtual base.
+- A diamond of **interfaces** (no data) is mostly harmless: nothing is duplicated and one override serves both paths, which is why many languages allow multiple inheritance of interfaces only. Converting to the shared base can still be ambiguous unless it is inherited virtually.
+- The standard library uses it: `std::iostream` derives from `istream` and `ostream`, which both inherit `basic_ios` virtually.
 
 ### deep
 #### The problem
@@ -802,74 +675,48 @@ Worked example of construction order for `Copier`:
 
 Virtual bases are always built first, by the most derived class. If `Copier` did not mention `Device`, the compiler would try `Device`'s default constructor, which here does not exist, so it would not compile.
 
-#### Java: interfaces and defaults
+#### A diamond of interfaces
 
-Java allows only one superclass, so there is never a duplicated field. Interfaces can still form a diamond of **behavior** through default methods:
-
-```java
-interface Device { default String name() { return "device"; } }
-interface Printer extends Device { default String name() { return "printer"; } }
-interface Scanner extends Device { default String name() { return "scanner"; } }
-
-class Copier implements Printer, Scanner {
-    public String name() { return Printer.super.name() + "+" + Scanner.super.name(); }
-}
+```cpp
+struct Named {                                   // an interface: no data
+    virtual ~Named() = default;
+    virtual string name() const = 0;
+};
+struct Printer2 : Named { string print() const { return "printing"; } };
+struct Scanner2 : Named { string scan() const { return "scanning"; } };
+struct Copier2 : Printer2, Scanner2 {
+    string name() const override { return "copier"; }   // one override for both paths
+};
 ```
 
-If only `Printer` overrode `name`, `Copier` would use `Printer`'s version without complaint: the more specific interface wins.
+| expression | result |
+|---|---|
+| `Printer2& p = c; p.name()` | "copier" |
+| `Scanner2& s = c; s.name()` | "copier" |
+| `Named& n = c;` | error: `Named` is an ambiguous base (two subobjects, both empty) |
 
-#### Python: method resolution order
-
-```python
-class Device:
-    def __init__(self):
-        print("Device")
-
-
-class Printer(Device):
-    def __init__(self):
-        print("Printer")
-        super().__init__()
-
-
-class Scanner(Device):
-    def __init__(self):
-        print("Scanner")
-        super().__init__()
-
-
-class Copier(Printer, Scanner):
-    def __init__(self):
-        print("Copier")
-        super().__init__()
-
-
-Copier()     # Copier, Printer, Scanner, Device: each once
-print([k.__name__ for k in Copier.__mro__])   # ['Copier', 'Printer', 'Scanner', 'Device', 'object']
-```
-
-`super()` means "the next class in the MRO of the object", not "my parent". That is why `Printer`'s `super().__init__()` calls `Scanner` here.
+There is no duplicated state, and one override satisfies both paths. Inheriting `Named` virtually would also make the last line legal.
 
 #### Takeaways
 
 - Multiple inheritance of **interfaces** is harmless and common. Multiple inheritance of **state** is where diamonds hurt.
-- In C++, reach for virtual inheritance only when a shared base truly must be one object (as with `std::iostream` from `istream` and `ostream`).
+- Reach for virtual inheritance only when a shared base truly must be one object, as in the iostream hierarchy.
 - Composition sidesteps the whole issue.
 
 Connects to: inheritance, abstract class vs interface, composition over inheritance.
 
 ### questions
 Q: What is the diamond problem?
-A: It arises when a class inherits from two classes that share a common base. The derived class may end up with two copies of the base's state, and calls to the base's members become ambiguous because the compiler cannot tell which path to use.
+A: It arises when a class inherits from two classes that share a common base. The derived class may end up with two copies of the base's state, and uses of the base's members, or conversions to the base, become ambiguous because the compiler cannot tell which path to use.
 
-Q: How does virtual inheritance solve the diamond problem in C++?
+Q: How does virtual inheritance solve the diamond problem?
 A: Declaring the middle classes with virtual inheritance makes them share a single base subobject, so the most derived class has exactly one copy of the base. The most derived class is then responsible for calling the virtual base's constructor, and the middle classes' calls to it are ignored.
 
-Q: Why doesn't Java have the diamond problem with classes?
-A: A Java class can extend only one class, so it can never inherit two copies of the same state. It can implement many interfaces, and if two supply the same default method, the class must override it and can choose one with InterfaceName.super.method().
+Q: Why is a diamond of interfaces less of a problem?
+A: Interfaces carry no data, so nothing is duplicated, and a single override in the most derived class serves both inheritance paths. The only remaining issue is that converting to the shared interface is ambiguous unless it is inherited virtually.
 
-Q: How does Python decide which parent method to call with multiple inheritance?
-A: It uses the method resolution order, computed with C3 linearization, which lists each class once, with children before parents and parents in the order written. For class D(B, C) where both extend A, the order is D, B, C, A, object, and super() moves to the next class in that list.
+Q: What does virtual inheritance cost?
+A: Each object needs a hidden pointer or offset to find its virtual base, accessing the base's members takes an extra indirection, and the most derived class must construct the virtual base. That is why it is used only where a shared base really must be one object.
 
 ## oop.pillars.method-overloading-vs-overriding
 name: "Method overloading vs overriding"
@@ -878,26 +725,26 @@ prereqs: [oop.pillars.polymorphism]
 scope: "rules, return types, covariant returns"
 
 ### simple
-Overloading is giving several methods the same name but different inputs, and overriding is a child class replacing a method it inherited. A coffee machine with separate buttons for "espresso" and "espresso with a size" is overloading. A newer model that makes its espresso differently when you press the same button is overriding.
+Overloading is giving several functions the same name but different inputs, and overriding is a derived class replacing a virtual function it inherited. A coffee machine with separate buttons for "espresso" and "espresso with a size" is overloading. A newer model that makes its espresso differently when you press the same button is overriding.
 
 ### interview
-- **Overloading**: same name, **different parameter lists** (number, types or order), usually in the same class. Resolved at **compile time** from the argument types. Return type alone cannot distinguish overloads.
-- **Overriding**: a subclass redefines an inherited virtual method with the **same signature**. Resolved at **runtime** from the object's type.
-- **Covariant return types**: an override may return a **subtype** of the base method's return type (a derived pointer or reference in C++, a subclass in Java). Primitive return types must match exactly.
-- Java override rules: cannot reduce visibility, cannot throw broader **checked** exceptions, cannot override `static`, `final` or `private` methods. Use `@Override`.
-- C++ rules: the base method must be `virtual`; use `override`. **Name hiding**: declaring `f(double)` in a derived class hides every base `f` overload unless you add `using Base::f;`.
-- Python has no overloading (a second `def` replaces the first); use default arguments, `*args` or `functools.singledispatch`. Overriding works as usual.
+- **Overloading**: same name, **different parameter lists** (number, types, order, or `const`-ness of a member function), in the same scope. Resolved at **compile time** from the arguments. Return type alone cannot distinguish overloads.
+- **Overriding**: a derived class redefines a base **virtual** function with the **same signature** (parameters, `const`, reference qualifiers). Resolved at **runtime** from the object's type.
+- **Covariant return types**: an override may return a pointer or reference to a class derived from the base function's return class. Other return types must match exactly.
+- Write `override` (the compiler checks the base really has that virtual function) and `final` (no further overriding). Access can differ in an override; it is checked on the static type used at the call.
+- **Name hiding**: declaring `f(double)` in a derived class hides every base `f` overload unless you add `using Base::f;`.
+- Default arguments of virtual functions come from the **static** type, even though the body comes from the dynamic type.
 
 ### deep
 #### Side by side
 
 | | overloading | overriding |
 |---|---|---|
-| where | same class (or scope) | base and derived class |
+| where | same scope | base and derived class |
 | signature | must differ in parameters | must match |
 | return type | free, but cannot be the only difference | same or covariant |
 | resolved | compile time, static types | runtime, dynamic type |
-| polymorphism | compile-time | runtime |
+| needs `virtual` | no | yes |
 
 #### Overloading
 
@@ -910,7 +757,7 @@ struct Printer {
 };
 ```
 
-The compiler picks the best match for the arguments' static types. Surprises come from conversions: `show('a')` promotes `char` to `int`, and `show(5L)` is ambiguous (a `long` converts equally well to `int` and `double`).
+The compiler picks the best match for the arguments' static types: an exact match beats a promotion, which beats a conversion. Surprises come from conversions: `show('a')` promotes `char` to `int`, and `show(5L)` is ambiguous (a `long` converts equally well to `int` and `double`).
 
 #### Overriding with a covariant return
 
@@ -934,7 +781,7 @@ int main() {
 }
 ```
 
-#### Name hiding in C++ (worked example)
+#### Name hiding (worked example)
 
 ```cpp
 struct Base {
@@ -956,62 +803,40 @@ struct Derived : Base {
 
 Name lookup stops at the first scope that has the name, before overload resolution runs.
 
-#### Java rules
+#### Default arguments and `final`
 
-```java
-class Shape {
-    protected Shape copy() throws IOException { return new Shape(); }
-}
+```cpp
+struct Greeter {
+    virtual ~Greeter() = default;
+    virtual string greet(string who = "base default") const { return "hi " + who; }
+};
+struct Loud final : Greeter {                   // final: nothing may derive from Loud
+    string greet(string who = "derived default") const override { return "hello " + who; }
+};
 
-class Circle extends Shape {
-    @Override
-    // wider access, covariant return, fewer exceptions: all allowed
-    public Circle copy() { return new Circle(); }
-    // private Shape copy() {...}                 // error: reduces visibility
-    // Shape copy() throws Exception {...}        // error: broader checked exception
+int main() {
+    Loud l;
+    Greeter& g = l;
+    cout << g.greet() << " | " << l.greet() << "\n";   // hello base default | hello derived default
 }
 ```
 
-Overloads are chosen from static types, overrides from the runtime type, and the two combine in surprising ways: with `void greet(Object o)` and `void greet(String s)`, calling `greet(x)` where `Object x = "hi"` picks the `Object` version.
-
-#### Python
-
-```python
-from functools import singledispatch
-
-
-@singledispatch
-def describe(x):
-    return "something"
-
-
-@describe.register
-def _(x: int):
-    return "an int"
-
-
-@describe.register
-def _(x: str):
-    return "a string"
-
-
-print(describe(3), describe("a"), describe(2.5))   # an int a string something
-```
+The body comes from `Loud` both times, but the default argument comes from the type of the expression: `Greeter&` supplies "base default". Avoid giving overrides different defaults.
 
 Connects to: polymorphism, inheritance, Liskov substitution principle, prototype pattern.
 
 ### questions
-Q: What is the difference between method overloading and overriding?
-A: Overloading defines several methods with the same name but different parameter lists, and the compiler picks one from the argument types. Overriding redefines an inherited method with the same signature in a subclass, and the choice is made at runtime from the object's actual type.
+Q: What is the difference between overloading and overriding?
+A: Overloading defines several functions with the same name but different parameter lists, and the compiler picks one from the argument types. Overriding redefines an inherited virtual function with the same signature in a derived class, and the choice is made at runtime from the object's actual type.
 
 Q: Can two overloads differ only in return type?
-A: No, in both C++ and Java. The compiler selects an overload from the arguments at the call site, and the return type is not part of that decision, so two methods with identical parameter lists are a duplicate definition.
+A: No. The compiler selects an overload from the arguments at the call site, and the return type is not part of that decision, so two functions with identical parameter lists are a duplicate definition.
 
 Q: What is a covariant return type?
-A: An overriding method may declare a return type that is a subtype of the overridden method's return type, such as Dog pointer instead of Animal pointer in C++ or Circle instead of Shape in Java. Callers using the derived type then need no cast, and callers using the base type still get a valid object.
+A: An override may return a pointer or reference to a class derived from the one the base function returns, such as Dog* instead of Animal*. Callers using the derived type then need no cast, and callers using the base type still get a valid object.
 
-Q: What rules must a Java override follow?
-A: Same name and parameter types, a return type that is the same or covariant, access that is the same or wider, and no new or broader checked exceptions. Static, final and private methods cannot be overridden. The Override annotation makes the compiler check all this.
+Q: What must match for a function to override a base virtual function?
+A: The name, the parameter types, and the const and reference qualifiers of the member function; the return type must be the same or covariant. The override keyword makes the compiler check this, turning a near miss, such as a missing const, into an error instead of a new hidden function.
 
 Q: What is name hiding in C++?
 A: If a derived class declares a function with the same name as base class functions, it hides all the base overloads of that name, even ones with different parameters. Calls then consider only the derived versions. Writing using Base::name in the derived class brings the base overloads back.

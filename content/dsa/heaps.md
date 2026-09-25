@@ -20,7 +20,7 @@ A binary heap is a tree that always keeps the smallest (or largest) item at the 
 - **Push**: append, then **sift up** (swap with the parent while smaller): O(log n). **Pop**: move the last element to the root, **sift down** (swap with the smaller child): O(log n). **Top**: O(1).
 - **Heapify** an array in **O(n)** by sifting down from the last parent to the root.
 - Not sorted and no fast search: finding an arbitrary element is O(n).
-- Library: C++ `priority_queue` (max-heap by default; `greater<>` for min), Java `PriorityQueue` (min-heap), Python `heapq` (min-heap on a list; negate values for a max-heap).
+- Library: `std::priority_queue` (a max-heap by default; `priority_queue<int, vector<int>, greater<int>>` for a min-heap), or `make_heap`, `push_heap` and `pop_heap` on a vector.
 
 ### deep
 #### Intuition
@@ -73,20 +73,6 @@ public:
 };
 ```
 
-```python
-import heapq
-
-def k_smallest_with_heapq(nums, k):
-    heap = list(nums)
-    heapq.heapify(heap)                      # O(n)
-    return [heapq.heappop(heap) for _ in range(min(k, len(heap)))]
-
-def max_heap_demo(nums):
-    heap = [-x for x in nums]                # heapq is a min-heap: store negatives
-    heapq.heapify(heap)
-    return -heap[0]                          # the maximum
-```
-
 #### Why heapify is O(n)
 
 Sift-down costs the height of the node. In a heap of $n$ nodes, about $n/2$ are leaves (height 0), $n/4$ have height 1, $n/8$ height 2, and so on:
@@ -106,9 +92,9 @@ so building a heap by sifting down is linear, while inserting items one at a tim
 
 #### Edge cases and bugs
 
-- C++ `priority_queue` is a **max-heap** by default; Java's and Python's are min-heaps.
+- `std::priority_queue` is a **max-heap** by default; forgetting `greater<>` for a min-heap is a classic bug.
 - Custom comparators in C++ are reversed: `priority_queue<int, vector<int>, greater<int>>` is a min-heap.
-- Python compares tuples element by element; add a tiebreaker when the payload isn't comparable.
+- `pair` and `tuple` compare element by element, so `{priority, id}` breaks ties by id; a struct needs its own comparator.
 - Mutating an element's priority inside the heap breaks the heap property; push a new entry instead (lazy deletion).
 
 #### Variants
@@ -130,8 +116,8 @@ A: Sifting down from the last parent to the root costs each node its height, and
 Q: What can't a heap do efficiently?
 A: Search for an arbitrary value or delete an arbitrary element, which take O(n) without an extra index map. It also doesn't give sorted order; iterating over its array is not sorted.
 
-Q: How do you get a max-heap in Python and a min-heap in C++?
-A: Python's heapq is a min-heap, so push negated values (or negate the key). C++'s priority_queue is a max-heap, so declare it with greater<T> as the comparator for a min-heap.
+Q: How do you make std::priority_queue a min-heap, and why does the comparator look reversed?
+A: Declare priority_queue<T, vector<T>, greater<T>>. The comparator answers whether a has lower priority than b, and the top is the element nothing outranks, so less<T> gives a max-heap and greater<T> a min-heap.
 
 ## dsa.heaps.top-k-elements
 name: "Top K elements"
@@ -193,24 +179,6 @@ vector<vector<int>> kClosest(const vector<vector<int>>& pts, int k) {
     while (!heap.empty()) { out.push_back(pts[heap.top().second]); heap.pop(); }
     return out;
 }
-```
-
-```python
-import heapq
-from collections import Counter
-
-def top_k_frequent_words(words, k):
-    """Most frequent first; ties in alphabetical order."""
-    count = Counter(words)
-    return heapq.nsmallest(k, count, key=lambda w: (-count[w], w))
-
-def kth_largest_stream(k, stream):
-    heap = []
-    for x in stream:
-        heapq.heappush(heap, x)
-        if len(heap) > k:
-            heapq.heappop(heap)
-        yield heap[0] if len(heap) == k else None   # current kth largest
 ```
 
 #### Complexity
@@ -342,35 +310,6 @@ vector<int> smallestRange(const vector<vector<int>>& lists) {
 }
 ```
 
-```python
-import heapq
-
-def merge_k_sorted(lists):
-    heap = [(lst[0], i, 0) for i, lst in enumerate(lists) if lst]
-    heapq.heapify(heap)
-    out = []
-    while heap:
-        v, i, j = heapq.heappop(heap)
-        out.append(v)
-        if j + 1 < len(lists[i]):
-            heapq.heappush(heap, (lists[i][j + 1], i, j + 1))
-    return out
-
-def k_smallest_pairs(a, b, k):
-    """k pairs (x, y), x from a and y from b (both sorted), with the smallest sums."""
-    if not a or not b:
-        return []
-    heap = [(a[i] + b[0], i, 0) for i in range(min(k, len(a)))]
-    heapq.heapify(heap)
-    out = []
-    while heap and len(out) < k:
-        _, i, j = heapq.heappop(heap)
-        out.append((a[i], b[j]))
-        if j + 1 < len(b):
-            heapq.heappush(heap, (a[i] + b[j + 1], i, j + 1))
-    return out
-```
-
 #### Complexity
 
 $O(N \log k)$ time for a full merge (each element pushed and popped once), $O(k)$ extra space besides the output. Smallest range: $O(N \log k)$. K smallest pairs: $O(k \log k)$.
@@ -379,7 +318,7 @@ $O(N \log k)$ time for a full merge (each element pushed and popped once), $O(k)
 
 - Empty lists: skip them when seeding the heap (and in smallest range, the problem usually guarantees non-empty lists).
 - Stop the smallest-range loop as soon as the popped list is exhausted: without an element from that list, no further range covers all lists.
-- Tuples in Python: include the list index so equal values never compare payloads.
+- Keep the list index in each heap entry, `{value, list, position}`, so you know where to take the next element from.
 
 #### Variants
 
@@ -483,39 +422,6 @@ public:
 };
 ```
 
-```python
-import heapq
-
-class MedianFinder:
-    def __init__(self):
-        self.low = []    # max-heap via negated values
-        self.high = []   # min-heap
-
-    def add(self, x):
-        heapq.heappush(self.low, -x)
-        heapq.heappush(self.high, -heapq.heappop(self.low))
-        if len(self.high) > len(self.low):
-            heapq.heappush(self.low, -heapq.heappop(self.high))
-
-    def median(self):
-        if len(self.low) > len(self.high):
-            return -self.low[0]
-        return (-self.low[0] + self.high[0]) / 2
-
-def maximize_capital(k, w, profits, capital):
-    """Pick at most k projects; each needs capital <= w and adds its profit to w."""
-    locked = sorted(zip(capital, profits))
-    available, i = [], 0
-    for _ in range(k):
-        while i < len(locked) and locked[i][0] <= w:
-            heapq.heappush(available, -locked[i][1])   # max-heap of affordable profits
-            i += 1
-        if not available:
-            break
-        w -= heapq.heappop(available)
-    return w
-```
-
 #### Why pushing through `low` first works
 
 Pushing into `low` and immediately moving `low`'s maximum to `high` guarantees the ordering invariant (everything in `low` ≤ everything in `high`) without comparing against the tops by hand. The final size check restores the size invariant. Each add does at most three heap operations: $O(\log n)$.
@@ -528,7 +434,7 @@ Add: $O(\log n)$. Median: $O(1)$. Space $O(n)$. Sliding window median with lazy 
 
 - Integer overflow when averaging two large ints: average in floating point or `a + (b - a) / 2`.
 - Median of an empty structure: define the behavior.
-- Python's negation trick: remember to negate when reading `low`.
+- Mixing up the two heaps' orders: `low` is a max-heap (the default `priority_queue`), `high` a min-heap (`greater<>`).
 
 #### Variants
 
@@ -638,7 +544,7 @@ scope: "stale entries, indexed heap idea"
 Heaps usually can't remove an item from the middle or change its priority quickly. Lazy deletion works around this: instead of removing an outdated item, you leave it in place and throw it away later when it reaches the top, like ignoring expired coupons only when you pull them out of the drawer. A custom comparator tells the heap what "best" means for your data.
 
 ### interview
-- Custom order: C++ `priority_queue<T, vector<T>, Cmp>` where `Cmp(a, b)` returns true if `a` has **lower** priority (so `greater<>` makes a min-heap); Java `new PriorityQueue<>((a, b) -> ...)`; Python tuples `(key1, key2, payload)`.
+- Custom order: C++ `priority_queue<T, vector<T>, Cmp>` where `Cmp(a, b)` returns true if `a` has **lower** priority (so `greater<>` makes a min-heap); or push `tuple<key1, key2, payload>` and let tuples compare in order.
 - **Lazy deletion**: when a priority changes or an item is removed, push a new entry (or record the deletion) and skip stale entries when they surface at the top. Dijkstra does this: skip a popped node whose distance is larger than the best known.
 - Stale entries can make the heap grow to O(total pushes); rebuild when stale entries dominate.
 - **Indexed heap**: keep each item's position in the heap array so decrease-key and delete are O(log n); more code, less memory.

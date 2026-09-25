@@ -15,7 +15,7 @@ scope: "interleaving vs simultaneous execution"
 name: "Creating threads"
 importance: must
 prereqs: [conc.basics.concurrency-vs-parallelism]
-scope: "std::thread, Java threads and executors, Python threading"
+scope: "std::thread, std::jthread, std::async and thread pools"
 
 ## conc.basics.data-races-vs-race-conditions
 name: "Data races vs race conditions"

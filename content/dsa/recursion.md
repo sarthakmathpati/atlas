@@ -18,7 +18,7 @@ A recursive function solves a problem by calling itself on a smaller version of 
 - Two parts: a **base case** that answers directly, and a **recursive case** that reduces the problem and combines the smaller answer.
 - Every call must make progress toward a base case, or the recursion never ends (stack overflow).
 - **Trust the recursion** (the "leap of faith"): assume the call on the smaller input returns the right answer, and only check how you use it.
-- Each active call takes a **stack frame**; depth d costs O(d) space. Default limits: Python about 1,000 frames; C++ and Java depend on stack size (roughly 10⁴ to 10⁵ frames).
+- Each active call takes a **stack frame**; depth d costs O(d) space. The limit is the stack size (commonly 8 MB on Linux, 1 MB on Windows), roughly 10⁴ to 10⁶ frames depending on frame size.
 - Decide what the function **returns** and what it takes as **parameters** before writing it: say it in one sentence.
 - Pass results up through return values or accumulate into a parameter (a result list passed by reference).
 
@@ -70,19 +70,6 @@ void collectLeaves(Node* root, vector<int>& out) {
 }
 ```
 
-```python
-def digit_sum(n):
-    return n if n < 10 else n % 10 + digit_sum(n // 10)
-
-def power_set_sizes(items):
-    """Returns how many subsets have each size, using recursion on the rest of the list."""
-    if not items:
-        return [1]                       # the empty set: one subset of size 0
-    rest = power_set_sizes(items[1:])    # trust: counts for the smaller list
-    with_first = [0] + rest              # adding the first item shifts every size by one
-    return [a + b for a, b in zip(rest + [0], with_first)]
-```
-
 #### Complexity
 
 Time is the sum of the work over all calls (draw the recursion tree). Space is the maximum depth times the frame size, plus anything the calls allocate. `digitSum` is $O(\log_{10} n)$ time and space.
@@ -91,9 +78,9 @@ Time is the sum of the work over all calls (draw the recursion tree). Space is t
 
 - **Missing or unreachable base case**: `f(n) = f(n - 2)` with odd `n` and base case `n == 0` never stops.
 - **Not shrinking the input**: calling `f(n)` from `f(n)` with the same arguments.
-- **Deep recursion**: a linked list of $10^5$ nodes recursed node by node can overflow the stack; use iteration, or raise the limit carefully (`sys.setrecursionlimit` in Python).
+- **Deep recursion**: a linked list of $10^5$ nodes recursed node by node can overflow the stack; use iteration, or raise the stack size carefully (`ulimit -s`, or a thread created with a bigger stack).
 - **Shared mutable state**: appending to a list and forgetting to remove (see backtracking).
-- **Slicing** in Python (`items[1:]`) copies, adding $O(n)$ per call; pass an index instead when performance matters.
+- **Copying** containers per call (passing a `vector` by value, or building a sub-vector) adds $O(n)$ per call; pass `const&` and an index instead.
 
 #### Variants
 
@@ -115,7 +102,7 @@ Q: What is the space complexity of a recursive function with no extra data struc
 A: O(maximum recursion depth), because that many frames are on the stack at once. For recursion over a balanced tree it is O(log n); for recursion that decreases n by one each time it is O(n).
 
 Q: When should you prefer iteration over recursion?
-A: When the recursion would be very deep (long lists, large n with n − 1 steps), when the language has a low recursion limit such as Python's 1,000, or when the iterative version is just as clear. Tree and divide-and-conquer problems are usually clearer recursively.
+A: When the recursion would be very deep (long lists, large n with n − 1 steps), when the depth could overflow the call stack, or when the iterative version is just as clear. Tree and divide-and-conquer problems are usually clearer recursively.
 
 ## dsa.recursion.recursion-tree-thinking
 name: "Recursion tree thinking"
@@ -186,19 +173,6 @@ long long fibNaive(int n) {
     return n < 2 ? n : fibNaive(n - 1) + fibNaive(n - 2);
 }
 // fibNaive(30) makes 2,692,537 calls; the memoized version makes 59.
-```
-
-```python
-from collections import Counter
-
-def label_counts(n):
-    """How many times each argument appears in the naive Fibonacci tree."""
-    seen = Counter()
-    def fib(k):
-        seen[k] += 1
-        return k if k < 2 else fib(k - 1) + fib(k - 2)
-    fib(n)
-    return seen
 ```
 
 #### How to use the tree in an interview
@@ -292,32 +266,6 @@ long long maxSubarrayDC(const vector<int>& a, int lo, int hi) {
 }
 ```
 
-```python
-def fast_pow(x, n, mod):
-    if n == 0:
-        return 1 % mod
-    half = fast_pow(x, n // 2, mod)
-    result = half * half % mod
-    return result * x % mod if n % 2 else result
-
-def max_subarray_dc(a, lo=0, hi=None):
-    if hi is None:
-        hi = len(a) - 1
-    if lo == hi:
-        return a[lo]
-    mid = (lo + hi) // 2
-    best_left_part = cur = float("-inf")
-    s = 0
-    for i in range(mid, lo - 1, -1):
-        s += a[i]
-        best_left_part = max(best_left_part, s)
-    s = 0
-    for i in range(mid + 1, hi + 1):
-        s += a[i]
-        cur = max(cur, s)
-    return max(max_subarray_dc(a, lo, mid), max_subarray_dc(a, mid + 1, hi), best_left_part + cur)
-```
-
 #### Complexity
 
 - Fast power: $T(n) = T(n/2) + O(1) = O(\log n)$.
@@ -377,9 +325,9 @@ Any recursive function can be rewritten as a loop by keeping your own stack of p
 ### interview
 - Replace the call stack with an **explicit stack** (a vector or deque) holding what each frame needs: arguments and, if necessary, how far it got.
 - Order matters: push children in reverse to process them in the original order (for preorder DFS, push right then left).
-- **Tail recursion**: the recursive call is the last action, with nothing left to do after it. It can become a loop that updates the parameters. C++ compilers may optimize it; Java and Python never do.
+- **Tail recursion**: the recursive call is the last action, with nothing left to do after it. It can become a loop that updates the parameters. C++ compilers often optimize it at -O2, but the standard doesn't guarantee it, so don't rely on it.
 - Postorder (work after the children) needs a visited flag or two stacks.
-- Reasons to convert: deep recursion (stack overflow), languages with small limits (Python's 1,000), or needing to pause and resume (iterators).
+- Reasons to convert: deep recursion (stack overflow), small stacks (threads, embedded systems), or needing to pause and resume (iterators).
 
 ### questions
 Q: How do you convert a recursive DFS into an iterative one?
@@ -388,8 +336,8 @@ A: Push the start node onto an explicit stack. While the stack isn't empty, pop 
 Q: What is tail recursion?
 A: A recursive call that is the final action of the function, so its result is returned directly with no further work. Such a function can be turned into a loop by reassigning the parameters, and some compilers do this automatically (tail-call optimization).
 
-Q: Does Python or Java optimize tail recursion?
-A: No. Neither performs tail-call optimization, so deep tail recursion still overflows. Convert it to a loop yourself.
+Q: Can you rely on tail-call optimization in C++?
+A: No. GCC and Clang often turn tail calls into jumps at -O2, but the standard doesn't require it, debug builds don't do it, and destructors of local objects can prevent it. Convert deep tail recursion into a loop yourself.
 
 Q: How do you do an iterative postorder traversal?
 A: One way is to push (node, visited) pairs: the first time a node is popped, push it back marked visited and then push its children; when a visited node is popped, process it. Another is to do a modified preorder (root, right, left) and reverse the output.
@@ -407,7 +355,7 @@ Memoization means remembering the answer to a question the first time you work i
 - Add a cache keyed by the function's arguments: check it first, compute on a miss, store before returning.
 - Only valid when the result depends **only on the arguments** (a pure function), not on outside mutable state.
 - Cost becomes **number of distinct states × work per state**: naive Fibonacci O(φⁿ) becomes O(n).
-- Keys: arrays for small integer arguments, hash maps (or tuples in Python) otherwise. Python: `@functools.cache` / `lru_cache`.
+- Keys: arrays for small integer arguments, hash maps otherwise (encode several arguments into one integer key, or use `map<tuple<...>, T>`).
 - Memoization is **top-down DP**: it computes only the states actually reached; tabulation (bottom-up) fills every state in order.
 - Recursion depth still applies; very deep memoized recursions may need to become bottom-up.
 
@@ -422,4 +370,4 @@ Q: What is the relationship between memoization and dynamic programming?
 A: Memoization is top-down dynamic programming: a recursion with a cache, which computes only the states it reaches. Tabulation is bottom-up DP, which fills a table in an order that guarantees each state's dependencies are ready. Both exploit overlapping subproblems.
 
 Q: How do you choose the cache structure?
-A: If the arguments are small integers with known bounds, use an array (fastest), initialized to a sentinel such as −1. Otherwise use a hash map keyed by the arguments, or in Python decorate the function with functools.cache.
+A: If the arguments are small integers with known bounds, use an array (fastest), initialized to a sentinel such as −1. Otherwise use a hash map keyed by the arguments.

@@ -79,33 +79,6 @@ public:
 };
 ```
 
-```python
-class Trie:
-    def __init__(self):
-        self.root = {}
-
-    def insert(self, word):
-        node = self.root
-        for c in word:
-            node = node.setdefault(c, {})
-        node["$"] = True                    # end-of-word marker
-
-    def _walk(self, s):
-        node = self.root
-        for c in s:
-            if c not in node:
-                return None
-            node = node[c]
-        return node
-
-    def search(self, word):
-        node = self._walk(word)
-        return node is not None and "$" in node
-
-    def starts_with(self, prefix):
-        return self._walk(prefix) is not None
-```
-
 In the C++ version, `nodes.emplace_back()` can reallocate the vector, which is why the code stores indices, not references, across the call.
 
 #### Complexity
@@ -233,29 +206,6 @@ public:
 };
 ```
 
-```python
-class WordDictionary:
-    """add(word) and search(pattern) where '.' matches any letter."""
-    def __init__(self):
-        self.root = {}
-
-    def add(self, word):
-        node = self.root
-        for c in word:
-            node = node.setdefault(c, {})
-        node["$"] = True
-
-    def search(self, pattern):
-        def dfs(node, i):
-            if i == len(pattern):
-                return "$" in node
-            c = pattern[i]
-            if c == ".":
-                return any(dfs(child, i + 1) for k, child in node.items() if k != "$")
-            return c in node and dfs(node[c], i + 1)
-        return dfs(self.root, 0)
-```
-
 #### Complexity
 
 - Wildcard search: $O(L)$ without dots; with dots, up to the number of trie nodes in the worst case.
@@ -374,20 +324,6 @@ int findMaximumXOR(const vector<int>& nums) {
     for (int x : nums) { insert(x); best = max(best, bestWith(x)); }  // pairs with earlier ones
     return best;
 }
-```
-
-```python
-def max_xor_prefix_method(nums):
-    """Alternative without a trie: build the answer bit by bit with a set of prefixes."""
-    answer = 0
-    for b in range(max(nums).bit_length() - 1, -1, -1):
-        prefixes = {x >> b for x in nums}
-        candidate = (answer << 1) | 1                  # try to set this bit
-        if any((candidate ^ p) in prefixes for p in prefixes):
-            answer = candidate
-        else:
-            answer <<= 1
-    return answer
 ```
 
 The prefix-set version uses the same greedy (decide the highest bit first) with $O(n \cdot B)$ time and no trie.

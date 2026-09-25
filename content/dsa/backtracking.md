@@ -76,27 +76,6 @@ vector<vector<int>> subsetsBitmask(const vector<int>& a) {
 }
 ```
 
-```python
-def subsets_include_exclude(a):
-    out, cur = [], []
-    def go(i):
-        if i == len(a):
-            out.append(cur[:])       # copy: cur keeps changing
-            return
-        go(i + 1)                    # exclude a[i]
-        cur.append(a[i])             # include a[i]
-        go(i + 1)
-        cur.pop()
-    go(0)
-    return out
-
-def subsets_iterative(a):
-    out = [[]]
-    for x in a:
-        out += [s + [x] for s in out]
-    return out
-```
-
 #### Complexity
 
 $2^n$ subsets, each copied in $O(n)$: $O(n \cdot 2^n)$ time and output size. Recursion depth $O(n)$. For $n = 20$ that is about 20 million element copies, which is fine; for $n = 30$ it is not.
@@ -212,25 +191,6 @@ vector<vector<int>> permuteUnique(vector<int> a) {
     permute(a, used, cur, out);
     return out;
 }
-```
-
-```python
-def permutations_by_swapping(a):
-    a, out = list(a), []
-    def go(i):
-        if i == len(a):
-            out.append(a[:])
-            return
-        seen = set()                      # avoids duplicate values at this position
-        for j in range(i, len(a)):
-            if a[j] in seen:
-                continue
-            seen.add(a[j])
-            a[i], a[j] = a[j], a[i]
-            go(i + 1)
-            a[i], a[j] = a[j], a[i]       # swap back
-    go(0)
-    return out
 ```
 
 #### Why the duplicate rule works
@@ -352,26 +312,6 @@ void chooseK(int n, int k, int start, vector<int>& cur, vector<vector<int>>& out
 }
 ```
 
-```python
-def combination_sum_once(candidates, target):
-    """Each candidate used at most once; the input may contain duplicates."""
-    c, out, cur = sorted(candidates), [], []
-    def go(start, remaining):
-        if remaining == 0:
-            out.append(cur[:])
-            return
-        for j in range(start, len(c)):
-            if j > start and c[j] == c[j - 1]:
-                continue                     # same value already tried at this level
-            if c[j] > remaining:
-                break
-            cur.append(c[j])
-            go(j + 1, remaining - c[j])
-            cur.pop()
-    go(0, target)
-    return out
-```
-
 #### Complexity
 
 Choose-k produces $\binom{n}{k}$ results in $O(k \binom{n}{k})$ time. Combination sum with reuse is exponential in target / smallest candidate; pruning with sorting keeps it fast in practice. Depth is at most $k$ or target / smallest candidate.
@@ -484,40 +424,6 @@ vector<vector<int>> subsetsII(vector<int> a) {
 }
 ```
 
-```python
-def subsets_with_dup(a):
-    a, out, cur = sorted(a), [], []
-    def go(start):
-        out.append(cur[:])
-        for j in range(start, len(a)):
-            if j > start and a[j] == a[j - 1]:
-                continue
-            cur.append(a[j])
-            go(j + 1)
-            cur.pop()
-    go(0)
-    return out
-
-def permutations_with_dup_seen_set(a):
-    out, cur, used = [], [], [False] * len(a)
-    def go():
-        if len(cur) == len(a):
-            out.append(cur[:])
-            return
-        tried = set()                      # values already placed at this position
-        for j in range(len(a)):
-            if used[j] or a[j] in tried:
-                continue
-            tried.add(a[j])
-            used[j] = True
-            cur.append(a[j])
-            go()
-            cur.pop()
-            used[j] = False
-    go()
-    return out
-```
-
 #### Why `j > start` and not `j > 0`
 
 `j > 0` would also skip the second 2 when it is the first choice at a deeper level (start = 2), which removes valid answers like `[1, 2, 2]`. The duplicate is only a problem among siblings, which are the choices of the same loop, so compare with the previous candidate **in this loop**, meaning `j > start`.
@@ -600,23 +506,6 @@ bool exist(vector<vector<char>>& g, const string& w) {
             if (dfs(g, w, 0, r, c)) return true;
     return false;
 }
-```
-
-```python
-def exist(grid, word):
-    R, C = len(grid), len(grid[0])
-
-    def dfs(i, r, c):
-        if i == len(word):
-            return True
-        if not (0 <= r < R and 0 <= c < C) or grid[r][c] != word[i]:
-            return False
-        saved, grid[r][c] = grid[r][c], "#"
-        found = any(dfs(i + 1, r + dr, c + dc) for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-        grid[r][c] = saved
-        return found
-
-    return any(dfs(0, r, c) for r in range(R) for c in range(C))
 ```
 
 The `||` and `any` short-circuit, so the search stops at the first success; the cell is still restored before returning.
@@ -736,23 +625,6 @@ int countQueens(int n, int row = 0, int cols = 0, int d1 = 0, int d2 = 0) {
     }
     return count;
 }
-```
-
-```python
-def solve_n_queens(n):
-    cols, diag, anti, board, out = set(), set(), set(), [], []
-    def place(r):
-        if r == n:
-            out.append(["." * c + "Q" + "." * (n - c - 1) for c in board])
-            return
-        for c in range(n):
-            if c in cols or r - c in diag or r + c in anti:
-                continue
-            cols.add(c); diag.add(r - c); anti.add(r + c); board.append(c)
-            place(r + 1)
-            cols.remove(c); diag.remove(r - c); anti.remove(r + c); board.pop()
-    place(0)
-    return out
 ```
 
 In the bitmask version, shifting `d1` left and `d2` right moves each diagonal's attack one column over as you go down a row, and `full &` discards bits that fall off the board.

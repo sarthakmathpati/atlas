@@ -69,16 +69,6 @@ vector<int> twoSumIndices(const vector<int>& nums, long long target) {
 }
 ```
 
-```python
-def restate(problem, examples):
-    """A habit, not an algorithm: write the contract and small cases before solving."""
-    return {
-        "problem": problem,
-        "examples": examples,
-        "edge_cases": ["empty input", "one element", "duplicates", "negatives", "no answer"],
-    }
-```
-
 #### Pitfalls
 
 - Starting to code after reading the first sentence.
@@ -164,21 +154,6 @@ int longestUniqueOptimal(const string& s) {             // O(n): the start only 
     }
     return best;
 }
-```
-
-```python
-def optimize_checklist(bottleneck):
-    """Map a named bottleneck to the usual fix (a thinking aid)."""
-    fixes = {
-        "repeated search in unsorted data": "hash map or set",
-        "repeated search in sorted data": "binary search or two pointers",
-        "recomputing range sums": "prefix sums or a sliding window",
-        "recomputing the same subproblem": "memoization or DP",
-        "repeatedly finding the min or max": "heap or monotonic stack/deque",
-        "trying all pairs of sorted values": "two pointers",
-        "trying all subsets": "DP over sums or bitmask DP, or meet in the middle",
-    }
-    return fixes.get(bottleneck, "look for structure: sorting, monotonicity, or a graph model")
 ```
 
 #### Useful questions when stuck
@@ -297,21 +272,6 @@ vector<string> candidatePatterns(const string& statement) {
 }
 ```
 
-```python
-SIGNALS = {
-    "sorted": ["two pointers", "binary search"],
-    "subarray": ["sliding window", "prefix sums"],
-    "intervals": ["sort and sweep", "merge intervals"],
-    "dependencies": ["topological sort"],
-    "number of ways": ["dynamic programming"],
-    "minimize the maximum": ["binary search on the answer"],
-}
-
-def suggest(statement):
-    text = statement.lower()
-    return sorted({p for key, patterns in SIGNALS.items() if key in text for p in patterns})
-```
-
 #### Pitfalls
 
 - Pattern-matching on one keyword and ignoring constraints that rule the pattern out.
@@ -409,22 +369,6 @@ bool stressTest(int rounds) {
 }
 ```
 
-```python
-import random
-
-def stress(fast, brute, gen, rounds=1000, seed=1):
-    """Return the first input where fast and brute disagree, or None."""
-    rng = random.Random(seed)
-    for _ in range(rounds):
-        case = gen(rng)
-        if fast(case) != brute(case):
-            return case
-    return None
-
-# stress(lambda a: sorted(a), lambda a: sorted(a, reverse=True)[::-1],
-#        lambda rng: [rng.randint(-5, 5) for _ in range(rng.randint(0, 6))])
-```
-
 #### What to trace
 
 1. The given example (confirms the main logic).
@@ -511,22 +455,7 @@ int absSafe(int x) {                        // abs(INT_MIN) overflows; decide wh
 }
 ```
 
-```python
-def edge_cases_for_array(max_value=10**9):
-    """A reusable list of array inputs to try on any array function."""
-    return [
-        [],                      # empty
-        [5],                     # single element
-        [2, 2, 2],               # all equal
-        [-3, -1, -2],            # all negative
-        [1, 2, 3, 4],            # sorted
-        [4, 3, 2, 1],            # reverse sorted
-        [max_value, max_value],  # large values (overflow in fixed-width languages)
-        [0, 0, 1],               # zeros
-    ]
-```
-
-Python integers don't overflow, but the same inputs still expose logic errors and matter when you write C++ or Java.
+The same inputs also expose logic errors unrelated to overflow, such as an empty result or a flipped sign.
 
 #### Where each category bites
 
@@ -627,14 +556,6 @@ int shortestWindowContaining(const string& s, const string& t) {
     }
     return best == INT_MAX ? -1 : best;
 }
-```
-
-```python
-def explain_complexity(time, space, notes=""):
-    """A habit: always pair the algorithm with its costs and what n means."""
-    return f"Time {time}, space {space}. {notes}".strip()
-
-# explain_complexity("O(n)", "O(k)", "n is the length of s, k the alphabet size")
 ```
 
 #### Pitfalls

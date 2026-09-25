@@ -19,7 +19,7 @@ An adapter wraps an object so it fits an interface it was not built for. A trave
 - Typical use: integrating a **legacy class or third-party library** whose API you cannot change behind your own interface (`PaymentGateway`, `TemperatureSensor`).
 - **Object adapter**: holds the adaptee and delegates (composition; the usual choice). **Class adapter**: inherits from both the target and the adaptee (needs multiple inheritance, as in C++).
 - The adapter may also convert data: units, formats, error codes into exceptions, callbacks into return values.
-- Library examples: Java's `InputStreamReader` (bytes to characters) and `Arrays.asList` (array to `List`); C++ `std::stack` and `std::queue` are container adapters over `deque`.
+- Library examples: `std::stack`, `std::queue` and `std::priority_queue` are container adapters over `deque` or `vector`; `std::reverse_iterator` adapts an iterator to walk backwards; `std::back_inserter` makes a container look like an output iterator.
 - Adapter vs facade vs decorator: an adapter **changes** one interface to another; a facade **simplifies** a whole subsystem; a decorator **keeps** the interface and adds behavior.
 
 ### deep
@@ -62,32 +62,6 @@ int main() {
 }
 ```
 
-```python
-class LegacyPayments:                    # third-party API: amounts in paise, returns codes
-    def make_payment(self, paise, account):
-        return 0 if paise > 0 else 17    # 0 means success
-
-
-class PaymentGateway:                    # our interface
-    def charge(self, rupees, account):
-        raise NotImplementedError
-
-
-class LegacyPaymentsAdapter(PaymentGateway):
-    def __init__(self, legacy):
-        self.legacy = legacy
-
-    def charge(self, rupees, account):
-        code = self.legacy.make_payment(round(rupees * 100), account)
-        if code != 0:                    # translate error codes into exceptions
-            raise RuntimeError(f"payment failed with code {code}")
-        return True
-
-
-gateway = LegacyPaymentsAdapter(LegacyPayments())
-print(gateway.charge(499.5, "acct-1"))   # True
-```
-
 #### Worked example: what the adapter translates
 
 | our call | adapter does | legacy call | result back to us |
@@ -97,7 +71,7 @@ print(gateway.charge(499.5, "acct-1"))   # True
 
 Names, units and error style all change in one class. If the vendor is replaced, only the adapter is rewritten.
 
-#### Class adapter (C++ only)
+#### Class adapter
 
 ```cpp
 class Target { public: virtual ~Target() = default; virtual string request() const = 0; };
@@ -130,7 +104,7 @@ Q: How is an adapter different from a facade?
 A: An adapter converts one existing interface into another specific interface a client already expects. A facade defines a new, simpler interface over a whole subsystem of many classes to make it easier to use.
 
 Q: Give examples of adapters in standard libraries.
-A: Java's InputStreamReader adapts a byte stream to a character reader, and Arrays.asList adapts an array to the List interface. In C++, std::stack, std::queue and std::priority_queue are container adapters that present a restricted interface over another container.
+A: std::stack, std::queue and std::priority_queue are container adapters that present a restricted interface over another container. std::reverse_iterator adapts an iterator to walk backwards, and std::back_inserter lets algorithms such as std::copy append to a container as if it were an output iterator.
 
 Q: When would you use an adapter in a system design or LLD interview?
 A: When integrating a third-party service, such as a payment provider or SMS vendor, behind your own interface. Each vendor gets an adapter, so the core code never depends on vendor APIs and providers can be swapped or added.
@@ -147,9 +121,9 @@ A decorator adds a feature to an object by wrapping it in another object with th
 - Intent: **attach extra responsibilities to an object dynamically** by wrapping it in objects that implement the **same interface** and forward to the wrapped object.
 - Solves **subclass explosion**: logging, caching and retrying in every combination would need 2³ subclasses, but only three decorators.
 - Decorators **stack**, and **order matters**: caching outside retrying differs from retrying outside caching.
-- Classic example: Java I/O, `new BufferedReader(new InputStreamReader(new FileInputStream(path)))`. Also middleware chains in web frameworks.
+- Classic examples: middleware chains in web servers, and stream filter chains (Boost.Iostreams stacks compression or encryption filters on a stream).
 - Decorator vs proxy: both wrap with the same interface; a decorator **adds behavior** chosen by the client, a proxy **controls access** to the real object and often manages its lifecycle. Decorator vs inheritance: behavior is added at runtime, per object.
-- Python's `@decorator` syntax wraps functions, the same idea applied to functions; `functools.lru_cache` is a caching decorator.
+- The same idea works for functions: a higher-order function takes a callable and returns a wrapped callable with the same signature (logging, timing, memoizing).
 
 ### deep
 #### Intuition
@@ -236,32 +210,38 @@ int main() {
 
 Swap the order to `Caching(Logging(...))` and the second call would not print, because the cache answers before the logger is reached.
 
-#### Python
+#### Decorating functions
 
-```python
-import functools
+```cpp
+template <class F>
+auto logged(string name, F f) {                       // wraps any callable with logging
+    return [name, f](auto... args) mutable {
+        cout << "call " << name << "\n";
+        return f(args...);
+    };
+}
 
+template <class F>
+auto memoized(F f) {                                  // wraps a function of int with a cache
+    return [f, cache = map<int, long long>{}](int n) mutable {
+        auto it = cache.find(n);
+        if (it == cache.end()) it = cache.emplace(n, f(n)).first;
+        return it->second;
+    };
+}
 
-def logged(fn):                             # a function decorator: same idea, for functions
-    @functools.wraps(fn)
-    def wrapper(*args):
-        print(f"call {fn.__name__}{args}")
-        return fn(*args)
-    return wrapper
-
-
-@logged
-@functools.lru_cache(maxsize=None)          # caching, applied first (innermost)
-def square(n):
-    return n * n
-
-
-print(square(4), square(4))                 # logs twice, computes once
+int main() {
+    int computed = 0;
+    auto square = [&computed](int n) { ++computed; return 1LL * n * n; };
+    auto fast = logged("square", memoized(square));  // caching innermost, logging outside
+    long long a = fast(4), b = fast(4);              // logs twice, computes once
+    cout << a << " " << b << " computed " << computed << "\n";   // 16 16 computed 1
+}
 ```
 
 #### Pitfalls
 
-- Code that checks the concrete type (`instanceof FlakyNetwork`) breaks once the object is wrapped.
+- Code that checks the concrete type (`dynamic_cast<FlakyNetwork*>`) breaks once the object is wrapped.
 - Long stacks are hard to debug; keep each decorator small and name it clearly.
 - The interface must be small enough that forwarding every method is practical; a base decorator class that forwards by default helps.
 - Identity: the wrapped object is not `==` to the original.
@@ -281,8 +261,8 @@ A: Yes. Each decorator sees the call before the ones inside it. For example, a c
 Q: How is a decorator different from a proxy?
 A: Both wrap an object with the same interface. A decorator's purpose is adding behavior, and clients compose decorators themselves. A proxy's purpose is controlling access to the real object, for example lazy creation, permission checks or remote calls, and it often manages the real object's lifecycle.
 
-Q: Where does Java's standard library use the decorator pattern?
-A: In java.io: BufferedInputStream, DataInputStream and GZIPInputStream wrap another InputStream and add buffering, typed reads or decompression. Collections.unmodifiableList and synchronizedList also wrap a list and change its behavior.
+Q: Where do decorators show up in everyday C++ code?
+A: Wrappers that hold an object through its interface and implement the same interface: a logging or caching wrapper around a repository, a retrying HTTP client, or a stream filter that compresses what passes through. For functions, a higher-order function that returns a wrapped callable, such as a memoizing wrapper, is the same idea.
 
 ## oop.patterns-structural.facade
 name: "Facade"
@@ -296,7 +276,7 @@ A facade is one simple entrance to a complicated set of parts. When you press "s
 - Intent: provide a **unified, simplified interface to a subsystem** of many classes, so common tasks take one call.
 - It reduces coupling: clients depend on the facade, not on ten subsystem classes, and the subsystem can change behind it.
 - It does **not hide** the subsystem completely; advanced clients can still use the parts directly.
-- Examples: a `VideoConverter.convert(file, format)` over codecs, bitrate readers and mixers; an `OrderFacade.placeOrder()` over inventory, payment and shipping; a library's top-level function such as `requests.get`.
+- Examples: a `VideoConverter.convert(file, format)` over codecs, bitrate readers and mixers; an `OrderFacade.placeOrder()` over inventory, payment and shipping; a library's one-call helper such as `download(address)` over sockets, TLS and HTTP parsing.
 - Facade vs adapter: a facade **defines a new, simpler interface** over many classes; an adapter **matches an existing interface** for one class. Facade vs mediator: a facade is one-way (clients call in); a mediator coordinates two-way talk among peers.
 - Watch out for a facade that becomes a **god object** with every operation of the system.
 
@@ -307,49 +287,66 @@ Placing an order touches inventory, pricing, payment, shipping and notifications
 
 #### Code
 
-```python
-class Inventory:
-    def __init__(self):
-        self.stock = {"pen": 5}
+```cpp
+class Inventory {
+    map<string, int> stock{{"pen", 5}};
+public:
+    void reserve(const string& item, int qty) {
+        if (stock[item] < qty) throw runtime_error("out of stock");
+        stock[item] -= qty;
+    }
+};
 
-    def reserve(self, item, qty):
-        if self.stock.get(item, 0) < qty:
-            raise ValueError("out of stock")
-        self.stock[item] -= qty
+class Payments {
+public:
+    string charge(const string& user, int amount) {
+        return "txn-" + user + "-" + to_string(amount);
+    }
+};
 
+class Shipping {
+public:
+    string schedule(const string& user, const string& item) {
+        return "ship " + item + " to " + user;
+    }
+};
 
-class Payments:
-    def charge(self, user, amount):
-        return f"txn-{user}-{amount}"
+class Notifier {
+public:
+    void send(const string& user, const string& text) {
+        cout << "notify " << user << ": " << text << "\n";
+    }
+};
 
+class OrderFacade {                                   // one simple entry point
+    Inventory& inventory;
+    Payments& payments;
+    Shipping& shipping;
+    Notifier& notifier;
+    map<string, int> prices{{"pen", 20}};
+public:
+    OrderFacade(Inventory& i, Payments& p, Shipping& s, Notifier& n)
+        : inventory(i), payments(p), shipping(s), notifier(n) {}
 
-class Shipping:
-    def schedule(self, user, item):
-        return f"ship {item} to {user}"
+    string placeOrder(const string& user, const string& item, int qty) {
+        inventory.reserve(item, qty);
+        string txn = payments.charge(user, prices.at(item) * qty);
+        string plan = shipping.schedule(user, item);
+        notifier.send(user, plan + " (" + txn + ")");
+        return txn;
+    }
+};
 
-
-class Notifier:
-    def send(self, user, text):
-        print(f"notify {user}: {text}")
-
-
-class OrderFacade:                                   # one simple entry point
-    PRICES = {"pen": 20}
-
-    def __init__(self, inventory, payments, shipping, notifier):
-        self.inventory, self.payments = inventory, payments
-        self.shipping, self.notifier = shipping, notifier
-
-    def place_order(self, user, item, qty):
-        self.inventory.reserve(item, qty)
-        txn = self.payments.charge(user, self.PRICES[item] * qty)
-        plan = self.shipping.schedule(user, item)
-        self.notifier.send(user, f"{plan} ({txn})")
-        return txn
-
-
-shop = OrderFacade(Inventory(), Payments(), Shipping(), Notifier())
-print(shop.place_order("asha", "pen", 2))            # txn-asha-40
+int main() {
+    Inventory inv;
+    Payments pay;
+    Shipping ship;
+    Notifier note;
+    OrderFacade shop(inv, pay, ship, note);
+    cout << shop.placeOrder("asha", "pen", 2) << "\n";
+    // notify asha: ship pen to asha (txn-asha-40)
+    // txn-asha-40
+}
 ```
 
 ```cpp
@@ -378,7 +375,7 @@ int main() {
 
 | without the facade, a controller must know | with the facade |
 |---|---|
-| reserve stock before charging | `place_order(user, item, qty)` |
+| reserve stock before charging | `placeOrder(user, item, qty)` |
 | how to compute the price | |
 | how to build a shipping request | |
 | to notify only after all succeed | |
@@ -427,7 +424,7 @@ A proxy is a stand-in that controls access to the real object. A receptionist an
 - Kinds: **virtual proxy** (create an expensive object lazily, on first use), **protection proxy** (check permissions), **caching proxy** (reuse results), **remote proxy** (a local stub that forwards calls over the network, as in RPC and gRPC clients), **smart reference** (counting, locking; `shared_ptr` is one).
 - The client cannot tell the proxy from the real subject, so it can be introduced without changing client code.
 - Proxy vs decorator: same structure; a proxy **manages access or lifecycle** and often creates the subject itself, while a decorator **adds features** and is composed by the client.
-- Real uses: ORM lazy-loaded associations (Hibernate proxies), Spring's transactional proxies, JavaScript's `Proxy` object, CDN and reverse proxies at system scale.
+- Real uses: `std::vector<bool>::reference` (a proxy for one bit), lazy-loaded records in ORMs, generated RPC client stubs, CDN and reverse proxies at system scale.
 - Watch out for hidden latency (a remote proxy looks like a cheap local call) and for thread safety in lazy initialization.
 
 ### deep
@@ -490,44 +487,55 @@ int main() {
 | second `draw()` of b | proxy only | reused | proxy only |
 | locked `draw()` of a | proxy only (denied) | loaded | proxy only |
 
-#### Caching proxy in Python
+#### Caching proxy
 
-```python
-class WeatherService:
-    def __init__(self):
-        self.calls = 0
+```cpp
+class Weather {
+public:
+    virtual ~Weather() = default;
+    virtual string forecast(const string& city) = 0;
+};
 
-    def forecast(self, city):
-        self.calls += 1                      # pretend this is a slow network call
-        return f"{city}: sunny"
+class WeatherService : public Weather {
+public:
+    int calls = 0;
+    string forecast(const string& city) override {
+        ++calls;                                      // pretend this is a slow network call
+        return city + ": sunny";
+    }
+};
 
+class CachedWeather : public Weather {                // same interface, controls access
+    Weather& service;
+    unordered_map<string, string> cache;
+public:
+    explicit CachedWeather(Weather& s) : service(s) {}
+    string forecast(const string& city) override {
+        auto it = cache.find(city);
+        if (it == cache.end()) it = cache.emplace(city, service.forecast(city)).first;
+        return it->second;
+    }
+};
 
-class CachedWeather:                         # same interface, controls access to the service
-    def __init__(self, service):
-        self._service = service
-        self._cache = {}
-
-    def forecast(self, city):
-        if city not in self._cache:
-            self._cache[city] = self._service.forecast(city)
-        return self._cache[city]
-
-
-real = WeatherService()
-proxy = CachedWeather(real)
-proxy.forecast("Delhi"); proxy.forecast("Delhi"); proxy.forecast("Pune")
-print(real.calls)                            # 2
+int main() {
+    WeatherService real;
+    CachedWeather proxy(real);
+    proxy.forecast("Delhi");
+    proxy.forecast("Delhi");
+    proxy.forecast("Pune");
+    cout << real.calls << "\n";                       // 2
+}
 ```
 
 #### Remote proxies
 
-A gRPC or RMI client stub has the same methods as the server object, but each call serializes the arguments, sends them over the network and waits for the reply. It is convenient, and dangerous if callers forget that the "method call" can take 200 ms or fail with a timeout.
+A gRPC client stub has the same methods as the server object, but each call serializes the arguments, sends them over the network and waits for the reply. It is convenient, and dangerous if callers forget that the "method call" can take 200 ms or fail with a timeout.
 
 #### Pitfalls
 
 - Lazy initialization shared across threads needs synchronization.
 - Proxies that change semantics (a cache that serves stale data) must say so.
-- Identity and type checks (`instanceof RealImage`) fail on proxies.
+- Identity and type checks (`dynamic_cast<RealImage*>`) fail on proxies.
 
 Connects to: decorator, adapter, lazy loading, caching, smart pointers.
 
@@ -614,28 +622,6 @@ int main() {
     //     main.cpp (1200)
     //     util.cpp (800)
 }
-```
-
-```python
-class File:
-    def __init__(self, name, size):
-        self.name, self._size = name, size
-
-    def size(self):
-        return self._size
-
-
-class Folder:
-    def __init__(self, name, *children):
-        self.name, self.children = name, list(children)
-
-    def size(self):
-        return sum(child.size() for child in self.children)
-
-
-root = Folder("project", File("README.md", 300),
-              Folder("src", File("main.cpp", 1200), File("util.cpp", 800)))
-print(root.size())   # 2300
 ```
 
 #### Worked example: the recursion
@@ -779,7 +765,7 @@ The flyweight pattern saves memory by letting many objects share the parts they 
 - **Intrinsic state**: shared, context-free and **immutable** (a tree type's mesh and texture, a character's font glyph). **Extrinsic state**: unique per object, stored by the client or passed in (position, size).
 - A **flyweight factory** caches instances by key and returns the existing one when asked again.
 - Savings: memory falls from n × (intrinsic + extrinsic) to k × intrinsic + n × extrinsic, where k is the number of distinct kinds.
-- Everyday examples: Java's `Integer.valueOf` cache for -128 to 127, string interning, glyphs in text editors, tiles and particles in games.
+- Everyday examples: string interning (one shared copy per distinct string), glyphs in text editors, tiles and particles in games.
 - Costs: more complex code, and flyweights must be immutable because many clients share them; thread-safe factories need care.
 
 ### deep
@@ -829,14 +815,24 @@ Suppose a texture takes 1 MB and a position 8 bytes.
 | every tree stores its own texture | about 100,000 MB |
 | flyweight | 3 MB of textures + about 100,000 × (8 bytes + a pointer), roughly 5 MB |
 
-#### Python
+#### String interning
 
-```python
-import sys
+```cpp
+class Interner {                                      // one shared copy per distinct string
+    unordered_set<string> pool;                       // node-based: addresses never move
+public:
+    const string* intern(const string& s) { return &*pool.insert(s).first; }
+};
 
-a, b = "hello_world", "".join(["hello", "_world"])
-print(a is b, sys.intern(b) is a)   # False True: interning shares one string object
+int main() {
+    Interner names;
+    const string* a = names.intern("hello_world");
+    const string* b = names.intern(string("hello") + "_world");
+    cout << (a == b) << "\n";                         // 1: one object, compare by pointer
+}
 ```
+
+After interning, equal strings are the same object, so comparing them is one pointer comparison and each distinct name is stored once.
 
 Connects to: factory method, immutability, composite, caching.
 
@@ -850,5 +846,5 @@ A: Intrinsic state is independent of context and identical across many objects, 
 Q: Why must flyweight objects be immutable?
 A: Many clients hold references to the same flyweight instance. If one client changed it, every other object sharing it would silently change too, so shared intrinsic state must never be modified.
 
-Q: Give examples of flyweights in standard libraries.
-A: Java's Integer.valueOf returns cached Integer objects for values from -128 to 127, and String.intern and Python's sys.intern share one object per distinct string. Text editors share glyph objects per character and font.
+Q: Give everyday examples of flyweights.
+A: String interning keeps one shared copy per distinct string, so equal names compare by pointer. Text editors share one glyph object per character and font, and games share one mesh and texture per tree or particle kind while each instance keeps only its position.

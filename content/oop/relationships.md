@@ -19,7 +19,7 @@ These three words describe how strongly two objects are tied together. A teacher
 - **Aggregation**: a **has-a** whole-part link **without ownership**. The part can exist on its own and can even be shared (a `Team` has `Player`s; a player outlives a disbanded team). UML: hollow diamond at the whole.
 - **Composition**: a **has-a** link **with ownership**. The part belongs to one whole at a time and is created and destroyed with it (an `Order` has `OrderLine`s). UML: filled diamond at the whole.
 - In C++ the difference is visible in the types: composition is a member by value or a `unique_ptr`; aggregation and association are references, raw non-owning pointers, or `shared_ptr` or `weak_ptr` when lifetime is shared.
-- In Java and Python everything is a reference, so the difference is in intent: composition creates the part inside and never hands it out; aggregation receives it from outside.
+- Rule of thumb: an owned part is a member or a `unique_ptr` created by the whole; a part you only use arrives from outside as a reference or pointer, and the whole never deletes it.
 - Interview test: "if the whole is deleted, should the part be deleted too?" Yes means composition; no means aggregation.
 
 ### deep
@@ -91,39 +91,6 @@ int main() {
 }
 ```
 
-```python
-class Player:
-    def __init__(self, name):
-        self.name = name
-
-
-class Team:
-    def __init__(self, players):
-        self.players = list(players)          # aggregation: players come from outside
-
-
-class OrderLine:
-    def __init__(self, item, qty):
-        self.item, self.qty = item, qty
-
-
-class Order:
-    def __init__(self):
-        self._lines = []                      # composition: created and kept inside
-
-    def add_line(self, item, qty):
-        self._lines.append(OrderLine(item, qty))
-
-    def total_qty(self):
-        return sum(line.qty for line in self._lines)
-
-
-asha = Player("Asha")
-team = Team([asha])
-del team
-print(asha.name)           # Asha: the player outlives the team
-```
-
 #### Worked example: a university
 
 Model a university with departments, professors and courses.
@@ -174,10 +141,10 @@ Composition over inheritance means building an object out of smaller parts inste
 
 ### interview
 - Prefer **has-a** (hold an object and delegate to it) over **is-a** (extend a class) when the goal is reusing behavior. Keep inheritance for true subtypes that callers use polymorphically.
-- **Fragile base class problem**: a subclass depends on how the parent is implemented, so a harmless-looking change in the parent can break it. The classic case: counting inserts by overriding both `add` and `addAll` on Java's `HashSet` double counts, because `addAll` calls `add` internally.
+- **Fragile base class problem**: a subclass depends on how the parent is implemented, so a harmless-looking change in the parent can break it. The classic case: a counting class that overrides both `add` and `addAll` double counts when the base's `addAll` happens to call `add` internally.
 - Composition can be changed **at runtime** (swap the engine or strategy), while a parent class is fixed at compile time.
 - It avoids **class explosion**: n kinds of engine times m kinds of body would need n × m subclasses but only n + m components.
-- It exposes only what you choose (the wrapper's own interface), whereas inheritance exposes every public method of the parent, even ones that break your rules (a `Stack` extending `Vector` allows inserting in the middle).
+- It exposes only what you choose (the wrapper's own interface), whereas inheritance exposes every public method of the parent, even ones that break your rules (a stack that publicly inherits `std::vector` also gets `insert` and `erase`).
 - Costs: more small classes and forwarding methods. Inheritance is still right for real type hierarchies and frameworks designed for extension.
 
 ### deep
@@ -187,45 +154,60 @@ Inheritance says "I am one of those, including all its insides". Composition say
 
 #### The fragile base class problem (worked example)
 
-Count how many elements were ever added to a set:
+Count how many elements were ever added to a container. The base class is a library class whose `addAll` happens to call `add`:
 
-```java
-class InstrumentedSet<E> extends HashSet<E> {
-    private int addCount = 0;
-    @Override public boolean add(E e) { addCount++; return super.add(e); }
-    @Override public boolean addAll(Collection<? extends E> c) {
-        addCount += c.size();
-        return super.addAll(c);            // HashSet's addAll calls add() for each element
+```cpp
+class IntBag {
+protected:
+    vector<int> items;
+public:
+    virtual ~IntBag() = default;
+    virtual void add(int x) { items.push_back(x); }
+    virtual void addAll(const vector<int>& xs) { for (int x : xs) add(x); }   // an internal detail
+    size_t size() const { return items.size(); }
+};
+
+class CountingBag : public IntBag {              // inheritance
+    int added = 0;
+public:
+    void add(int x) override { ++added; IntBag::add(x); }
+    void addAll(const vector<int>& xs) override {
+        added += (int)xs.size();
+        IntBag::addAll(xs);                      // calls our add() again for every element
     }
-    public int getAddCount() { return addCount; }
+    int count() const { return added; }
+};
+
+class CountingWrapper {                          // composition: has-a, not is-a
+    IntBag& inner;
+    int added = 0;
+public:
+    explicit CountingWrapper(IntBag& b) : inner(b) {}
+    void add(int x) { ++added; inner.add(x); }
+    void addAll(const vector<int>& xs) {
+        added += (int)xs.size();
+        inner.addAll(xs);                        // inner's addAll calls inner's add, not ours
+    }
+    int count() const { return added; }
+};
+
+int main() {
+    CountingBag bag;
+    bag.addAll({1, 2, 3});
+    IntBag plain;
+    CountingWrapper wrapped(plain);
+    wrapped.addAll({1, 2, 3});
+    cout << bag.count() << " " << wrapped.count() << "\n";   // 6 3
 }
 ```
 
-| step | addCount |
+| step, for `bag.addAll({1, 2, 3})` | added |
 |---|---|
-| `s.addAll(List.of("a", "b", "c"))` starts | 0 |
-| our `addAll` adds `c.size()` | 3 |
-| inherited `addAll` calls our `add` three times | 6 |
+| starts | 0 |
+| our `addAll` adds `xs.size()` | 3 |
+| the inherited `addAll` calls our `add` three times | 6 |
 
-The answer is 6, not 3. Nothing in `HashSet`'s documented interface promises that `addAll` uses `add`, so the subclass broke by relying on a detail; if a future version changed it, the subclass would break again in a different way.
-
-The composition version wraps a set and forwards:
-
-```java
-class CountingSet<E> {
-    private final Set<E> inner;            // has-a, not is-a
-    private int addCount = 0;
-    CountingSet(Set<E> inner) { this.inner = inner; }
-    boolean add(E e) { addCount++; return inner.add(e); }
-    boolean addAll(Collection<? extends E> c) {
-        addCount += c.size();
-        return inner.addAll(c);            // inner's addAll calls inner's add, not ours
-    }
-    int getAddCount() { return addCount; }
-}
-```
-
-Now the count is 3, and it works with any `Set` (`HashSet`, `TreeSet`), chosen by the caller.
+The answer is 6, not 3. Nothing in `IntBag`'s documented interface promised that `addAll` uses `add`, so the derived class broke by relying on a detail; if a later version changed that detail, it would break again in a different way. The wrapper counts 3 and works with any `IntBag` the caller passes in.
 
 #### Class explosion and runtime flexibility
 
@@ -256,27 +238,25 @@ int main() {
 
 With inheritance you would need `PetrolHatchback`, `ElectricHatchback`, `PetrolSedan`, `ElectricSedan` and so on: every new engine multiplies the classes, and a car can never change its engine.
 
-```python
-class Car:
-    def __init__(self, body, engine):
-        self.body = body
-        self.engine = engine            # any object with start() works
-
-    def drive(self):
-        return f"{self.body}: {self.engine.start()}"
-
-
-class Electric:
-    def start(self):
-        return "hum"
-
-
-print(Car("sedan", Electric()).drive())   # sedan: hum
-```
-
 #### Unwanted inherited methods
 
-Java's `Stack` extends `Vector`, so `stack.add(0, x)` inserts at the bottom of a stack, breaking the stack's meaning. A stack that holds a list and exposes only `push`, `pop` and `peek` cannot be misused.
+```cpp
+class BadStack : public vector<int> {            // inherits insert, erase, operator[] and more
+public:
+    void push(int x) { push_back(x); }
+    int pop() { int x = back(); pop_back(); return x; }
+};
+
+class GoodStack {                                // composition: only stack operations exist
+    vector<int> items;
+public:
+    void push(int x) { items.push_back(x); }
+    int pop() { int x = items.back(); items.pop_back(); return x; }
+    bool empty() const { return items.empty(); }
+};
+```
+
+`BadStack s; s.insert(s.begin(), 42);` compiles and slips an element under the bottom of the stack. `std::vector` also has no virtual destructor, so deleting a `BadStack` through a `vector<int>*` is undefined behavior. The standard library chose composition: `std::stack` is an adapter that holds a container and exposes only `push`, `pop` and `top`.
 
 #### When inheritance is still right
 
@@ -297,7 +277,7 @@ Q: What does composition over inheritance mean?
 A: Prefer building classes that hold other objects and delegate work to them over extending a class to reuse its code. Inheritance is kept for genuine subtype relationships used polymorphically, while reuse of behavior goes through composed parts.
 
 Q: What is the fragile base class problem?
-A: A subclass depends on implementation details of its parent, such as which methods call which, so a change inside the parent can break the subclass without any change to its interface. Overriding add and addAll on a HashSet to count insertions double counts because addAll calls add internally.
+A: A subclass depends on implementation details of its parent, such as which methods call which, so a change inside the parent can break the subclass without any change to its interface. A class that counts insertions by overriding both add and addAll double counts when the base's addAll calls add internally.
 
 Q: Why is composition more flexible than inheritance?
 A: A composed part can be chosen by the caller and swapped at runtime, and several independent parts can be combined without creating a subclass for every combination. Inheritance is fixed at compile time and each new variation multiplies the number of subclasses.
@@ -305,8 +285,8 @@ A: A composed part can be chosen by the caller and swapped at runtime, and sever
 Q: When is inheritance still the better choice?
 A: When the child is truly a subtype that can be used anywhere the parent is expected, when callers treat the objects polymorphically, and when the parent was designed for extension, such as an abstract class with a documented template of steps.
 
-Q: Why is Java's Stack extending Vector considered a design mistake?
-A: Because Stack inherits every Vector method, including inserting and removing at any index, so code can break the last-in, first-out rule. A stack that wraps a list and exposes only push, pop and peek could not be misused.
+Q: Why is publicly inheriting from std::vector to build a stack a bad idea?
+A: The stack then exposes every vector operation, including insert, erase and indexing, so code can break the last-in, first-out rule. std::vector also has no virtual destructor. Holding a vector as a member and exposing only push, pop and top, as std::stack does, avoids both problems.
 
 ## oop.relationships.uml-class-diagrams
 name: "UML class diagrams"
@@ -375,39 +355,44 @@ In this text sketch `<>` is a hollow diamond, `<#>` a filled one, `<|--` an inhe
 
 The same design in code:
 
-```java
-interface Auditable { String auditTrail(); }
+```cpp
+struct Auditable {                                        // <<interface>>
+    virtual ~Auditable() = default;
+    virtual string auditTrail() const = 0;
+};
 
-class Transaction {
-    final double amount;
-    Transaction(double amount) { this.amount = amount; }
-}
+struct Transaction { double amount; };
 
-class Account implements Auditable {                       // realization
-    private final List<Transaction> history = new ArrayList<>();   // composition
-    protected double balance;
-    public void deposit(double x) { balance += x; history.add(new Transaction(x)); }
-    public String auditTrail() { return history.size() + " transactions"; }
-}
+class Account : public Auditable {                        // realization
+    vector<Transaction> history;                          // composition: owned by value
+protected:
+    double balance = 0;
+public:
+    void deposit(double x) { balance += x; history.push_back({x}); }
+    string auditTrail() const override { return to_string(history.size()) + " transactions"; }
+};
 
-class SavingsAccount extends Account {                     // inheritance
-    private final double rate;
-    SavingsAccount(double rate) { this.rate = rate; }
-}
+class SavingsAccount : public Account {                   // inheritance
+    double rate;
+public:
+    explicit SavingsAccount(double r) : rate(r) {}
+};
 
 class Customer {
-    private final List<Account> accounts = new ArrayList<>();   // association, 1 to *
-    void open(Account a) { accounts.add(a); }
-}
+    vector<Account*> accounts;                            // association, 1 to *: not owned
+public:
+    void open(Account& a) { accounts.push_back(&a); }
+};
 
 class Bank {
-    private final List<Customer> customers = new ArrayList<>(); // aggregation
-    void register(Customer c) { customers.add(c); }
-}
+    vector<Customer*> customers;                          // aggregation: customers outlive it
+public:
+    void enroll(Customer& c) { customers.push_back(&c); }
+};
 
-class StatementPrinter {
-    String print(Account a) { return a.auditTrail(); }      // dependency: a parameter only
-}
+struct StatementPrinter {
+    string print(const Account& a) const { return a.auditTrail(); }   // dependency: a parameter
+};
 ```
 
 #### Tips for interviews
@@ -467,7 +452,7 @@ A change is cheap when it touches one place. High cohesion makes sure everything
 
 | kind | meaning | example |
 |---|---|---|
-| content | one module changes another's internals | editing another object's private fields via reflection |
+| content | one module changes another's internals | reaching into another class's private data through pointer casts |
 | common | modules share global data | many classes reading and writing a global config map |
 | external | modules share an external format or device | two services parsing the same hand-rolled file format |
 | control | one module passes a flag that steers another's logic | `render(data, isAdmin, useCache, mode)` |
@@ -488,51 +473,68 @@ A change is cheap when it touches one place. High cohesion makes sure everything
 
 #### Worked example: splitting a class
 
-```python
-# Low cohesion, high coupling: one class does three jobs and builds its own dependencies.
-class ReportManager:
-    def run(self):
-        rows = self.query_database()        # data access
-        html = self.to_html(rows)           # formatting
-        self.send_email("boss@corp", html)  # delivery
-
-    def query_database(self):
-        return [("north", 120), ("south", 80)]
-
-    def to_html(self, rows):
-        return "".join(f"<p>{name}: {value}</p>" for name, value in rows)
-
-    def send_email(self, to, body):
-        print(f"mail to {to}: {len(body)} chars")
+```cpp
+// Low cohesion, high coupling: one class does three jobs and builds its own dependencies.
+class ReportManager {
+public:
+    void run() {
+        auto rows = queryDatabase();              // data access
+        string html = toHtml(rows);               // formatting
+        sendEmail("boss@corp", html);             // delivery
+    }
+private:
+    vector<pair<string, int>> queryDatabase() { return {{"north", 120}, {"south", 80}}; }
+    string toHtml(const vector<pair<string, int>>& rows) {
+        string out;
+        for (const auto& [name, value] : rows) out += "<p>" + name + ": " + to_string(value) + "</p>";
+        return out;
+    }
+    void sendEmail(const string& to, const string& body) {
+        cout << "mail to " << to << ": " << body.size() << " chars\n";
+    }
+};
 ```
 
 After the split, each class has one reason to change, and the coordinator depends on small interfaces that are passed in:
 
-```python
-class SalesRepository:
-    def totals(self):
-        return [("north", 120), ("south", 80)]
+```cpp
+using Rows = vector<pair<string, int>>;
 
+struct SalesSource { virtual ~SalesSource() = default; virtual Rows totals() const = 0; };
+struct Formatter { virtual ~Formatter() = default; virtual string format(const Rows&) const = 0; };
+struct Mailer { virtual ~Mailer() = default; virtual void send(const string&, const string&) = 0; };
 
-class HtmlFormatter:
-    def format(self, rows):
-        return "".join(f"<p>{name}: {value}</p>" for name, value in rows)
+struct SalesRepository : SalesSource {
+    Rows totals() const override { return {{"north", 120}, {"south", 80}}; }
+};
+struct HtmlFormatter : Formatter {
+    string format(const Rows& rows) const override {
+        string out;
+        for (const auto& [name, value] : rows) out += "<p>" + name + ": " + to_string(value) + "</p>";
+        return out;
+    }
+};
+struct ConsoleMailer : Mailer {
+    void send(const string& to, const string& body) override {
+        cout << "mail to " << to << ": " << body.size() << " chars\n";
+    }
+};
 
+class ReportJob {                                 // one job: coordinate the three parts
+    const SalesSource& source;
+    const Formatter& formatter;
+    Mailer& mailer;
+public:
+    ReportJob(const SalesSource& s, const Formatter& f, Mailer& m) : source(s), formatter(f), mailer(m) {}
+    void run(const string& to) { mailer.send(to, formatter.format(source.totals())); }
+};
 
-class ConsoleMailer:
-    def send(self, to, body):
-        print(f"mail to {to}: {len(body)} chars")
-
-
-class ReportJob:
-    def __init__(self, repo, formatter, mailer):   # dependencies injected
-        self.repo, self.formatter, self.mailer = repo, formatter, mailer
-
-    def run(self, to):
-        self.mailer.send(to, self.formatter.format(self.repo.totals()))
-
-
-ReportJob(SalesRepository(), HtmlFormatter(), ConsoleMailer()).run("boss@corp")
+int main() {
+    SalesRepository repo;
+    HtmlFormatter html;
+    ConsoleMailer mail;
+    ReportJob(repo, html, mail).run("boss@corp");   // mail to boss@corp: 33 chars
+}
 ```
 
 | change request | classes touched before | after |
@@ -543,7 +545,7 @@ ReportJob(SalesRepository(), HtmlFormatter(), ConsoleMailer()).run("boss@corp")
 
 #### Measuring it informally
 
-- Count what a class imports or constructs; many concrete dependencies suggest high coupling.
+- Count what a class `#include`s or constructs; many concrete dependencies suggest high coupling.
 - Check whether methods share fields; groups of methods using separate groups of fields suggest two classes hiding in one (low cohesion).
 - Look at version history: files that always change together are coupled, whatever the design says.
 

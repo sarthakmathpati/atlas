@@ -62,30 +62,6 @@ string lcs(const string& a, const string& b) {
 }
 ```
 
-```python
-def lcs_length(a, b):
-    if len(a) < len(b):
-        a, b = b, a                               # keep the row as short as possible
-    prev = [0] * (len(b) + 1)
-    for ch in a:
-        cur = [0]
-        for j, bj in enumerate(b, 1):
-            cur.append(prev[j - 1] + 1 if ch == bj else max(prev[j], cur[j - 1]))
-        prev = cur
-    return prev[-1]
-
-def longest_common_substring(a, b):
-    best, prev = 0, [0] * (len(b) + 1)
-    for ch in a:
-        cur = [0] * (len(b) + 1)
-        for j, bj in enumerate(b, 1):
-            if ch == bj:
-                cur[j] = prev[j - 1] + 1          # contiguous: extend the diagonal only
-                best = max(best, cur[j])
-        prev = cur
-    return best
-```
-
 #### Why "drop one character" covers every case
 
 When the last characters differ, an LCS can't use both of them as its final matched pair. So at least one of them is unused: either `a[i-1]` isn't in the LCS (the answer is the LCS of `a[0..i-1)` and `b`), or `b[j-1]` isn't (the LCS of `a` and `b[0..j-1)`). Taking the maximum of the two covers both possibilities, which is why no third option, such as dropping both, is needed: dropping both is already included in either of them.
@@ -120,7 +96,7 @@ Q: How is longest common substring different?
 A: A substring must be contiguous, so a mismatch resets the value to 0 instead of taking the max of neighbors, and the answer is the largest value anywhere in the table, not the last cell.
 
 Q: How can LCS answer "minimum deletions to make two strings equal"?
-A: Keep the LCS and delete everything else from both strings. The number of deletions is len(a) + len(b) − 2 · LCS.
+A: Keep the LCS and delete everything else from both strings. The number of deletions is |a| + |b| − 2 · LCS, where |a| is the length of a.
 
 Q: What is the space-optimized complexity if you only need the length?
 A: O(n · m) time and O(min(n, m)) space, keeping only the previous and current rows of the shorter dimension.
@@ -201,21 +177,6 @@ int editDistance(const string& a, const string& b) {
 }
 ```
 
-```python
-def is_one_edit_apart(a, b):
-    """True if exactly one insert, delete or replace turns a into b (O(n))."""
-    if abs(len(a) - len(b)) > 1:
-        return False
-    if len(a) > len(b):
-        a, b = b, a
-    for i in range(len(a)):
-        if a[i] != b[i]:
-            if len(a) == len(b):
-                return a[i + 1:] == b[i + 1:]     # replace
-            return a[i:] == b[i + 1:]             # insert into a
-    return len(b) - len(a) == 1                   # extra last character
-```
-
 #### Reading the table
 
 Each move through the table is an operation: a diagonal step on equal characters is free, a diagonal step on different characters is a replacement, a step down (from `dp[i-1][j]`) deletes `a[i-1]`, and a step right (from `dp[i][j-1]`) inserts `b[j-1]`. Walking back from the bottom-right corner along any path that reproduces the values lists one optimal sequence of edits, which is how spell checkers and `diff` tools show changes.
@@ -249,7 +210,7 @@ Q: How do you check whether two strings are exactly one edit apart without the f
 A: If their lengths differ by more than one, they aren't. Otherwise scan to the first mismatch: for equal lengths, the rest must match after skipping that character in both (a replace); for lengths differing by one, the rest of the shorter must equal the longer after skipping one character (an insert). It's O(n).
 
 Q: How does edit distance relate to LCS when only insertions and deletions are allowed?
-A: Every character outside a longest common subsequence must be deleted from one string or inserted into the other, so the distance is len(a) + len(b) − 2 · LCS.
+A: Every character outside a longest common subsequence must be deleted from one string or inserted into the other, so the distance is |a| + |b| − 2 · LCS, where |a| is the length of a.
 
 Q: What is the space complexity if you only need the distance?
 A: O(min(n, m)), using one row plus a variable for the diagonal value from the previous row, because each cell only reads the cell above, the cell to the left and the upper-left cell.
@@ -347,7 +308,7 @@ Two strings are interleaved when their letters are merged into one string while 
 ### interview
 - `dp[i][j]` = can the first i chars of `s1` and first j chars of `s2` form the first i + j chars of `s3`.
 - Transition: `(dp[i-1][j] && s1[i-1] == s3[i+j-1]) || (dp[i][j-1] && s2[j-1] == s3[i+j-1])`; `dp[0][0] = true`.
-- Check `len(s1) + len(s2) == len(s3)` first.
+- Check `s1.size() + s2.size() == s3.size()` first.
 - **O(n · m)** time; O(m) space with one row.
 - A greedy two-pointer approach fails when both strings offer the same next character; the DP (or memoized DFS) handles the choice.
 
@@ -362,7 +323,7 @@ Q: Why doesn't a greedy two-pointer approach work?
 A: When the next character of s3 matches the next character of both s1 and s2, the right choice depends on characters much later. Greedy picks one and may fail, while the DP keeps both possibilities.
 
 Q: What must you check before running the DP?
-A: That len(s1) + len(s2) == len(s3). If not, the answer is false immediately, and the DP's indexing into s3 would also be off.
+A: That the lengths of s1 and s2 add up to the length of s3. If not, the answer is false immediately, and the DP's indexing into s3 would also be off.
 
 ## dsa.dp-strings.pattern-matching-dp
 name: "Pattern matching DP"

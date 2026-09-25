@@ -78,36 +78,6 @@ TreeNode* erase(TreeNode* root, int key) {
 }
 ```
 
-```python
-def bst_insert(root, key):
-    if root is None:
-        return TreeNode(key)
-    if key < root.val:
-        root.left = bst_insert(root.left, key)
-    elif key > root.val:
-        root.right = bst_insert(root.right, key)
-    return root
-
-def bst_delete(root, key):
-    if root is None:
-        return None
-    if key < root.val:
-        root.left = bst_delete(root.left, key)
-    elif key > root.val:
-        root.right = bst_delete(root.right, key)
-    else:
-        if root.left is None:
-            return root.right
-        if root.right is None:
-            return root.left
-        succ = root.right
-        while succ.left:
-            succ = succ.left
-        root.val = succ.val
-        root.right = bst_delete(root.right, succ.val)
-    return root
-```
-
 #### Why the successor keeps the tree valid
 
 The inorder successor is the smallest key larger than the deleted key. Every key in the left subtree is smaller than the deleted key, so also smaller than the successor; every other key in the right subtree is larger than the successor, because the successor is the minimum there. Writing the successor's value into the node therefore preserves the BST property, and removing the original successor node is easy because it has no left child.
@@ -220,15 +190,6 @@ bool isValidBSTInorder(TreeNode* root) {
 }
 ```
 
-```python
-def is_valid_bst(root, low=float("-inf"), high=float("inf")):
-    if root is None:
-        return True
-    if not (low < root.val < high):
-        return False
-    return is_valid_bst(root.left, low, root.val) and is_valid_bst(root.right, root.val, high)
-```
-
 #### Which method to present
 
 Both run in $O(n)$. The bounds method states the invariant directly and generalizes well (for example, to checking that a preorder sequence could come from a BST). The inorder method reuses a traversal you already know and makes the "strictly increasing" condition obvious. Mention that you would stop early on the first violation in either version, and state your duplicate policy before coding.
@@ -339,30 +300,6 @@ TreeNode* inorderSuccessor(TreeNode* root, TreeNode* p) {
 }
 ```
 
-```python
-def two_sum_bst(root, target):
-    """Two pointers with a forward and a backward inorder iterator."""
-    def push(stack, node, forward):
-        while node:
-            stack.append(node)
-            node = node.left if forward else node.right
-
-    lo, hi = [], []
-    push(lo, root, True)
-    push(hi, root, False)
-    while lo and hi and lo[-1] is not hi[-1]:
-        s = lo[-1].val + hi[-1].val
-        if s == target:
-            return True
-        if s < target:
-            node = lo.pop()
-            push(lo, node.right, True)       # next larger
-        else:
-            node = hi.pop()
-            push(hi, node.left, False)       # next smaller
-    return False
-```
-
 #### When the tree keeps changing
 
 If the BST is modified often and you are asked for the kth smallest repeatedly, an $O(h + k)$ walk per query is wasteful. Store in every node the size of its subtree (updated on insert and delete). Then at a node with left subtree size $L$: if $k \le L$ go left, if $k = L + 1$ the node is the answer, otherwise go right with $k - L - 1$. Each query is $O(h)$, which is $O(\log n)$ in a balanced tree.
@@ -465,7 +402,7 @@ A plain binary search tree can become lopsided and slow, like a shelf where ever
 - **Rotations** (left and right) change the local shape while keeping the inorder order, in O(1).
 - **AVL trees**: every node's subtree heights differ by at most 1; rebalanced with single or double rotations; height ≤ about 1.44 log₂ n; faster lookups, more rotations on updates.
 - **Red-black trees**: nodes are red or black; no red node has a red child; every root-to-null path has the same number of black nodes; height ≤ 2 log₂(n + 1); fewer rotations per update.
-- `std::map`/`set`, Java `TreeMap`/`TreeSet` are red-black trees: search, insert, delete, floor and ceiling in **O(log n)** worst case.
+- `std::map` and `std::set` are red-black trees in the common standard libraries: search, insert, delete, floor and ceiling in **O(log n)** worst case.
 - Alternatives: B-trees (databases, many keys per node), skip lists, treaps, splay trees (amortized).
 - In interviews you rarely implement these; know the guarantees and when to use an ordered map.
 
@@ -495,7 +432,7 @@ The floor of a value is the largest item not bigger than it, and the ceiling is 
 - **Floor(x)**: walk from the root; if `node.val == x` return it; if `node.val < x`, it's a candidate, go right for something closer; else go left.
 - **Ceiling(x)**: mirror image: if `node.val > x`, candidate, go left; else go right.
 - **O(h)** time, O(1) space iteratively.
-- Equivalent to `lower_bound` (ceiling) and the element before `upper_bound` (floor) on a sorted array; in libraries: C++ `set::lower_bound`, Java `TreeSet.floor/ceiling`.
+- Equivalent to `lower_bound` (ceiling) and the element before `upper_bound` (floor) on a sorted array; with `std::set`: `s.lower_bound(x)` is the ceiling and `prev(s.upper_bound(x))` is the floor (check for `begin()` first).
 - Uses: closest value in a BST, scheduling (next free slot), range counting with an augmented tree.
 
 ### questions
@@ -508,5 +445,5 @@ A: It's the mirror image: when the node is greater than x, it's a candidate, so 
 Q: How do you find the value in a BST closest to a target?
 A: Walk down as in a search, updating the best value whenever the current node is closer to the target, and go left or right by comparing the target with the node. The floor and the ceiling are both visited on this path, so the closest value is found in O(h).
 
-Q: Which library calls give floor and ceiling on ordered sets?
-A: In Java, TreeSet.floor(x) and ceiling(x) (and floorKey, ceilingKey on TreeMap). In C++, lower_bound(x) on a set gives the ceiling, and the element before upper_bound(x) gives the floor.
+Q: Which std::set calls give floor and ceiling?
+A: s.lower_bound(x) returns the first element not less than x, which is the ceiling. The element just before s.upper_bound(x) is the floor, if that iterator is not s.begin(). Both are O(log n).

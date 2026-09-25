@@ -80,38 +80,6 @@ public:
 };
 ```
 
-```python
-class MinSegmentTree:
-    """Iterative bottom-up segment tree for range minimum with point updates."""
-    def __init__(self, a):
-        self.n = len(a)
-        self.t = [float("inf")] * self.n + list(a)
-        for i in range(self.n - 1, 0, -1):
-            self.t[i] = min(self.t[2 * i], self.t[2 * i + 1])
-
-    def update(self, i, value):
-        i += self.n
-        self.t[i] = value
-        while i > 1:
-            i //= 2
-            self.t[i] = min(self.t[2 * i], self.t[2 * i + 1])
-
-    def query(self, l, r):                 # inclusive l..r
-        res = float("inf")
-        l += self.n
-        r += self.n + 1
-        while l < r:
-            if l & 1:
-                res = min(res, self.t[l])
-                l += 1
-            if r & 1:
-                r -= 1
-                res = min(res, self.t[r])
-            l //= 2
-            r //= 2
-        return res
-```
-
 #### Choosing a range structure
 
 | Need | Structure |

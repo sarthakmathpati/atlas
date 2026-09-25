@@ -18,8 +18,8 @@ A singleton is a class that allows exactly one object of itself and gives everyo
 - Intent: guarantee **one instance** of a class and a **global access point** to it (config, logger, connection pool, hardware driver).
 - Mechanics: private constructor, a static accessor, and no copying (delete copy and move in C++).
 - **Eager** creates the instance at startup (simple, thread-safe, may waste work); **lazy** creates it on first use.
-- Thread-safe lazy variants: C++11 **function-local static** (the Meyers singleton); Java **holder idiom** (a nested class holds the instance), **double-checked locking with `volatile`**, or an **enum** (Effective Java's choice, safe against reflection and serialization). In Python a module-level object is already a singleton.
-- Criticism: it is **global mutable state**, hides dependencies, makes tests share state and hard to fake, mixes "what it does" with "how many exist", and "one per process" breaks with multiple class loaders or processes.
+- Thread-safe lazy variants: a C++11 **function-local static** (the Meyers singleton, the usual choice), **`std::call_once`** with a `once_flag`, or **double-checked locking** with a `std::atomic` pointer (release on publish, acquire on read) and a mutex.
+- Criticism: it is **global mutable state**, hides dependencies, makes tests share state and hard to fake, mixes "what it does" with "how many exist", and "one per process" breaks with several processes or with shared libraries that each carry their own copy.
 - Better default: create one instance at startup and **inject** it; the object is single by configuration, not by force.
 
 ### deep
@@ -55,71 +55,66 @@ int main() {
 
 The C++ standard guarantees a function-local static is initialized exactly once even if several threads call `instance()` at the same time, so no explicit lock is needed.
 
-#### Java: lazy and thread-safe variants
+#### Other thread-safe variants
 
-```java
-class EagerLogger {                                   // eager: created when the class loads
-    private static final EagerLogger INSTANCE = new EagerLogger();
-    private EagerLogger() {}
-    static EagerLogger get() { return INSTANCE; }
-}
+```cpp
+class Logger {                                    // lazy with std::call_once
+    Logger() = default;
+    static inline unique_ptr<Logger> inst;
+    static inline once_flag flag;
+public:
+    static Logger& get() {
+        call_once(flag, [] { inst.reset(new Logger); });   // runs exactly once
+        return *inst;
+    }
+};
 
-class HolderLogger {                                  // lazy via the holder idiom
-    private HolderLogger() {}
-    private static class Holder { static final HolderLogger INSTANCE = new HolderLogger(); }
-    static HolderLogger get() { return Holder.INSTANCE; }   // Holder loads on first call
-}
-
-class DclLogger {                                     // double-checked locking
-    private static volatile DclLogger instance;       // volatile is essential
-    private DclLogger() {}
-    static DclLogger get() {
-        DclLogger local = instance;
-        if (local == null) {                          // first check, no lock
-            synchronized (DclLogger.class) {
-                local = instance;
-                if (local == null) instance = local = new DclLogger();   // second check
+class Pool {                                      // double-checked locking
+    Pool() = default;
+    static inline atomic<Pool*> inst{nullptr};
+    static inline mutex m;
+public:
+    static Pool& get() {
+        Pool* p = inst.load(memory_order_acquire);           // first check, no lock
+        if (!p) {
+            lock_guard<mutex> lock(m);
+            p = inst.load(memory_order_relaxed);
+            if (!p) {                                        // second check, under the lock
+                p = new Pool;
+                inst.store(p, memory_order_release);         // publish after construction
             }
         }
-        return local;
+        return *p;
     }
-}
+};
 
-enum EnumLogger {                                     // Effective Java's recommendation
-    INSTANCE;
-    void log(String msg) { System.out.println(msg); }
+int main() {
+    set<Pool*> seen;
+    mutex seenLock;
+    vector<thread> ts;
+    for (int i = 0; i < 8; i++)
+        ts.emplace_back([&] {
+            Pool* p = &Pool::get();
+            lock_guard<mutex> g(seenLock);
+            seen.insert(p);
+        });
+    for (auto& t : ts) t.join();
+    cout << seen.size() << " " << (&Logger::get() == &Logger::get()) << "\n";   // 1 1
 }
 ```
 
-Why `volatile` in double-checked locking: without it, the write of the reference may become visible to another thread before the constructor's writes, so that thread sees a non-null but half-built object. `volatile` forbids that reordering.
+Why acquire and release in double-checked locking: without them, the pointer may become visible to another thread before the constructor's writes, so that thread sees a non-null but half-built object (and the unsynchronized read is a data race, which is undefined behavior). The release store publishes the finished object and the acquire load makes its contents visible. The function-local static does all of this for you, so prefer it.
 
 #### Worked example: two threads, lazy creation without a lock
 
 | time | thread A | thread B | instances |
 |---|---|---|---|
-| 1 | reads `instance == null` | | 0 |
-| 2 | | reads `instance == null` | 0 |
+| 1 | reads `instance == nullptr` | | 0 |
+| 2 | | reads `instance == nullptr` | 0 |
 | 3 | creates object #1 | | 1 |
 | 4 | | creates object #2, overwrites | 2 created, 1 kept |
 
-A naive `if (instance == null) instance = new X();` breaks the one guarantee. The variants above close this race.
-
-#### Python
-
-```python
-class Registry:
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:                 # not thread-safe; add a lock if threads race
-            cls._instance = super().__new__(cls)
-            cls._instance.items = {}
-        return cls._instance
-
-
-print(Registry() is Registry())   # True
-# More idiomatic: put `registry = Registry()` in a module; imports share that one object.
-```
+A naive `if (!instance) instance = new X;` breaks the one guarantee. The variants above close this race.
 
 #### Why it is criticized
 
@@ -140,11 +135,11 @@ A: A creational pattern that ensures a class has exactly one instance and provid
 Q: How do you implement a thread-safe singleton in C++11?
 A: Return a reference to a function-local static object from a static instance method. Since C++11 the language guarantees such a static is initialized exactly once, even when several threads call the method at the same time, so no explicit locking is needed.
 
-Q: Why does double-checked locking in Java need volatile?
-A: Without volatile, the compiler or CPU may publish the reference to the new object before its constructor's writes are visible. Another thread passing the unsynchronized first check could then use a partly constructed object. volatile prevents this reordering and makes the write visible safely.
+Q: Why does double-checked locking need an atomic pointer with acquire and release ordering?
+A: Without it, the compiler or CPU may publish the pointer to the new object before the constructor's writes are visible. Another thread passing the unlocked first check could then use a partly constructed object, and the plain read and write are a data race. A release store after construction and an acquire load in the first check prevent this.
 
 Q: What is the difference between eager and lazy singletons?
-A: An eager singleton creates its instance when the class is loaded or the program starts, which is simple and thread-safe but pays the cost even if it is never used. A lazy singleton creates the instance on first use, which saves work but needs care to stay thread-safe.
+A: An eager singleton creates its instance when the program starts, as a namespace-scope object, which is simple and thread-safe but pays the cost even if it is never used. A lazy singleton creates the instance on first use, which saves work but needs care to stay thread-safe.
 
 Q: Why is the singleton often called an anti-pattern?
 A: It introduces global mutable state and hidden dependencies, makes unit tests share state and hard to fake, couples the class to its own instance management, and can cause lifetime and concurrency problems. Creating one instance at startup and injecting it usually gives the same benefit without these costs.
@@ -159,16 +154,16 @@ A factory method is a method whose job is to create objects, so the code that us
 
 ### interview
 - GoF intent: **define an interface for creating an object, but let subclasses decide which class to instantiate**. A creator class declares `createX()`; each subclass overrides it to return a different product.
-- The everyday cousin is the **simple factory**: one function or static method that picks a class from a parameter (`NotificationFactory.create("sms")`). Not a GoF pattern, but what many interviewers mean by "factory".
-- **Static factory methods** (`Integer.valueOf`, `List.of`, `make_unique`) have names, can cache or reuse instances, and can return a subtype.
+- The everyday cousin is the **simple factory**: one function or static method that picks a class from a parameter (`NotifierFactory::create("sms")`). Not a GoF pattern, but what many interviewers mean by "factory".
+- **Static factory methods** and factory functions (named constructors such as `Temperature::ofCelsius`, `make_unique`, `make_shared`) have names, can cache or reuse instances, and can return a subtype.
 - Benefits: callers depend on the product interface, not concrete classes; creation logic lives in one place; new products need no change in client code (open/closed).
 - Costs: more classes; a simple factory's `switch` still grows with each new type (a registry map avoids that).
-- Signals to use it: `new ConcreteClass` scattered around, object type chosen from config or input, or setup logic repeated at every creation site.
+- Signals to use it: `make_unique<ConcreteClass>()` scattered around, object type chosen from config or input, or setup logic repeated at every creation site.
 
 ### deep
 #### Intuition
 
-`new EmailSender()` hard-codes a decision into the caller. If the decision depends on configuration, on the platform or on a subclass's needs, that line has to move somewhere central. A factory method is that somewhere: one place that knows how to build the right object, behind a method that returns an abstraction.
+`make_unique<EmailSender>()` hard-codes a decision into the caller. If the decision depends on configuration, on the platform or on a subclass's needs, that line has to move somewhere central. A factory method is that somewhere: one place that knows how to build the right object, behind a method that returns an abstraction.
 
 #### The GoF form: subclasses choose the product
 
@@ -211,45 +206,50 @@ int main() {
 
 #### The simple factory with a registry
 
-```python
-class Notifier:
-    def send(self, to, text):
-        raise NotImplementedError
+```cpp
+struct Notifier {
+    virtual ~Notifier() = default;
+    virtual string send(const string& to, const string& text) const = 0;
+};
+struct EmailNotifier : Notifier {
+    string send(const string& to, const string& t) const override {
+        return "email " + to + ": " + t;
+    }
+};
+struct SmsNotifier : Notifier {
+    string send(const string& to, const string& t) const override {
+        return "sms " + to + ": " + t;
+    }
+};
 
+class NotifierFactory {
+    map<string, function<unique_ptr<Notifier>()>> registry;
+public:
+    template <class T>
+    void add(const string& kind) {                  // new kinds plug in without editing create()
+        registry[kind] = [] { return make_unique<T>(); };
+    }
+    unique_ptr<Notifier> create(const string& kind) const {
+        auto it = registry.find(kind);
+        if (it == registry.end()) throw invalid_argument("unknown notifier: " + kind);
+        return it->second();
+    }
+};
 
-class EmailNotifier(Notifier):
-    def send(self, to, text):
-        return f"email {to}: {text}"
+struct PushNotifier : Notifier {                    // added later
+    string send(const string& to, const string& t) const override {
+        return "push " + to + ": " + t;
+    }
+};
 
-
-class SmsNotifier(Notifier):
-    def send(self, to, text):
-        return f"sms {to}: {text}"
-
-
-class NotifierFactory:
-    _registry = {"email": EmailNotifier, "sms": SmsNotifier}
-
-    @classmethod
-    def register(cls, kind, klass):          # new kinds plug in without editing create()
-        cls._registry[kind] = klass
-
-    @classmethod
-    def create(cls, kind):
-        try:
-            return cls._registry[kind]()
-        except KeyError:
-            raise ValueError(f"unknown notifier: {kind}") from None
-
-
-class PushNotifier(Notifier):
-    def send(self, to, text):
-        return f"push {to}: {text}"
-
-
-NotifierFactory.register("push", PushNotifier)
-for kind in ["email", "sms", "push"]:
-    print(NotifierFactory.create(kind).send("asha", "hi"))
+int main() {
+    NotifierFactory factory;
+    factory.add<EmailNotifier>("email");
+    factory.add<SmsNotifier>("sms");
+    factory.add<PushNotifier>("push");
+    for (string kind : {"email", "sms", "push"})
+        cout << factory.create(kind)->send("asha", "hi") << "\n";   // email asha: hi, ...
+}
 ```
 
 #### Worked example: where creation logic lives
@@ -259,21 +259,26 @@ for kind in ["email", "sms", "push"]:
 | choose the sender from config | `if` chain at every call site | one `create(config.kind)` |
 | add a push sender | edit every `if` chain | register one class |
 | test with a fake sender | patch constructors | register or inject a fake |
-| a sender needs a retry wrapper | edit every `new` | wrap inside `create` |
+| a sender needs a retry wrapper | edit every creation site | wrap inside `create` |
 
 #### Static factory methods
 
-```java
-final class Temperature {
-    private final double kelvin;
-    private Temperature(double k) { kelvin = k; }
-    static Temperature ofCelsius(double c) { return new Temperature(c + 273.15); }   // named
+```cpp
+class Temperature {
+    double kelvin;
+    explicit Temperature(double k) : kelvin(k) {}
+public:
+    static Temperature ofCelsius(double c) { return Temperature(c + 273.15); }   // named
     static Temperature ofFahrenheit(double f) { return ofCelsius((f - 32) * 5 / 9); }
-    double celsius() { return kelvin - 273.15; }
+    double celsius() const { return kelvin - 273.15; }
+};
+
+int main() {
+    cout << Temperature::ofFahrenheit(212).celsius() << "\n";    // 100
 }
 ```
 
-Two constructors taking one `double` each could not coexist; named static factories can, and they read clearly at the call site. `Integer.valueOf(5)` goes further and returns a cached object.
+Two constructors taking one `double` each could not coexist; named static factories can, and they read clearly at the call site. `make_shared` shows another power: it allocates the object and its reference count in one block, which a constructor call cannot do.
 
 #### Pitfalls
 
@@ -358,30 +363,6 @@ int main() {
 }
 ```
 
-```python
-class DarkFactory:
-    def button(self):
-        return "[dark button]"
-
-    def checkbox(self):
-        return "[dark checkbox]"
-
-
-class LightFactory:
-    def button(self):
-        return "[light button]"
-
-    def checkbox(self):
-        return "[light checkbox]"
-
-
-def settings_screen(ui):
-    return f"{ui.button()} {ui.checkbox()}"
-
-
-print(settings_screen(LightFactory()))   # [light button] [light checkbox]
-```
-
 #### Worked example: the cost of each kind of change
 
 | change | classes to edit or add |
@@ -427,9 +408,9 @@ A builder lets you create a complicated object step by step, naming each choice 
 - Intent: **separate the construction of a complex object from its representation**, building it in named steps and returning the result from a final `build()`.
 - Solves the **telescoping constructor** problem: `Pizza(size, cheese, pepperoni, olives, crust, ...)` with many optional parameters is unreadable and easy to call with arguments in the wrong order.
 - Each setter returns the builder (**fluent interface**); `build()` validates everything once and returns an object that can be **immutable**.
-- Java's common form is a static nested `Builder` (Effective Java); C++ uses a fluent builder or C++20 designated initializers for simple cases; Python usually just uses **keyword arguments with defaults**.
+- In C++ the builder is a separate class (a friend or nested class) whose setters return `*this`. For simple cases, C++20 **designated initializers** on an aggregate (`Options{.timeout = 5, .retries = 3}`) name each field without a builder.
 - The GoF form adds a **Director** that runs a fixed sequence of steps on any builder (same steps, different representations, such as HTML or PDF output).
-- Examples: `StringBuilder`, HTTP request builders, query builders, `ProcessBuilder`, protobuf message builders.
+- Examples: `std::ostringstream` assembling a string, HTTP request builders, SQL query builders, FlatBuffers' `FlatBufferBuilder`.
 
 ### deep
 #### Intuition
@@ -438,69 +419,65 @@ Some objects have a few required fields and many optional ones. Constructors for
 
 #### Worked example: telescoping constructors
 
-```java
+```cpp
 // Which argument is which?
-// new HttpRequest("GET", "/api/orders", null, 30, true, false, 3)
+// HttpRequest r("GET", "/api/orders", "", 30, true, false, 3);
 ```
 
 With a builder:
 
-```java
-final class HttpRequest {
-    private final String method, url, body;
-    private final int timeoutSeconds, retries;
-    private final Map<String, String> headers;
-
-    private HttpRequest(Builder b) {
-        method = b.method; url = b.url; body = b.body;
-        timeoutSeconds = b.timeoutSeconds; retries = b.retries;
-        headers = Map.copyOf(b.headers);
+```cpp
+class HttpRequest {
+    string method, url, body;
+    int timeoutSeconds = 30, retries = 0;
+    map<string, string> headers;
+    friend class HttpRequestBuilder;
+    HttpRequest() = default;                         // only the builder can create one
+public:
+    string str() const {
+        return method + " " + url + " timeout=" + to_string(timeoutSeconds) +
+               " retries=" + to_string(retries);
     }
+};
 
-    static Builder builder(String url) { return new Builder(url); }   // required field up front
-
-    static final class Builder {
-        private final String url;
-        private String method = "GET", body = null;
-        private int timeoutSeconds = 30, retries = 0;
-        private final Map<String, String> headers = new HashMap<>();
-
-        private Builder(String url) { this.url = url; }
-        Builder method(String m) { method = m; return this; }
-        Builder body(String b) { body = b; return this; }
-        Builder timeout(int s) { timeoutSeconds = s; return this; }
-        Builder retries(int r) { retries = r; return this; }
-        Builder header(String k, String v) { headers.put(k, v); return this; }
-
-        HttpRequest build() {                                 // validate once, at the end
-            if (body != null && method.equals("GET"))
-                throw new IllegalStateException("GET cannot have a body");
-            if (retries < 0) throw new IllegalArgumentException("retries");
-            return new HttpRequest(this);
-        }
+class HttpRequestBuilder {
+    HttpRequest r;
+public:
+    explicit HttpRequestBuilder(string url) {        // the required field comes first
+        r.url = std::move(url);
+        r.method = "GET";
     }
-
-    @Override public String toString() {
-        return method + " " + url + " timeout=" + timeoutSeconds + " retries=" + retries;
+    HttpRequestBuilder& method(string m) { r.method = std::move(m); return *this; }
+    HttpRequestBuilder& body(string b) { r.body = std::move(b); return *this; }
+    HttpRequestBuilder& timeout(int s) { r.timeoutSeconds = s; return *this; }
+    HttpRequestBuilder& retries(int n) { r.retries = n; return *this; }
+    HttpRequestBuilder& header(const string& k, const string& v) {
+        r.headers[k] = v;
+        return *this;
     }
-
-    public static void main(String[] args) {
-        HttpRequest r = HttpRequest.builder("/api/orders")
-            .method("POST").body("{}").retries(3).header("Auth", "token").build();
-        System.out.println(r);   // POST /api/orders timeout=30 retries=3
+    HttpRequest build() const {                      // validate once, at the end
+        if (!r.body.empty() && r.method == "GET") throw logic_error("GET cannot have a body");
+        if (r.retries < 0) throw invalid_argument("retries");
+        return r;                                    // a copy: the builder can be reused
     }
+};
+
+int main() {
+    const HttpRequest req = HttpRequestBuilder("/api/orders")
+        .method("POST").body("{}").retries(3).header("Auth", "token").build();
+    cout << req.str() << "\n";   // POST /api/orders timeout=30 retries=3
 }
 ```
 
 | step | builder state |
 |---|---|
-| `builder(url)` | url set, GET, no body, 30 s, 0 retries |
+| `HttpRequestBuilder(url)` | url set, GET, no body, 30 s, 0 retries |
 | `.method("POST")` | POST |
 | `.body("{}")` | body set |
 | `.retries(3)` | retries 3 |
 | `.build()` | checks pass, immutable `HttpRequest` created |
 
-#### C++ and Python
+#### A smaller builder
 
 ```cpp
 class Pizza {
@@ -535,48 +512,42 @@ int main() {
 }
 ```
 
-```python
-from dataclasses import dataclass, field
-
-
-@dataclass(frozen=True)
-class Pizza:                     # keyword arguments with defaults do the builder's job
-    size: str
-    toppings: tuple = ()
-    extra_cheese: bool = False
-    crust: str = field(default="thin")
-
-
-print(Pizza("large", toppings=("olives",), extra_cheese=True))
-```
-
 #### Director (GoF form)
 
 A director knows the recipe; builders know the output format:
 
-```python
-class Director:
-    def make_report(self, builder):
-        builder.title("Sales")
-        builder.row("north", 120)
-        return builder.result()
+```cpp
+struct ReportBuilder {
+    virtual ~ReportBuilder() = default;
+    virtual void title(const string& t) = 0;
+    virtual void row(const string& key, int value) = 0;
+};
 
+struct TextBuilder : ReportBuilder {
+    string out;
+    void title(const string& t) override { out += "== " + t + " ==\n"; }
+    void row(const string& k, int v) override { out += k + ": " + to_string(v) + "\n"; }
+};
 
-class TextBuilder:
-    def __init__(self):
-        self.lines = []
+struct CsvBuilder : ReportBuilder {
+    string out = "key,value\n";
+    void title(const string&) override {}           // CSV has no title line
+    void row(const string& k, int v) override { out += k + "," + to_string(v) + "\n"; }
+};
 
-    def title(self, t):
-        self.lines.append(t.upper())
+void makeSalesReport(ReportBuilder& b) {             // the director: fixed steps, any builder
+    b.title("Sales");
+    b.row("north", 120);
+    b.row("south", 95);
+}
 
-    def row(self, k, v):
-        self.lines.append(f"{k}: {v}")
-
-    def result(self):
-        return "\n".join(self.lines)
-
-
-print(Director().make_report(TextBuilder()))
+int main() {
+    TextBuilder text;
+    CsvBuilder csv;
+    makeSalesReport(text);
+    makeSalesReport(csv);
+    cout << text.out << csv.out;   // == Sales ==, north: 120, ... then key,value, north,120, ...
+}
 ```
 
 #### Pitfalls
@@ -597,8 +568,8 @@ A: Providing a chain of constructors with more and more parameters to cover opti
 Q: Why does a builder pair well with immutable objects?
 A: The builder is the mutable part that collects values step by step, and build creates the final object in one go with every field set. The product never needs setters, so it can be immutable and valid from the moment it exists.
 
-Q: Do you need the builder pattern in Python?
-A: Usually not. Keyword arguments with default values already give named, optional parameters, and dataclasses can make the result frozen. A builder is still useful when construction has many steps or must produce different representations.
+Q: When can C++ code skip a builder?
+A: When the object is a plain aggregate with sensible defaults. C++20 designated initializers such as Options{.timeout = 5, .retries = 3} already name each field and let you leave out the rest. A builder is still useful when fields must be validated together, when construction has many steps, or when the same steps must produce different representations.
 
 Q: What does the director do in the GoF builder pattern?
 A: The director encodes a fixed sequence of building steps and runs them on any builder. Different builders turn the same steps into different products, such as the same report rendered as plain text or HTML.
@@ -614,7 +585,7 @@ The prototype pattern creates new objects by copying an existing one instead of 
 ### interview
 - Intent: create objects by **cloning a prototype** instance, then adjusting the copy.
 - Useful when construction is **expensive** (loaded from disk, heavy computation), when the exact class is only known at runtime (you hold a `Shape*` and need another one like it), or to avoid a parallel hierarchy of factories.
-- C++: a **virtual `clone()`** returning `unique_ptr<Base>`, implemented with the copy constructor in each subclass. Java: `Cloneable` and `clone()` (awkward) or copy constructors. Python: `copy.copy` or `copy.deepcopy`.
+- In C++: a **virtual `clone()`** returning `unique_ptr<Base>`, implemented with the copy constructor in each subclass (the "virtual constructor" idiom). The clone is only as deep as that copy constructor.
 - A **prototype registry** maps names to preconfigured prototypes: `registry.get("red-circle")` returns a fresh clone.
 - Main decision: **shallow vs deep** cloning; cloned objects must not share mutable parts they are supposed to own.
 - Examples: duplicating slides or shapes in an editor, game units spawned from templates, preconfigured request objects.
@@ -680,40 +651,63 @@ int main() {
 
 Step 4 shows the semantics: a clone is a snapshot, not a live link.
 
-#### Python
+#### Deep enough clones
 
-```python
-import copy
+```cpp
+struct Section { string heading, text; };
 
+struct Document {
+    string title;
+    vector<shared_ptr<Section>> sections;             // pointers: the default copy shares them
 
-class Document:
-    def __init__(self, title, sections):
-        self.title = title
-        self.sections = sections          # a list of dicts: must be deep-copied
+    Document clone() const {                          // deep: copies each Section too
+        Document d{title, {}};
+        for (const auto& s : sections) d.sections.push_back(make_shared<Section>(*s));
+        return d;
+    }
+};
 
-    def clone(self):
-        return copy.deepcopy(self)
-
-
-template = Document("Weekly report", [{"heading": "Summary", "text": ""}])
-week1 = template.clone()
-week1.sections[0]["text"] = "Shipped search"
-print(template.sections[0]["text"] == "", week1.sections[0]["text"])   # True Shipped search
+int main() {
+    Document tmpl{"Weekly report", {make_shared<Section>(Section{"Summary", ""})}};
+    Document week1 = tmpl.clone();
+    Document shallow = tmpl;                          // copies the pointers only
+    week1.sections[0]->text = "Shipped search";
+    shallow.sections[0]->text = "oops";
+    cout << tmpl.sections[0]->text << " | " << week1.sections[0]->text << "\n";
+    // oops | Shipped search
+}
 ```
 
-With `copy.copy` instead, both documents would share the same section dictionaries, and filling in week 1 would also change the template.
+The default copy (`shallow`) copies the pointers, so both documents share one `Section` and filling in the copy also changed the template. `clone()` copies the sections themselves.
 
-#### Java notes
+#### Writing clone() once
 
-`Object.clone()` is shallow, bypasses constructors, requires the `Cloneable` marker and throws a checked exception if it is missing. A copy constructor plus a `copy()` method is the common, clearer alternative:
+Every subclass repeating the same `clone()` is boilerplate. A small CRTP helper writes it once:
 
-```java
-class Sheep {
-    String name;
-    List<String> tags = new ArrayList<>();
-    Sheep(String name) { this.name = name; }
-    Sheep(Sheep other) { this.name = other.name; this.tags = new ArrayList<>(other.tags); }
-    Sheep copy() { return new Sheep(this); }
+```cpp
+struct Shape {
+    virtual ~Shape() = default;
+    virtual unique_ptr<Shape> clone() const = 0;
+    virtual string name() const = 0;
+};
+
+template <class Derived>
+struct ShapeCloner : Shape {                          // writes clone() once for every subclass
+    unique_ptr<Shape> clone() const override {
+        return make_unique<Derived>(static_cast<const Derived&>(*this));
+    }
+};
+
+struct Square : ShapeCloner<Square> {
+    int side = 2;
+    string name() const override { return "square " + to_string(side); }
+};
+
+int main() {
+    Square s;
+    s.side = 7;
+    unique_ptr<Shape> copy = s.clone();
+    cout << copy->name() << "\n";                     // square 7
 }
 ```
 
@@ -721,7 +715,7 @@ class Sheep {
 
 - Shallow clones sharing owned mutable state.
 - Cloning objects that hold unique resources (sockets, file handles, ids) without resetting them.
-- Deep cloning object graphs with cycles without a memo (Python's `deepcopy` handles it; hand-written code must too).
+- Deep cloning object graphs with cycles or shared nodes without a memo (a map from each old node to its copy), which loops forever or duplicates the shared nodes.
 
 Connects to: shallow vs deep copy, factory method, polymorphism, method overloading vs overriding.
 

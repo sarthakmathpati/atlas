@@ -15,9 +15,9 @@ scope: "trade-offs, exception safety guarantees"
 There are two main ways for code to report a problem: return a special value saying it failed, or throw an exception that jumps out of the normal path. An error code is like a note left on your desk that you might forget to read, while an exception is like a fire alarm that everyone hears and must deal with. Each suits different situations, and good code picks one style on purpose.
 
 ### interview
-- **Error codes** (return values, `errno`, `std::error_code`, Go's `value, err`): explicit and cheap, but **easy to ignore**, they clutter every call site, and they compete with the real return value.
+- **Error codes** (return values, `errno`, `std::error_code`): explicit and cheap, but **easy to ignore**, they clutter every call site, and they compete with the real return value.
 - **Exceptions**: separate the error path from the normal path, **cannot be silently ignored** (they propagate), carry rich information, and work in constructors and operators. Costs: hidden control flow, and throwing is slow (C++ uses a "zero-cost" model: nothing on the happy path, expensive on throw).
-- Typed results sit in between: `std::optional`, C++23 `std::expected`, Rust's `Result`, Java's `Optional`; the failure is in the type, so the caller must look.
+- Typed results sit in between: `std::optional` (failed, no reason) and C++23 `std::expected` (the value or an error); the failure is in the type, so the caller must look.
 - Rule of thumb: exceptions for **unexpected** failures the immediate caller cannot handle (file missing mid-run, out of memory, broken invariants); codes or result types for **expected** outcomes (user typed a bad number, key not found), hot loops and C or cross-language boundaries.
 - C++ **exception safety guarantees**: **no-throw** (never fails, required for destructors, swaps and moves), **strong** (commit or roll back: on failure, state is unchanged), **basic** (no leaks and invariants hold, but state may have changed), none.
 - Tools for safety: RAII for cleanup, copy-and-swap for the strong guarantee, `noexcept` on operations that cannot fail.
@@ -65,20 +65,7 @@ int main() {
 }
 ```
 
-```python
-def parse_port(s):
-    if not s.isdigit() or not 1 <= int(s) <= 65535:
-        raise ValueError(f"bad port {s!r}")
-    return int(s)
-
-
-try:
-    parse_port("99999")
-except ValueError as e:
-    print(e)              # bad port '99999'
-```
-
-Python leans on exceptions even for expected cases ("easier to ask forgiveness than permission"), because they are cheap relative to the rest of the language.
+Marking functions that return codes or results `[[nodiscard]]` makes the compiler warn when a caller ignores the answer, which closes the biggest hole of error codes.
 
 #### Exception safety guarantees (worked example)
 
@@ -119,14 +106,14 @@ struct Bank {
 
 The strong version copies the whole map, which is expensive; you choose the guarantee per operation. Destructors must never throw: during stack unwinding a second exception calls `std::terminate`.
 
-#### Java's checked and unchecked exceptions
+#### noexcept
 
-Java splits exceptions into **checked** (subclasses of `Exception` other than `RuntimeException`, which the compiler forces callers to catch or declare, for recoverable conditions such as `IOException`) and **unchecked** (`RuntimeException` and its subclasses, for programming errors like `NullPointerException`). Checked exceptions make failure part of the signature, the same goal as `expected`, at the cost of boilerplate.
+`noexcept` promises that a function never throws; if an exception escapes anyway, `std::terminate` runs, so it is a promise, not a check. It also changes what the library does: when a `vector` grows, it moves its elements only if their move constructor is `noexcept`, and otherwise copies them to keep the strong guarantee. Destructors are `noexcept` unless you say otherwise.
 
 #### Pitfalls
 
-- Catching everything (`catch (...)`, `except Exception: pass`) and hiding real bugs.
-- Using exceptions for normal control flow in hot loops (slow in C++ and Java).
+- Catching everything (`catch (...) {}`) and hiding real bugs.
+- Using exceptions for normal control flow in hot loops (a throw costs far more than a return).
 - Ignoring return codes, especially from `write`, `close` and system calls.
 - Mixing styles randomly inside one module.
 
@@ -158,118 +145,87 @@ scope: "hierarchy, meaningful messages"
 Custom exceptions are your own named error types, built so the code that catches them knows exactly what went wrong. A hospital sorts patients by named problems, like a broken arm or a fever, instead of labelling everyone "unwell", so each goes to the right doctor. Good error types and clear messages let each problem reach the code that can fix it.
 
 ### interview
-- Build a small **hierarchy**: a domain base (`PaymentError`) under the language's standard base (`std::runtime_error`, Java `Exception` or `RuntimeException`, Python `Exception`), with specific subclasses (`CardDeclined`, `InsufficientFunds`). Callers catch as broadly or narrowly as they need.
-- Create a new type only when a caller would **handle it differently**; otherwise reuse standard ones (`std::invalid_argument`, `IllegalArgumentException`, `ValueError`, `KeyError`).
+- Build a small **hierarchy**: a domain base (`PaymentError`) under a standard base (`std::runtime_error` or `std::logic_error`), with specific subclasses (`CardDeclined`, `InsufficientFunds`). Callers catch as broadly or narrowly as they need.
+- Create a new type only when a caller would **handle it differently**; otherwise reuse standard ones (`std::invalid_argument`, `std::out_of_range`, `std::system_error`).
 - **Messages** state what failed and the relevant values ("order 42: amount 500 exceeds limit 300"), never secrets such as passwords or card numbers.
 - Carry **structured fields** for code, not only text: an error code, the order id, whether it is retryable.
-- **Chain causes** so the root error is not lost: `new X(msg, cause)` in Java, `raise X(...) from e` in Python, `std::throw_with_nested` in C++.
-- In C++ throw by value and catch by **const reference** (avoids slicing and copies). In Java choose checked for recoverable conditions the caller must handle, unchecked for programming errors.
+- **Chain causes** so the root error is not lost: `std::throw_with_nested` wraps the exception being handled inside the new one, and `std::rethrow_if_nested` unpacks it.
+- Throw by value and catch by **const reference** (avoids slicing and copies). Derive from `std::exception` so `catch (const std::exception&)` and `what()` work everywhere.
 
 ### deep
 #### Intuition
 
 A caller catching `Exception` can only log and give up. A caller catching `InsufficientFunds` can offer a smaller amount, while one catching `PaymentGatewayUnavailable` can retry in a minute. Exception types are an API: they tell callers which failures they can react to.
 
-#### A hierarchy in Python
-
-```python
-class PaymentError(Exception):
-    """Base for every payment failure, so callers can catch them all at once."""
-
-    retryable = False
-
-    def __init__(self, message, *, order_id):
-        super().__init__(f"order {order_id}: {message}")
-        self.order_id = order_id
-
-
-class CardDeclined(PaymentError):
-    pass
-
-
-class InsufficientFunds(PaymentError):
-    def __init__(self, *, order_id, needed, available):
-        super().__init__(f"needs {needed}, only {available} available", order_id=order_id)
-        self.needed, self.available = needed, available
-
-
-class GatewayUnavailable(PaymentError):
-    retryable = True
-
-
-def charge(order_id, amount, balance):
-    try:
-        if amount > balance:
-            raise InsufficientFunds(order_id=order_id, needed=amount, available=balance)
-        raise ConnectionError("timeout after 3s")          # simulate a network failure
-    except ConnectionError as e:
-        raise GatewayUnavailable("gateway down", order_id=order_id) from e   # keep the cause
-
-
-for amount in (500, 100):
-    try:
-        charge(42, amount, balance=300)
-    except InsufficientFunds as e:
-        print("offer a partial payment:", e, e.available)
-    except PaymentError as e:
-        print("retry later" if e.retryable else "give up", "|", e, "| cause:", repr(e.__cause__))
-# offer a partial payment: order 42: needs 500, only 300 available 300
-# retry later | order 42: gateway down | cause: ConnectionError('timeout after 3s')
-```
-
-#### Worked example: who catches what
-
-| raised | caught by `except InsufficientFunds` | caught by `except PaymentError` | caught by `except Exception` |
-|---|---|---|---|
-| `InsufficientFunds` | yes | yes | yes |
-| `GatewayUnavailable` | no | yes | yes |
-| `KeyError` (a bug) | no | no | yes |
-
-Order the `except` or `catch` clauses from most specific to most general; the first match wins.
-
-#### The same in C++ and Java
+#### A hierarchy
 
 ```cpp
-class PaymentError : public runtime_error {
+class PaymentError : public runtime_error {         // base: catch every payment failure at once
 public:
-    PaymentError(const string& msg, int orderId)
-        : runtime_error("order " + to_string(orderId) + ": " + msg), orderId(orderId) {}
-    int orderId;
+    const int orderId;
+    PaymentError(const string& msg, int id)
+        : runtime_error("order " + to_string(id) + ": " + msg), orderId(id) {}
+    virtual bool retryable() const { return false; }
+};
+
+class CardDeclined : public PaymentError {
+public:
+    using PaymentError::PaymentError;
 };
 
 class InsufficientFunds : public PaymentError {
 public:
-    InsufficientFunds(int orderId, long long needed, long long available)
-        : PaymentError("needs " + to_string(needed) + ", only " + to_string(available), orderId),
-          needed(needed), available(available) {}
-    long long needed, available;
+    const long long needed, available;               // structured fields, not only text
+    InsufficientFunds(int id, long long need, long long have)
+        : PaymentError("needs " + to_string(need) + ", only " + to_string(have) + " available", id),
+          needed(need), available(have) {}
 };
 
-void pay(int orderId, long long amount, long long balance) {
+class GatewayUnavailable : public PaymentError {
+public:
+    using PaymentError::PaymentError;
+    bool retryable() const override { return true; }
+};
+
+void charge(int orderId, long long amount, long long balance) {
     if (amount > balance) throw InsufficientFunds(orderId, amount, balance);   // throw by value
+    try {
+        throw system_error(make_error_code(errc::timed_out));   // simulate a network failure
+    } catch (const system_error&) {
+        throw_with_nested(GatewayUnavailable("gateway down", orderId));   // keep the cause
+    }
 }
 
 int main() {
-    try {
-        pay(42, 500, 300);
-    } catch (const InsufficientFunds& e) {       // catch by const reference: no slicing
-        cout << e.what() << " (short by " << e.needed - e.available << ")\n";
-    } catch (const PaymentError& e) {
-        cout << "payment failed: " << e.what() << "\n";
+    for (long long amount : {500, 100}) {
+        try {
+            charge(42, amount, 300);
+        } catch (const InsufficientFunds& e) {       // catch by const reference: no slicing
+            cout << "offer " << e.available << ": " << e.what() << "\n";
+        } catch (const PaymentError& e) {
+            cout << (e.retryable() ? "retry later" : "give up") << " | " << e.what();
+            try {
+                rethrow_if_nested(e);
+            } catch (const exception& cause) {
+                cout << " | cause: " << cause.what();
+            }
+            cout << "\n";
+        }
     }
 }
+// offer 300: order 42: needs 500, only 300 available
+// retry later | order 42: gateway down | cause: Connection timed out
 ```
 
-```java
-class PaymentException extends Exception {                  // checked: callers must handle it
-    private final int orderId;
-    PaymentException(String message, int orderId, Throwable cause) {
-        super("order " + orderId + ": " + message, cause);   // chain the cause
-        this.orderId = orderId;
-    }
-    int orderId() { return orderId; }
-}
-```
+#### Worked example: who catches what
+
+| thrown | caught by `catch (const InsufficientFunds&)` | caught by `catch (const PaymentError&)` | caught by `catch (const exception&)` |
+|---|---|---|---|
+| `InsufficientFunds` | yes | yes | yes |
+| `GatewayUnavailable` | no | yes | yes |
+| `out_of_range` from `map::at` (a bug) | no | no | yes |
+
+Order the `catch` clauses from most specific to most general; the first match wins.
 
 #### Message checklist
 
@@ -295,7 +251,7 @@ Q: What makes a good exception message?
 A: It says which operation failed, on which entity, and why, including the relevant values such as ids and limits. It must not contain secrets or personal data, and it is aimed at developers reading logs rather than end users.
 
 Q: What is exception chaining and why does it matter?
-A: When you catch a low-level exception and throw a higher-level one, you attach the original as the cause, for example with raise from in Python or a cause argument in Java. The original error and stack trace are kept, which is essential for debugging.
+A: When you catch a low-level exception and throw a higher-level one, you attach the original as the cause, in C++ with std::throw_with_nested, which a handler can unpack with std::rethrow_if_nested. The original error and stack trace are kept, which is essential for debugging.
 
 Q: When should you create a new exception type instead of using a standard one?
 A: When a caller would want to handle that failure differently from others, or needs structured data from it, such as the available balance. For generic cases like a bad argument or a missing key, standard exceptions communicate the meaning just as well.
@@ -314,8 +270,8 @@ Defensive programming means writing code that expects mistakes and catches them 
 ### interview
 - **Validate at trust boundaries**: public APIs, user input, files, network messages, configuration. Reject bad data with clear errors there, and trust the data inside.
 - **Fail fast**: detect a problem as early as possible and stop loudly, instead of continuing with a bad state that fails far away later.
-- **Assertions** check internal assumptions that must never be false if the code is correct (invariants, postconditions). They are often disabled in production (C and C++ `NDEBUG`, Java's `-ea` off by default, Python `-O`), so never use them for input validation.
-- Techniques: guard clauses, `Objects.requireNonNull`, preconditions and postconditions, defensive copies, immutable objects, exhaustive `switch` defaults that throw, timeouts on external calls.
+- **Assertions** check internal assumptions that must never be false if the code is correct (invariants, postconditions). `assert` compiles to nothing when `NDEBUG` is defined, as in most release builds, so never use it for input validation.
+- Techniques: guard clauses, references instead of pointers where null is not allowed, preconditions and postconditions, defensive copies, immutable objects, exhaustive `switch` defaults that throw, timeouts on external calls.
 - Balance: checks everywhere (re-validating the same value in every layer) add noise and cost; validate once at the boundary and keep internal code clean.
 
 ### deep
@@ -357,27 +313,32 @@ A config loader reads `timeout = "30s"` where a number was expected.
 | approach | what happens |
 |---|---|
 | lenient: default to 0 on parse error | every request times out instantly in production; the cause is three layers away |
-| fail fast: raise at startup | the service refuses to start with "timeout: expected a number, got '30s'"; fixed in a minute |
+| fail fast: throw at startup | the service refuses to start with "timeout: expected a number, got '30s'"; fixed in a minute |
 
-```python
-def load_timeout(config):
-    raw = config.get("timeout")
-    if raw is None:
-        raise KeyError("timeout is missing from the config")
-    if not str(raw).isdigit():
-        raise ValueError(f"timeout: expected a number of seconds, got {raw!r}")
-    return int(raw)
+```cpp
+int loadTimeout(const map<string, string>& config) {
+    auto it = config.find("timeout");
+    if (it == config.end()) throw runtime_error("timeout is missing from the config");
+    const string& raw = it->second;
+    bool digits = !raw.empty() && all_of(raw.begin(), raw.end(), [](unsigned char c) {
+        return isdigit(c) != 0;
+    });
+    if (!digits) throw invalid_argument("timeout: expected a number of seconds, got '" + raw + "'");
+    return stoi(raw);
+}
 
-
-try:
-    load_timeout({"timeout": "30s"})
-except ValueError as e:
-    print(e)   # timeout: expected a number of seconds, got '30s'
+int main() {
+    try {
+        loadTimeout({{"timeout", "30s"}});
+    } catch (const invalid_argument& e) {
+        cout << e.what() << "\n";   // timeout: expected a number of seconds, got '30s'
+    }
+}
 ```
 
 #### Pitfalls
 
-- `assert user_input > 0` in Python: with `-O` the check disappears and bad input flows through.
+- `assert(userInput > 0)` as validation: with `NDEBUG` the check disappears and bad input flows through.
 - Swallowing errors to "keep running" (empty catch blocks), which converts a crash into silent wrong answers.
 - Repeating the same null checks in every layer instead of validating once.
 

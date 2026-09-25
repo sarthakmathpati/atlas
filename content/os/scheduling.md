@@ -89,18 +89,6 @@ int main() {
 }
 ```
 
-```python
-def metrics(rows):
-    """rows: (id, arrival, burst, first_run, completion)"""
-    out = [(pid, c - a, c - a - b, f - a) for pid, a, b, f, c in rows]
-    n = len(out)
-    return out, [round(sum(r[i] for r in out) / n, 2) for i in (1, 2, 3)]
-
-
-# [6.33, 3.33, 3.33]
-print(metrics([("P1", 0, 5, 0, 5), ("P2", 1, 3, 5, 8), ("P3", 2, 1, 8, 9)])[1])
-```
-
 #### Which criteria for which system
 
 | system | primary goals |
@@ -502,39 +490,6 @@ int main() {
     for (auto& [id, c] : roundRobin({{"P1", 0, 24}, {"P2", 0, 3}, {"P3", 0, 3}}, 4))
         cout << id << " finishes at " << c << "\n";   // P2 at 7, P3 at 10, P1 at 30
 }
-```
-
-```python
-from collections import deque
-
-
-def round_robin(jobs, q):
-    """jobs: list of (id, arrival, burst); returns {id: completion}."""
-    jobs = sorted(jobs, key=lambda j: j[1])
-    rem = {j[0]: j[2] for j in jobs}
-    ready, t, nxt, done = deque(), 0, 0, {}
-    while len(done) < len(jobs):
-        while nxt < len(jobs) and jobs[nxt][1] <= t:
-            ready.append(jobs[nxt][0])
-            nxt += 1
-        if not ready:
-            t = jobs[nxt][1]
-            continue
-        pid = ready.popleft()
-        run = min(q, rem[pid])
-        t, rem[pid] = t + run, rem[pid] - run
-        while nxt < len(jobs) and jobs[nxt][1] <= t:   # new arrivals first
-            ready.append(jobs[nxt][0])
-            nxt += 1
-        if rem[pid]:
-            ready.append(pid)
-        else:
-            done[pid] = t
-    return done
-
-
-print(round_robin([("P1", 0, 5), ("P2", 1, 3), ("P3", 2, 1), ("P4", 4, 2)], 2))
-# {'P3': 5, 'P4': 9, 'P2': 10, 'P1': 11}
 ```
 
 #### Pitfalls in numericals

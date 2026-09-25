@@ -66,17 +66,6 @@ int pivotIndex(const vector<int>& a) {
 }
 ```
 
-```python
-from itertools import accumulate
-
-class RangeSum:
-    def __init__(self, a):
-        self.P = [0] + list(accumulate(a))
-
-    def query(self, l, r):          # inclusive
-        return self.P[r + 1] - self.P[l]
-```
-
 Build $O(n)$ time and $O(n)$ space; each query $O(1)$.
 
 #### Prefix counts
@@ -202,35 +191,11 @@ int longestSubarrayWithSum(const vector<int>& a, long long k) {
 }
 ```
 
-```python
-from collections import defaultdict
-
-def count_subarrays_divisible_by_k(a, k):
-    seen = defaultdict(int)
-    seen[0] = 1
-    cur = count = 0
-    for x in a:
-        cur = (cur + x) % k        # Python's % is already non-negative for k > 0
-        count += seen[cur]
-        seen[cur] += 1
-    return count
-
-def longest_subarray_with_sum(a, k):
-    first = {0: -1}
-    cur = best = 0
-    for j, x in enumerate(a):
-        cur += x
-        if cur - k in first:
-            best = max(best, j - first[cur - k])
-        first.setdefault(cur, j)
-    return best
-```
-
 Time $O(n)$ on average (hash operations), space $O(n)$ for the map.
 
 #### Divisibility
 
-A subarray sum is divisible by $K$ exactly when two prefixes have the same remainder mod $K$. So count remainders and add `seen[r]` at each step. In C++ and Java, `%` can return a negative number for negative sums; normalize with `((cur % k) + k) % k`.
+A subarray sum is divisible by $K$ exactly when two prefixes have the same remainder mod $K$. So count remainders and add `seen[r]` at each step. In C++, `%` can return a negative number for negative sums; normalize with `((cur % k) + k) % k`.
 
 #### Edge cases and bugs
 
@@ -259,7 +224,7 @@ Q: Why can't you use a sliding window when the array has negative numbers?
 A: A sliding window relies on the sum growing when the window expands and shrinking when it contracts. Negative numbers break that monotonicity, so you can't decide which end to move. The prefix-sum map doesn't need monotonicity.
 
 Q: How do you count subarrays whose sum is divisible by K?
-A: Two prefixes with the same remainder mod K bound a subarray whose sum is divisible by K. Count remainders in a map starting with {0: 1}, and at each step add the count of the current remainder. Normalize negative remainders in C++ and Java.
+A: Two prefixes with the same remainder mod K bound a subarray whose sum is divisible by K. Count remainders in a map starting with {0: 1}, and at each step add the count of the current remainder. Normalize negative remainders, since C++'s % can return them.
 
 Q: For the longest subarray with sum K, why store the first index of each prefix?
 A: The subarray length is j − i, so for a fixed end j you want the earliest i with the right prefix value. Storing the first occurrence (and never overwriting it) gives the longest possible subarray.
@@ -353,21 +318,6 @@ public:
         return P[r2 + 1][c2 + 1] - P[r1][c2 + 1] - P[r2 + 1][c1] + P[r1][c1];
     }
 };
-```
-
-```python
-class MatrixSum:
-    def __init__(self, a):
-        R, C = len(a), len(a[0]) if a else 0
-        self.P = [[0] * (C + 1) for _ in range(R + 1)]
-        for r in range(R):
-            for c in range(C):
-                self.P[r + 1][c + 1] = (a[r][c] + self.P[r][c + 1]
-                                        + self.P[r + 1][c] - self.P[r][c])
-
-    def query(self, r1, c1, r2, c2):
-        P = self.P
-        return P[r2 + 1][c2 + 1] - P[r1][c2 + 1] - P[r2 + 1][c1] + P[r1][c1]
 ```
 
 Build $O(RC)$ time and space, query $O(1)$.
@@ -487,19 +437,6 @@ bool carPooling(const vector<array<int, 3>>& trips, int capacity) {
     for (int x : D) if ((load += x) > capacity) return false;
     return true;
 }
-```
-
-```python
-def apply_range_adds(n, updates):
-    D = [0] * (n + 1)
-    for l, r, v in updates:
-        D[l] += v
-        D[r + 1] -= v
-    out, run = [], 0
-    for i in range(n):
-        run += D[i]
-        out.append(run)
-    return out
 ```
 
 Updates $O(1)$ each; reconstruction $O(n)$. Total $O(n + q)$ instead of $O(nq)$.

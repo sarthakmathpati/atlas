@@ -68,33 +68,6 @@ struct DSU {
 };
 ```
 
-```python
-class DSU:
-    def __init__(self, n):
-        self.parent = list(range(n))
-        self.size = [1] * n
-        self.components = n
-
-    def find(self, x):
-        root = x
-        while self.parent[root] != root:
-            root = self.parent[root]
-        while self.parent[x] != root:          # full path compression
-            self.parent[x], x = root, self.parent[x]
-        return root
-
-    def union(self, a, b):
-        a, b = self.find(a), self.find(b)
-        if a == b:
-            return False
-        if self.size[a] < self.size[b]:
-            a, b = b, a
-        self.parent[b] = a
-        self.size[a] += self.size[b]
-        self.components -= 1
-        return True
-```
-
 #### Complexity
 
 With union by size (or rank) and path compression, $m$ operations on $n$ elements take $O(m \, \alpha(n))$, where $\alpha$ grows so slowly that it is at most 4 for any input that fits in the universe. With only one of the two optimizations it is $O(\log n)$ per operation. Space $O(n)$.
@@ -188,51 +161,6 @@ bool equationsPossible(const vector<string>& eqs) {
     for (auto& e : eqs) if (e[1] == '!' && uf.find(e[0] - 'a') == uf.find(e[3] - 'a')) return false;
     return true;
 }
-```
-
-```python
-def accounts_merge(accounts):
-    parent = list(range(len(accounts)))
-    def find(x):
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-
-    owner = {}                                   # email -> first account index
-    for i, (_, *emails) in enumerate(accounts):
-        for email in emails:
-            if email in owner:
-                parent[find(i)] = find(owner[email])
-            else:
-                owner[email] = i
-
-    groups = {}
-    for email, i in owner.items():
-        groups.setdefault(find(i), []).append(email)
-    return [[accounts[root][0]] + sorted(emails) for root, emails in groups.items()]
-
-def islands_after_each_addition(R, C, positions):
-    parent, count, out = {}, 0, []
-    def find(x):
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-    for r, c in positions:
-        cell = r * C + c
-        if cell not in parent:
-            parent[cell] = cell
-            count += 1
-            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
-                nb = nr * C + nc
-                if 0 <= nr < R and 0 <= nc < C and nb in parent:
-                    a, b = find(cell), find(nb)
-                    if a != b:
-                        parent[a] = b
-                        count -= 1
-        out.append(count)
-    return out
 ```
 
 #### Recognizing a DSU problem
@@ -352,33 +280,6 @@ long long kruskal(int n, vector<array<int, 3>> edges) {    // {w, u, v}
     }
     return used == n - 1 ? total : -1;                      // -1: graph not connected
 }
-```
-
-```python
-def min_cost_connect_points(points):
-    """Manhattan-distance MST over points with Kruskal (O(n^2 log n) edges)."""
-    n = len(points)
-    edges = sorted(
-        (abs(x1 - x2) + abs(y1 - y2), i, j)
-        for i, (x1, y1) in enumerate(points)
-        for j, (x2, y2) in enumerate(points[:i])
-    )
-    parent = list(range(n))
-    def find(x):
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-    total = used = 0
-    for w, i, j in edges:
-        a, b = find(i), find(j)
-        if a != b:
-            parent[a] = b
-            total += w
-            used += 1
-            if used == n - 1:
-                break
-    return total
 ```
 
 For all-pairs complete graphs like "connect points", Prim's $O(V^2)$ version beats sorting $O(V^2)$ edges.

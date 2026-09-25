@@ -9539,7 +9539,7 @@
    "topicId": "oop.foundations",
    "subjectId": "oop",
    "name": "Access modifiers",
-   "scope": "public, private, protected, package-private in Java",
+   "scope": "public, private, protected, friends and struct defaults in C++",
    "importance": "must",
    "tracks": [
     "sde",
@@ -9740,7 +9740,7 @@
    "topicId": "oop.pillars",
    "subjectId": "oop",
    "name": "The diamond problem",
-   "scope": "multiple inheritance ambiguity, virtual inheritance in C++, interfaces in Java",
+   "scope": "multiple inheritance ambiguity, virtual inheritance, diamonds of interfaces",
    "importance": "important",
    "tracks": [
     "sde",
@@ -9933,8 +9933,8 @@
    "id": "oop.language-specifics.equals-and-hashcode-in-java",
    "topicId": "oop.language-specifics",
    "subjectId": "oop",
-   "name": "equals and hashCode in Java",
-   "scope": "the contract and what breaks when violated",
+   "name": "Equality and hashing",
+   "scope": "operator== and the hash must agree, and what breaks when they don't",
    "importance": "important",
    "tracks": [
     "sde",
@@ -13253,7 +13253,7 @@
    "topicId": "conc.basics",
    "subjectId": "conc",
    "name": "Creating threads",
-   "scope": "std::thread, Java threads and executors, Python threading",
+   "scope": "std::thread, std::jthread, std::async and thread pools",
    "importance": "must",
    "tracks": [
     "sde",

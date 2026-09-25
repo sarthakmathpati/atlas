@@ -80,8 +80,17 @@ describe("syllabus matches BUILD_SPEC.md section 6", () => {
     }
   });
 
-  it("derives every concept id from its topic and name", () => {
-    for (const c of syllabus.concepts) expect(c.id).toBe(`${c.topicId}.${slugify(c.name)}`);
+  it("derives every concept id from its topic and name, unless the spec keeps an older id", () => {
+    const kept = new Set(
+      specSubjects.flatMap((s) => s.topics.flatMap((t) => t.concepts.filter((c) => c.idSlug))),
+    );
+    expect([...kept].map((c) => c.id)).toEqual([
+      "oop.language-specifics.equals-and-hashcode-in-java",
+    ]);
+    const keptIds = new Set([...kept].map((c) => c.id));
+    for (const c of syllabus.concepts) {
+      if (!keptIds.has(c.id)) expect(c.id).toBe(`${c.topicId}.${slugify(c.name)}`);
+    }
   });
 
   it("shows a subject for a track when any of its concepts belongs to it", () => {

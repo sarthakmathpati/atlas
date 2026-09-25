@@ -17,7 +17,7 @@ A stack is a pile where you can only add or remove at the top, like a stack of p
 ### interview
 - **LIFO**: `push`, `pop`, `top`/`peek`, `empty`, all **O(1)** (amortized for a dynamic array).
 - Implementations: dynamic array (push and pop at the end; cache-friendly) or linked list (push and pop at the head).
-- Library: C++ `std::stack` or `vector`; Java `ArrayDeque` (not the legacy `Stack` class); Python `list` with `append` and `pop`.
+- Library: `std::stack` (an adapter over `deque` by default) or a `vector` with `push_back`, `back` and `pop_back`.
 - Real uses: function call stack, undo and redo, browser back button, DFS, parsing nested structure, backtracking.
 - Signals: **nesting** (brackets, tags, directories), "most recent unmatched", reversing order, and processing an element once all later ones that affect it are known.
 - Always check `empty()` before `top()` or `pop()`.
@@ -56,22 +56,6 @@ string reverseWords(const string& s) {
 }
 ```
 
-```python
-class UndoableText:
-    """Undo with a stack of previous states (the most recent change is undone first)."""
-    def __init__(self):
-        self.text = ""
-        self.history = []
-
-    def type(self, s):
-        self.history.append(self.text)
-        self.text += s
-
-    def undo(self):
-        if self.history:
-            self.text = self.history.pop()
-```
-
 #### Worked example: undo
 
 | action | text | history (top on the right) |
@@ -97,8 +81,8 @@ A stack only exposes its top. If you need the oldest item, use a queue; if you n
 
 #### Edge cases and bugs
 
-- Popping or reading the top of an empty stack: undefined behavior in C++ (`std::stack::top` on empty), an exception in Java and Python.
-- In Java, `Stack` is synchronized and slow; prefer `ArrayDeque` with `push`, `pop`, `peek`.
+- Popping or reading the top of an empty stack: undefined behavior (`std::stack::top` and `pop` on an empty stack); check `empty()` first.
+- Keeping the reference from `top()` and then calling `pop()` leaves a dangling reference; copy the value first.
 - Storing indices instead of values when you later need positions (monotonic stack problems).
 
 #### Variants
@@ -122,8 +106,8 @@ A: The function call stack, undo in editors, the back button in browsers, matchi
 Q: What is the signal that a problem needs a stack?
 A: Nested structure or "most recent unmatched" logic: brackets, nested encodings like 3[a2[c]], directory paths with "..", or needing the nearest previous element that satisfies a condition. Reversal is another hint.
 
-Q: Why is Java's Stack class discouraged?
-A: It extends Vector, so every method is synchronized, which adds overhead, and it exposes list operations that break the stack abstraction. ArrayDeque is faster and is the recommended stack in modern Java.
+Q: Why does std::stack::pop return nothing instead of the removed element?
+A: Returning the element by value could throw while copying it after it had already been removed, losing it for good. Splitting the job into top(), which returns a reference, and pop(), which removes, keeps the operation exception-safe, so read top() before calling pop().
 
 ## dsa.stacks-queues.queue-and-deque-basics
 name: "Queue and deque basics"
@@ -136,8 +120,8 @@ A queue is a line where people join at the back and leave from the front, so the
 ### interview
 - **FIFO**: `push`/`enqueue` at the back, `pop`/`dequeue` at the front, `front`: all **O(1)**.
 - **Circular buffer**: a fixed array with `head` and `size` (or head and tail); the back index is `(head + size) % capacity`, so no shifting is needed.
-- **Deque**: push and pop at both ends in O(1). C++ `std::deque`, Java `ArrayDeque`, Python `collections.deque`.
-- Don't use a Python `list` as a queue: `pop(0)` is O(n). Use `deque.popleft()`.
+- **Deque**: push and pop at both ends in O(1) with `std::deque`.
+- Don't use a `vector` as a queue by erasing its front: `erase(begin())` is O(n). Use `std::queue`, `std::deque`, or a vector with a head index.
 - Uses: BFS, task scheduling, buffering streams, rate limiters (sliding time window), and the monotonic deque.
 - A **priority queue** is not FIFO: it serves the smallest (or largest) key first (a heap).
 
@@ -187,52 +171,23 @@ public:
 };
 ```
 
-```python
-from collections import deque
-
-def bfs_order(graph, start):
-    """Visit nodes in breadth-first order using a FIFO queue."""
-    seen, order, q = {start}, [], deque([start])
-    while q:
-        node = q.popleft()                  # O(1), unlike list.pop(0)
-        order.append(node)
-        for nxt in graph.get(node, []):
-            if nxt not in seen:
-                seen.add(nxt)
-                q.append(nxt)
-    return order
-
-class HitCounter:
-    """Hits in the last 300 seconds: drop old timestamps from the front."""
-    def __init__(self):
-        self.q = deque()
-
-    def hit(self, t):
-        self.q.append(t)
-
-    def count(self, t):
-        while self.q and self.q[0] <= t - 300:
-            self.q.popleft()
-        return len(self.q)
-```
-
 #### Deque operations
 
-| C++ `deque` | Java `ArrayDeque` | Python `deque` |
+| operation | `std::deque` | `std::queue` |
 |---|---|---|
-| `push_back`, `push_front` | `offerLast`, `offerFirst` | `append`, `appendleft` |
-| `pop_back`, `pop_front` | `pollLast`, `pollFirst` | `pop`, `popleft` |
-| `back`, `front` | `peekLast`, `peekFirst` | `q[-1]`, `q[0]` |
+| add | `push_back`, `push_front` | `push` (at the back) |
+| remove | `pop_back`, `pop_front` | `pop` (from the front) |
+| read | `back`, `front`, `dq[i]` | `front`, `back` |
 
 #### Complexity
 
-All queue and deque end operations are $O(1)$. `std::deque` also allows $O(1)$ random access by index; Python's `deque` indexing is $O(n)$ in the middle.
+All queue and deque end operations are $O(1)$. `std::deque` also allows $O(1)$ random access by index, which a linked list cannot offer.
 
 #### Edge cases and bugs
 
 - Full versus empty in a circular buffer: with only `head` and `tail` indices both look like `head == tail`; keep a `count` (or leave one slot unused).
 - Modulo of a negative index when moving `head` backwards: use `(head - 1 + cap) % cap`.
-- Using a list as a queue in Python makes BFS quadratic on large graphs.
+- Erasing from the front of a `vector` to simulate a queue makes BFS quadratic on large graphs.
 
 #### Variants
 
@@ -247,8 +202,8 @@ A: A stack is last in, first out: you add and remove at the same end. A queue is
 Q: How does a circular buffer implement a queue in a fixed array?
 A: It keeps the index of the front element and the current size. New elements go to (head + size) mod capacity and removing advances head by one mod capacity, so nothing ever shifts and every operation is O(1).
 
-Q: Why shouldn't you use a Python list as a queue?
-A: list.pop(0) shifts every remaining element, costing O(n), so a BFS over n nodes becomes O(n²). collections.deque supports popleft in O(1).
+Q: Why shouldn't you use a vector as a queue by erasing its front?
+A: vector::erase at the front shifts every remaining element, costing O(n), so a BFS over n nodes becomes O(n²). std::queue, which uses a deque underneath, pops the front in O(1).
 
 Q: What is a deque, and where is it useful?
 A: A double-ended queue that supports O(1) insertion and removal at both ends. It can act as a stack or a queue, and it powers the monotonic deque for sliding window maximums and 0-1 BFS, where zero-weight edges go to the front.
@@ -323,29 +278,6 @@ int longestValidParentheses(const string& s) {
     }
     return best;
 }
-```
-
-```python
-def min_add_to_make_valid(s):
-    open_count = additions = 0
-    for c in s:
-        if c == "(":
-            open_count += 1
-        elif open_count:
-            open_count -= 1
-        else:
-            additions += 1           # a ')' with nothing to match needs a '(' added
-    return additions + open_count    # plus a ')' for every '(' left open
-
-def check_valid_string_with_stars(s):
-    lo = hi = 0                      # range of possible numbers of open '('
-    for c in s:
-        lo += 1 if c == "(" else -1
-        hi += 1 if c != ")" else -1
-        if hi < 0:
-            return False             # too many ')' even if every '*' is '('
-        lo = max(lo, 0)
-    return lo == 0
 ```
 
 #### Why the −1 base works
@@ -495,43 +427,6 @@ long long evaluate(const string& s) {
 }
 ```
 
-```python
-def eval_rpn(tokens):
-    st = []
-    for t in tokens:
-        if t in "+-*/" and len(t) == 1:
-            b, a = st.pop(), st.pop()           # the right operand is on top
-            if t == "+":
-                st.append(a + b)
-            elif t == "-":
-                st.append(a - b)
-            elif t == "*":
-                st.append(a * b)
-            else:
-                st.append(int(a / b))           # truncate toward zero, like C++ and Java
-        else:
-            st.append(int(t))
-    return st[-1]
-
-def calculate_no_parens(s):
-    """+ - * / with precedence, no parentheses."""
-    st, num, op = [], 0, "+"
-    for i, c in enumerate(s + "+"):             # a sentinel operator flushes the last number
-        if c.isdigit():
-            num = num * 10 + int(c)
-        elif c in "+-*/":
-            if op == "+":
-                st.append(num)
-            elif op == "-":
-                st.append(-num)
-            elif op == "*":
-                st.append(st.pop() * num)
-            else:
-                st.append(int(st.pop() / num))
-            op, num = c, 0
-    return sum(st)
-```
-
 #### Complexity
 
 Each token is pushed and popped at most once: $O(n)$ time, $O(n)$ space for the stacks.
@@ -539,7 +434,7 @@ Each token is pushed and popped at most once: $O(n)$ time, $O(n)$ space for the 
 #### Edge cases and bugs
 
 - Operand order in RPN: pop `b` first, then `a`, and compute `a - b`.
-- Python's `//` rounds toward negative infinity; interview problems usually want truncation toward zero: `int(a / b)` (fine for values that fit in a double).
+- C++ integer division truncates toward zero (−7 / 2 is −3), which is what these problems usually expect; the remainder then takes the dividend's sign.
 - Unary minus at the start, after `(` or after another operator: a separate unary operator with the highest precedence handles `10 / -2 * 3` correctly; the `0 - x` shortcut does not.
 - Right-associative operators such as `^`: apply only strictly higher precedence before pushing.
 
@@ -564,8 +459,8 @@ A: Push numbers onto one stack and operators onto another. Before pushing an ope
 Q: How do you handle unary minus?
 A: Detect a minus where an operand is expected: at the start, after "(" or after another operator. Treat it as a separate unary operator that binds tighter than * and / and negates one operand, or keep a sign variable that multiplies the next number or parenthesized group. Rewriting it as 0 − x only works when nothing binds tighter around it: 10 / −2 * 3 would go wrong.
 
-Q: What is a subtle difference between languages in integer division?
-A: C++ and Java truncate toward zero, so −7 / 2 is −3, while Python's // floors, giving −4. To match typical problem statements in Python, use int(a / b) or adjust the floor result for negative quotients.
+Q: How does C++ integer division round negative results?
+A: It truncates toward zero, so −7 / 2 is −3 and −7 % 2 is −1, and (a / b) * b + a % b == a always holds. Floor division, which would give −4, needs an adjustment when the signs differ and the remainder is not zero.
 
 ### signals
 - evaluate an arithmetic string with operators and parentheses
@@ -671,29 +566,6 @@ vector<int> asteroidCollision(const vector<int>& a) {
     }
     return st;
 }
-```
-
-```python
-def remove_adjacent_duplicates(s, k=2):
-    st = []                                   # [char, run length]
-    for c in s:
-        if st and st[-1][0] == c:
-            st[-1][1] += 1
-            if st[-1][1] == k:
-                st.pop()                      # k equal neighbors vanish
-        else:
-            st.append([c, 1])
-    return "".join(c * n for c, n in st)
-
-def simplify_path(path):
-    st = []
-    for part in path.split("/"):
-        if part == "..":
-            if st:
-                st.pop()
-        elif part and part != ".":
-            st.append(part)
-    return "/" + "/".join(st)
 ```
 
 #### Complexity

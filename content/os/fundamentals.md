@@ -67,15 +67,6 @@ int main() {
 }
 ```
 
-```python
-import os
-
-fd = os.open("notes.txt", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
-n = os.write(fd, b"hello kernel\n")
-os.close(fd)
-print(f"pid {os.getpid()} wrote {n} bytes")
-```
-
 Neither program knows which disk sector holds the file, which physical memory holds its variables, or which CPU core it runs on. That ignorance is the abstraction working.
 
 #### Kernel vs OS

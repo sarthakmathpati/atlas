@@ -100,24 +100,6 @@ int main() {
 
 A repository class and a mailer class would take the remaining two jobs. A small coordinator (an `InvoiceService` with ten lines) can still wire them together; coordinating is its one job.
 
-```python
-class InvoiceCalculator:
-    def __init__(self, tax_rate):
-        self.tax_rate = tax_rate
-
-    def total(self, items):
-        return sum(price for _, price in items) * (1 + self.tax_rate)
-
-
-class InvoiceRenderer:
-    def render(self, items):
-        return "\n".join(name for name, _ in items)
-
-
-items = [("pen", 50), ("book", 250)]
-print(round(InvoiceCalculator(0.18).total(items), 2))   # 354.0
-```
-
 #### How to find responsibilities
 
 - List who could request changes (actors) and group code by actor.
@@ -173,56 +155,50 @@ Every edit to working code is a chance to break it. If adding the tenth payment 
 
 Before:
 
-```python
-def discount(customer_type, amount):
-    if customer_type == "regular":
-        return 0
-    elif customer_type == "student":
-        return amount * 0.10
-    elif customer_type == "senior":
-        return amount * 0.15
-    # every new customer type edits this function (and every similar switch elsewhere)
-    return 0
+```cpp
+// Before: every new customer type edits this function (and every similar switch elsewhere)
+double discount(const string& customerType, double amount) {
+    if (customerType == "regular") return 0;
+    if (customerType == "student") return amount * 0.10;
+    if (customerType == "senior") return amount * 0.15;
+    return 0;
+}
 ```
 
 After:
 
-```python
-from abc import ABC, abstractmethod
+```cpp
+struct DiscountRule {
+    virtual ~DiscountRule() = default;
+    virtual double discount(double amount) const = 0;
+};
 
+struct NoDiscount : DiscountRule {
+    double discount(double) const override { return 0; }
+};
 
-class DiscountRule(ABC):
-    @abstractmethod
-    def discount(self, amount): ...
+struct Percentage : DiscountRule {
+    double rate;
+    explicit Percentage(double r) : rate(r) {}
+    double discount(double amount) const override { return amount * rate; }
+};
 
+class Checkout {                                 // closed: never edited for new rules
+    const DiscountRule& rule;
+public:
+    explicit Checkout(const DiscountRule& r) : rule(r) {}
+    double pay(double amount) const { return amount - rule.discount(amount); }
+};
 
-class NoDiscount(DiscountRule):
-    def discount(self, amount):
-        return 0
+struct FestivalOffer : DiscountRule {            // open: a new rule is a new class
+    double discount(double amount) const override { return min(200.0, amount * 0.25); }
+};
 
-
-class Percentage(DiscountRule):
-    def __init__(self, rate):
-        self.rate = rate
-
-    def discount(self, amount):
-        return amount * self.rate
-
-
-class Checkout:                                  # closed: never edited for new rules
-    def __init__(self, rule):
-        self.rule = rule
-
-    def pay(self, amount):
-        return amount - self.rule.discount(amount)
-
-
-class FestivalOffer(DiscountRule):               # open: a new rule is a new class
-    def discount(self, amount):
-        return min(200, amount * 0.25)
-
-
-print(Checkout(Percentage(0.10)).pay(1000), Checkout(FestivalOffer()).pay(1000))   # 900.0 800
+int main() {
+    Percentage student(0.10);
+    FestivalOffer festival;
+    cout << Checkout(student).pay(1000) << " " << Checkout(festival).pay(1000) << "\n";   // 900 800
+}
 ```
 
 | new requirement | before | after |
@@ -231,7 +207,7 @@ print(Checkout(Percentage(0.10)).pay(1000), Checkout(FestivalOffer()).pay(1000))
 | change the student rate | edit `discount` | construct `Percentage(0.12)` |
 | a rule based on cart contents | edit signature and every caller | add a rule class (maybe widen the interface once) |
 
-#### The same in C++
+#### A second example: shapes
 
 ```cpp
 struct Shape {
@@ -299,7 +275,7 @@ The Liskov substitution principle says that if code works with a parent type, it
 - Barbara Liskov (1987): objects of a subtype must be usable wherever the base type is expected **without changing the program's correctness**.
 - Contract rules for an override: it may **not strengthen preconditions** (accept at least what the base accepts), may **not weaken postconditions** (promise at least what the base promises), must **preserve invariants**, and must not throw new kinds of exceptions callers do not expect.
 - Classic violations: `Square` extends a mutable `Rectangle`; `Penguin` extends `Bird` whose `fly()` it cannot do; a read-only list whose `add` throws.
-- Symptoms: `instanceof` or type checks before calling a method, overrides that throw "not supported" or do nothing, comments like "don't call this on X".
+- Symptoms: `dynamic_cast` or other type checks before calling a method, overrides that throw "not supported" or do nothing, comments like "don't call this on X".
 - Fixes: change the hierarchy (a common parent without the problematic method), use composition, split interfaces, or make objects immutable.
 - Inheritance should model **behavior** ("behaves like"), not taxonomy ("is a kind of in real life").
 
@@ -315,7 +291,7 @@ Polymorphism promises that callers can ignore which subtype they have. That prom
 | preconditions not stronger | accept every input the base accepts | base `withdraw` accepts any positive amount, child rejects amounts above 500 |
 | postconditions not weaker | guarantee everything the base guarantees | base `sort` returns sorted output, child returns it "mostly sorted" |
 | invariants preserved | keep the base's always-true facts | base guarantees `size() >= 0`, child lets it go negative |
-| no surprise exceptions | only failures callers already handle | child `save` throws a new unchecked "not supported" error |
+| no surprise exceptions | only failures callers already handle | child `save` throws a "not supported" error no caller expects |
 | history constraint | do not allow changes the base forbids | base is immutable, child adds a setter |
 
 #### Worked example: rectangle and square
@@ -359,48 +335,52 @@ int main() {
 
 #### Worked example: birds
 
-```python
-class Bird:
-    def fly(self):
-        return "flap"
+```cpp
+struct Bird {
+    virtual ~Bird() = default;
+    virtual string fly() const { return "flap"; }
+};
+struct Penguin : Bird {
+    string fly() const override { throw logic_error("penguins can't fly"); }   // callers crash
+};
 
+// A better model: flying is a capability, not something every bird has.
+struct Animal {
+    virtual ~Animal() = default;
+    virtual string eat() const { return "eat"; }
+};
+struct Flyer {
+    virtual ~Flyer() = default;
+    virtual string fly() const = 0;
+};
+struct Sparrow : Animal, Flyer {
+    string fly() const override { return "flap"; }
+};
+struct BetterPenguin : Animal {
+    string swim() const { return "swim"; }
+};
 
-class Penguin(Bird):
-    def fly(self):
-        raise NotImplementedError("penguins can't fly")   # callers of Bird.fly() now crash
+string migrate(const vector<const Flyer*>& flock) {    // asks only for what it needs
+    string out;
+    for (const Flyer* f : flock) out += f->fly() + " ";
+    return out;
+}
 
-
-# A better model: flying is a capability, not something every bird has.
-class BetterBird:
-    def eat(self):
-        return "eat"
-
-
-class FlyingBird(BetterBird):
-    def fly(self):
-        return "flap"
-
-
-class BetterPenguin(BetterBird):
-    def swim(self):
-        return "swim"
-
-
-def migrate(birds):               # asks only for what it needs
-    return [b.fly() for b in birds]
-
-
-print(migrate([FlyingBird()]), BetterPenguin().swim())   # ['flap'] swim
+int main() {
+    Sparrow s1, s2;
+    cout << migrate({&s1, &s2}) << BetterPenguin().swim() << "\n";   // flap flap swim
+}
 ```
 
 #### Real-world cases
 
-- Java's `Collections.unmodifiableList` returns a `List` whose `add` throws `UnsupportedOperationException`. The `List` documentation marks `add` as optional to allow this, which shows the tension: callers must know whether a list is modifiable.
+- `std::vector<bool>` is packed into bits, so `v[0]` returns a proxy object instead of a `bool&`, and `&v[0]` is not a `bool*`. Generic code that works for every other `vector<T>` breaks on it, which is substitution failing in templates.
+- The removed `std::auto_ptr` "copied" by moving ownership, leaving the source empty. Containers and algorithms assume a copy leaves the original unchanged, so it broke them and was replaced by `unique_ptr`, whose moves are explicit.
 - A `ReadOnlyFile` extending `File` with a `write` that silently does nothing is worse than one that throws: it breaks the postcondition quietly.
 
 #### How to spot violations
 
-- `if (x instanceof Square)` checks before calling base methods.
+- `if (dynamic_cast<Square*>(x))` checks before calling base methods.
 - Overrides that throw "not supported", return dummy values or do nothing.
 - Tests for the base type that fail when run with a subclass instance. A good practice is to run the base class's contract tests against every subclass.
 
@@ -417,7 +397,7 @@ Q: What rules must an overriding method follow to respect the principle?
 A: It must accept at least every input the base accepts (no stronger preconditions), guarantee at least what the base guarantees (no weaker postconditions), preserve the base's invariants, and not throw exceptions that callers of the base would not expect.
 
 Q: What are common signs of an LSP violation in a codebase?
-A: Type checks such as instanceof before calling a method, overrides that throw not supported or do nothing, and documentation saying a method must not be called on certain subclasses. Base class tests failing when run against a subclass are a direct signal.
+A: Type checks such as dynamic_cast before calling a method, overrides that throw not supported or do nothing, and documentation saying a method must not be called on certain subclasses. Base class tests failing when run against a subclass are a direct signal.
 
 Q: How do you fix an LSP violation?
 A: Change the model rather than patching the override: introduce a common parent that only has behaviors every child supports, move optional capabilities into separate interfaces, prefer composition, or make objects immutable so the conflicting mutation does not exist.
@@ -433,9 +413,9 @@ The interface segregation principle says nobody should be forced to depend on me
 ### interview
 - Robert C. Martin: **clients should not be forced to depend on methods they do not use**.
 - A "fat" interface forces implementers to write stubs that throw or do nothing (an LSP smell) and makes every client recompile or retest when an unrelated method changes.
-- Fix: split into **role interfaces** by what each client needs (`Printer`, `Scanner`, `Fax`), and let a class implement several (`MultiFunctionMachine implements Printer, Scanner, Fax`).
+- Fix: split into **role interfaces** by what each client needs (`Printer`, `Scanner`, `Fax`), and let a class implement several (`struct OfficeMachine : Printer, Scanner, Fax`).
 - A client should take the narrowest interface that does its job (accept `Readable`, not `ReadWriteSeekableStream`).
-- Java examples: `Iterable` vs `Collection` vs `List`; `Closeable` as its own tiny interface. Go's small interfaces (`io.Reader`, `io.Writer`) are the idea in its purest form.
+- The C++ standard library does this with iterator categories and C++20 concepts: `std::find` asks only for an input iterator, `std::sort` for random access, so each algorithm accepts every container that can do what it needs.
 - Do not overdo it: a separate interface per method becomes noise. Group methods that are always used together.
 
 ### deep
@@ -447,18 +427,20 @@ Interfaces are for the people who **call** them, not for the classes that implem
 
 Before, one fat interface:
 
-```java
-interface Machine {
-    void print(String doc);
-    void scan(String doc);
-    void fax(String doc);
-}
+```cpp
+// Before: one fat interface
+struct Machine {
+    virtual ~Machine() = default;
+    virtual void print(const string& doc) = 0;
+    virtual void scan(const string& doc) = 0;
+    virtual void fax(const string& doc) = 0;
+};
 
-class BasicPrinter implements Machine {
-    public void print(String doc) { System.out.println("print " + doc); }
-    public void scan(String doc) { throw new UnsupportedOperationException(); }   // forced stub
-    public void fax(String doc) { throw new UnsupportedOperationException(); }    // forced stub
-}
+struct BasicPrinter : Machine {
+    void print(const string& doc) override { cout << "print " << doc << "\n"; }
+    void scan(const string&) override { throw logic_error("not supported"); }   // forced stub
+    void fax(const string&) override { throw logic_error("not supported"); }    // forced stub
+};
 ```
 
 | problem | effect |
@@ -469,31 +451,48 @@ class BasicPrinter implements Machine {
 
 After, role interfaces:
 
-```java
-interface Printer { void print(String doc); }
-interface Scanner { void scan(String doc); }
-interface Fax { void fax(String doc); }
+```cpp
+struct Printer {
+    virtual ~Printer() = default;
+    virtual void print(const string& doc) = 0;
+};
+struct Scanner {
+    virtual ~Scanner() = default;
+    virtual void scan(const string& doc) = 0;
+};
+struct Fax {
+    virtual ~Fax() = default;
+    virtual void fax(const string& doc) = 0;
+};
 
-class SimplePrinter implements Printer {
-    public void print(String doc) { System.out.println("print " + doc); }
-}
+struct SimplePrinter : Printer {
+    void print(const string& doc) override { cout << "print " << doc << "\n"; }
+};
 
-class OfficeMachine implements Printer, Scanner, Fax {
-    public void print(String doc) { System.out.println("print " + doc); }
-    public void scan(String doc) { System.out.println("scan " + doc); }
-    public void fax(String doc) { System.out.println("fax " + doc); }
-}
+struct OfficeMachine : Printer, Scanner, Fax {
+    void print(const string& doc) override { cout << "print " << doc << "\n"; }
+    void scan(const string& doc) override { cout << "scan " << doc << "\n"; }
+    void fax(const string& doc) override { cout << "fax " << doc << "\n"; }
+};
 
 class PrintQueue {
-    private final Printer printer;                     // needs only printing
-    PrintQueue(Printer printer) { this.printer = printer; }
-    void run(List<String> docs) { docs.forEach(printer::print); }
+    Printer& printer;                                  // needs only printing
+public:
+    explicit PrintQueue(Printer& p) : printer(p) {}
+    void run(const vector<string>& docs) { for (const auto& d : docs) printer.print(d); }
+};
+
+int main() {
+    SimplePrinter cheap;
+    OfficeMachine office;
+    PrintQueue(cheap).run({"a.txt"});                  // print a.txt
+    PrintQueue(office).run({"b.txt"});                 // print b.txt
 }
 ```
 
 `PrintQueue` accepts either machine, cannot misuse scanning, and is untouched when faxing changes.
 
-#### C++ and Python
+#### Another split: reading and writing
 
 ```cpp
 struct Readable {
@@ -524,31 +523,11 @@ int main() {
 }
 ```
 
-```python
-from typing import Protocol
-
-
-class Readable(Protocol):
-    def read(self) -> str: ...
-
-
-def first_word(source: Readable) -> str:   # any object with read() fits
-    return source.read().split(" ")[0]
-
-
-class Note:
-    def read(self):
-        return "hello world"
-
-
-print(first_word(Note()))                   # hello
-```
-
 #### How to split
 
 - Start from clients: list what each caller uses, and let those sets suggest interfaces.
 - Keep methods that are always used together in one interface (a `Stack` with `push`, `pop` and `peek` is fine).
-- Compose larger interfaces from smaller ones where convenient (`interface ReadWrite extends Readable, Writable`).
+- Compose larger interfaces from smaller ones where convenient (`struct ReadWrite : Readable, Writable {}`).
 
 #### Pitfalls
 
@@ -569,7 +548,7 @@ Q: How does the interface segregation principle relate to Liskov substitution?
 A: A fat interface often forces implementations that cannot honor part of the contract, such as a printer whose fax method throws, which is an LSP violation. Splitting the interface removes the need for such broken implementations.
 
 Q: Give a standard library example of small, focused interfaces.
-A: Java separates Iterable, Collection and List, and has tiny interfaces like Closeable, Runnable and Comparable. Go's io.Reader and io.Writer each have a single method, and functions accept exactly the capability they need.
+A: C++ iterator categories and the C++20 iterator and range concepts. std::find needs only an input iterator, std::reverse a bidirectional one and std::sort a random access one, so a singly linked list works with find but not with sort. Each algorithm demands exactly the capability it uses.
 
 Q: Can you take interface segregation too far?
 A: Yes. Making every method its own interface fragments the design and makes signatures hard to read. Methods that clients always use together, such as push and pop on a stack, belong in the same interface.
@@ -585,9 +564,9 @@ The dependency inversion principle says important code should depend on a genera
 ### interview
 - Robert C. Martin's two rules: **high-level modules should not depend on low-level modules; both should depend on abstractions**, and **abstractions should not depend on details; details should depend on abstractions**.
 - "Inversion": the high-level module **owns** the interface (`MessageSender`), and the low-level module (`SmtpSender`) implements it, so the source-code dependency points upward, against the flow of control.
-- **Dependency injection** is the usual technique: pass dependencies in (constructor injection preferred; also setter or method injection) instead of creating them inside with `new`.
+- **Dependency injection** is the usual technique: pass dependencies in (constructor injection preferred; also setter or method injection) instead of creating them inside the class.
 - Benefits: swap implementations (database, payment provider), test with fakes, and build and compile modules independently.
-- DI **containers** (Spring, Guice, Dagger) automate the wiring, but plain constructor injection is the principle; a container is optional.
+- DI **containers** (such as Google's Fruit for C++) automate the wiring, but plain constructor injection is the principle; a container is optional.
 - Do not wrap every stable, pure utility in an interface (`Math`, `std::string`); invert dependencies on volatile things such as I/O, networks, clocks and third-party services.
 
 ### deep
@@ -599,57 +578,64 @@ Business rules are the most valuable, most stable part of a program. Databases, 
 
 Before (high level depends on low level):
 
-```python
-class SmtpClient:
-    def send_mail(self, to, text):
-        print(f"SMTP to {to}: {text}")
+```cpp
+// Before: the high-level class creates its low-level helper
+class SmtpClient {
+public:
+    void sendMail(const string& to, const string& text) {
+        cout << "SMTP to " << to << ": " << text << "\n";
+    }
+};
 
-
-class OrderService:
-    def __init__(self):
-        self.mailer = SmtpClient()              # hard-wired concrete dependency
-
-    def place(self, order_id, email):
-        self.mailer.send_mail(email, f"order {order_id} placed")
+class OrderService {
+    SmtpClient mailer;                          // hard-wired concrete dependency
+public:
+    void place(int orderId, const string& email) {
+        mailer.sendMail(email, "order " + to_string(orderId) + " placed");
+    }
+};
 ```
 
 Problems: testing `place` sends real mail; switching to SMS means editing `OrderService`.
 
 After (both depend on an abstraction owned by the high level):
 
-```python
-from typing import Protocol
+```cpp
+class Notifier {                                // owned by the order module
+public:
+    virtual ~Notifier() = default;
+    virtual void notify(const string& to, const string& text) = 0;
+};
 
+class OrderService {
+    Notifier& notifier;
+public:
+    explicit OrderService(Notifier& n) : notifier(n) {}      // constructor injection
+    void place(int orderId, const string& contact) {
+        notifier.notify(contact, "order " + to_string(orderId) + " placed");
+    }
+};
 
-class Notifier(Protocol):                       # owned by the order module
-    def notify(self, to: str, text: str) -> None: ...
+class EmailNotifier : public Notifier {         // a detail that depends on the abstraction
+public:
+    void notify(const string& to, const string& text) override {
+        cout << "email " << to << ": " << text << "\n";
+    }
+};
 
+class FakeNotifier : public Notifier {          // used in tests
+public:
+    vector<pair<string, string>> sent;
+    void notify(const string& to, const string& text) override { sent.push_back({to, text}); }
+};
 
-class OrderService:
-    def __init__(self, notifier: Notifier):     # constructor injection
-        self.notifier = notifier
-
-    def place(self, order_id, contact):
-        self.notifier.notify(contact, f"order {order_id} placed")
-
-
-class EmailNotifier:                            # a detail that depends on the abstraction
-    def notify(self, to, text):
-        print(f"email {to}: {text}")
-
-
-class FakeNotifier:                             # used in tests
-    def __init__(self):
-        self.sent = []
-
-    def notify(self, to, text):
-        self.sent.append((to, text))
-
-
-OrderService(EmailNotifier()).place(7, "asha@example.com")
-fake = FakeNotifier()
-OrderService(fake).place(8, "ben")
-print(fake.sent)    # [('ben', 'order 8 placed')]
+int main() {
+    EmailNotifier email;
+    OrderService(email).place(7, "asha@example.com");  // email asha@example.com: order 7 placed
+    FakeNotifier fake;
+    OrderService(fake).place(8, "ben");
+    cout << fake.sent.size() << " " << fake.sent[0].second << "\n";   // 1 order 8 placed
+}
 ```
 
 | dependency arrow | before | after |
@@ -659,7 +645,7 @@ print(fake.sent)    # [('ben', 'order 8 placed')]
 | to add SMS | edit OrderService | add SmsNotifier |
 | to test | patch or send real mail | pass FakeNotifier |
 
-#### The same in C++
+#### A second example: the clock
 
 ```cpp
 class Clock {                                    // volatile detail behind an interface
@@ -725,7 +711,7 @@ Q: What is dependency injection, and how does it relate to dependency inversion?
 A: Dependency injection means giving an object its dependencies from outside, typically through its constructor, instead of creating them inside. It is the common technique for applying dependency inversion, because the object then only knows the abstraction it receives.
 
 Q: Why is constructor injection usually preferred?
-A: It makes required dependencies explicit in the signature, guarantees the object is fully configured once constructed, and allows fields to be final or const. Setter injection can leave objects half configured.
+A: It makes required dependencies explicit in the signature, guarantees the object is fully configured once constructed, and allows the members to be const. Setter injection can leave objects half configured.
 
 Q: Should every class depend on an interface instead of a concrete class?
 A: No. Stable, side-effect-free classes such as strings, collections or math utilities can be used directly. Apply inversion to volatile or external dependencies, such as databases, networks, clocks, file systems and third-party services, where swapping and testing matter.
@@ -753,68 +739,66 @@ Two pieces of code can look the same and still be different knowledge. A 10% stu
 
 #### Worked example: one rule, one place
 
-```python
-# Before: the password rule is known in three places
-def signup(password):
-    if len(password) < 8:
-        raise ValueError("too short")
+```cpp
+// Before: the password rule is known in three places
+void signup(const string& password) {
+    if (password.size() < 8) throw invalid_argument("too short");
+}
+void changePassword(const string& password) {
+    if (password.size() < 8) throw invalid_argument("too short");
+}
+const string HELP_TEXT = "Passwords need at least 8 characters.";   // the third copy
 
+```
 
-def change_password(password):
-    if len(password) < 8:
-        raise ValueError("too short")
+```cpp
+// After: one authoritative definition
+constexpr size_t MIN_PASSWORD_LENGTH = 12;
 
+void validatePassword(const string& password) {
+    if (password.size() < MIN_PASSWORD_LENGTH)
+        throw invalid_argument("needs at least " + to_string(MIN_PASSWORD_LENGTH) + " characters");
+}
 
-HELP_TEXT = "Passwords need at least 8 characters."   # the third copy
+string helpText() {
+    return "Passwords need at least " + to_string(MIN_PASSWORD_LENGTH) + " characters.";
+}
 
-# After: one authoritative definition
-MIN_PASSWORD_LENGTH = 12
-
-
-def validate_password(password):
-    if len(password) < MIN_PASSWORD_LENGTH:
-        raise ValueError(f"needs at least {MIN_PASSWORD_LENGTH} characters")
-
-
-def help_text():
-    return f"Passwords need at least {MIN_PASSWORD_LENGTH} characters."
-
-
-print(help_text())   # Passwords need at least 12 characters.
+int main() {
+    cout << helpText() << "\n";          // Passwords need at least 12 characters.
+}
 ```
 
 Changing the rule from 8 to 12 now edits one line, and the help text cannot disagree with the check.
 
 #### KISS in practice
 
-```python
-# Over-built: a strategy base class, a subclass and a factory with a registry,
-# all to format the one greeting the product has.
-class GreetingStrategy:
-    def greet(self, name):
-        raise NotImplementedError
+```cpp
+// Over-built: a strategy base class, a subclass and a factory with a registry,
+// all to format the one greeting the product has.
+struct GreetingStrategy {
+    virtual ~GreetingStrategy() = default;
+    virtual string greet(const string& name) const = 0;
+};
+struct EnglishGreeting : GreetingStrategy {
+    string greet(const string& name) const override { return "Hello, " + name; }
+};
+struct GreetingFactory {
+    static unique_ptr<GreetingStrategy> create(const string& lang) {
+        static const map<string, function<unique_ptr<GreetingStrategy>()>> registry = {
+            {"en", [] { return make_unique<EnglishGreeting>(); }},
+        };
+        return registry.at(lang)();
+    }
+};
 
+// Simple: the same behavior in one function. When a second language really arrives,
+// turning this into a map lookup takes a minute.
+string greet(const string& name) { return "Hello, " + name; }
 
-class EnglishGreeting(GreetingStrategy):
-    def greet(self, name):
-        return f"Hello, {name}"
-
-
-class GreetingFactory:
-    registry = {"en": EnglishGreeting}
-
-    @classmethod
-    def create(cls, lang):
-        return cls.registry[lang]()
-
-
-# Simple: the same behavior in one function. When a second language really arrives,
-# turning this into a dictionary lookup takes a minute.
-def greet(name):
-    return f"Hello, {name}"
-
-
-print(GreetingFactory.create("en").greet("Asha") == greet("Asha"))   # True
+int main() {
+    cout << (GreetingFactory::create("en")->greet("Asha") == greet("Asha")) << "\n";   // 1
+}
 ```
 
 KISS is judged by the reader: fewer moving parts, obvious names, straightforward control flow, standard library over home-made machinery.
@@ -869,7 +853,7 @@ The Law of Demeter says an object should talk only to its close friends, not to 
 - Nickname: "don't talk to strangers"; rule of thumb: avoid **train wrecks** like `order.getCustomer().getWallet().deduct(total)`.
 - Fix: **tell, don't ask**. Add a method on the near object that does the work: `customer.pay(total)`.
 - Benefits: lower coupling (a caller depends only on its direct neighbors), easier refactoring and mocking, better encapsulation.
-- Not every dot is a violation: fluent APIs and builders (`builder.setA().setB()`), stream pipelines and plain data structures return the same kind of object or plain data, not strangers.
+- Not every dot is a violation: fluent APIs and builders (`builder.setA().setB()`), ranges pipelines and plain data structures return the same kind of object or plain data, not strangers.
 - Cost: over-applying it creates many thin forwarding methods ("wrapper explosion"); apply it where the chain exposes real internals.
 
 ### deep
@@ -879,44 +863,43 @@ The Law of Demeter says an object should talk only to its close friends, not to 
 
 #### Worked example
 
-```python
-class Wallet:
-    def __init__(self, cash):
-        self.cash = cash
+```cpp
+class Wallet {
+    int cash;
+public:
+    explicit Wallet(int c) : cash(c) {}
+    void deduct(int amount) {
+        if (amount > cash) throw runtime_error("insufficient funds");
+        cash -= amount;
+    }
+    int balance() const { return cash; }
+};
 
-    def deduct(self, amount):
-        if amount > self.cash:
-            raise ValueError("insufficient funds")
-        self.cash -= amount
+class Customer {
+    Wallet wallet;
+public:
+    explicit Customer(int cash) : wallet(cash) {}
+    Wallet& getWallet() { return wallet; }       // exposes internals, invites train wrecks
+    void pay(int amount) { wallet.deduct(amount); }   // tell, don't ask: the customer decides how
+    int balance() const { return wallet.balance(); }
+};
 
+class Cashier {
+public:
+    void chargeBad(Customer& c, int total) { c.getWallet().deduct(total); }  // talks to a stranger
+    void charge(Customer& c, int total) { c.pay(total); }                    // talks to a parameter
+};
 
-class Customer:
-    def __init__(self, cash):
-        self._wallet = Wallet(cash)
-
-    def get_wallet(self):              # exposes internals, invites train wrecks
-        return self._wallet
-
-    def pay(self, amount):             # tell, don't ask: the customer decides how to pay
-        self._wallet.deduct(amount)
-
-
-class Cashier:
-    def charge_bad(self, customer, total):
-        customer.get_wallet().deduct(total)   # talks to a stranger (the wallet)
-
-    def charge(self, customer, total):
-        customer.pay(total)                   # talks only to a parameter
-
-
-c = Customer(500)
-Cashier().charge(c, 120)
-print(c.get_wallet().cash)   # 380
+int main() {
+    Customer c(500);
+    Cashier().charge(c, 120);
+    cout << c.balance() << "\n";                 // 380
+}
 ```
 
-| change | `charge_bad` | `charge` |
+| change | `chargeBad` | `charge` |
 |---|---|---|
-| customers pay by card instead of wallet | breaks | unchanged, `Customer.pay` changes |
+| customers pay by card instead of wallet | breaks | unchanged, `Customer::pay` changes |
 | wallet adds a PIN check | may break or bypass it | unchanged |
 | test the cashier | needs a real or mocked wallet inside a customer | needs a customer with `pay` |
 
@@ -924,7 +907,7 @@ print(c.get_wallet().cash)   # 380
 
 For a method `m` in class `O`, allowed targets are:
 
-1. `O` itself (`this`, `self`).
+1. `O` itself (`this`).
 2. `m`'s parameters.
 3. Objects created inside `m`.
 4. `O`'s direct fields (components).
@@ -954,7 +937,7 @@ int main() {
 }
 ```
 
-Fluent builders, stream pipelines (`list.stream().filter(...).map(...)`) and navigation of plain data (a parsed JSON tree, a record's fields) do not expose behavior-owning internals, so the law's purpose is not at stake.
+Fluent builders, ranges pipelines (`v | views::filter(f) | views::transform(g)`) and navigation of plain data (a parsed JSON tree, a record's fields) do not expose behavior-owning internals, so the law's purpose is not at stake.
 
 #### Pitfalls
 

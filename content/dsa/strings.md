@@ -12,13 +12,13 @@ importance: must
 scope: "immutability, building strings efficiently, character arithmetic, ASCII and Unicode basics"
 
 ### simple
-A string is an array of characters, and each character is stored as a number. In Java and Python strings can't be changed once made, so "changing" one quietly builds a whole new copy, like rewriting a page instead of fixing one word. Knowing this helps you avoid slow code that copies the same text over and over.
+A string is an array of characters, and each character is stored as a number. A C++ string can be edited in place, but writing `s = s + c` still builds a whole new copy each time, like rewriting a page instead of fixing one word. Knowing this helps you avoid slow code that copies the same text over and over.
 
 ### interview
 - Characters are numbers: `'a'` is 97, `'A'` is 65, `'0'` is 48. `c - 'a'` gives a letter's index 0 to 25; `c - '0'` gives a digit's value.
-- **Immutable** in Java, Python, JavaScript: `s += c` in a loop copies the string every time, **O(n²)** total. Use `StringBuilder`, a list plus `''.join(...)`, or C++ `std::string` (mutable, `push_back` amortized O(1)).
-- Comparing, hashing and slicing a string cost **O(length)**, not O(1); `substr` and slices copy.
-- ASCII has 128 characters (7 bits). **Unicode** assigns code points; UTF-8 encodes them in 1 to 4 bytes, so byte length can differ from character count. Java `char` is a UTF-16 unit; some emoji take two.
+- `std::string` is **mutable**: `s += c` and `push_back` are amortized O(1), but `s = s + c` builds a new string every time, **O(n²)** over a loop.
+- Comparing, hashing and taking substrings cost **O(length)**, not O(1); `substr` copies (a `string_view` does not).
+- ASCII has 128 characters (7 bits). **Unicode** assigns code points; UTF-8 encodes them in 1 to 4 bytes, so byte length can differ from character count. A C++ `char` is one byte, so `s.size()` counts bytes, not characters, in UTF-8 text.
 - Ask about the character set: lowercase only (array of 26), ASCII (128 or 256), or full Unicode (hash map).
 
 ### deep
@@ -28,13 +28,13 @@ A string behaves like an array of small integers with extra rules. Most string p
 
 #### Character arithmetic
 
-| Expression (C++/Java) | Meaning | Python |
-|---|---|---|
-| `c - 'a'` | index 0 to 25 of a lowercase letter | `ord(c) - ord('a')` |
-| `(char)('a' + i)` | the i-th lowercase letter | `chr(ord('a') + i)` |
-| `c - '0'` | digit value | `int(c)` or `ord(c) - 48` |
-| `c ^ 32` | toggles ASCII letter case | |
-| `isalnum`, `isdigit`, `tolower` | classification | `c.isalnum()`, `c.lower()` |
+| Expression | Meaning |
+|---|---|
+| `c - 'a'` | index 0 to 25 of a lowercase letter |
+| `char('a' + i)` | the i-th lowercase letter |
+| `c - '0'` | digit value |
+| `c ^ 32` | toggles ASCII letter case |
+| `isalnum`, `isdigit`, `tolower` | classification (pass an `unsigned char`) |
 
 #### Building strings efficiently
 
@@ -57,26 +57,15 @@ string shift(const string& s, int k) {
 }
 ```
 
-```python
-def build_csv(values):
-    return ",".join(str(v) for v in values)   # one pass, no repeated copying
-
-def slow_concat(n):
-    s = ""
-    for i in range(n):
-        s = s + str(i % 10)    # creates a new string each time: O(n^2) in the worst case
-    return s
-```
-
-In Java, use `StringBuilder sb = new StringBuilder(); sb.append(x);` then `sb.toString()`. (CPython sometimes optimizes `s += c` in place, but don't rely on it.)
+Call `out.reserve(n)` when you know the final size to avoid reallocations; `ostringstream` helps when formatting many numbers.
 
 #### Hidden costs
 
 | Operation | Cost |
 |---|---|
 | `s[i]` | $O(1)$ (bytes or code units) |
-| `s == t`, `hash(s)` | $O(L)$ (Java caches a string's hash after the first call) |
-| `s.substr(i, k)`, `s[i:j]` | $O(k)$: it copies |
+| `s == t`, `hash<string>{}(s)` | $O(L)$ |
+| `s.substr(i, k)` | $O(k)$: it copies |
 | `s + t` | $O(|s| + |t|)$ |
 | `s.find(t)` | typically $O(|s| \cdot |t|)$ worst case |
 | sorting $n$ strings | $O(n \log n)$ comparisons, each up to $O(L)$ |
@@ -85,7 +74,7 @@ A hash map keyed by strings of length $L$ therefore costs $O(L)$ per operation, 
 
 #### Unicode in a sentence or two
 
-Code points go up to U+10FFFF. UTF-8 stores ASCII in one byte and other characters in 2 to 4 bytes; UTF-16 (Java, JavaScript) stores most characters in one 16-bit unit and the rest (many emoji) as surrogate pairs. So `length()` in Java counts units, not characters, and reversing a string unit by unit can break emoji. In interviews, ask whether input is ASCII; usually it is.
+Code points go up to U+10FFFF. UTF-8 stores ASCII in one byte and other characters in 2 to 4 bytes, so `s.size()` counts bytes, and reversing a UTF-8 string byte by byte scrambles every multi-byte character (and emoji can span several code points). `std::string` itself knows nothing about encodings. In interviews, ask whether input is ASCII; usually it is.
 
 #### Edge cases and bugs
 
@@ -101,11 +90,11 @@ String problems usually reuse: two pointers (palindromes, reversal), counting (a
 Connects to: arrays, anagrams and character counts, parsing strings, rolling hash.
 
 ### questions
-Q: Why is building a string with s += c in a loop slow in Java or Python?
-A: Strings are immutable there, so each concatenation allocates a new string and copies the old contents. Over n appends that copies 1 + 2 + … + n characters, which is O(n²). A StringBuilder or a list joined at the end is O(n).
+Q: Why is s = s + c in a loop slow in C++, while s += c is fast?
+A: s + c creates a new temporary string holding a full copy of s, which is then assigned back, so n steps copy 1 + 2 + … + n characters, O(n²). s += c appends in place and capacity grows geometrically, so n appends cost O(n) in total.
 
 Q: How do you convert a lowercase letter to an index from 0 to 25 and back?
-A: Subtract the code of 'a': c − 'a' in C++ or Java, ord(c) − ord('a') in Python. To go back, add the index to 'a' and convert to a character.
+A: Subtract the code of 'a': c − 'a' gives 0 for 'a' through 25 for 'z'. To go back, add the index to 'a' and cast to char, as in char('a' + i).
 
 Q: What is the cost of comparing two strings or using them as hash map keys?
 A: O(L) for strings of length L, because every character may need to be read. Hash map operations with string keys are O(L) on average, not O(1), which matters for long keys.
@@ -180,32 +169,6 @@ bool isPalindromeIgnoringCase(const string& s) {
     }
     return true;
 }
-```
-
-```python
-def count_palindromic_substrings(s):
-    n, count = len(s), 0
-    for center in range(2 * n - 1):
-        l, r = center // 2, center // 2 + center % 2   # odd centers, then gaps
-        while l >= 0 and r < n and s[l] == s[r]:
-            count += 1
-            l, r = l - 1, r + 1
-    return count
-
-def valid_palindrome_one_deletion(s):
-    def is_pal(l, r):
-        while l < r:
-            if s[l] != s[r]:
-                return False
-            l, r = l + 1, r - 1
-        return True
-
-    l, r = 0, len(s) - 1
-    while l < r:
-        if s[l] != s[r]:
-            return is_pal(l + 1, r) or is_pal(l, r - 1)
-        l, r = l + 1, r - 1
-    return True
 ```
 
 #### Complexity
@@ -332,27 +295,6 @@ int minStepsToAnagram(const string& s, const string& t) {
 }
 ```
 
-```python
-def group_anagrams(words):
-    groups = {}
-    for w in words:
-        key = [0] * 26
-        for c in w:
-            key[ord(c) - 97] += 1
-        groups.setdefault(tuple(key), []).append(w)
-    return list(groups.values())
-
-def can_construct(note, magazine):
-    count = [0] * 26
-    for c in magazine:
-        count[ord(c) - 97] += 1
-    for c in note:
-        count[ord(c) - 97] -= 1
-        if count[ord(c) - 97] < 0:
-            return False
-    return True
-```
-
 #### Complexity
 
 $O(n)$ time for strings of length $n$, $O(\sigma)$ space for an alphabet of size $\sigma$ (26, so $O(1)$). Sorting both strings and comparing also works in $O(n \log n)$.
@@ -406,7 +348,7 @@ Parsing means reading text one character at a time and turning it into meaningfu
 ### interview
 - Walk with an index `i` and a small set of states: skip whitespace, read an optional sign, read digits, stop at anything else.
 - **String to integer (atoi)** rules: skip leading spaces, optional `+`/`-`, digits until a non-digit, and clamp to the 32-bit range. Check overflow **before** multiplying: `val > (INT_MAX - d) / 10`.
-- Tokenizing: C++ `stringstream >> word` splits on whitespace; Python `s.split()` drops empty pieces while `s.split(' ')` keeps them.
+- Tokenizing: `stringstream >> word` splits on any run of whitespace, while `getline(ss, token, ' ')` splits on every single space and yields empty tokens for repeated spaces.
 - Parse numbers digit by digit: `val = val * 10 + (c - '0')`.
 - Validating a number (decimal points, exponents) is a small state machine; list the valid transitions first.
 - Always test: empty string, only spaces, lone sign, leading zeros, overflow, trailing junk.
@@ -419,7 +361,7 @@ Q: How do you detect integer overflow while parsing digits?
 A: Before computing val · 10 + d, check whether val > (INT_MAX − d) / 10; if so, the result would overflow, so clamp. Alternatively accumulate in a 64-bit integer and stop once it passes the 32-bit limit.
 
 Q: How do you split a string into words when there may be several spaces between them?
-A: Skip spaces, then collect characters until the next space, and repeat; or use a tokenizer that ignores empty tokens, such as stringstream in C++ or split() with no argument in Python. Splitting on a single space character produces empty strings for repeated spaces.
+A: Skip spaces, then collect characters until the next space, and repeat; or use a tokenizer that ignores empty tokens, such as reading words from a stringstream with >>. Splitting on each single space character, as getline with ' ' does, produces empty strings for repeated spaces.
 
 Q: How would you validate whether a string is a valid decimal number?
 A: Write a small state machine or ordered checks: optional sign, digits with at most one decimal point (at least one digit overall), then optionally e or E followed by an optional sign and at least one digit, and nothing else. Test edge cases such as ".", "1.", ".5", "e5" and "1e".
