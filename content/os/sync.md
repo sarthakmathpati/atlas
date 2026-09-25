@@ -66,41 +66,6 @@ int main() {
 
 The unsafe count changes from run to run. In a loop that did nothing but the unprotected increment, three test runs gave 112750, 102130 and 127514; the protected counters always give 200000.
 
-```python
-import threading
-import time
-
-counter = 0
-lock = threading.Lock()
-
-
-def unsafe_add():
-    global counter
-    for _ in range(1000):
-        value = counter
-        time.sleep(0)          # invite a thread switch between read and write
-        counter = value + 1
-
-
-def safe_add():
-    global counter
-    for _ in range(1000):
-        with lock:             # entry and exit sections
-            value = counter
-            time.sleep(0)
-            counter = value + 1
-
-
-for fn in (unsafe_add, safe_add):
-    counter = 0
-    threads = [threading.Thread(target=fn) for _ in range(4)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
-    print(fn.__name__, counter)   # unsafe_add: far below 4000; safe_add: 4000
-```
-
 #### The three requirements, by counterexample
 
 | requirement | a "solution" that violates it |
@@ -240,7 +205,7 @@ A mutex is a lock that lets only one thread at a time into a critical section. I
 - **Busy waiting (spinlock)**: the waiter loops checking the lock. No context switch, so it is best for very short critical sections on multicore machines, but it wastes CPU and is terrible on a single core.
 - **Blocking**: the waiter sleeps in a kernel wait queue and is woken on release. No CPU wasted, but each sleep and wakeup costs a context switch (microseconds).
 - Real mutexes are **hybrid**: Linux's pthread mutex uses a **futex**, so the uncontended path is one atomic instruction in user space and the kernel is involved only under contention; adaptive mutexes spin briefly before sleeping.
-- Use **RAII** (`std::lock_guard`, `std::scoped_lock`, Java `synchronized` or try/finally, Python `with lock:`) so exceptions cannot leave a lock held.
+- Use **RAII** (`std::lock_guard`, `std::scoped_lock`, `std::unique_lock`) so exceptions cannot leave a lock held.
 - Hazards: deadlock (lock ordering), forgetting to unlock, holding locks during slow I/O, contention; a normal mutex locked twice by the same thread deadlocks (a **recursive** mutex allows it).
 
 ### deep
@@ -290,28 +255,6 @@ int main() {
     for (auto& t : ts) t.join();
     cout << a.get() << "\n";                    // 80000
 }
-```
-
-```python
-import threading
-
-balance = 0
-lock = threading.Lock()
-
-
-def deposit(n):
-    global balance
-    for _ in range(n):
-        with lock:                 # acquire on entry, release on exit (even on exceptions)
-            balance += 1
-
-
-threads = [threading.Thread(target=deposit, args=(10000,)) for _ in range(8)]
-for t in threads:
-    t.start()
-for t in threads:
-    t.join()
-print(balance)   # 80000
 ```
 
 #### Worked example: contention timeline
@@ -372,7 +315,7 @@ A semaphore is a counter that controls how many threads may use something at onc
 - **Counting semaphore**: any non-negative value; models a pool of N identical resources (connections, buffer slots). **Binary semaphore**: 0 or 1; can act as a lock.
 - Three standard uses: **mutual exclusion** (initial value 1), **signaling or ordering** (initial 0: "B must happen after A" by having A signal and B wait), **limiting concurrency** (initial N).
 - Unlike a mutex, a semaphore has **no owner**: any thread may signal it. That makes it a signaling tool, but also easier to misuse as a lock (a stray signal lets two threads in).
-- Implementations keep a **wait queue** so waiters sleep instead of spinning. Available as C++20 `std::counting_semaphore`, POSIX `sem_t`, Java `Semaphore`, Python `threading.Semaphore`.
+- Implementations keep a **wait queue** so waiters sleep instead of spinning. Available as C++20 `std::counting_semaphore` and `std::binary_semaphore`, and as POSIX `sem_t`.
 - Classic problems solved with semaphores: producer-consumer, readers-writers, dining philosophers.
 
 ### deep
@@ -426,29 +369,22 @@ int main() {
 
 #### Code: ordering with a semaphore that starts at 0
 
-```python
-import threading
-
-ready = threading.Semaphore(0)       # nothing available yet
-log = []
-
-
-def loader():
-    log.append("config loaded")
-    ready.release()                  # signal: the event happened
-
-
-def server():
-    ready.acquire()                  # wait: block until the loader signals
-    log.append("server started")
-
-
-threads = [threading.Thread(target=server), threading.Thread(target=loader)]
-for t in threads:
-    t.start()
-for t in threads:
-    t.join()
-print(log)   # ['config loaded', 'server started'] regardless of start order
+```cpp
+int main() {
+    binary_semaphore ready(0);                       // nothing available yet
+    vector<string> log;
+    thread server([&] {
+        ready.acquire();                             // wait: block until the loader signals
+        log.push_back("server started");
+    });
+    thread loader([&] {
+        log.push_back("config loaded");
+        ready.release();                             // signal: the event happened
+    });
+    server.join();
+    loader.join();
+    cout << log[0] << ", " << log[1] << "\n";        // config loaded, server started, always
+}
 ```
 
 #### Semaphore vs mutex
@@ -494,12 +430,12 @@ scope: "higher-level synchronization"
 A monitor is an object that lets only one thread run its methods at a time and gives threads a way to wait for a condition inside it. Think of a single-person office with a waiting bench: only one visitor inside, and a visitor who needs a document that isn't ready yet steps out to the bench until someone says it has arrived. This packages the lock and the waiting together so they are harder to get wrong.
 
 ### interview
-- A **monitor** bundles shared data with the procedures that access it and guarantees **mutual exclusion** for those procedures automatically (Java `synchronized` methods; in C++ you build one with a mutex plus condition variables).
+- A **monitor** bundles shared data with the procedures that access it and guarantees **mutual exclusion** for those procedures automatically (in C++ you build one: a class whose public methods all lock the same private mutex, plus condition variables for waiting).
 - A **condition variable** lets a thread wait inside the monitor until some condition becomes true: **wait** atomically releases the lock and sleeps, and re-acquires the lock before returning; **signal** (notify one) wakes one waiter; **broadcast** (notify all) wakes all.
-- **Always wait in a `while` loop** that re-checks the condition: wakeups can be **spurious**, and under **Mesa semantics** (used by Java, pthreads, C++) the signaler keeps running, so the condition may change before the waiter gets the lock. (Hoare semantics hand the lock straight to the waiter, but are rarely implemented.)
+- **Always wait in a `while` loop** that re-checks the condition: wakeups can be **spurious**, and under **Mesa semantics** (used by pthreads and C++) the signaler keeps running, so the condition may change before the waiter gets the lock. (Hoare semantics hand the lock straight to the waiter, but are rarely implemented.)
 - Condition variables have **no memory**: a signal with no waiter is lost, unlike a semaphore's count. So the condition itself must live in shared state checked under the lock.
 - Use notify-all when different waiters wait for different conditions on one variable, or when a change can satisfy several waiters.
-- Tools: `std::mutex` + `std::condition_variable`, `pthread_cond_t`, Java `wait`/`notify`/`notifyAll` or `Condition` objects, Python `threading.Condition`.
+- Tools: `std::mutex` + `std::condition_variable`, `condition_variable_any` for other lock types, `pthread_cond_t`.
 
 ### deep
 #### Intuition
@@ -541,19 +477,6 @@ int main() {
 
 `zero.wait(lk, pred)` is shorthand for `while (!pred()) zero.wait(lk);`.
 
-```java
-class Latch {                                  // a Java monitor: synchronized + wait/notifyAll
-    private int count;
-    Latch(int n) { count = n; }
-    synchronized void countDown() {
-        if (count > 0 && --count == 0) notifyAll();
-    }
-    synchronized void await() throws InterruptedException {
-        while (count > 0) wait();              // releases the monitor lock while waiting
-    }
-}
-```
-
 #### Worked example: why `if` instead of `while` breaks
 
 A queue with one item and two consumers, C1 and C2, both waiting on "not empty":
@@ -574,38 +497,13 @@ With `while`, C1 re-checks, finds the queue empty and waits again. Spurious wake
 | after signal | the waiter runs immediately with the lock | the signaler continues; the waiter competes for the lock later |
 | condition when the waiter runs | guaranteed true | may be false again |
 | waiting code | `if` would do | must use `while` |
-| used by | textbooks | Java, pthreads, C++, Python |
-
-#### Python
-
-```python
-import threading
-
-items, cond = [], threading.Condition()
-
-
-def consume(out):
-    with cond:
-        while not items:          # re-check after every wakeup
-            cond.wait()
-        out.append(items.pop())
-
-
-result = []
-t = threading.Thread(target=consume, args=(result,))
-t.start()
-with cond:
-    items.append("job-1")
-    cond.notify()
-t.join()
-print(result)   # ['job-1']
-```
+| used by | textbooks | pthreads, C++ |
 
 Connects to: semaphores, mutex locks, producer-consumer problem, readers-writers problem, concurrency patterns.
 
 ### questions
 Q: What is a monitor?
-A: A synchronization construct that combines shared data, the operations on it and a lock, so that only one thread can execute any of its operations at a time. Condition variables inside the monitor let threads wait for specific conditions. Java objects with synchronized methods are monitors.
+A: A synchronization construct that combines shared data, the operations on it and a lock, so that only one thread can execute any of its operations at a time. Condition variables inside the monitor let threads wait for specific conditions. In C++, a class whose methods all lock one private mutex, with condition variables for waiting, is a monitor.
 
 Q: What does wait on a condition variable do?
 A: It atomically releases the associated mutex and puts the thread to sleep until another thread signals the condition variable, or a spurious wakeup occurs. Before returning, it re-acquires the mutex, so the thread again holds the lock when it continues.
@@ -744,7 +642,7 @@ The producer-consumer problem is about one group of threads making items and ano
 - Producer: `wait(empty); wait(mutex); put; signal(mutex); signal(full)`. Consumer: `wait(full); wait(mutex); take; signal(mutex); signal(empty)`.
 - **Order matters**: taking `mutex` before `empty` can **deadlock** (a producer sleeps on a full buffer while holding the mutex, so no consumer can ever get in to free a slot).
 - Equivalent monitor version: one mutex and two condition variables (`notFull`, `notEmpty`), waiting in `while` loops.
-- Real-world forms: blocking queues (`java.util.concurrent.BlockingQueue`, Python `queue.Queue`, Go channels), thread pools' task queues, pipes, message brokers; the bound provides **back-pressure** so fast producers cannot exhaust memory.
+- Real-world forms: blocking queues (in C++, a `std::queue` with a mutex and two condition variables), thread pools' task queues, pipes, message brokers; the bound provides **back-pressure** so fast producers cannot exhaust memory.
 
 ### deep
 #### Intuition
@@ -830,34 +728,6 @@ public:
 };
 ```
 
-```python
-import queue
-import threading
-
-q = queue.Queue(maxsize=4)          # a bounded buffer with the locking built in
-total = 0
-
-
-def producer():
-    for i in range(1, 1001):
-        q.put(i)                    # blocks while full
-    q.put(None)
-
-
-def consumer():
-    global total
-    while (item := q.get()) is not None:   # blocks while empty
-        total += item
-
-
-threads = [threading.Thread(target=producer), threading.Thread(target=consumer)]
-for t in threads:
-    t.start()
-for t in threads:
-    t.join()
-print(total)   # 500500
-```
-
 #### The deadlock from the wrong order
 
 If the producer does `wait(mutex)` then `wait(empty)` with a full buffer, it sleeps holding the mutex. Every consumer then blocks on `wait(mutex)` and can never take an item and signal `empty`. Always wait on the counting semaphore first, then take the mutex.
@@ -900,7 +770,7 @@ The readers-writers problem is about letting many people read shared data at the
 - **First readers-writers problem (reader preference)**: readers never wait unless a writer is already writing. A `readCount` protected by a mutex; the **first** reader locks the writer semaphore and the **last** reader unlocks it. Writers can **starve** under a steady stream of readers.
 - **Second problem (writer preference)**: once a writer is waiting, new readers are held back. Readers can starve.
 - **Fair** versions queue readers and writers in arrival order (a "turnstile" semaphore), so neither side starves.
-- In practice: **read-write locks** such as C++17 `std::shared_mutex` (`shared_lock` for readers, `unique_lock` for writers), Java `ReentrantReadWriteLock`, `pthread_rwlock_t`. Their fairness policy varies by implementation.
+- In practice: **read-write locks** such as C++17 `std::shared_mutex` (`shared_lock` for readers, `unique_lock` for writers), `pthread_rwlock_t`. Their fairness policy varies by implementation.
 - They pay off only when reads dominate and hold the lock for a while; for tiny critical sections a plain mutex is often faster. Alternatives: copy-on-write snapshots, RCU, sequence locks.
 
 ### deep
@@ -972,37 +842,6 @@ public:
         kv[k] = v;
     }
 };
-```
-
-```python
-import threading
-
-
-class RWLock:
-    """Reader preference, built from two locks."""
-
-    def __init__(self):
-        self._readers = 0
-        self._count_lock = threading.Lock()
-        self._rw = threading.Lock()
-
-    def acquire_read(self):
-        with self._count_lock:
-            self._readers += 1
-            if self._readers == 1:
-                self._rw.acquire()
-
-    def release_read(self):
-        with self._count_lock:
-            self._readers -= 1
-            if self._readers == 0:
-                self._rw.release()
-
-    def acquire_write(self):
-        self._rw.acquire()
-
-    def release_write(self):
-        self._rw.release()
 ```
 
 (`threading.Lock` may be released by a thread other than the one that acquired it, which the last-reader release relies on.)
@@ -1096,29 +935,29 @@ int main() {
 
 #### Fix 2: at most N − 1 at the table
 
-```python
-import threading
-
-N, MEALS = 5, 200
-forks = [threading.Lock() for _ in range(N)]
-seats = threading.Semaphore(N - 1)       # at most 4 philosophers reach for forks
-meals = [0] * N
-
-
-def philosopher(i):
-    for _ in range(MEALS):
-        with seats:
-            with forks[i]:
-                with forks[(i + 1) % N]:
-                    meals[i] += 1
-
-
-threads = [threading.Thread(target=philosopher, args=(i,)) for i in range(N)]
-for t in threads:
-    t.start()
-for t in threads:
-    t.join()
-print(meals)   # [200, 200, 200, 200, 200]
+```cpp
+int main() {
+    const int N = 5, MEALS = 200;
+    vector<mutex> forks(N);
+    counting_semaphore<N> seats(N - 1);              // at most 4 philosophers reach for forks
+    vector<int> meals(N);
+    vector<thread> philosophers;
+    for (int i = 0; i < N; i++)
+        philosophers.emplace_back([&, i] {
+            for (int m = 0; m < MEALS; m++) {
+                seats.acquire();
+                {
+                    lock_guard left(forks[i]);
+                    lock_guard right(forks[(i + 1) % N]);
+                    meals[i]++;
+                }
+                seats.release();
+            }
+        });
+    for (auto& p : philosophers) p.join();
+    for (int m : meals) cout << m << " ";
+    cout << "\n";                                    // 200 200 200 200 200
+}
 ```
 
 With only four at the table and five forks, by the pigeonhole principle at least one of them can get both forks, eat and release them.

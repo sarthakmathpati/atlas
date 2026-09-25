@@ -68,27 +68,6 @@ void selectionSort(vector<int>& a) {
 }
 ```
 
-```python
-def bubble_sort(a):
-    n = len(a)
-    for end in range(n - 1, 0, -1):
-        swapped = False
-        for i in range(end):
-            if a[i] > a[i + 1]:
-                a[i], a[i + 1] = a[i + 1], a[i]
-                swapped = True
-        if not swapped:                # already sorted: O(n) best case
-            break
-
-def insertion_sort(a):
-    for i in range(1, len(a)):
-        x, j = a[i], i - 1
-        while j >= 0 and a[j] > x:
-            a[j + 1] = a[j]
-            j -= 1
-        a[j + 1] = x
-```
-
 #### Comparison
 
 | Sort | Best | Average | Worst | Stable | Swaps or writes |
@@ -180,28 +159,9 @@ void mergeSort(vector<int>& a) {
 }
 ```
 
-```python
-def merge_sort(a):
-    if len(a) <= 1:
-        return a
-    mid = len(a) // 2
-    left, right = merge_sort(a[:mid]), merge_sort(a[mid:])
-    out, i, j = [], 0, 0
-    while i < len(left) and j < len(right):
-        if left[i] <= right[j]:
-            out.append(left[i])
-            i += 1
-        else:
-            out.append(right[j])
-            j += 1
-    out.extend(left[i:])
-    out.extend(right[j:])
-    return out
-```
-
 #### Complexity
 
-Each level of recursion merges $n$ elements in total, and there are $\log_2 n$ levels: $O(n \log n)$ time for best, average and worst case. Space: $O(n)$ for the buffer plus $O(\log n)$ recursion stack. The Python version above allocates new lists at every level (still $O(n \log n)$ time, $O(n)$ live memory at a time).
+Each level of recursion merges $n$ elements in total, and there are $\log_2 n$ levels: $O(n \log n)$ time for best, average and worst case. Space: $O(n)$ for the buffer plus $O(\log n)$ recursion stack.
 
 #### Merge sort on linked lists
 
@@ -217,7 +177,7 @@ Find the middle with fast and slow pointers, cut, sort both halves, and merge by
 #### Variants
 
 - **Bottom-up merge sort**: iterative, merges widths 1, 2, 4, …; good for linked lists and avoids recursion.
-- **Natural merge sort / Timsort**: detect existing sorted runs and merge them; $O(n)$ on sorted input. Python's `sorted` and Java's object sort use Timsort.
+- **Natural merge sort / Timsort**: detect existing sorted runs and merge them; $O(n)$ on already sorted input.
 - **External merge sort**: sort chunks that fit in memory, write them to disk, then k-way merge with a heap.
 - **Counting during merge**: inversions and related counts.
 
@@ -314,26 +274,6 @@ void quickSort(vector<int>& a, int lo, int hi, mt19937& rng) {
 }
 ```
 
-```python
-import random
-
-def quick_sort(a, lo=0, hi=None):
-    if hi is None:
-        hi = len(a) - 1
-    if lo >= hi:
-        return
-    k = random.randint(lo, hi)
-    a[k], a[hi] = a[hi], a[k]
-    pivot, i = a[hi], lo
-    for j in range(lo, hi):
-        if a[j] < pivot:
-            a[i], a[j] = a[j], a[i]
-            i += 1
-    a[i], a[hi] = a[hi], a[i]
-    quick_sort(a, lo, i - 1)
-    quick_sort(a, i + 1, hi)
-```
-
 With Hoare's scheme, recurse on `[lo, p]` and `[p + 1, hi]` (the pivot is included in the left side).
 
 #### Complexity
@@ -344,7 +284,7 @@ With Hoare's scheme, recurse on `[lo, p]` and `[p + 1, hi]` (the pivot is includ
 
 #### Why quicksort is fast in practice
 
-It partitions in place with sequential scans (cache-friendly), does few writes compared with merge sort's copying, and has a small inner loop. That is why it is the default for primitive arrays in many libraries (Java uses dual-pivot quicksort for primitives; C++ uses introsort).
+It partitions in place with sequential scans (cache-friendly), does few writes compared with merge sort's copying, and has a small inner loop. That is why it is the default for primitive arrays in many libraries (`std::sort` is introsort: quicksort that switches to heap sort when recursion gets too deep, and to insertion sort on small ranges).
 
 #### Edge cases and bugs
 
@@ -443,11 +383,10 @@ scope: "sorting by multiple keys, comparator rules"
 A stable sort keeps items with equal keys in the order they started in. If you sort a class list by grade with a stable sort, students with the same grade stay in alphabetical order from before. A comparator is the rule you give the sort to decide which of two items comes first.
 
 ### interview
-- **Stable**: merge sort, insertion sort, Timsort (Python `sort`, Java object sort), C++ `std::stable_sort`. **Not stable**: quicksort, heap sort, selection sort, C++ `std::sort`, Java primitive sort.
+- **Stable**: merge sort, insertion sort, `std::stable_sort`. **Not stable**: quicksort, heap sort, selection sort, `std::sort`.
 - **Multiple keys**: compare the primary key, and only on a tie compare the next key. Or stable-sort by the least important key first, then by more important keys.
 - C++ comparators must be a **strict weak ordering**: `comp(a, a)` is false; never use `<=` (undefined behavior, crashes are possible).
-- Java `compare` returns negative, zero, positive; avoid `a - b` (overflow), use `Integer.compare`.
-- Python: `key=` functions with tuples, `-x` for descending numbers, `reverse=True`, or `functools.cmp_to_key`.
+- Several keys in one comparator: `return tie(a.grade, a.name) < tie(b.grade, b.name);`, and swap the sides of one key to sort it descending.
 - Custom orders: "largest number" (compare `a + b` vs `b + a`), sort by frequency then value, sort points by distance.
 
 ### deep
@@ -497,24 +436,6 @@ string largestNumber(vector<int> nums) {
 }
 ```
 
-```python
-from functools import cmp_to_key
-
-def sort_people(people):
-    # people: list of (name, age); age ascending, then name ascending
-    return sorted(people, key=lambda p: (p[1], p[0]))
-
-def sort_by_frequency_desc_then_value(nums):
-    from collections import Counter
-    freq = Counter(nums)
-    return sorted(nums, key=lambda x: (-freq[x], x))
-
-def largest_number(nums):
-    s = list(map(str, nums))
-    s.sort(key=cmp_to_key(lambda a, b: -1 if a + b > b + a else (1 if a + b < b + a else 0)))
-    return "0" if s[0] == "0" else "".join(s)
-```
-
 #### Comparator rules (strict weak ordering)
 
 A C++ comparator `comp` must satisfy:
@@ -524,14 +445,14 @@ A C++ comparator `comp` must satisfy:
 3. **Transitive**: `comp(a, b)` and `comp(b, c)` imply `comp(a, c)`.
 4. **Transitive equivalence**: if `a` ties with `b` and `b` ties with `c`, then `a` ties with `c`.
 
-Breaking them is undefined behavior: `std::sort` may read out of bounds. Java's Timsort may throw "Comparison method violates its general contract". A common culprit is comparing floating-point values that include NaN, or a comparator that depends on mutable state.
+Breaking them is undefined behavior: `std::sort` may read out of bounds. A common culprit is comparing floating-point values that include NaN, or a comparator that depends on mutable state.
 
 #### Pitfalls
 
-- Java `(a, b) -> a - b` overflows for large magnitudes (`Integer.MIN_VALUE - 1`); use `Integer.compare(a, b)`.
+- Comparing by subtraction (`return a - b < 0;`) overflows for values of large magnitude; compare directly with `a < b`.
 - Sorting an array of indices by values: capture the values by reference and compare `v[i] < v[j]`, tie-breaking by index for determinism.
-- Descending order on strings in Python can't use `-s`; use `reverse=True` or a second stable pass.
-- Sorting objects by a key that is expensive to compute: compute once (decorate-sort-undecorate, which Python's `key=` does automatically).
+- Descending order: use `greater<>()` or reverse the comparison, never negate the result of `<`.
+- Sorting objects by a key that is expensive to compute: compute the keys once into a vector of `pair<key, index>`, sort that, then reorder (decorate-sort-undecorate).
 
 #### Complexity
 
@@ -541,7 +462,7 @@ Connects to: merge sort (stable), quick sort (unstable), intervals (sort by star
 
 ### questions
 Q: What does it mean for a sort to be stable, and name stable and unstable examples?
-A: A stable sort keeps elements with equal keys in their original relative order. Merge sort, insertion sort and Timsort (Python's sort, Java's object sort, C++ stable_sort) are stable; quicksort, heap sort and C++ std::sort are not.
+A: A stable sort keeps elements with equal keys in their original relative order. Merge sort, insertion sort and std::stable_sort are stable; quicksort, heap sort and std::sort are not.
 
 Q: How do you sort by two keys?
 A: Compare by the primary key and use the secondary key only to break ties, for example with a tuple comparison. Alternatively, stable-sort by the secondary key first and then by the primary key.
@@ -552,8 +473,8 @@ A: std::sort requires a strict weak ordering, where comp(a, a) must be false. Wi
 Q: How do you sort numbers to form the largest possible concatenated number?
 A: Sort the numbers as strings with the rule that a comes before b when a + b > b + a. This ordering is transitive, so the sorted concatenation is the largest; return "0" if the first string is "0".
 
-Q: Why avoid return a − b in a Java comparator?
-A: The subtraction can overflow for values of large magnitude with opposite signs, flipping the sign of the result and corrupting the sort. Integer.compare(a, b) gives the correct sign without overflow.
+Q: Why must a C++ sort comparator never use <=?
+A: std::sort requires a strict weak ordering, where comp(a, a) is false. With <=, equal elements each claim to come first, which is undefined behavior: std::sort may loop forever or read past the end of the range.
 
 ## dsa.sorting.quickselect
 name: "Quickselect"
@@ -613,26 +534,7 @@ int kthLargest(const vector<int>& a, int k) {       // k-th largest, 1-based
 }
 ```
 
-```python
-import random
-
-def quickselect(a, k):
-    """k-th smallest (0-based); works on a copy with three-way partitioning."""
-    a = list(a)
-    while True:
-        pivot = random.choice(a)
-        less = [x for x in a if x < pivot]
-        equal = [x for x in a if x == pivot]
-        if k < len(less):
-            a = less
-        elif k < len(less) + len(equal):
-            return pivot
-        else:
-            k -= len(less) + len(equal)
-            a = [x for x in a if x > pivot]
-```
-
-The Python version trades the in-place partition for clarity: still $O(n)$ expected, but with $O(n)$ extra memory. The three-way split also handles many duplicates gracefully.
+With many equal values, Lomuto's partition as written degrades toward $O(n^2)$ (all equal elements land on one side); a three-way partition into less, equal and greater fixes it.
 
 #### Complexity
 
@@ -767,33 +669,6 @@ long long countInversions(vector<int> a) {
     vector<int> buf(a.size());
     return sortCount(a, buf, 0, a.size());
 }
-```
-
-```python
-def count_smaller_after_self(nums):
-    """result[i] = number of j > i with nums[j] < nums[i]."""
-    n = len(nums)
-    result = [0] * n
-    idx = list(range(n))
-
-    def sort(lo, hi):                       # sorts idx[lo:hi] by value
-        if hi - lo <= 1:
-            return
-        mid = (lo + hi) // 2
-        sort(lo, mid)
-        sort(mid, hi)
-        merged, j = [], mid
-        for i in range(lo, mid):
-            while j < hi and nums[idx[j]] < nums[idx[i]]:
-                merged.append(idx[j])
-                j += 1
-            result[idx[i]] += j - mid       # right elements already placed are smaller
-            merged.append(idx[i])
-        merged.extend(idx[j:hi])
-        idx[lo:hi] = merged
-
-    sort(0, n)
-    return result
 ```
 
 #### Reverse pairs

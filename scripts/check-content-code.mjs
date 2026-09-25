@@ -35,7 +35,8 @@ const PRELUDE = [
   "#include <thread>",
   "#include <mutex>",
   "#include <condition_variable>",
-  // POSIX headers for the OS subject (fork, pipes, mmap, semaphores, sockets, epoll).
+  // POSIX headers for the OS subject (fork, pipes, mmap, semaphores, sockets, epoll, uname,
+  // user-level context switches).
   "#include <fcntl.h>",
   "#include <poll.h>",
   "#include <pthread.h>",
@@ -48,7 +49,9 @@ const PRELUDE = [
   "#include <sys/stat.h>",
   "#include <sys/syscall.h>",
   "#include <sys/types.h>",
+  "#include <sys/utsname.h>",
   "#include <sys/wait.h>",
+  "#include <ucontext.h>",
   "#include <unistd.h>",
   "using namespace std;",
   "struct ListNode { int val; ListNode* next; ListNode(int v = 0, ListNode* n = nullptr) : val(v), next(n) {} };",

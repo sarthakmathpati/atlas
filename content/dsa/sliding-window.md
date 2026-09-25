@@ -69,30 +69,7 @@ vector<int> findAnagrams(const string& s, const string& p) {
 }
 ```
 
-```python
-def find_anagrams(s, p):
-    k, out = len(p), []
-    need, have = [0] * 26, [0] * 26
-    for c in p:
-        need[ord(c) - 97] += 1
-    matches = sum(need[x] == have[x] for x in range(26))  # letters whose counts agree
-
-    def update(idx, delta):
-        nonlocal matches
-        matches -= have[idx] == need[idx]
-        have[idx] += delta
-        matches += have[idx] == need[idx]
-
-    for i, c in enumerate(s):
-        update(ord(c) - 97, 1)
-        if i >= k:
-            update(ord(s[i - k]) - 97, -1)
-        if i >= k - 1 and matches == 26:
-            out.append(i - k + 1)
-    return out
-```
-
-The Python version keeps a `matches` counter (how many of the 26 letters currently agree), so each step is $O(1)$ rather than $O(26)$.
+A refinement keeps a `matches` counter (how many of the 26 letters currently agree), so each step is $O(1)$ rather than $O(26)$.
 
 #### Complexity
 
@@ -212,28 +189,6 @@ int longestWithSumAtMost(const vector<int>& a, long long limit) {
     }
     return best;
 }
-```
-
-```python
-def min_subarray_len(target, a):
-    l, total, best = 0, 0, float("inf")
-    for r, x in enumerate(a):
-        total += x
-        while total >= target:
-            best = min(best, r - l + 1)
-            total -= a[l]
-            l += 1
-    return 0 if best == float("inf") else best
-
-def longest_ones_with_k_flips(bits, k):
-    l = zeros = best = 0
-    for r, b in enumerate(bits):
-        zeros += b == 0
-        while zeros > k:                    # too many zeros to flip
-            zeros -= bits[l] == 0
-            l += 1
-        best = max(best, r - l + 1)
-    return best
 ```
 
 #### Complexity
@@ -368,20 +323,6 @@ int longestWithAtMostKDistinct(const string& s, int k) {
 }
 ```
 
-```python
-def character_replacement(s, k):
-    count = [0] * 26
-    l = max_count = best = 0
-    for r, c in enumerate(s):
-        count[ord(c) - 65] += 1                # uppercase letters
-        max_count = max(max_count, count[ord(c) - 65])
-        while (r - l + 1) - max_count > k:     # more than k letters to replace
-            count[ord(s[l]) - 65] -= 1
-            l += 1
-        best = max(best, r - l + 1)
-    return best
-```
-
 #### Why a stale `max_count` is fine
 
 In character replacement, `max_count` is never decreased when the window shrinks. It can overstate the true maximum, which can only make the window look valid when it isn't. But the answer only grows when a window of a new, larger length is valid with a genuinely larger `max_count`, so the recorded best is still correct. Recomputing the maximum over 26 counts each step also works and is still $O(26n)$.
@@ -506,24 +447,6 @@ long long exactlyKDistinct(const vector<int>& a, int k) {
 }
 ```
 
-```python
-def at_most_sum(bits, s):
-    """Subarrays of a 0/1 (or non-negative) array with sum at most s."""
-    if s < 0:
-        return 0
-    l = total = window = 0
-    for r, x in enumerate(bits):
-        window += x
-        while window > s:
-            window -= bits[l]
-            l += 1
-        total += r - l + 1
-    return total
-
-def exactly_sum(bits, s):
-    return at_most_sum(bits, s) - at_most_sum(bits, s - 1)
-```
-
 #### Complexity
 
 Two linear passes: $O(n)$ time, $O(\text{distinct})$ space.
@@ -638,27 +561,6 @@ string minWindow(const string& s, const string& t) {
     }
     return bestLen == INT_MAX ? "" : s.substr(bestStart, bestLen);
 }
-```
-
-```python
-from collections import Counter
-
-def min_window(s, t):
-    need = Counter(t)
-    missing = len(t)
-    l, best = 0, (float("inf"), 0)
-    for r, c in enumerate(s):
-        if need[c] > 0:
-            missing -= 1
-        need[c] -= 1
-        while missing == 0:
-            best = min(best, (r - l + 1, l))
-            need[s[l]] += 1
-            if need[s[l]] > 0:
-                missing += 1
-            l += 1
-    length, start = best
-    return "" if length == float("inf") else s[start:start + length]
 ```
 
 Characters not in `t` go negative in `need` and never affect `missing`, which is why a single table suffices.

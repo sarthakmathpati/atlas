@@ -17,10 +17,10 @@ A hash table turns a key into an array index with a hash function, so it can jum
 ### interview
 - A **hash function** maps a key to an integer; `index = hash(key) mod capacity` picks a **bucket** in an array.
 - Insert, lookup and delete are **O(1) on average**, **O(n) worst case** when many keys collide.
-- **Load factor** = items / buckets. When it passes a threshold (0.75 in Java's `HashMap`, 1.0 by default for C++ `unordered_map`, about 2/3 for Python's `dict`), the table **resizes** (roughly doubles) and rehashes every key: O(n) once, O(1) amortized per insert.
-- A good hash function is deterministic, fast, and spreads keys evenly. Equal keys must have equal hashes (override `hashCode` with `equals` in Java).
+- **Load factor** = items / buckets. When it passes a threshold (1.0 by default for C++ `unordered_map`, adjustable with `max_load_factor`), the table **resizes** (roughly doubles) and rehashes every key: O(n) once, O(1) amortized per insert.
+- A good hash function is deterministic, fast, and spreads keys evenly. Equal keys must have equal hashes: a custom key needs `operator==` and a hash that agrees with it.
 - Keys should be immutable: changing a key after insertion leaves it in the wrong bucket.
-- Iteration order is unspecified in most hash maps (Python dicts keep insertion order since 3.7; Java's `LinkedHashMap` does too).
+- Iteration order of `unordered_map` is unspecified and can change after a rehash; use `std::map` when you need sorted order.
 
 ### deep
 #### Intuition
@@ -30,7 +30,7 @@ An array gives $O(1)$ access if you know the index. A hash table manufactures th
 #### The pieces
 
 1. **Hash function**: turns a key into a number. For strings, a polynomial hash $h = \sum s_i \cdot p^{i}$ mixes every character; for integers, the identity or a bit mixer.
-2. **Compression**: `hash mod capacity` (or `hash & (capacity - 1)` when capacity is a power of two, which is why Java also mixes the high bits into the low ones).
+2. **Compression**: `hash mod capacity` (or `hash & (capacity - 1)` when capacity is a power of two, which is why such tables mix the high bits of the hash into the low ones first).
 3. **Buckets**: an array of lists (chaining) or of single slots (open addressing).
 4. **Load factor** $\alpha = n / m$: the average number of items per bucket. Expected chain length is $\alpha$, so keeping $\alpha$ bounded keeps operations $O(1)$.
 5. **Resizing**: when $\alpha$ exceeds the threshold, allocate about twice as many buckets and reinsert every key (their indices change because the modulus changes).
@@ -77,44 +77,14 @@ public:
 };
 ```
 
-```python
-class IntHashMap:
-    def __init__(self):
-        self.buckets = [[] for _ in range(8)]
-        self.count = 0
-
-    def _bucket(self, key):
-        return self.buckets[hash(key) % len(self.buckets)]
-
-    def put(self, key, value):
-        bucket = self._bucket(key)
-        for pair in bucket:
-            if pair[0] == key:
-                pair[1] = value
-                return
-        bucket.append([key, value])
-        self.count += 1
-        if self.count > 0.75 * len(self.buckets):
-            old = [p for b in self.buckets for p in b]
-            self.buckets = [[] for _ in range(2 * len(self.buckets))]
-            for k, v in old:
-                self._bucket(k).append([k, v])
-
-    def get(self, key):
-        for k, v in self._bucket(key):
-            if k == key:
-                return v
-        return None
-```
-
 #### Complexity
 
 With a good hash and bounded load factor, each operation inspects $O(1 + \alpha)$ entries on average: $O(1)$. Resizing costs $O(n)$ but happens after $\Theta(n)$ inserts, so it is $O(1)$ amortized. The worst case, every key in one bucket, is $O(n)$ per operation.
 
 #### Pitfalls
 
-- Using a mutable object (a Python list, a Java object whose fields change) as a key.
-- Overriding `equals` without `hashCode` in Java: equal objects land in different buckets.
+- Changing a key after insertion (for example through a pointer): it now belongs in another bucket. `unordered_map` keys are `const` for this reason.
+- A custom hash that disagrees with `operator==`: equal keys land in different buckets and lookups miss.
 - Iterating over a hash map and expecting sorted order.
 - In C++, `map[key]` inserts a default value when the key is missing; use `find` or `count` to test membership.
 
@@ -146,11 +116,11 @@ scope: "chaining vs open addressing, worst case O(n)"
 A collision happens when two different keys land on the same spot in a hash table. With chaining, each spot holds a small list, like several coats hanging on one hook. With open addressing, the newcomer walks along to the next free hook instead.
 
 ### interview
-- **Separate chaining**: each bucket is a list (or tree). Simple, tolerates load factors above 1, deletion is easy. Used by Java `HashMap` and C++ `unordered_map`.
-- **Open addressing**: all entries live in the array; on a collision, **probe** another slot: linear (`i + 1`), quadratic (`i + k²`), or double hashing (`i + k·h2(key)`). Used by Python `dict`.
+- **Separate chaining**: each bucket is a list (or tree). Simple, tolerates load factors above 1, deletion is easy. Used by C++ `unordered_map`, whose bucket interface effectively requires it.
+- **Open addressing**: all entries live in the array; on a collision, **probe** another slot: linear (`i + 1`), quadratic (`i + k²`), or double hashing (`i + k·h2(key)`). Used by fast tables such as Abseil's `flat_hash_map` and Boost's `unordered_flat_map`.
 - Open addressing needs load factor well below 1 (often at most 0.5 to 0.7), is cache-friendly, and needs **tombstones** for deletion so probe chains stay intact.
 - Linear probing suffers **primary clustering**: runs of filled slots grow and slow everything down.
-- **Worst case O(n)**: many keys in one chain or one probe run. Java 8 turns long chains (more than 8) into balanced trees, giving O(log n) worst case per bucket.
+- **Worst case O(n)**: many keys in one chain or one probe run. Some libraries turn long chains into balanced trees, giving O(log n) worst case per bucket.
 
 ### deep
 #### Intuition
@@ -221,40 +191,9 @@ public:
 };
 ```
 
-```python
-EMPTY, DELETED = object(), object()
-
-class LinearProbingSet:
-    def __init__(self, capacity):
-        self.slots = [EMPTY] * capacity
-
-    def _probe(self, key):
-        n = len(self.slots)
-        i = hash(key) % n
-        for _ in range(n):
-            yield i
-            i = (i + 1) % n
-
-    def contains(self, key):
-        for i in self._probe(key):
-            if self.slots[i] is EMPTY:
-                return False
-            if self.slots[i] == key:
-                return True
-        return False
-
-    def erase(self, key):
-        for i in self._probe(key):
-            if self.slots[i] is EMPTY:
-                return
-            if self.slots[i] == key:
-                self.slots[i] = DELETED   # tombstone keeps probe chains intact
-                return
-```
-
 #### Worst case
 
-If an adversary (or bad luck) sends keys that all hash to one bucket, a chained table degenerates into a linked list and open addressing into a linear scan: $O(n)$ per operation, $O(n^2)$ for $n$ inserts. Defenses: randomized (seeded) hash functions, and tree-shaped buckets as in Java 8.
+If an adversary (or bad luck) sends keys that all hash to one bucket, a chained table degenerates into a linked list and open addressing into a linear scan: $O(n)$ per operation, $O(n^2)$ for $n$ inserts. Defenses: randomized (seeded) hash functions, and tree-shaped buckets.
 
 #### Variants
 
@@ -273,7 +212,7 @@ Q: What is primary clustering?
 A: With linear probing, filled slots form contiguous runs. Any key hashing into a run lands at its end and makes it longer, so runs grow faster and faster, and probe counts rise sharply as the load factor approaches 1.
 
 Q: When is a hash table lookup O(n), and how do libraries defend against it?
-A: When many keys collide in one bucket, from a poor hash function or adversarial input. Libraries randomize hash seeds (Python strings, Rust), and Java 8 converts long bucket chains into balanced trees so a bucket costs O(log n) in the worst case.
+A: When many keys collide in one bucket, from a poor hash function or adversarial input. Hardened tables randomize their hash seed, and some turn long chains into balanced trees. In C++, a custom hash such as splitmix64 with a random seed protects unordered_map from crafted inputs.
 
 Q: Why does the birthday paradox matter for hash tables?
 A: It shows collisions appear long before a table is full: with m buckets, a collision becomes likely after about √m insertions. So collision handling is required even at low load factors.
@@ -294,7 +233,7 @@ Frequency counting means tallying how many times each item appears, like countin
 - **Anagram check**: equal count arrays (or equal sorted strings, O(n log n)).
 - **Group by a key**: map `key → list`, where the key is a canonical form (sorted word, count tuple, normalized shape).
 - Top k frequent: count, then use a heap (O(n log k)) or bucket sort by frequency (O(n)).
-- In C++ `unordered_map<int,int>` defaults counts to 0 on `[]`; Python has `collections.Counter` and `defaultdict(list)`.
+- In C++, `m[key]++` works because `[]` value-initializes a missing count to 0, and `m[key].push_back(x)` groups items because it creates an empty vector.
 
 ### deep
 #### Intuition
@@ -352,25 +291,6 @@ vector<int> topKFrequent(const vector<int>& a, int k) {
 }
 ```
 
-```python
-from collections import Counter, defaultdict
-
-def is_anagram(s, t):
-    return Counter(s) == Counter(t)
-
-def group_anagrams(words):
-    groups = defaultdict(list)
-    for w in words:
-        count = [0] * 26
-        for c in w:
-            count[ord(c) - ord('a')] += 1
-        groups[tuple(count)].append(w)   # count tuple: O(len) key instead of sorting
-    return list(groups.values())
-
-def top_k_frequent(a, k):
-    return [x for x, _ in Counter(a).most_common(k)]
-```
-
 #### Complexity
 
 Counting is $O(n)$ time. Group anagrams with sorted keys is $O(n \cdot L \log L)$ for $n$ words of length $L$; with count tuples it is $O(n \cdot (L + 26))$. Space is $O(n \cdot L)$ for the groups.
@@ -386,7 +306,7 @@ Counting is $O(n)$ time. Group anagrams with sorted keys is $O(n \cdot L \log L)
 
 - Unicode or uppercase input breaks `c - 'a'` indexing; ask about the alphabet, or use a map.
 - Reading a missing key with `map[key]` in C++ inserts it; that is fine for counting, not for membership tests.
-- Comparing two `Counter`s is correct, but comparing two `dict` counts after deleting zero entries matters in some languages.
+- Comparing two count maps with `==` fails when one keeps zero entries and the other erased them; erase a key when its count drops to 0, or compare fixed-size arrays.
 
 #### Variants
 
@@ -495,16 +415,6 @@ long long countPairsWithDiff(const vector<int>& nums, int k) {
 }
 ```
 
-```python
-def two_sum(nums, target):
-    index_of = {}
-    for i, x in enumerate(nums):
-        if target - x in index_of:
-            return [index_of[target - x], i]
-        index_of[x] = i
-    return []
-```
-
 Time $O(n)$ average, space $O(n)$.
 
 #### Hash map or two pointers?
@@ -608,11 +518,11 @@ scope: "when you need sorted keys, floor and ceiling queries"
 A hash map finds a key instantly but keeps keys in no useful order. An ordered map keeps keys sorted, like a dictionary on a shelf, so it can answer "what is the nearest word before this one?" It pays a little for that: each operation takes log n time instead of constant time.
 
 ### interview
-- Hash map (`unordered_map`, `HashMap`, `dict`): O(1) average operations, no order.
-- Ordered map (`std::map`, Java `TreeMap`): balanced BST (red-black tree), **O(log n)** worst case per operation, keys in sorted order.
-- Ordered maps answer **floor/ceiling** and range queries: C++ `lower_bound` (first key ≥ x), `upper_bound` (first key > x), `prev(it)` for floor; Java `floorKey`, `ceilingKey`, `headMap`, `tailMap`.
+- Hash map (`unordered_map`): O(1) average operations, no order.
+- Ordered map (`std::map`): balanced BST (red-black tree), **O(log n)** worst case per operation, keys in sorted order.
+- Ordered maps answer **floor/ceiling** and range queries: C++ `lower_bound` (first key ≥ x), `upper_bound` (first key > x), `prev(it)` for floor.
 - Use an ordered map for: sorted iteration, nearest key, smallest or largest key, sliding windows needing min and max with deletions (multiset), calendars and intervals.
-- Python has no built-in ordered map; use `bisect` on a sorted list (O(n) insert) or `sortedcontainers.SortedList` where allowed.
+- `std::set` and `std::multiset` are the key-only versions; a multiset keeps duplicates, and erasing one copy needs `s.erase(s.find(x))`.
 
 ### questions
 Q: When would you choose a TreeMap or std::map over a hash map?
@@ -641,7 +551,7 @@ Some keys, such as pairs of numbers, need you to tell the hash map how to turn t
 - Combining hashes: avoid `h1 ^ h2` (symmetric: `(a, b)` and `(b, a)` collide, and `(x, x)` gives 0); use a multiplier or a mixing function.
 - **Anti-hash tests**: libstdc++ reduces integer hashes (the identity) modulo a prime bucket count; inputs built from multiples of that prime make every key collide, turning O(1) into O(n) and a solution into O(n²).
 - Defense: a randomized, well-mixed hash such as splitmix64 seeded from the clock, or switch to an ordered map.
-- In Java and Python, tuples and records already hash all fields; Python randomizes string hashes per process for the same security reason.
+- `std::hash` is not specialized for `pair` or `tuple` either, so every composite key needs one of these approaches.
 
 ### questions
 Q: How do you use a pair as a key in C++'s unordered_map?

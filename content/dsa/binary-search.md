@@ -21,7 +21,7 @@ Binary search finds a value in a sorted list by checking the middle and throwing
 - Safe midpoint: `mid = lo + (hi - lo) / 2` avoids overflow of `lo + hi` in fixed-width integers.
 - State the **invariant**: "if the target exists, it is in `[lo, hi]`". Every update must preserve it and shrink the range.
 - Most bugs are infinite loops (the range doesn't shrink) or off-by-one ends; test with 0, 1 and 2 elements.
-- Library: C++ `binary_search`, `lower_bound`; Java `Arrays.binarySearch`; Python `bisect`.
+- Library: `std::binary_search` (found or not) and `std::lower_bound` / `std::upper_bound` (positions), all O(log n) on a sorted range.
 
 ### deep
 #### Intuition
@@ -62,25 +62,11 @@ int binarySearch(const vector<int>& a, int target) {
 }
 ```
 
-```python
-def binary_search(a, target):
-    lo, hi = 0, len(a) - 1
-    while lo <= hi:
-        mid = (lo + hi) // 2          # Python ints don't overflow
-        if a[mid] == target:
-            return mid
-        if a[mid] < target:
-            lo = mid + 1
-        else:
-            hi = mid - 1
-    return -1
-```
-
 Time $O(\log n)$, space $O(1)$ (a recursive version uses $O(\log n)$ stack).
 
 #### The overflow detail
 
-With 32-bit ints, `(lo + hi) / 2` overflows when `lo + hi > 2^{31} - 1`, which happens for arrays over about a billion elements, and more often when searching over a value range. `lo + (hi - lo) / 2` never overflows. In Java, `(lo + hi) >>> 1` also works.
+With 32-bit ints, `(lo + hi) / 2` overflows when `lo + hi > 2^{31} - 1`, which happens for arrays over about a billion elements, and more often when searching over a value range. `lo + (hi - lo) / 2` never overflows. C++20's `std::midpoint(lo, hi)` computes it safely too.
 
 #### Edge cases and bugs
 
@@ -150,7 +136,7 @@ Lower bound finds the first position whose value is at least your target, and up
 - First occurrence of `x`: `lower_bound(x)` if it is in range and equals `x`. Last occurrence: `upper_bound(x) - 1`. Count of `x`: `upper_bound(x) - lower_bound(x)`.
 - Insert position that keeps the array sorted: `lower_bound(x)`.
 - Half-open search: `lo = 0, hi = n, while (lo < hi)`; `if (a[mid] < x) lo = mid + 1; else hi = mid;` (use `<=` for upper bound).
-- Library: C++ `lower_bound`/`upper_bound` (return iterators), Python `bisect_left`/`bisect_right`, Java has no direct equivalent for arrays (write it, or use `TreeMap.ceilingKey`).
+- Library: `std::lower_bound` / `std::upper_bound` return iterators (subtract `begin()` for an index); `std::equal_range` returns both at once.
 - General idea: find the **first index where a monotone condition becomes true**.
 
 ### deep
@@ -200,26 +186,6 @@ pair<int, int> firstAndLast(const vector<int>& a, int x) {
     if (first == (int)a.size() || a[first] != x) return {-1, -1};
     return {first, upperBound(a, x) - 1};
 }
-```
-
-```python
-from bisect import bisect_left, bisect_right
-
-def first_and_last(a, x):
-    i = bisect_left(a, x)
-    if i == len(a) or a[i] != x:
-        return [-1, -1]
-    return [i, bisect_right(a, x) - 1]
-
-def first_true(lo, hi, pred):
-    """Smallest i in [lo, hi) with pred(i) true, or hi if none (pred must be monotone)."""
-    while lo < hi:
-        mid = (lo + hi) // 2
-        if pred(mid):
-            hi = mid
-        else:
-            lo = mid + 1
-    return lo
 ```
 
 Each search is $O(\log n)$; the count of a value takes two searches.
@@ -347,38 +313,6 @@ int findMin(const vector<int>& a) {                     // works with duplicates
     }
     return a[lo];
 }
-```
-
-```python
-def search_rotated(a, target):
-    lo, hi = 0, len(a) - 1
-    while lo <= hi:
-        mid = (lo + hi) // 2
-        if a[mid] == target:
-            return mid
-        if a[lo] <= a[mid]:
-            if a[lo] <= target < a[mid]:
-                hi = mid - 1
-            else:
-                lo = mid + 1
-        else:
-            if a[mid] < target <= a[hi]:
-                lo = mid + 1
-            else:
-                hi = mid - 1
-    return -1
-
-def find_min(a):
-    lo, hi = 0, len(a) - 1
-    while lo < hi:
-        mid = (lo + hi) // 2
-        if a[mid] > a[hi]:
-            lo = mid + 1
-        elif a[mid] < a[hi]:
-            hi = mid
-        else:
-            hi -= 1
-    return a[lo]
 ```
 
 #### Why compare with `a[hi]` for the minimum
@@ -526,44 +460,6 @@ int maxMinDistance(vector<int> pos, int k) {
 }
 ```
 
-```python
-def ship_within_days(w, days):
-    def days_needed(cap):
-        d, load = 1, 0
-        for x in w:
-            if load + x > cap:
-                d, load = d + 1, 0
-            load += x
-        return d
-
-    lo, hi = max(w), sum(w)
-    while lo < hi:
-        mid = (lo + hi) // 2
-        if days_needed(mid) <= days:
-            hi = mid
-        else:
-            lo = mid + 1
-    return lo
-
-def max_min_distance(pos, k):
-    pos = sorted(pos)
-    def can_place(gap):
-        placed, last = 1, pos[0]
-        for p in pos:
-            if p - last >= gap:
-                placed, last = placed + 1, p
-        return placed >= k
-
-    lo, hi = 0, pos[-1] - pos[0]
-    while lo < hi:
-        mid = (lo + hi + 1) // 2      # round up because we assign lo = mid
-        if can_place(mid):
-            lo = mid
-        else:
-            hi = mid - 1
-    return lo
-```
-
 #### Complexity
 
 With $n$ items and an answer range of size $R$: $O(n \log R)$ time, $O(1)$ extra space. For $R = 10^{9}$ that is 30 checks.
@@ -696,18 +592,6 @@ pair<int, int> findPeak2D(const vector<vector<int>>& m) {
     for (int r = 1; r < R; r++) if (m[r][lo] > m[best][lo]) best = r;
     return {best, lo};
 }
-```
-
-```python
-def find_peak(a):
-    lo, hi = 0, len(a) - 1
-    while lo < hi:
-        mid = (lo + hi) // 2
-        if a[mid] < a[mid + 1]:
-            lo = mid + 1
-        else:
-            hi = mid
-    return lo
 ```
 
 #### Why the 2D version works

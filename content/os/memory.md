@@ -67,18 +67,20 @@ The kernel loads `base` and `limit` on every context switch, so each process see
 
 #### Seeing it for yourself
 
-```python
-import os
-
-x = [42]
-print(hex(id(x)))            # CPython's id is the object's (virtual) address
-pid = os.fork()
-if pid == 0:
-    x[0] = 99                # the child writes to "the same" address...
-    print("child", hex(id(x)), x[0])
-    os._exit(0)
-os.waitpid(pid, 0)
-print("parent", hex(id(x)), x[0])   # ...but the parent still sees 42
+```cpp
+int main() {
+    int* x = new int(42);
+    pid_t pid = fork();
+    if (pid == 0) {
+        *x = 99;                                     // the child writes to "the same" address...
+        printf("child  %p %d\n", (void*)x, *x);
+        fflush(stdout);                              // _exit skips stdio's buffers
+        _exit(0);
+    }
+    waitpid(pid, nullptr, 0);
+    printf("parent %p %d\n", (void*)x, *x);          // ...but the parent still sees 42
+    delete x;
+}
 ```
 
 Both processes print the same virtual address, yet hold different values: the MMU maps that address to different physical frames after the child's write (copy-on-write).
@@ -137,28 +139,38 @@ Here best fit is the only one that places all four, but it also leaves the most 
 
 #### Code
 
-```python
-def allocate(holes, requests, strategy):
-    holes = list(holes)
-    placed = []
-    for size in requests:
-        fits = [i for i, h in enumerate(holes) if h >= size]
-        if not fits:
-            placed.append((size, None))                  # must wait
-            continue
-        if strategy == "first":
-            i = fits[0]
-        elif strategy == "best":
-            i = min(fits, key=lambda k: holes[k])
-        else:                                            # worst
-            i = max(fits, key=lambda k: holes[k])
-        placed.append((size, holes[i]))
-        holes[i] -= size                                 # the leftover stays a (smaller) hole
-    return placed, holes
+```cpp
+enum class Fit { First, Best, Worst };
 
+// Returns the hole size each request went into (0 = must wait) and the holes left over.
+pair<vector<int>, vector<int>> allocate(vector<int> holes, const vector<int>& requests, Fit fit) {
+    vector<int> placed;
+    for (int size : requests) {
+        int chosen = -1;
+        for (int i = 0; i < (int)holes.size(); i++) {
+            if (holes[i] < size) continue;
+            if (chosen == -1 || (fit == Fit::Best && holes[i] < holes[chosen]) ||
+                (fit == Fit::Worst && holes[i] > holes[chosen]))
+                chosen = i;
+            if (fit == Fit::First) break;
+        }
+        placed.push_back(chosen == -1 ? 0 : holes[chosen]);
+        if (chosen != -1) holes[chosen] -= size;     // the leftover stays a (smaller) hole
+    }
+    return {placed, holes};
+}
 
-for s in ("first", "best", "worst"):
-    print(s, allocate([100, 500, 200, 300, 600], [212, 417, 112, 426], s))
+int main() {
+    vector<pair<string, Fit>> fits = {
+        {"first", Fit::First}, {"best", Fit::Best}, {"worst", Fit::Worst}};
+    for (auto [name, fit] : fits) {
+        auto [placed, holes] = allocate({100, 500, 200, 300, 600}, {212, 417, 112, 426}, fit);
+        cout << name << ":";
+        for (int h : placed) cout << " " << h;
+        cout << "\n";
+    }
+    // first: 500 600 288 0    best: 300 500 200 600    worst: 600 500 388 0
+}
 ```
 
 ```cpp
@@ -212,7 +224,7 @@ Fragmentation is memory that is free but wasted because of how it is split up. I
 - **Internal fragmentation**: wasted space **inside** an allocated block, because blocks come in fixed sizes larger than the request (the unused part of a process's last page, allocator rounding, fixed partitions).
 - **External fragmentation**: free memory split into **non-contiguous holes** between allocations, so a request can fail although the total free memory would suffice. It arises with variable-size contiguous allocation (and segmentation).
 - **Paging** eliminates external fragmentation (any free frame fits any page) but has internal fragmentation of half a page per process on average; larger pages mean more internal waste but smaller page tables.
-- **Compaction** shuffles allocated blocks together to merge holes; it needs execution-time address binding and is expensive (copying memory, pausing processes). Garbage collectors with compaction (Java's) do this for the heap.
+- **Compaction** shuffles allocated blocks together to merge holes; it needs execution-time address binding and is expensive (copying memory, pausing processes). Compacting garbage collectors do this for a language's heap; a C++ allocator cannot move blocks, because every pointer to them would dangle.
 - Other remedies: coalescing freed neighbors, buddy allocation, slab allocators (fixed-size object caches), size-class allocators (`malloc`).
 - The **50-percent rule** (first fit): for N allocated blocks, about 0.5N blocks are lost to fragmentation, so up to a third of memory can be unusable.
 
@@ -271,14 +283,6 @@ int main() {
     cout << internalWaste({72766, 5000, 4096}, 4096) << "\n";   // 962 + 3192 + 0 = 4154
     cout << unusableFree({150, 100, 100}, 250) << "\n";         // 350: all of it is stranded
 }
-```
-
-```python
-def internal_waste(requests, block):
-    return sum(-r % block for r in requests)     # distance to the next multiple of block
-
-
-print(internal_waste([72766, 5000, 4096], 4096))  # 4154
 ```
 
 #### Choosing block sizes
@@ -385,21 +389,6 @@ int main() {
 }
 ```
 
-```python
-PAGE = 4096
-table = {0: 3, 1: 7, 5: 9}
-
-
-def translate(addr):
-    page, offset = divmod(addr, PAGE)
-    if page not in table:
-        return "page fault"
-    return table[page] * PAGE + offset
-
-
-print([translate(a) for a in (20500, 4100, 100, 8200)])   # [36884, 28676, 12388, 'page fault']
-```
-
 #### The cost and the fix
 
 A flat page table in memory means every load or store needs **two** memory accesses: one to read the page table entry, one for the data. The **TLB** caches recent translations so most accesses need only one. Page tables are also large, so real systems use **multi-level** tables that allocate only the parts in use.
@@ -470,35 +459,43 @@ With a four-level page table, a miss costs up to four extra memory accesses, whi
 
 #### Code: simulating a small TLB
 
-```python
-from collections import OrderedDict
+```cpp
+double tlbHitRatio(const vector<long>& addresses, size_t entries, long pageSize = 4096) {
+    list<long> lru;                                  // pages, most recently used at the front
+    unordered_map<long, list<long>::iterator> tlb;   // page -> its place in the LRU list
+    long hits = 0;
+    for (long a : addresses) {
+        long page = a / pageSize;
+        if (auto it = tlb.find(page); it != tlb.end()) {
+            hits++;
+            lru.splice(lru.begin(), lru, it->second);   // now the most recently used
+            continue;
+        }
+        if (tlb.size() == entries) {                 // evict the least recently used translation
+            tlb.erase(lru.back());
+            lru.pop_back();
+        }
+        lru.push_front(page);                        // after a (pretend) page-table walk
+        tlb[page] = lru.begin();
+    }
+    return double(hits) / addresses.size();
+}
 
-
-def tlb_hit_ratio(addresses, entries, page_size=4096):
-    tlb = OrderedDict()                   # page -> frame, in LRU order
-    hits = 0
-    for a in addresses:
-        page = a // page_size
-        if page in tlb:
-            hits += 1
-            tlb.move_to_end(page)
-        else:
-            if len(tlb) == entries:
-                tlb.popitem(last=False)   # evict the least recently used translation
-            tlb[page] = page + 100        # pretend page-table walk
-    return hits / len(addresses)
-
-
-sequential = [4 * i for i in range(100_000)]                   # walking an int array
-strided = [4096 * (i % 64) for i in range(100_000)]           # one access per page, 64 pages
-print(round(tlb_hit_ratio(sequential, 16), 4))                 # 0.999: 1 miss per 1,024 ints
-print(round(tlb_hit_ratio(strided, 16), 4))  # 0.0: 64 pages cycling through 16 entries
+int main() {
+    vector<long> sequential, strided;
+    for (long i = 0; i < 100000; i++) {
+        sequential.push_back(4 * i);                 // walking an int array
+        strided.push_back(4096 * (i % 64));          // one access per page, 64 pages
+    }
+    cout << tlbHitRatio(sequential, 16) << " " << tlbHitRatio(strided, 16) << "\n";
+    // 0.99902 (1 miss per 1,024 ints) and 0 (64 pages cycling through 16 entries)
+}
 ```
 
 Sequential access misses once per page (1 in 1,024 `int`s). The strided pattern touches 64 pages in a cycle with only 16 entries, so LRU evicts each translation just before it is needed again: every access misses.
 
 ```cpp
-// The same effect in C++: a column-wise walk of a row-major matrix jumps a whole row per step.
+// The same effect in real code: a column-wise walk of a row-major matrix jumps a row per step.
 long long sumRows(const vector<int>& m, int n) {
     long long s = 0;
     for (int r = 0; r < n; ++r)
@@ -611,14 +608,17 @@ That is 10 tables of 4 KB = 40 KB, instead of the $2^{36}$ entries a flat table 
 
 To translate (pid 12, page 0x7ff), hash the pair to find the matching entry; its index (frame 2) is the frame number. The table's size is fixed by physical memory (for 16 GB of RAM with 4 KB frames, about 4 million entries), no matter how many processes run.
 
-```python
-def inverted_lookup(table, pid, page):
-    index = {(p, v): frame for frame, (p, v) in enumerate(table)}   # the hash table
-    return index.get((pid, page), "page fault")
-
-
-table = [(12, 0x400), (7, 0x10), (12, 0x7FF)]
-print(inverted_lookup(table, 12, 0x7FF), inverted_lookup(table, 7, 0x400))   # 2 page fault
+```cpp
+int main() {
+    vector<pair<int, long>> table = {{12, 0x400}, {7, 0x10}, {12, 0x7FF}};   // frame -> (pid, page)
+    map<pair<int, long>, int> index;                 // the hash table: (pid, page) -> frame
+    for (int frame = 0; frame < (int)table.size(); frame++) index[table[frame]] = frame;
+    auto lookup = [&](int pid, long page) {
+        auto it = index.find({pid, page});
+        return it == index.end() ? string("page fault") : to_string(it->second);
+    };
+    cout << lookup(12, 0x7FF) << " " << lookup(7, 0x400) << "\n";   // 2 page fault
+}
 ```
 
 #### Trade-offs
@@ -689,22 +689,27 @@ Segmentation divides a program's memory into logical pieces of different sizes, 
 | (3, 852) | 852 < 1100 | 3200 + 852 = 4052 |
 | (0, 1222) | 1222 ≥ 1000 | trap: addressing error |
 
-```python
-SEGMENTS = {0: (1400, 1000), 1: (6300, 400), 2: (4300, 400), 3: (3200, 1100), 4: (4700, 1000)}
+```cpp
+struct Segment { long base, limit; };
+const vector<Segment> segments = {                  // segment number -> (base, limit)
+    {1400, 1000}, {6300, 400}, {4300, 400}, {3200, 1100}, {4700, 1000}};
 
+long translate(int segment, long offset) {
+    const Segment& s = segments.at(segment);
+    if (offset >= s.limit)                           // the hardware traps to the kernel
+        throw out_of_range("offset " + to_string(offset) + " beyond limit " +
+                           to_string(s.limit) + " of segment " + to_string(segment));
+    return s.base + offset;
+}
 
-def translate(segment, offset):
-    base, limit = SEGMENTS[segment]
-    if offset >= limit:
-        raise MemoryError(f"offset {offset} beyond limit {limit} of segment {segment}")
-    return base + offset
-
-
-print(translate(2, 53), translate(3, 852))   # 4353 4052
-try:
-    translate(0, 1222)
-except MemoryError as e:
-    print(e)
+int main() {
+    cout << translate(2, 53) << " " << translate(3, 852) << "\n";   // 4353 4052
+    try {
+        translate(0, 1222);
+    } catch (const out_of_range& e) {
+        cout << e.what() << "\n";                    // offset 1222 beyond limit 1000 of segment 0
+    }
+}
 ```
 
 #### Segmentation with paging
@@ -807,19 +812,22 @@ int main() {
 
 A test run printed "touched 8192 pages, minor faults 8192": `mmap` only reserved address space, and each first touch faulted in one zero-filled page. The untouched half never used any RAM.
 
-```python
-def demand_paging(refs, frames):
-    resident, faults = [], 0
-    for page in refs:
-        if page not in resident:
-            faults += 1                      # page fault: bring the page in
-            if len(resident) == frames:
-                resident.pop(0)              # evict the oldest (FIFO, for simplicity)
-            resident.append(page)
-    return faults
+```cpp
+int demandPaging(const vector<int>& refs, size_t frames) {
+    deque<int> resident;                             // oldest page at the front
+    int faults = 0;
+    for (int page : refs) {
+        if (find(resident.begin(), resident.end(), page) != resident.end()) continue;
+        faults++;                                    // page fault: bring the page in
+        if (resident.size() == frames) resident.pop_front();   // evict the oldest (FIFO)
+        resident.push_back(page);
+    }
+    return faults;
+}
 
-
-print(demand_paging([0, 1, 0, 2, 0, 1, 3, 0], frames=3))   # 5
+int main() {
+    cout << demandPaging({0, 1, 0, 2, 0, 1, 3, 0}, 3) << "\n";   // 5
+}
 ```
 
 #### What makes it work
@@ -951,25 +959,6 @@ int main() {
 }
 ```
 
-```python
-def clock(refs, n):
-    frames, ref_bit, hand, faults = [None] * n, [0] * n, 0, 0
-    for page in refs:
-        if page in frames:
-            ref_bit[frames.index(page)] = 1        # hardware sets the bit on access
-            continue
-        faults += 1
-        while frames[hand] is not None and ref_bit[hand]:
-            ref_bit[hand] = 0                      # second chance
-            hand = (hand + 1) % n
-        frames[hand], ref_bit[hand] = page, 1
-        hand = (hand + 1) % n
-    return faults
-
-
-print(clock([7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2, 1, 2, 0, 1, 7, 0, 1], 3))   # 14
-```
-
 #### In real kernels
 
 Linux keeps active and inactive lists (a two-list LRU approximation, with a newer multi-generational LRU), prefers evicting clean page-cache pages over dirty or anonymous ones, and writes dirty pages back in the background so eviction rarely waits on I/O.
@@ -1040,26 +1029,32 @@ Reference string (time 0 to 15): 1 2 3 3 2 1 4 4 4 5 5 6 5 6 6 5, window $\Delta
 
 At time 5 the process needs 3 frames; by time 15 it has moved to a new locality needing only 2. If three such processes each need 3 frames and only 8 are available, the OS should suspend one rather than let all three thrash.
 
-```python
-def working_set(refs, t, delta):
-    return set(refs[max(0, t - delta + 1): t + 1])
+```cpp
+set<int> workingSet(const vector<int>& refs, int t, int delta) {
+    return set<int>(refs.begin() + max(0, t - delta + 1), refs.begin() + t + 1);
+}
 
+// Admission control: run processes while their working sets fit in memory.
+vector<string> admit(const vector<pair<string, int>>& workingSetSizes, int frames) {
+    vector<string> running;
+    int used = 0;
+    for (const auto& [pid, size] : workingSetSizes)
+        if (used + size <= frames) {
+            running.push_back(pid);
+            used += size;
+        }
+    return running;
+}
 
-refs = [1, 2, 3, 3, 2, 1, 4, 4, 4, 5, 5, 6, 5, 6, 6, 5]
-print(sorted(working_set(refs, 5, 5)), sorted(working_set(refs, 15, 5)))   # [1, 2, 3] [5, 6]
-
-
-def admit(working_set_sizes, frames):
-    """Admission control: run processes while their working sets fit."""
-    running, used = [], 0
-    for pid, size in working_set_sizes.items():
-        if used + size <= frames:
-            running.append(pid)
-            used += size
-    return running
-
-
-print(admit({"A": 3, "B": 3, "C": 3}, frames=8))   # ['A', 'B']: C waits instead of thrashing
+int main() {
+    vector<int> refs = {1, 2, 3, 3, 2, 1, 4, 4, 4, 5, 5, 6, 5, 6, 6, 5};
+    for (int p : workingSet(refs, 5, 5)) cout << p << " ";       // 1 2 3
+    cout << "| ";
+    for (int p : workingSet(refs, 15, 5)) cout << p << " ";      // 5 6
+    cout << "| ";
+    for (const string& p : admit({{"A", 3}, {"B", 3}, {"C", 3}}, 8)) cout << p << " ";
+    cout << "\n";                                    // A B: C waits instead of thrashing
+}
 ```
 
 #### Choosing $\Delta$
@@ -1156,18 +1151,6 @@ int main() {
 }
 ```
 
-```python
-import mmap
-
-with open("greeting.txt", "w+b") as f:
-    f.write(b"hello mmap\n")
-    f.flush()
-    with mmap.mmap(f.fileno(), 0) as m:       # MAP_SHARED by default on Unix
-        m[0:5] = m[0:5].upper()
-with open("greeting.txt") as f:
-    print(f.read().strip())                   # HELLO mmap
-```
-
 #### read versus mmap
 
 | | `read` into a buffer | `mmap` |
@@ -1182,7 +1165,7 @@ with open("greeting.txt") as f:
 
 - Every executable and shared library is `mmap`ed: code pages are loaded on demand and shared across processes.
 - Databases (LMDB, older MongoDB engines) and search engines (Lucene) map their files.
-- `fork` in shells and servers relies on COW; Python's multiprocessing on Linux does too, although reference-count updates can trigger copies of pages holding objects.
+- `fork` in shells and servers relies on COW; a prefork server loads its data once and forks workers that share those pages until one of them writes.
 
 Connects to: fork, exec and wait, virtual memory and demand paging, inter-process communication, buffering, caching and spooling.
 
@@ -1209,11 +1192,11 @@ The stack is memory for short-lived local variables that are created and destroy
 
 ### interview
 - **Stack**: one per thread; holds function **frames** (locals, arguments, return addresses, saved registers). Allocation is just moving the **stack pointer**, so it is extremely fast, and memory is freed automatically when the function returns (**LIFO lifetime**).
-- **Heap**: shared by all threads of a process; memory from `malloc`/`new` (or the runtime, in Java and Python) with **arbitrary lifetime**, freed by `free`/`delete`, destructors, or a garbage collector.
+- **Heap**: shared by all threads of a process; memory from `malloc`/`new` with **arbitrary lifetime**, freed by `free`/`delete` or by the destructor of an owning object (`unique_ptr`, `vector`).
 - Stack size is **limited** (commonly 8 MB for the main thread on Linux, `ulimit -s`; less for other threads, 1 MB by default on Windows), so deep recursion or huge local arrays cause a **stack overflow**. The heap can grow to the size of available virtual memory.
 - Heap allocation is slower (allocator bookkeeping, possible locks, possible system calls) and suffers **fragmentation**; the stack never fragments.
 - Bugs: stack: returning a pointer to a local, overflow; heap: **leaks**, double free, use-after-free, dangling pointers.
-- Java and Python keep objects on the heap and only references and primitive locals on the stack (the JIT may still allocate non-escaping objects on the stack).
+- In C++ you choose: a local object lives on the stack unless you create it with `new`, and a `vector` object sits on the stack while its elements live on the heap.
 
 ### deep
 #### Side by side
@@ -1273,25 +1256,17 @@ main():      [ return address | p | big ]
 
 Each call pushes a frame; each return pops it by moving the stack pointer back. Nothing is "freed" item by item, which is why the stack is so fast.
 
-#### Python's view
+#### How big is the stack?
 
-```python
-import sys
-
-print(sys.getrecursionlimit())     # 1000 by default: Python guards its own stack
-
-
-def depth(n):
-    return n if n == 0 else depth(n - 1)
-
-
-try:
-    depth(10_000)
-except RecursionError as e:
-    print("RecursionError:", e)
+```cpp
+int main() {
+    rlimit lim{};
+    getrlimit(RLIMIT_STACK, &lim);                   // the same number `ulimit -s` shows
+    cout << "stack limit: " << lim.rlim_cur / 1024 << " KB\n";   // 8192 KB on most Linux systems
+}
 ```
 
-Python objects always live on the heap; the interpreter's frames hold references to them.
+Nothing checks the depth of C++ recursion: once the stack grows past its guard page, the process gets `SIGSEGV`. Each thread has its own stack (8 MB of virtual space by default for pthreads), so recursion whose depth depends on the input, such as a DFS down a path of a million nodes, should use an explicit stack instead.
 
 #### Choosing
 

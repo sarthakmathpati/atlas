@@ -64,23 +64,6 @@ int dpCoins(const vector<int>& coins, int amount) {    // always correct, O(amou
 }
 ```
 
-```python
-from itertools import combinations
-
-def brute_force_check(greedy, exact, trials):
-    """Compare a greedy against an exhaustive answer on small inputs; return a counterexample."""
-    for case in trials:
-        if greedy(case) != exact(case):
-            return case
-    return None
-
-def max_sum_of_k_distinct_greedy(nums, k):
-    return sum(sorted(nums, reverse=True)[:k])     # greedy: take the k largest
-
-def max_sum_of_k_exact(nums, k):
-    return max(sum(c) for c in combinations(nums, k))
-```
-
 Testing a greedy against brute force on small random inputs is the fastest way to catch a wrong greedy before an interviewer does.
 
 #### Common greedy strategies
@@ -171,23 +154,6 @@ long long minWeightedCompletion(vector<pair<long long, long long>> jobs) {  // {
     for (auto [t, w] : jobs) { time += t; total += w * time; }
     return total;
 }
-```
-
-```python
-from itertools import permutations
-
-def weighted_completion(order):
-    time = total = 0
-    for t, w in order:
-        time += t
-        total += w * time
-    return total
-
-def smith_rule(jobs):
-    return weighted_completion(sorted(jobs, key=lambda j: j[0] / j[1]))
-
-def brute_force(jobs):
-    return min(weighted_completion(p) for p in permutations(jobs))
 ```
 
 For small random inputs, `smith_rule(jobs) == brute_force(jobs)`, which is the empirical check of the proof.
@@ -287,24 +253,6 @@ int canCompleteCircuit(const vector<int>& gas, const vector<int>& cost) {
     }
     return total < 0 ? -1 : start;
 }
-```
-
-```python
-def min_taps(n, ranges):
-    """Minimum taps to water [0, n]; tap i covers [i - ranges[i], i + ranges[i]]."""
-    reach = [0] * (n + 1)                       # farthest right point starting from each left
-    for i, r in enumerate(ranges):
-        left, right = max(0, i - r), min(n, i + r)
-        reach[left] = max(reach[left], right)
-    taps = cur_end = far = 0
-    for i in range(n):
-        far = max(far, reach[i])
-        if i == cur_end:
-            if far <= i:
-                return -1                       # a gap nobody covers
-            taps += 1
-            cur_end = far
-    return taps
 ```
 
 #### Why the gas station reset is correct
@@ -437,14 +385,6 @@ vector<int> partitionLabels(const string& s) {
 }
 ```
 
-```python
-def two_city_cost(costs):
-    """costs[i] = [to A, to B]; exactly half go to each city."""
-    costs = sorted(costs, key=lambda c: c[0] - c[1])   # most A-favored first
-    half = len(costs) // 2
-    return sum(c[0] for c in costs[:half]) + sum(c[1] for c in costs[half:])
-```
-
 #### Why two city scheduling sorts by the difference
 
 Everyone must go somewhere, so start from "everyone flies to B" and pay the extra `costA − costB` for each person moved to A. To minimize the total, move the half with the smallest (most negative) differences.
@@ -570,30 +510,6 @@ string reorganizeString(const string& s) {
     }
     return out;
 }
-```
-
-```python
-import heapq
-
-def schedule_courses(courses):
-    """courses: [duration, deadline]; maximum number of courses you can finish."""
-    taken, time = [], 0                       # max-heap of durations (negated)
-    for duration, deadline in sorted(courses, key=lambda c: c[1]):
-        heapq.heappush(taken, -duration)
-        time += duration
-        if time > deadline:
-            time += heapq.heappop(taken)      # drop the longest course so far
-    return len(taken)
-
-def connect_ropes(lengths):
-    heap = list(lengths)
-    heapq.heapify(heap)
-    cost = 0
-    while len(heap) > 1:
-        a, b = heapq.heappop(heap), heapq.heappop(heap)
-        cost += a + b
-        heapq.heappush(heap, a + b)
-    return cost
 ```
 
 #### Complexity

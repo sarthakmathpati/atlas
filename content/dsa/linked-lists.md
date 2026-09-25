@@ -20,7 +20,7 @@ A linked list is a chain of nodes where each node holds a value and a pointer to
 - **Dummy (sentinel) head**: a fake node before the real head removes special cases when the head itself changes (deleting the first node, merging, partitioning). Return `dummy.next`.
 - Traverse with `while (cur)`; stop at the node **before** the one you want to change, since singly linked nodes can't look back.
 - Draw the pointers before and after each operation and change them in an order that never loses the rest of the list.
-- In C++, free removed nodes (or note the leak); in Java and Python garbage collection handles it.
+- Free removed nodes with `delete` (or say that the caller owns them); interview linked lists rarely use smart pointers.
 
 ### deep
 #### Intuition
@@ -57,38 +57,6 @@ ListNode* removeAll(ListNode* head, int v) {
     }
     return dummy.next;
 }
-```
-
-```python
-class ListNode:
-    def __init__(self, val=0, next=None):
-        self.val = val
-        self.next = next
-
-def from_list(values):
-    dummy = ListNode()
-    tail = dummy
-    for v in values:
-        tail.next = ListNode(v)
-        tail = tail.next
-    return dummy.next
-
-def to_list(head):
-    out = []
-    while head:
-        out.append(head.val)
-        head = head.next
-    return out
-
-def remove_all(head, v):
-    dummy = ListNode(0, head)
-    prev = dummy
-    while prev.next:
-        if prev.next.val == v:
-            prev.next = prev.next.next
-        else:
-            prev = prev.next
-    return dummy.next
 ```
 
 #### Worked example: remove value 6 from 6 → 1 → 6 → 2
@@ -233,24 +201,6 @@ ListNode* reverseKGroup(ListNode* head, int k) {
 }
 ```
 
-```python
-def reverse_list(head):
-    prev = None
-    while head:
-        head.next, prev, head = prev, head, head.next
-    return prev
-
-def reverse_recursive(head):
-    if head is None or head.next is None:
-        return head
-    new_head = reverse_recursive(head.next)   # the rest, reversed
-    head.next.next = head                     # the old next node now points back
-    head.next = None
-    return new_head
-```
-
-The Python tuple assignment evaluates the right side first (`prev`, `head`, `head.next`) and then assigns left to right, which is exactly the save-flip-advance sequence.
-
 #### Complexity
 
 All versions are $O(n)$ time. Iterative versions use $O(1)$ extra space; the recursive one uses $O(n)$ stack, which can overflow on long lists.
@@ -373,36 +323,6 @@ ListNode* detectCycle(ListNode* head) {
 }
 ```
 
-```python
-def has_cycle(head):
-    slow = fast = head
-    while fast and fast.next:
-        slow, fast = slow.next, fast.next.next
-        if slow is fast:
-            return True
-    return False
-
-def is_palindrome_list(head):
-    # Find the middle, reverse the second half, compare, then restore it.
-    slow = fast = head
-    while fast and fast.next:
-        slow, fast = slow.next, fast.next.next
-    prev, cur = None, slow
-    while cur:
-        cur.next, prev, cur = prev, cur, cur.next
-    left, right, ok = head, prev, True
-    while right:
-        if left.val != right.val:
-            ok = False
-            break
-        left, right = left.next, right.next
-    # restore the second half
-    cur, back = prev, None
-    while cur:
-        cur.next, back, cur = back, cur, cur.next
-    return ok
-```
-
 #### Why the cycle entry is found
 
 Let $\mu$ be the number of nodes before the cycle and $\lambda$ its length. When they meet, slow has walked $d$ steps and fast $2d$; fast has gone around some whole number of extra laps, so $d$ is a multiple of $\lambda$. The meeting point is $d - \mu$ steps past the entry. Walking $\mu$ more steps puts slow at $d$ steps past the entry modulo $\lambda$, which is the entry itself. A pointer starting at the head reaches the entry after the same $\mu$ steps, so they meet there.
@@ -414,7 +334,7 @@ Middle: $O(n)$ time. Cycle detection and entry: $O(\mu + \lambda) = O(n)$ time. 
 #### Edge cases and bugs
 
 - Checking `fast->next->next` without checking `fast->next` crashes on even-length lists.
-- Comparing values instead of node identity (`is` in Python, pointer equality in C++) gives false cycles when values repeat.
+- Comparing node values instead of node pointers gives false cycles when values repeat.
 - A self-loop (a node pointing to itself) and a cycle that includes the head are good tests.
 
 #### Variants
@@ -534,21 +454,6 @@ ListNode* mergeK(vector<ListNode*>& lists) {
 }
 ```
 
-```python
-import heapq
-
-def merge_k(lists):
-    heap = [(node.val, i, node) for i, node in enumerate(lists) if node]
-    heapq.heapify(heap)              # the index i breaks ties so nodes are never compared
-    dummy = tail = ListNode()
-    while heap:
-        _, i, node = heapq.heappop(heap)
-        tail.next = tail = node
-        if node.next:
-            heapq.heappush(heap, (node.next.val, i, node.next))
-    return dummy.next
-```
-
 `tail.next = tail = node` assigns left to right: first `tail.next = node`, then `tail = node`.
 
 #### Complexity
@@ -561,7 +466,7 @@ def merge_k(lists):
 #### Edge cases and bugs
 
 - Empty lists in the input (skip nulls when building the heap).
-- Python's `heapq` compares tuples element by element; without the index tiebreaker it would try to compare `ListNode` objects and raise an error.
+- Comparing `ListNode*` pointers in the heap instead of their values: that orders nodes by memory address.
 - Forgetting to attach the leftover list after the two-list loop.
 
 #### Variants
@@ -586,8 +491,8 @@ A: The result grows with each merge, so the i-th merge touches about i · (N/k) 
 Q: How does the pairwise (divide and conquer) approach work?
 A: Merge list 0 with 1, 2 with 3, and so on, halving the number of lists each round. There are log k rounds and each touches every node once, so the total is O(N log k) without a heap.
 
-Q: Why does the Python heap store (value, index, node) rather than (value, node)?
-A: When two values are equal, heapq compares the next tuple element. ListNode objects can't be compared, so the unique index acts as a tiebreaker and the node is never compared.
+Q: What comparator does a min-heap of list nodes need in C++?
+A: priority_queue keeps the element that nothing outranks on top, so pass a comparator returning a->val > b->val to put the smallest value on top. Comparing the ListNode pointers themselves would order the nodes by memory address.
 
 ## dsa.linked-lists.removal-patterns
 name: "Removal patterns"
@@ -664,7 +569,7 @@ Combining a hash map with a doubly linked list gives you instant lookup and inst
 - **Sentinel head and tail** nodes remove all null checks: every real node always has both neighbors.
 - Removing a known node in O(1) requires the `prev` pointer, which is why the list is doubly linked.
 - The node must store its **key** so the map entry can be erased on eviction.
-- C++ shortcut: `std::list` plus `unordered_map<key, list::iterator>` and `splice` to move nodes. Python: `collections.OrderedDict` with `move_to_end` and `popitem(last=False)`.
+- C++ shortcut: `std::list` plus `unordered_map<key, list::iterator>` and `splice` to move nodes.
 
 ### questions
 Q: Why does an LRU cache need both a hash map and a doubly linked list?

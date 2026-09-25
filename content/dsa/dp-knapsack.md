@@ -54,32 +54,6 @@ int knapsack01(const vector<int>& w, const vector<int>& v, int W) {
 }
 ```
 
-```python
-def knapsack_01(weights, values, W):
-    dp = [0] * (W + 1)
-    for w, v in zip(weights, values):
-        for c in range(W, w - 1, -1):
-            dp[c] = max(dp[c], dp[c - w] + v)
-    return dp[W]
-
-def knapsack_items(weights, values, W):
-    """Full table to recover which items were taken."""
-    n = len(weights)
-    dp = [[0] * (W + 1) for _ in range(n + 1)]
-    for i in range(1, n + 1):
-        w, v = weights[i - 1], values[i - 1]
-        for c in range(W + 1):
-            dp[i][c] = dp[i - 1][c]
-            if w <= c:
-                dp[i][c] = max(dp[i][c], dp[i - 1][c - w] + v)
-    taken, c = [], W
-    for i in range(n, 0, -1):                 # walk back: did item i change the value?
-        if dp[i][c] != dp[i - 1][c]:
-            taken.append(i - 1)
-            c -= weights[i - 1]
-    return dp[n][W], taken[::-1]
-```
-
 #### Why the loop goes downward
 
 With one array, `dp[c - w]` must still hold the value **before** considering the current item. Looping capacities downward updates larger capacities first, so the smaller `dp[c - w]` hasn't changed yet. Looping upward would let `dp[c - w]` already include the current item, which is exactly the unbounded knapsack (items reusable).
@@ -204,28 +178,6 @@ bool canPartitionBitset(const vector<int>& nums) {
 }
 ```
 
-```python
-def find_target_sum_ways(nums, target):
-    total = sum(nums)
-    if abs(target) > total or (total + target) % 2:
-        return 0
-    goal = (total + target) // 2              # sum of the numbers given a '+'
-    ways = [0] * (goal + 1)
-    ways[0] = 1
-    for x in nums:
-        for s in range(goal, x - 1, -1):
-            ways[s] += ways[s - x]
-    return ways[goal]
-
-def last_stone_weight_ii(stones):
-    total = sum(stones)
-    can = 1                                   # Python int as a bitset of reachable sums
-    for x in stones:
-        can |= can << x
-    best = max(s for s in range(total // 2 + 1) if can >> s & 1)
-    return total - 2 * best
-```
-
 #### Why target sum reduces to subset sum
 
 Split the numbers into P (given +) and N (given −). Then P − N = S and P + N = total, so P = (total + S) / 2. Counting sign assignments equals counting subsets with sum P. If total + S is odd or negative, the answer is 0.
@@ -336,22 +288,6 @@ int rodCutting(const vector<int>& price, int n) {     // price[len - 1] for a pi
             dp[L] = max(dp[L], dp[L - len] + price[len - 1]);
     return dp[n];
 }
-```
-
-```python
-def unbounded_knapsack(weights, values, W):
-    dp = [0] * (W + 1)
-    for w, v in zip(weights, values):
-        for c in range(w, W + 1):           # upward: reuse allowed
-            dp[c] = max(dp[c], dp[c - w] + v)
-    return dp[W]
-
-def min_coins(coins, amount):
-    INF = float("inf")
-    dp = [0] + [INF] * amount
-    for a in range(1, amount + 1):
-        dp[a] = min((dp[a - c] + 1 for c in coins if c <= a), default=INF)
-    return -1 if dp[amount] == INF else dp[amount]
 ```
 
 For minimum coins (and maximum value), the loop order (coins outside or amounts outside) doesn't matter; for **counting** it does (next concept).
@@ -473,18 +409,6 @@ long long countOrdered(const vector<int>& nums, int target) {
             if (x <= a) ways[a] += ways[a - x];
     return (long long)ways[target];
 }
-```
-
-```python
-def count_both(coins, amount):
-    combos = [1] + [0] * amount
-    for c in coins:
-        for a in range(c, amount + 1):
-            combos[a] += combos[a - c]
-    ordered = [1] + [0] * amount
-    for a in range(1, amount + 1):
-        ordered[a] = sum(ordered[a - c] for c in coins if c <= a)
-    return combos[amount], ordered[amount]
 ```
 
 #### Complexity

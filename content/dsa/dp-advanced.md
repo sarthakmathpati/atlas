@@ -84,27 +84,6 @@ vector<long long> sumOfDistances(int n, const vector<vector<int>>& adj) {
 }
 ```
 
-```python
-def min_cameras(root):
-    """Minimum cameras so every node is watched (a camera covers itself, parent, children)."""
-    NEED, COVERED, CAMERA = 0, 1, 2
-    count = 0
-    def dfs(node):
-        nonlocal count
-        if node is None:
-            return COVERED                   # empty children need nothing
-        left, right = dfs(node.left), dfs(node.right)
-        if NEED in (left, right):
-            count += 1
-            return CAMERA                    # a child needs cover: put a camera here
-        if CAMERA in (left, right):
-            return COVERED
-        return NEED                          # leave it to the parent
-    if dfs(root) == NEED:
-        count += 1
-    return count
-```
-
 #### Complexity
 
 Each node is processed once with constant work per child: $O(n)$ time, $O(h)$ recursion stack. Rerooting is two passes: $O(n)$.
@@ -237,28 +216,6 @@ int tsp(const vector<vector<int>>& d) {                   // start and end at ci
     for (int i = 0; i < n; i++) best = min(best, dp[FULL - 1][i] + d[i][0]);
     return best;
 }
-```
-
-```python
-def can_partition_k_subsets(nums, k):
-    total = sum(nums)
-    if total % k:
-        return False
-    target, n = total // k, len(nums)
-    nums = sorted(nums)
-    if nums[-1] > target:
-        return False
-    fill = [-1] * (1 << n)            # fill[mask]: amount in the current bucket, -1 unreachable
-    fill[0] = 0
-    for mask in range(1 << n):
-        if fill[mask] < 0:
-            continue
-        for i in range(n):
-            if not mask >> i & 1 and fill[mask] + nums[i] <= target:
-                fill[mask | 1 << i] = (fill[mask] + nums[i]) % target
-            elif not mask >> i & 1:
-                break                  # sorted: larger numbers won't fit either
-    return fill[-1] == 0
 ```
 
 #### Complexity

@@ -54,6 +54,30 @@ describe.each(FINISHED)("content for %s", (subjectId) => {
   });
 });
 
+// The owner studies in C++ only (CLAUDE.md decision 58): no Python or Java code, and no
+// comparisons with them, anywhere in concept names, scopes or text. The lang subject's Java and
+// Python topics are the one exception, since they exist for other primary languages.
+const OTHER_LANGUAGE_TOPICS = new Set(["lang.java-core", "lang.python-core"]);
+
+describe("C++ only", () => {
+  const checked = syllabus.concepts.filter((c) => !OTHER_LANGUAGE_TOPICS.has(c.topicId));
+  const textOf = (c: (typeof checked)[number]) => {
+    const { simple, interview, deep, questions, signals, template } = c.content;
+    const qa = questions.flatMap(({ q, a }: { q: string; a: string }) => [q, a]);
+    return [c.name, c.scope, simple, ...interview, deep, ...qa, ...(signals ?? []), template]
+      .filter(Boolean)
+      .join("\n");
+  };
+
+  it("has no Python or Java code blocks", () => {
+    for (const c of checked) expect(textOf(c), c.id).not.toMatch(/^\s*```(python|py|java)\b/m);
+  });
+
+  it("never mentions Python or Java", () => {
+    for (const c of checked) expect(textOf(c), c.id).not.toMatch(/\b(python|java)\b/i);
+  });
+});
+
 describe("content loader", () => {
   it("loads a subject's text on demand and knows unwritten concepts without loading", async () => {
     const bfs = conceptById.get("dsa.graph-basics.bfs")!;

@@ -18,7 +18,7 @@ The greatest common divisor of two numbers is the largest number that divides bo
 - **Euclid**: `gcd(a, b) = gcd(b, a mod b)`, `gcd(a, 0) = a`. **O(log min(a, b))** steps.
 - **LCM**: `lcm(a, b) = a / gcd(a, b) * b` (divide first to avoid overflow).
 - GCD of a list: fold `gcd` over it; LCM of a list: fold `lcm` (watch overflow).
-- Library: C++17 `std::gcd`, `std::lcm`; Python `math.gcd`, `math.lcm` (3.9+); Java `BigInteger.gcd`.
+- Library: C++17 `std::gcd` and `std::lcm` in `<numeric>`.
 - Uses: reduce fractions (slopes in "max points on a line"), water jug problems (a target is reachable iff it's a multiple of gcd), string GCD (`s + t == t + s` then the prefix of length gcd), synchronizing cycles (LCM).
 - `gcd(0, 0)` is 0 by convention; `gcd` of negative numbers: use absolute values.
 
@@ -59,23 +59,6 @@ string gcdOfStrings(const string& s, const string& t) {
 }
 ```
 
-```python
-from math import gcd
-from functools import reduce
-
-def gcd_list(nums):
-    return reduce(gcd, nums, 0)
-
-def can_measure_water(x, y, target):
-    """Two jugs of sizes x and y: a target amount is reachable iff it is a multiple of gcd(x, y)
-    and fits in both jugs combined."""
-    if target > x + y:
-        return False
-    if target == 0:
-        return True
-    return target % gcd(x, y) == 0
-```
-
 #### Recursive form and a sanity check
 
 The recursive version is one line, `gcd(a, b) = b == 0 ? a : gcd(b, a % b)`, and its depth is only $O(\log \min(a, b))$, so recursion is safe. A quick check of any implementation: `gcd(a, b) * lcm(a, b) == a * b` for positive a and b, and `gcd(a, 0) == a`. If the inputs are in the wrong order (a < b), the first step simply swaps them, because `a % b = a`.
@@ -113,7 +96,7 @@ Q: How do you decide whether two jugs of sizes x and y can measure exactly z lit
 A: By Bézout's identity, the amounts you can measure are the multiples of gcd(x, y), up to x + y in total. So z is reachable when z ≤ x + y and z is a multiple of gcd(x, y) (z = 0 is always reachable).
 
 Q: How do you find the largest string that divides two strings?
-A: If s + t != t + s, there's no common repeating unit, so the answer is empty. Otherwise the answer is the prefix of s whose length is gcd(len(s), len(t)).
+A: If s + t != t + s, there's no common repeating unit, so the answer is empty. Otherwise the answer is the prefix of s whose length is the gcd of the two lengths.
 
 ## dsa.math.primes
 name: "Primes"
@@ -174,36 +157,6 @@ vector<pair<long long, int>> factorize(long long n) {   // {prime, exponent}
 }
 ```
 
-```python
-def is_prime(n):
-    if n < 2:
-        return False
-    if n % 2 == 0:
-        return n == 2
-    d = 3
-    while d * d <= n:
-        if n % d == 0:
-            return False
-        d += 2
-    return True
-
-def smallest_prime_factors(limit):
-    spf = list(range(limit + 1))
-    for p in range(2, int(limit ** 0.5) + 1):
-        if spf[p] == p:                       # p is prime
-            for m in range(p * p, limit + 1, p):
-                if spf[m] == m:
-                    spf[m] = p
-    return spf
-
-def factor_with_spf(x, spf):
-    out = []
-    while x > 1:
-        out.append(spf[x])
-        x //= spf[x]
-    return out
-```
-
 #### Choosing the tool
 
 For one or a few numbers up to about $10^{12}$, trial division up to $\sqrt{n}$ is enough ($10^6$ steps). For all primes up to $10^7$, use the sieve. For factorizing many numbers up to $10^7$, build the smallest-prime-factor table once. For single 64-bit numbers near $10^{18}$, trial division is too slow and you need Miller-Rabin (and Pollard's rho to factor), which interviews rarely require.
@@ -256,7 +209,7 @@ Modular arithmetic keeps only the remainder after dividing by a fixed number m, 
 ### interview
 - `(a + b) mod m = ((a mod m) + (b mod m)) mod m`; same for `−` and `×`. **Division is different**: multiply by a modular inverse.
 - **1e9 + 7** is prime and < 2³⁰, so the sum of two residues fits in 32 bits and the product of two fits in 64 bits.
-- **Negative numbers**: C++ and Java `%` keeps the dividend's sign (−7 % 3 = −1); normalize with `((a % m) + m) % m`. Python's `%` is already non-negative for positive m.
+- **Negative numbers**: C++ `%` keeps the dividend's sign (−7 % 3 = −1); normalize with `((a % m) + m) % m`.
 - Reduce after **every** multiplication; don't accumulate a big product first.
 - Multiplying two 64-bit residues (m near 10¹⁸) needs `__int128` or a mulmod routine.
 - Congruences: `a ≡ b (mod m)` means m divides a − b; useful for cycle detection, divisibility and hashing.
@@ -292,19 +245,6 @@ unsigned long long mulMod64(unsigned long long a, unsigned long long b, unsigned
 }
 ```
 
-```python
-MOD = 10**9 + 7
-
-def sum_of_products_of_pairs(nums):
-    """Sum over i < j of nums[i] * nums[j], mod MOD, in O(n)."""
-    total = square_sum = 0
-    for x in nums:
-        total = (total + x) % MOD
-        square_sum = (square_sum + x * x) % MOD
-    inv2 = pow(2, MOD - 2, MOD)                # dividing by 2 means multiplying by its inverse
-    return (total * total - square_sum) % MOD * inv2 % MOD
-```
-
 #### Which operations are safe
 
 | Operation | Rule under mod m |
@@ -324,7 +264,7 @@ Each modular operation is $O(1)$ for word-sized moduli.
 
 #### Edge cases and bugs
 
-- Negative intermediate values after subtraction in C++ and Java.
+- Negative intermediate values after subtraction.
 - Overflow from multiplying before reducing, or from `int` instead of `long long`.
 - Dividing with `/` under a modulus: wrong; use the modular inverse (only when the divisor is coprime with m).
 - Comparing values after reduction: a larger true value can have a smaller residue.
@@ -344,7 +284,7 @@ A: The remainder of a sum or product depends only on the remainders of the opera
 Q: Why is 1e9 + 7 the usual modulus?
 A: It's prime, which makes modular inverses exist for every non-multiple, and it's just under 2^30, so two residues add without overflowing a 32-bit int and multiply without overflowing a 64-bit integer.
 
-Q: How do you handle negative numbers under a modulus in C++ or Java?
+Q: How do you handle negative numbers under a modulus in C++?
 A: The % operator keeps the sign of the dividend, so −7 % 3 is −1. Normalize with ((a % m) + m) % m to get a result in [0, m).
 
 Q: Can you divide under a modulus?
@@ -366,7 +306,7 @@ Fast exponentiation computes a number raised to a huge power with only a few doz
 - Do every multiplication **mod m** when a modulus is given.
 - Negative exponents (real numbers): compute x^|n| and take the reciprocal; careful with `n = INT_MIN` (use a 64-bit copy).
 - Works for any associative multiplication: **matrix power** computes linear recurrences (Fibonacci in O(log n)), and repeated function composition.
-- Python: `pow(x, n, m)` does it natively.
+- C++ has no standard modular power; write the loop, and keep products in `long long` so `(a * b) % m` cannot overflow while m is below about 3·10⁹.
 
 ### deep
 #### Intuition
@@ -409,21 +349,6 @@ double myPow(double x, long long n) {          // n may be negative
     }
     return result;
 }
-```
-
-```python
-def fib_matrix(n, mod=10**9 + 7):
-    """n-th Fibonacci number with 2x2 matrix exponentiation: O(log n)."""
-    def mul(A, B):
-        return [[(A[0][0] * B[0][0] + A[0][1] * B[1][0]) % mod, (A[0][0] * B[0][1] + A[0][1] * B[1][1]) % mod],
-                [(A[1][0] * B[0][0] + A[1][1] * B[1][0]) % mod, (A[1][0] * B[0][1] + A[1][1] * B[1][1]) % mod]]
-    result, base = [[1, 0], [0, 1]], [[1, 1], [1, 0]]
-    while n:
-        if n & 1:
-            result = mul(result, base)
-        base = mul(base, base)
-        n >>= 1
-    return result[0][1]            # [[F(n+1), F(n)], [F(n), F(n-1)]]
 ```
 
 #### Recursive version
@@ -577,28 +502,6 @@ public:
         return lower_bound(prefix.begin(), prefix.end(), r) - prefix.begin();
     }
 };
-```
-
-```python
-import random
-
-def reservoir_sample(stream, k, rng=random):
-    """k items chosen uniformly from an iterable of unknown length."""
-    sample = []
-    for i, item in enumerate(stream, 1):
-        if i <= k:
-            sample.append(item)
-        else:
-            j = rng.randrange(i)          # 0 .. i-1
-            if j < k:
-                sample[j] = item          # the new item enters with probability k / i
-    return sample
-
-def rand10_from_rand7(rand7):
-    while True:
-        x = (rand7() - 1) * 7 + rand7()   # uniform 1..49
-        if x <= 40:
-            return (x - 1) % 10 + 1       # 40 values: each of 1..10 four times
 ```
 
 #### Why the naive shuffle is biased

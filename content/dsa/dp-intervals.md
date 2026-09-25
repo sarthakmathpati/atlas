@@ -62,20 +62,6 @@ long long mergePiles(const vector<int>& a) {
 }
 ```
 
-```python
-from functools import lru_cache
-
-def min_score_triangulation(values):
-    """Polygon vertices in order; each triangle costs the product of its corners."""
-    @lru_cache(maxsize=None)
-    def best(i, j):                      # polygon formed by vertices i..j
-        if j - i < 2:
-            return 0
-        return min(best(i, k) + best(k, j) + values[i] * values[k] * values[j]
-                   for k in range(i + 1, j))   # triangle (i, k, j) sits on edge i-j
-    return best(0, len(values) - 1)
-```
-
 #### Complexity
 
 $O(n^2)$ states, $O(n)$ transitions each: $O(n^3)$ time, $O(n^2)$ space. Some problems allow Knuth's optimization (restricting split points) down to $O(n^2)$.

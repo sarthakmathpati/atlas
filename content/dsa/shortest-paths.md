@@ -68,36 +68,6 @@ vector<long long> dijkstra(const vector<vector<pair<int, int>>>& adj, int src) {
 }
 ```
 
-```python
-import heapq
-
-def dijkstra(adj, src):
-    """adj[u] = list of (v, w) with w >= 0. Returns (dist, parent)."""
-    n = len(adj)
-    dist, parent = [float("inf")] * n, [-1] * n
-    dist[src] = 0
-    pq = [(0, src)]
-    while pq:
-        d, u = heapq.heappop(pq)
-        if d > dist[u]:
-            continue
-        for v, w in adj[u]:
-            nd = d + w
-            if nd < dist[v]:
-                dist[v], parent[v] = nd, u
-                heapq.heappush(pq, (nd, v))
-    return dist, parent
-
-def network_delay_time(times, n, k):
-    """Time for a signal from node k to reach all n nodes (1-indexed), or -1."""
-    adj = [[] for _ in range(n + 1)]
-    for u, v, w in times:
-        adj[u].append((v, w))
-    dist, _ = dijkstra(adj, k)
-    best = max(dist[1:])
-    return best if best < float("inf") else -1
-```
-
 #### Complexity
 
 Each edge can push one heap entry, so there are at most $E + 1$ pushes and pops, each $O(\log E) = O(\log V)$: total $O((V + E) \log V)$. Space $O(V + E)$. The array-based version scans all vertices to find the minimum: $O(V^2)$, better when $E \approx V^2$.
@@ -218,29 +188,6 @@ vector<int> zeroOneBfs(const vector<vector<pair<int, int>>>& adj, int src) {
     }
     return dist;
 }
-```
-
-```python
-from collections import deque
-
-def min_obstacles_to_remove(grid):
-    """Walk from top-left to bottom-right; entering a 1-cell costs 1 (remove it)."""
-    R, C = len(grid), len(grid[0])
-    dist = [[float("inf")] * C for _ in range(R)]
-    dist[0][0] = 0
-    dq = deque([(0, 0)])
-    while dq:
-        r, c = dq.popleft()
-        for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
-            if 0 <= nr < R and 0 <= nc < C:
-                w = grid[nr][nc]
-                if dist[r][c] + w < dist[nr][nc]:
-                    dist[nr][nc] = dist[r][c] + w
-                    if w == 0:
-                        dq.appendleft((nr, nc))
-                    else:
-                        dq.append((nr, nc))
-    return dist[R - 1][C - 1]
 ```
 
 #### Complexity

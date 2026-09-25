@@ -88,28 +88,6 @@ vector<int> oneLIS(const vector<int>& a) {           // O(n log n) with reconstr
 }
 ```
 
-```python
-from bisect import bisect_left
-
-def lis_quadratic(a):
-    dp = [1] * len(a)
-    for i in range(len(a)):
-        for j in range(i):
-            if a[j] < a[i]:
-                dp[i] = max(dp[i], dp[j] + 1)
-    return max(dp, default=0)
-
-def lis_fast(a):
-    tails = []
-    for x in a:
-        k = bisect_left(tails, x)
-        if k == len(tails):
-            tails.append(x)
-        else:
-            tails[k] = x
-    return len(tails)
-```
-
 #### Complexity
 
 Quadratic DP: $O(n^2)$ time, $O(n)$ space. Patience sorting: $O(n \log n)$ time, $O(n)$ space. With $n = 10^5$, only the second is fast enough.
@@ -261,21 +239,6 @@ int maxProfitK(int k, const vector<int>& prices) {
         }
     return (int)sell[k];
 }
-```
-
-```python
-def max_profit_one(prices):
-    best, low = 0, float("inf")
-    for p in prices:
-        low = min(low, p)
-        best = max(best, p - low)
-    return best
-
-def max_profit_fee(prices, fee):
-    hold, free = float("-inf"), 0
-    for p in prices:
-        hold, free = max(hold, free - p), max(free, hold + p - fee)
-    return free
 ```
 
 In `maxProfitK`, updating `sell[j]` before `buy[j]`, with j going downward, means every update reads values from the previous day: `sell[j]` reads yesterday's `buy[j]`, and `buy[j]` reads `sell[j - 1]`, which this day's loop hasn't reached yet.

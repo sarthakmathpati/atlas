@@ -17,7 +17,7 @@ An array stores items side by side in one block of memory, like numbered lockers
 ### interview
 - Contiguous memory: `a[i]` is at `base + i * size`, so indexing is **O(1)** and scans are cache-friendly (fast in practice).
 - Access and update by index: O(1). Search in an unsorted array: O(n). Insert or delete in the middle: O(n) because of shifting; at the end of a dynamic array: O(1) amortized.
-- Static arrays have a fixed size; dynamic arrays (`vector`, `ArrayList`, Python `list`) grow by reallocating and copying.
+- Static arrays (`int a[10]`, `std::array`) have a fixed size; dynamic arrays (`std::vector`) grow by reallocating and copying.
 - In-place updates overwrite the input to save memory; ask whether modifying the input is allowed.
 - Common bugs: off-by-one at the ends, reading `a[i + 1]` on the last element, and changing an array's length while iterating over it.
 
@@ -67,23 +67,13 @@ int removeValue(vector<int>& a, int val) {
 }
 ```
 
-```python
-def remove_value(a, val):
-    w = 0
-    for x in a:
-        if x != val:
-            a[w] = x
-            w += 1
-    return w
-```
-
 Time $O(n)$, one pass. Space $O(1)$: the input is reused as the output.
 
 #### Memory layout details
 
 - A 2D array in C and C++ is stored **row by row** (row-major). Looping over rows in the outer loop and columns in the inner loop reads memory in order and is much faster than the reverse.
 - `vector<vector<int>>` stores each row separately; a flat `vector<int>` of size `rows * cols` indexed by `r * cols + c` is more cache-friendly.
-- Python lists store references to objects, so a list of ints is not contiguous ints; the `array` module and NumPy are.
+- `vector<int>` stores the ints themselves, side by side; `vector<int*>` or `vector<unique_ptr<T>>` stores pointers, so the objects are scattered and scans lose cache locality.
 
 #### Edge cases and bugs
 
@@ -182,25 +172,6 @@ long long maxCircularSubarray(const vector<int>& a) {
     }
     return best < 0 ? best : max(best, total - worst);  // all negative: no wrap
 }
-```
-
-```python
-def max_subarray(a):
-    cur = best = a[0]
-    for x in a[1:]:
-        cur = max(x, cur + x)
-        best = max(best, cur)
-    return best
-
-def max_product_subarray(a):
-    hi = lo = best = a[0]
-    for x in a[1:]:
-        if x < 0:
-            hi, lo = lo, hi               # a negative swaps the roles
-        hi = max(x, hi * x)
-        lo = min(x, lo * x)
-        best = max(best, hi)
-    return best
 ```
 
 Time $O(n)$, space $O(1)$ for all three.
@@ -333,21 +304,6 @@ pair<int, int> partition3(vector<int>& a, int pivot) {
 }
 ```
 
-```python
-def sort_colors(a):
-    low, mid, high = 0, 0, len(a) - 1
-    while mid <= high:
-        if a[mid] == 0:
-            a[low], a[mid] = a[mid], a[low]
-            low += 1
-            mid += 1
-        elif a[mid] == 1:
-            mid += 1
-        else:
-            a[mid], a[high] = a[high], a[mid]
-            high -= 1
-```
-
 Time $O(n)$: every step either advances `mid` or shrinks `high`, so there are at most $n$ steps. Space $O(1)$.
 
 #### Edge cases and bugs
@@ -465,25 +421,6 @@ vector<int> findDuplicates(vector<int> a) {  // values in [1, n], each appears o
     return dups;
 }
 ```
-
-```python
-def cyclic_sort(a):
-    n = len(a)
-    for i in range(n):
-        while 1 <= a[i] <= n and a[a[i] - 1] != a[i]:
-            j = a[i] - 1
-            a[i], a[j] = a[j], a[i]
-
-def first_missing_positive(a):
-    a = list(a)
-    cyclic_sort(a)
-    for i, x in enumerate(a):
-        if x != i + 1:
-            return i + 1
-    return len(a) + 1
-```
-
-In Python, compute `j` before swapping: `a[i], a[a[i] - 1] = ...` evaluates the target index after `a[i]` has changed and breaks.
 
 #### Complexity
 
@@ -617,25 +554,6 @@ void rotateClockwise(vector<vector<int>>& m) {
 }
 ```
 
-```python
-def rotate_clockwise(m):
-    n = len(m)
-    for r in range(n):
-        for c in range(r + 1, n):
-            m[r][c], m[c][r] = m[c][r], m[r][c]
-    for row in m:
-        row.reverse()
-
-def spiral_order(m):
-    out = []
-    while m:
-        out += m.pop(0)                    # top row
-        m = [list(row) for row in zip(*m)][::-1]  # rotate the rest counter-clockwise
-    return out
-```
-
-The Python spiral is a neat trick, but it rebuilds the remaining matrix after every row, which costs $O(n^3)$ for an $n \times n$ matrix; in an interview, prefer the boundary version.
-
 #### Diagonals
 
 - Main-direction diagonals (top-left to bottom-right): `r - c` is constant; there are `R + C - 1` of them. Use `r - c + (C - 1)` as a bucket index.
@@ -741,31 +659,6 @@ vector<int> majorityThird(const vector<int>& a) {
 }
 ```
 
-```python
-def majority_element(a):
-    candidate, count = None, 0
-    for x in a:
-        if count == 0:
-            candidate = x
-        count += 1 if x == candidate else -1
-    return candidate
-
-def majority_third(a):
-    c1, c2, n1, n2 = None, None, 0, 0
-    for x in a:
-        if x == c1:
-            n1 += 1
-        elif x == c2:
-            n2 += 1
-        elif n1 == 0:
-            c1, n1 = x, 1
-        elif n2 == 0:
-            c2, n2 = x, 1
-        else:
-            n1, n2 = n1 - 1, n2 - 1
-    return [c for c in (c1, c2) if c is not None and a.count(c) > len(a) // 3]
-```
-
 #### Why the n/3 version works
 
 Each "cancel" step removes three distinct values at once. A value appearing more than $n/3$ times cannot be removed completely, because there are fewer than $n/3$ cancel steps that could involve it. So any such value survives as a candidate, but survivors are not guaranteed to be frequent, which is why the verification pass is required.
@@ -861,19 +754,6 @@ void nextPermutation(vector<int>& a) {
     }
     reverse(a.begin() + i + 1, a.end());             // smallest arrangement of the suffix
 }
-```
-
-```python
-def next_permutation(a):
-    i = len(a) - 2
-    while i >= 0 and a[i] >= a[i + 1]:
-        i -= 1
-    if i >= 0:
-        j = len(a) - 1
-        while a[j] <= a[i]:
-            j -= 1
-        a[i], a[j] = a[j], a[i]
-    a[i + 1:] = reversed(a[i + 1:])
 ```
 
 When there is no pivot, `i` ends at -1 and the whole array is reversed, which wraps from the largest permutation to the smallest.

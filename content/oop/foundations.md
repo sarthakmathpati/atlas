@@ -15,12 +15,12 @@ scope: "state and behavior, instances, `this`"
 A class is a blueprint, and an object is one thing built from it. A cookie cutter (the class) decides the shape, and every cookie you press out (an object) has its own sprinkles. Each object keeps its own data but shares the same set of actions defined by the class.
 
 ### interview
-- A **class** bundles **state** (fields, also called attributes or data members) with **behavior** (methods that read and change that state).
-- An **object** is an **instance** of a class: it has its own copy of every instance field, while the method code is shared by all instances.
-- `this` (C++ pointer, Java reference) or `self` (Python, passed explicitly) refers to the object the method was called on; use it to tell a field from a parameter with the same name or to return the object for chaining.
-- Where objects live: C++ objects can sit on the stack, in static storage or on the heap; Java objects always live on the heap and variables hold references; in Python every value is an object and names are references to it.
-- In C++, `struct` and `class` differ only in default access (public vs private); an empty class still has size 1 so distinct objects have distinct addresses.
-- **Identity vs equality**: two objects with equal fields are still two objects (`&a != &b`, `a is not b`, `a != b` for Java references).
+- A **class** bundles **state** (data members, also called fields) with **behavior** (member functions that read and change that state).
+- An **object** is an **instance** of a class: it has its own copy of every non-static data member, while the member function code is shared by all instances.
+- `this` is a pointer to the object a member function was called on; use it to tell a member from a parameter with the same name, or return `*this` to allow chaining.
+- Objects can live on the **stack** (automatic storage), in **static storage** or on the **heap** (`new`, `make_unique`); a variable of class type is the object itself, not a reference to it.
+- `struct` and `class` differ only in default access (public vs private); an empty class still has size 1 so distinct objects have distinct addresses.
+- **Identity vs equality**: two objects with equal members are still two objects: `&a != &b`, while `a == b` compares values only if the class defines `operator==`.
 
 ### deep
 #### Intuition
@@ -29,7 +29,7 @@ Before classes, you would keep a bank balance in one variable and write free fun
 
 #### The formal idea
 
-A class defines a new type. Declaring a variable of that type creates an object with its own storage for every instance field. Calling `acct.deposit(50)` is really a call to one shared function with a hidden first argument, the address of `acct`. That hidden argument is `this` in C++ and Java and the explicit `self` in Python.
+A class defines a new type. Declaring a variable of that type creates an object with its own storage for every data member. Calling `acct.deposit(50)` is really a call to one shared function with a hidden first argument, the address of `acct`; inside the function that hidden argument is called `this`.
 
 #### Worked example
 
@@ -49,7 +49,7 @@ Step 3 runs `deposit` with `this == &a`, so only `a` changes. Step 4 is refused 
 ```cpp
 class Account {
     string owner;
-    long long balance;               // private: only methods below can change it
+    long long balance;               // private: only member functions can change it
 public:
     Account(string owner, long long balance) : owner(std::move(owner)), balance(balance) {}
     Account& deposit(long long amount) {
@@ -72,64 +72,37 @@ int main() {
 }
 ```
 
-```python
-class Account:
-    def __init__(self, owner, balance):
-        self.owner = owner          # instance attributes live on each object
-        self._balance = balance
-
-    def deposit(self, amount):
-        if amount > 0:
-            self._balance += amount
-        return self                 # allows chaining
-
-    def withdraw(self, amount):
-        if amount <= 0 or amount > self._balance:
-            return False
-        self._balance -= amount
-        return True
-
-    @property
-    def balance(self):
-        return self._balance
-
-
-a, b = Account("Asha", 100), Account("Ben", 20)
-a.deposit(50).deposit(10)
-print(a.balance, b.balance, b.withdraw(30))  # 160 20 False
-```
-
 #### Why `this` matters
 
-- **Name clashes**: in a constructor `Point(int x) { this->x = x; }` the parameter hides the field, so `this->x` names the field. A member initializer list (`: x(x)`) avoids the problem.
-- **Chaining**: returning `*this` (C++) or `this` (Java) or `self` (Python) lets builders and fluent APIs chain calls.
+- **Name clashes**: in a constructor `Point(int x) { this->x = x; }` the parameter hides the member, so `this->x` names the member. A member initializer list (`: x(x)`) avoids the problem.
+- **Chaining**: returning `*this` by reference lets builders and fluent interfaces chain calls.
 - **Passing yourself**: an object can register itself with another, as in `button.addListener(this)`.
-- In a C++ `const` method, `this` is a pointer to const, so the method cannot change fields.
+- In a `const` member function, `this` is a pointer to const, so the function cannot change members.
 
 #### Common mistakes
 
-- Forgetting `self` as the first parameter of a Python method, or writing `balance` instead of `self.balance` (that makes a local variable).
-- Confusing the class with an object: calling an instance method on the class name.
-- Comparing objects with `==` in Java, which compares references, not contents.
-- Making every field public, which throws away the reason to have a class.
+- Writing `Account a();` to create an object: it declares a function returning `Account` (the "most vexing parse"). Write `Account a;` or `Account a{};`.
+- Confusing the class with an object: calling a non-static member function without an object.
+- Comparing two objects with `==` when the class has no `operator==` (it does not compile; C++20 can default it), or comparing pointers, which compares addresses, not contents.
+- Making every data member public, which throws away the reason to have a class.
 
 Connects to: constructors, access modifiers, encapsulation, static members.
 
 ### questions
 Q: What is the difference between a class and an object?
-A: A class is a type definition: it lists the fields and methods. An object is a concrete instance of that type, with its own values for the instance fields. Many objects can be created from one class, and they share the method code but not the data.
+A: A class is a type definition: it lists the data members and member functions. An object is a concrete instance of that type, with its own values for the data members. Many objects can be created from one class, and they share the function code but not the data.
 
 Q: What does this refer to, and when do you need to write it?
-A: It refers to the object the current method was called on. You need it when a parameter or local variable has the same name as a field, when returning the object for method chaining, or when passing the current object to another function. In Python the equivalent is self and it must always be written.
+A: It is a pointer to the object the current member function was called on. You need it when a parameter or local variable has the same name as a member, when returning *this for method chaining, or when passing the current object to another function.
 
-Q: Where is an object stored in C++ compared with Java?
-A: In C++ an object can live on the stack, in static storage, or on the heap if created with new. In Java every object is on the heap and variables only hold references to it; the garbage collector frees it once nothing refers to it.
+Q: Where can a C++ object be stored?
+A: On the stack as a local variable, which is destroyed at the end of its scope; in static storage as a global or static variable, which lives until the program ends; or on the heap when created with new or make_unique, where it lives until it is deleted or its owning smart pointer goes away.
 
 Q: What is the difference between a struct and a class in C++?
 A: Only the default access. Members and base classes of a struct are public by default, while those of a class are private. By convention, struct is used for plain data and class for types that protect an invariant.
 
-Q: Two objects have exactly the same field values. Are they the same object?
-A: No. They are equal in value but have different identities, meaning different memory locations. Java's == on references and Python's is test identity, while equals and == (with __eq__) test value equality when a class defines it.
+Q: Two objects have exactly the same member values. Are they the same object?
+A: No. They are equal in value but have different identities, meaning different memory locations, so their addresses differ. a == b compares values only if the class defines operator==, while comparing &a and &b compares identity.
 
 ## oop.foundations.constructors-and-destructors
 name: "Constructors and destructors"
@@ -141,13 +114,13 @@ scope: "default, parameterized, copy constructors, initialization order"
 A constructor is the setup routine that runs the moment an object is created, and a destructor is the cleanup routine that runs when it goes away. Think of checking into a hotel: at check-in you get a key and a made bed, and at checkout the room is cleaned for the next guest. Constructors make sure an object never exists in a half-built state.
 
 ### interview
-- A **constructor** has the class's name and no return type; it establishes the object's invariants. Kinds: **default** (no arguments), **parameterized**, **copy** (`T(const T&)` in C++), and in C++11 **move** and **delegating** constructors.
-- The compiler writes a default constructor only when you declare **no** constructor at all (C++ and Java alike).
-- C++ **initialization order**: base classes first, then members **in declaration order** (not the order in the initializer list), then the constructor body. Destruction runs in exactly the reverse order.
+- A **constructor** has the class's name and no return type; it establishes the object's invariants. Kinds: **default** (no arguments), **parameterized**, **copy** (`T(const T&)`), and since C++11 **move** (`T(T&&)`) and **delegating** constructors.
+- The compiler writes a default constructor only when you declare **no** constructor at all; `= default` brings it back.
+- **Initialization order**: base classes first, then members **in declaration order** (not the order in the initializer list), then the constructor body. Destruction runs in exactly the reverse order.
 - Use the **member initializer list** for `const` members, references, members without a default constructor and base class arguments; it initializes directly instead of assigning afterwards.
-- A C++ **destructor** `~T()` runs automatically at scope exit or on `delete`; that is the basis of RAII. Java has no destructors (use `try`-with-resources; `finalize` is deprecated), and Python's `__del__` has no timing guarantee, so use `with`.
-- Mark single-argument C++ constructors `explicit` to stop surprise implicit conversions.
-- Calling a virtual method from a constructor: C++ calls the version of the class being built (the derived part does not exist yet); Java calls the derived override, which may see uninitialized fields.
+- A **destructor** `~T()` runs automatically at scope exit, on `delete`, or when an owning smart pointer lets go; that is the basis of **RAII** (acquire in the constructor, release in the destructor).
+- Mark single-argument constructors `explicit` to stop surprise implicit conversions.
+- A virtual call inside a constructor or destructor goes to the class being built or destroyed, never to a derived override.
 
 ### deep
 #### Intuition
@@ -207,23 +180,27 @@ int main() {
 
 Writing `Car() : wheels("wheels"), engine("engine")` would change nothing: the order comes from the declarations, and compilers warn about the mismatch (`-Wreorder`). This matters when one member's initializer reads another.
 
-#### The same ideas in Python and Java
+#### RAII: the destructor as guaranteed cleanup
 
-```python
-class TempFile:
-    def __init__(self, path):        # initializer: the object already exists (made by __new__)
-        self.path = path
-        self.handle = open(path, "w")
+```cpp
+class File {
+    FILE* f;
+public:
+    File(const char* path, const char* mode) : f(fopen(path, mode)) {
+        if (!f) throw runtime_error(string("cannot open ") + path);
+    }
+    ~File() { fclose(f); }                       // runs on every way out of the scope
+    File(const File&) = delete;                  // one owner: a copy would close twice
+    File& operator=(const File&) = delete;
+    void write(const string& s) { fputs(s.c_str(), f); }
+};
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):        # deterministic cleanup; do not rely on __del__
-        self.handle.close()
-        return False
+void logLine(const string& msg) {
+    File out("app.log", "a");
+    out.write(msg + "\n");
+    if (msg.empty()) throw invalid_argument("empty message");   // the file still closes
+}                                                                // ~File runs here
 ```
-
-Java runs the superclass constructor first (an implicit or explicit `super(...)`), then field initializers and instance initializer blocks in the order they appear, then the rest of the constructor body. Static initializers run once, when the class is first initialized.
 
 #### Edge cases and bugs
 
@@ -231,13 +208,12 @@ Java runs the superclass constructor first (an implicit or explicit `super(...)`
 - If a constructor throws, the destructor of that object does **not** run, but already-built members and bases are destroyed. That is why raw `new` in a constructor leaks and smart pointers or member objects do not.
 - Never let a destructor throw; during stack unwinding a second exception calls `std::terminate`.
 - A one-argument constructor without `explicit` lets `Matrix m = 5;` compile by accident.
-- Virtual calls in constructors do not reach the derived class in C++.
 
 Connects to: shallow vs deep copy, rule of three and five, object lifecycle, RAII, virtual destructors.
 
 ### questions
 Q: When does the compiler generate a default constructor?
-A: Only when the class declares no constructors at all, in both C++ and Java. As soon as you write any constructor, such as one with parameters, the implicit no-argument constructor disappears, and you must write it yourself or use = default in C++.
+A: Only when the class declares no constructors at all. As soon as you write any constructor, such as one with parameters, the implicit default constructor disappears, and you must write it yourself or bring it back with = default.
 
 Q: In what order are a C++ object's parts constructed and destroyed?
 A: Base classes are constructed first, then data members in the order they are declared in the class, then the constructor body runs. Destruction is the exact reverse: destructor body, members in reverse declaration order, then bases. The order written in the member initializer list is ignored.
@@ -249,62 +225,49 @@ Q: When is the copy constructor called?
 A: When a new object is initialized from an existing one of the same type: T b = a, T b(a), passing an object by value, and returning one by value (often elided by the compiler). Assigning to an object that already exists calls the copy assignment operator instead.
 
 Q: What happens if you call a virtual function from a C++ constructor?
-A: The call goes to the version in the class whose constructor is running, not to a derived override, because the derived part has not been built yet. Java does the opposite and calls the derived override, which can then read fields that are still at their default values. Both are best avoided.
+A: The call goes to the version in the class whose constructor is running, not to a derived override, because the derived part has not been built yet. The same happens in destructors, where the derived part is already gone. Such calls are best avoided.
 
 ## oop.foundations.access-modifiers
 name: "Access modifiers"
 importance: must
 prereqs: [oop.foundations.classes-and-objects]
-scope: "public, private, protected, package-private in Java"
+scope: "public, private, protected, friends and struct defaults in C++"
 
 ### simple
 Access modifiers decide who is allowed to touch each part of a class. A restaurant works the same way: the menu is public, the kitchen is private to the staff, and the recipe book might be shared only with the chefs in training. Keeping the kitchen private means the restaurant can reorganize it without upsetting any customer.
 
 ### interview
-- **public**: anyone can use it. **private**: only code inside the class (and C++ `friend`s). **protected**: the class and its subclasses (in Java also everything in the same package).
-- Java's **package-private** (no keyword) means visible inside the same package only; top-level Java classes are either public or package-private.
-- C++ defaults: `class` members are private, `struct` members are public. C++ also has access on inheritance: `public`, `protected` or `private` inheritance caps what the base's members become in the derived class.
-- Access is checked **per class, not per object**: a method can read the private fields of another object of the same class (common in copy constructors and `equals`).
-- Python has no enforcement: `_name` is a convention for internal, and `__name` triggers name mangling to `_Class__name`.
-- Rule of thumb: make fields private, expose the smallest public API that works, and use protected sparingly because subclasses then depend on those details.
+- **public**: anyone can use it. **private**: only the class's own members and its `friend`s. **protected**: the class, its friends and its derived classes.
+- Defaults: `class` members are private, `struct` members are public. Inheritance has access too: `public`, `protected` or `private` inheritance caps what the base's members become in the derived class.
+- Access is checked **per class, not per object**: a member function can read the private members of another object of the same class (common in copy constructors and `operator==`).
+- A **friend** function or class is granted access to private members; friendship is given by the class, and is not inherited or transitive.
+- Some languages add a **package-private** level (visible to one package). C++ has no packages; its tools for "internal to this part of the code" are `friend`, private headers, and unnamed namespaces for file-local helpers.
+- Rule of thumb: make data members private, expose the smallest public interface that works, and use protected sparingly because derived classes then depend on those details.
 
 ### deep
 #### Intuition
 
 Every public member is a promise: other code will use it, so you cannot change it without breaking them. Private members are free to change. Access modifiers let you choose which parts are promises and which are details, and the compiler enforces the choice.
 
-#### The four levels in Java
+#### Who can use a member
 
-| modifier | same class | same package | subclass in another package | everywhere |
+| access | the class itself | friends | derived classes | everyone else |
 |---|---|---|---|---|
 | `public` | yes | yes | yes | yes |
-| `protected` | yes | yes | yes | no |
-| none (package-private) | yes | yes | no | no |
-| `private` | yes | no | no | no |
+| `protected` | yes | yes | yes (through their own objects) | no |
+| `private` | yes | yes | no | no |
 
-Protected is wider than many people expect: any class in the same package can use it too.
+"Through their own objects": inside `Circle`, a protected member of `Shape` can be used on a `Circle`, but not on some unrelated `Shape` object.
 
-```java
-public class Account {
-    private long balance;            // only Account's own code
-    long auditCount;                 // package-private: tools in the same package
-    protected String currency = "INR";   // subclasses and the package
-    public long getBalance() { return balance; }   // the public promise
-
-    public boolean sameBalance(Account other) {
-        return this.balance == other.balance;      // allowed: access is per class, not per object
-    }
-}
-```
-
-#### C++: three levels plus inheritance access
+#### Code
 
 ```cpp
 class Shape {
 public:
     double area() const { return computeArea(); }   // public interface
+    bool sameId(const Shape& other) const { return id == other.id; }  // per class, not per object
 protected:
-    virtual double computeArea() const = 0;         // for subclasses to implement
+    virtual double computeArea() const = 0;         // for derived classes to implement
 private:
     int id = 0;                                     // nobody outside Shape
     friend void debugPrint(const Shape&);          // a friend may read private members
@@ -321,7 +284,7 @@ protected:
 };
 ```
 
-The inheritance keyword caps visibility of inherited members:
+The inheritance keyword caps the visibility of inherited members:
 
 | base member | `public` inheritance | `protected` inheritance | `private` inheritance |
 |---|---|---|---|
@@ -331,45 +294,47 @@ The inheritance keyword caps visibility of inherited members:
 
 `class D : B` defaults to private inheritance and `struct D : B` to public, a classic source of "why can't I call this" errors.
 
-#### Python conventions
+#### Internal to a file, not to a class
 
-```python
-class Account:
-    def __init__(self):
-        self.owner = "Asha"      # public by convention
-        self._limit = 500        # "internal, please don't touch"
-        self.__pin = 1234        # mangled to _Account__pin
+What other languages call package-private, C++ approximates at the file level. An unnamed namespace (or `static` at namespace scope) makes a helper invisible outside its `.cpp` file:
 
-a = Account()
-print(a._limit)                  # works; the underscore is only a signal
-print(a._Account__pin)           # works too; mangling avoids clashes, it is not security
+```cpp
+namespace {                                        // internal linkage: this file only
+    bool validAmount(long long x) { return x > 0; }
+}
+
+bool deposit(long long& balance, long long x) {
+    if (!validAmount(x)) return false;
+    balance += x;
+    return true;
+}
 ```
 
 #### Worked example: why private pays off
 
-Suppose `Account` stores `balance` as a public `double` and fifty files write to it directly. You now need to store paise as a `long` to avoid rounding errors. With a public field you edit fifty files; with a private field and `deposit`, `withdraw` and `getBalance`, you edit one class and nothing else notices.
+Suppose `Account` stores `balance` as a public `double` and fifty files write to it directly. You now need to store paise as a `long long` to avoid rounding errors. With a public member you edit fifty files; with a private member and `deposit`, `withdraw` and `getBalance`, you edit one class and nothing else notices.
 
 #### Pitfalls
 
-- Getters and setters for every field give no protection; expose operations (`withdraw`) that keep the rules, not raw state.
-- Protected fields leak implementation into every subclass; prefer private fields with protected methods.
-- Access control is not a security boundary: reflection in Java, pointer tricks in C++ and plain attribute access in Python can all get around it.
-- Returning a reference or pointer to a private mutable member hands out write access anyway.
+- Getters and setters for every member give no protection; expose operations (`withdraw`) that keep the rules, not raw state.
+- Protected data leaks implementation into every derived class; prefer private data with protected member functions.
+- Access control protects against mistakes, not attackers: pointer casts can reach private data.
+- Returning a non-const reference or pointer to a private member hands out write access anyway.
 
 Connects to: encapsulation, inheritance, abstraction, friend functions.
 
 ### questions
-Q: What does package-private mean in Java?
-A: It is the access level you get when you write no modifier. The member or class is visible to every class in the same package but not to code in other packages, including subclasses there. It is useful for helpers shared by a package's classes that should not be part of its public API.
+Q: Who can access a protected member in C++?
+A: The class itself, its friends, and classes derived from it. A derived class may use the protected member only through objects of its own type or types derived from it, not through an arbitrary base-class object.
 
-Q: Who can access a protected member in Java compared with C++?
-A: In C++, only the class itself, its friends, and derived classes. In Java, protected also opens the member to every class in the same package, so it is strictly wider than package-private.
+Q: What does private inheritance mean?
+A: The base's public and protected members become private members of the derived class, and outside code cannot convert a Derived to a Base. It models "implemented in terms of" rather than "is a", and composition usually expresses that more clearly.
 
-Q: Can a method access the private fields of another object of the same class?
-A: Yes. Access control in C++ and Java is checked per class, not per object, so code inside a class can read the private members of any instance of that class. Copy constructors and equals methods rely on this.
+Q: Can a member function access the private members of another object of the same class?
+A: Yes. Access control is checked per class, not per object, so code inside a class can read the private members of any instance of that class. Copy constructors and comparison operators rely on this.
 
-Q: How does Python handle private members?
-A: It does not enforce privacy. A single leading underscore is a convention meaning internal, and a double leading underscore triggers name mangling to _ClassName__name, which avoids accidental clashes in subclasses but can still be accessed deliberately.
+Q: What is a friend, and when is it reasonable to use one?
+A: A function or class that a class explicitly allows to access its private and protected members. It is reasonable for operators such as operator<< that need the class's data, or for a tightly coupled helper class. Friendship is not inherited and not transitive.
 
 Q: What is the default access for class and struct members in C++, and for inheritance?
 A: Members of a class and inheritance from a class are private by default, while members of a struct and inheritance from a struct are public by default. That is the only difference between the two keywords.
@@ -381,15 +346,15 @@ prereqs: [oop.foundations.classes-and-objects]
 scope: "class-level vs instance-level data and methods"
 
 ### simple
-A static member belongs to the class itself rather than to any one object. In a school, each student has their own name, but the school's total enrollment is a single number shared by everyone. Static data is that shared number, and a static method is a job anyone can ask the school office to do without picking a student first.
+A static member belongs to the class itself rather than to any one object. In a school, each student has their own name, but the school's total enrollment is a single number shared by everyone. Static data is that shared number, and a static function is a job anyone can ask the school office to do without picking a student first.
 
 ### interview
-- A **static field** has one copy for the whole class, shared by every instance; an **instance field** has one copy per object.
-- A **static method** has no `this`, so it can use only static members directly (or objects passed to it). It is called on the class: `Math.max`, `Counter::total()`.
-- Common uses: counters and ids, constants, caches, factory methods (`Integer.valueOf`), utility functions, singletons.
-- C++ details: a non-`const` static data member needs one out-of-class definition unless declared `inline` (C++17); a function-local `static` is initialized once, on first use, and that is thread-safe since C++11.
-- Java details: static methods are **hidden**, not overridden (no dynamic dispatch); static initializer blocks run once when the class is initialized.
-- Python: class attributes are shared, `@staticmethod` takes no `self`, `@classmethod` takes `cls`. A mutable class attribute (a list) shared by all instances is a classic bug.
+- A **static data member** has one copy for the whole class, shared by every instance; a non-static data member has one copy per object.
+- A **static member function** has no `this`, so it can use only static members directly (or objects passed to it). Call it on the class: `Counter::total()`, `std::numeric_limits<int>::max()`.
+- Common uses: counters and ids, constants, caches, factory functions (`Widget::create()`), utility functions, singletons.
+- A non-`const` static data member needs one out-of-class definition unless declared `inline` (C++17); `static constexpr` members are implicitly inline.
+- A function-local `static` is initialized once, the first time control reaches it, and that is thread-safe since C++11.
+- Static member functions cannot be `virtual` or `const`. At namespace scope, `static` means something else: **internal linkage** (visible only in that file).
 - Downsides: static mutable state is global state, hard to test and needs synchronization across threads.
 
 ### deep
@@ -399,9 +364,9 @@ Some facts are about the whole kind of thing, not about one instance: how many a
 
 #### Worked example: numbering objects
 
-Each new `Ticket` needs a unique id. An instance field cannot know what earlier objects did, but a static counter can.
+Each new `Ticket` needs a unique id. A non-static member cannot know what earlier objects did, but a static counter can.
 
-| action | Ticket::nextId (static) | t.id (instance) |
+| action | Ticket::nextId (static) | t.id (per object) |
 |---|---|---|
 | start | 1 | - |
 | `Ticket a;` | 2 | a.id = 1 |
@@ -413,11 +378,13 @@ Each new `Ticket` needs a unique id. An instance field cannot know what earlier 
 ```cpp
 class Ticket {
     inline static int nextId = 1;        // C++17: defined here, one copy for the class
+    static constexpr int MAX_ID = 1'000'000;
     int id;                               // one per object
 public:
     Ticket() : id(nextId++) {}
     int getId() const { return id; }
     static int issued() { return nextId - 1; }   // no this: cannot read id here
+    static bool valid(int value) { return value > 0 && value <= MAX_ID; }
 };
 
 int& requestCount() {
@@ -428,86 +395,63 @@ int& requestCount() {
 int main() {
     Ticket a, b, c;
     ++requestCount();
-    cout << c.getId() << " " << Ticket::issued() << " " << requestCount() << "\n";  // 3 3 1
+    cout << c.getId() << " " << Ticket::issued() << " " << Ticket::valid(0) << " "
+         << requestCount() << "\n";       // 3 3 0 1
 }
 ```
 
 Before C++17 you would write `static int nextId;` inside the class and `int Ticket::nextId = 1;` in exactly one `.cpp` file; forgetting that definition gives a linker error.
 
-```python
-class Ticket:
-    next_id = 1                          # class attribute, shared
+#### The meanings of `static`
 
-    def __init__(self):
-        self.id = Ticket.next_id         # instance attribute
-        Ticket.next_id += 1              # update through the class, not self
+| where | meaning |
+|---|---|
+| data member | one copy shared by the whole class |
+| member function | no `this`; called on the class |
+| local variable | lives for the whole program, initialized on first use |
+| function or variable at namespace scope | internal linkage: invisible to other files |
 
-    @classmethod
-    def issued(cls):
-        return cls.next_id - 1
+The last row has nothing to do with classes; an unnamed namespace is the modern way to say it.
 
-    @staticmethod
-    def is_valid_id(value):              # no self, no cls: a plain function in the class
-        return isinstance(value, int) and value > 0
+#### The static initialization order problem
 
+Globals and static members in different `.cpp` files are initialized in an unspecified order. If `a.cpp` has `Logger log;` and `b.cpp` has `Config cfg;` whose constructor calls `log.write(...)`, `log` may not be built yet. A function-local static avoids this, because it is built the first time it is used:
 
-a, b, c = Ticket(), Ticket(), Ticket()
-print(c.id, Ticket.issued(), Ticket.is_valid_id(0))   # 3 3 False
-```
+```cpp
+struct Logger {
+    vector<string> lines;
+    void write(const string& s) { lines.push_back(s); }
+};
 
-#### Two Python traps
-
-```python
-class Team:
-    members = []                         # one list shared by every Team
-
-    def add(self, name):
-        self.members.append(name)        # mutates the shared list
-
-
-x, y = Team(), Team()
-x.add("Asha")
-print(y.members)                         # ['Asha']: y sees x's member
-```
-
-Fix: create the list in `__init__` (`self.members = []`). The second trap is `self.next_id += 1`: it reads the class attribute, then **creates an instance attribute** that hides it, so the class counter never moves. Update through the class name or `type(self)`.
-
-#### Java notes
-
-```java
-class MathUtil {
-    static final double TAU = 2 * Math.PI;     // a constant
-    static int calls;                           // shared counter
-    static { calls = 0; }                       // static initializer: runs once
-    static double circumference(double r) { calls++; return TAU * r; }
+Logger& logger() {
+    static Logger instance;               // built on first call, never too early
+    return instance;
 }
 ```
 
-A static method with the same signature in a subclass **hides** the parent's; which one runs depends on the declared type at compile time, not the object, so there is no polymorphism.
-
 #### Pitfalls
 
-- Static mutable data is shared across threads; guard it with a lock or an atomic.
+- Static mutable data is shared across threads; guard it with a mutex or an atomic.
 - Tests that touch static state affect each other unless they reset it.
-- C++'s static initialization order across different source files is unspecified; a static in one file that reads a static in another may see it unbuilt. A function-local static avoids this.
-- Instance methods can read static members, but static methods cannot read instance members without an object.
+- Non-static member functions can read static members, but static member functions cannot read non-static members without an object.
+- Defining a non-inline static data member in a header included by several files breaks the one-definition rule (a linker error).
 
 Connects to: classes and objects, singleton, factory method, immutability.
 
 ### questions
-Q: What is the difference between a static field and an instance field?
-A: A static field has a single copy that belongs to the class and is shared by all instances. An instance field has a separate copy in each object. Changing a static field through one object is visible from every other object.
+Q: What is the difference between a static data member and a non-static one?
+A: A static data member has a single copy that belongs to the class and is shared by all instances. A non-static member has a separate copy in each object. Changing a static member through one object is visible from every other object.
 
-Q: Why can't a static method access instance fields directly?
-A: A static method is not called on any object, so it has no this or self to say whose fields to read. It can work with instance data only if an object is passed to it as an argument.
+Q: Why can't a static member function access non-static members directly?
+A: It is not called on any object, so it has no this pointer to say whose members to read. It can work with an object's data only if that object is passed to it as an argument.
 
-Q: Can static methods be overridden in Java?
-A: No. A subclass can declare a static method with the same signature, but that hides the parent's method rather than overriding it. Which one runs is decided at compile time from the declared type, so there is no runtime polymorphism.
+Q: Can a static member function be virtual?
+A: No. Virtual dispatch uses the vtable pointer stored in an object, and a static member function is called without any object. For the same reason it cannot be declared const.
 
-Q: What goes wrong with a list defined as a class attribute in Python?
-A: The list is created once, when the class is defined, and every instance shares it. Appending through one instance changes what all the others see. Mutable per-object state should be created in __init__.
+Q: What does static mean for a function or variable at namespace scope?
+A: It gives the name internal linkage: it is visible only inside its own translation unit, the .cpp file, so other files cannot use it or clash with it. It is unrelated to class-level static members; an unnamed namespace achieves the same thing.
 
-Q: When is a function-local static variable initialized in C++?
+Q: When is a function-local static variable initialized?
 A: The first time control passes through its declaration. Since C++11 that initialization is guaranteed to happen exactly once even if several threads arrive together, which makes it a simple way to build lazily created shared objects.
 
 ## oop.foundations.object-lifecycle
@@ -517,25 +461,24 @@ prereqs: [oop.foundations.constructors-and-destructors]
 scope: "creation, copying, destruction, garbage collection vs manual cleanup"
 
 ### simple
-Every object is born, used, maybe copied, and eventually removed, and languages differ in who cleans up at the end. In C++ you are like a camper who must pack out their own tent, while Java and Python send a park ranger around to collect whatever nobody is using anymore. The ranger is convenient, but you never know exactly when they will come by.
+Every object is born, used, maybe copied or moved, and eventually destroyed. In C++ you are like a camper who packs out their own tent: an object is cleaned up at a known moment, when its scope ends or its owner lets go. Garbage-collected languages instead send a park ranger around to collect whatever nobody uses anymore, which is convenient but happens whenever the ranger gets there.
 
 ### interview
-- **Creation**: memory is allocated (stack, heap or static storage), then the constructor runs. **Use**: the object may be copied or moved. **Destruction**: cleanup runs and the memory is reclaimed.
-- **C++**: destruction is deterministic. Stack objects die at the end of their scope (in reverse order), heap objects on `delete` or when their owning smart pointer goes away, statics at program exit. **RAII** ties any resource (file, lock, socket) to an object's lifetime.
-- **Java**: a tracing, usually generational **garbage collector** frees objects that are no longer reachable from the roots (stacks, statics). Timing is unpredictable, so release non-memory resources with `try`-with-resources on `AutoCloseable`; finalizers are deprecated.
-- **Python (CPython)**: **reference counting** frees an object as soon as its count hits zero, and a cycle collector handles reference cycles. Use `with` for resources.
-- Bugs by model: C++ has leaks, dangling pointers, double frees and use-after-free; GC languages still leak through lingering references (static caches, unremoved listeners).
+- **Creation**: storage is obtained, then the constructor runs. **Use**: the object may be copied or moved. **Destruction**: the destructor runs and the storage is released.
+- Four **storage durations**: automatic (a local; dies at the end of its scope), static (lives until the program ends), thread (lives as long as its thread), dynamic (`new`/`delete`, usually managed by a smart pointer).
+- Destruction is **deterministic**: locals die in reverse order of construction, statics at program exit in reverse order, heap objects when deleted or when their last owning smart pointer goes away. **RAII** ties any resource (file, lock, socket) to that moment.
+- Ownership tools: `unique_ptr` (one owner), `shared_ptr` (reference-counted owners; freed when the count reaches zero, but **cycles leak**), `weak_ptr` (non-owning, breaks cycles), raw pointers and references for non-owning access.
+- **Garbage collection** (used by many other languages) frees unreachable objects at an unspecified later time and needs separate cleanup code for files and locks; C++ has no garbage collector and cleans up everything, memory and other resources alike, in destructors.
+- Typical C++ bugs: leaks, dangling pointers, double delete, use-after-free, `shared_ptr` cycles.
 
 ### deep
 #### Three phases
 
-1. **Birth**: the runtime finds memory for the object, then its constructor turns that raw memory into a valid object.
-2. **Life**: the object is used, passed around, copied (a new object with the same value) or moved (its resources handed to a new object, C++11).
-3. **Death**: cleanup code runs (a destructor, a `close`, an `__exit__`) and the memory is returned.
+1. **Birth**: storage is found (a stack frame, static storage or the heap), then the constructor turns that raw memory into a valid object.
+2. **Life**: the object is used, passed around, copied (a new object with the same value) or moved (its resources handed to a new object).
+3. **Death**: the destructor runs, then the storage is released.
 
-The languages differ most in phase 3.
-
-#### C++: you decide when
+#### Deterministic destruction
 
 ```cpp
 struct Resource {
@@ -556,63 +499,62 @@ int main() {
 }                                                     // prints: close d, close a
 ```
 
-With raw `new`, forgetting `delete` leaks, deleting twice is undefined behavior, and using the pointer afterwards is use-after-free. Smart pointers and RAII make destruction automatic while keeping it deterministic.
+With raw `new`, forgetting `delete` leaks, deleting twice is undefined behavior, and using the pointer afterwards is use-after-free. Smart pointers make destruction automatic while keeping it deterministic.
 
-#### Java: the collector decides when
+#### Worked example: a shared_ptr cycle and weak_ptr
 
-An object becomes garbage once no chain of references leads to it from a **GC root** (thread stacks, static fields, JNI references). Collectors trace from the roots, keep everything they reach and reclaim the rest. Most objects die young, so generational collectors scan the young generation often and the old generation rarely. Memory is handled; files and sockets are not, because nobody knows when collection will run:
+```cpp
+struct Node {
+    string name;
+    shared_ptr<Node> next;                            // owning link
+    weak_ptr<Node> prev;                              // non-owning back link
+    explicit Node(string n) : name(std::move(n)) {}
+    ~Node() { cout << "free " << name << "\n"; }
+};
 
-```java
-static String firstLine(String path) throws IOException {
-    try (var reader = new BufferedReader(new FileReader(path))) {
-        return reader.readLine();
-    }   // reader.close() runs here, even if readLine threw
+int main() {
+    {
+        auto a = make_shared<Node>("a"), b = make_shared<Node>("b");
+        a->next = b;
+        b->prev = a;                                  // weak: does not raise a's count
+        cout << a.use_count() << " " << b.use_count() << "\n";   // 1 2
+    }                                                 // prints: free a, free b
 }
 ```
 
-#### Python: counts plus a cycle detector
+| moment | a's count | b's count |
+|---|---|---|
+| both created | 1 | 1 |
+| `a->next = b` | 1 | 2 |
+| `b->prev = a` (weak) | 1 | 2 |
+| local `b` destroyed | 1 | 1 |
+| local `a` destroyed | 0: a freed, which releases `next` | 0: b freed |
 
-```python
-import sys
+If `prev` were a `shared_ptr`, each node would keep the other's count at 1 after the locals died, and neither destructor would ever run: a leak even though no raw `new` appears anywhere.
 
-class Node:
-    def __init__(self):
-        self.other = None
+#### Manual cleanup vs garbage collection
 
-a = Node()
-print(sys.getrefcount(a))   # 2: the name a plus the temporary argument
-b = Node()
-a.other, b.other = b, a     # a cycle: counts never reach zero on their own
-del a, b                    # the cycle collector (gc module) reclaims them later
-```
+| | C++ (RAII and smart pointers) | a tracing garbage collector |
+|---|---|---|
+| when memory is freed | at a known point: scope exit, `delete`, last owner gone | some time after the object becomes unreachable |
+| other resources | the same destructors release them | need explicit close calls |
+| runtime cost | no collector; small per-object cost for `shared_ptr` counts | collector work and pauses |
+| typical bugs | dangling pointers, leaks, cycles of `shared_ptr` | leaks through references that are never dropped |
 
-#### Comparison
-
-| | C++ | Java | Python (CPython) |
-|---|---|---|---|
-| Reclaiming memory | you (RAII, smart pointers) | tracing GC | reference counting plus cycle GC |
-| When cleanup runs | exactly at scope exit or `delete` | unknown | usually at once, cycles later |
-| Resource cleanup | destructors | `try`-with-resources | `with` |
-| Typical bug | dangling pointer, leak | leak through a lingering reference | cycles with `__del__`, leaks via globals |
-
-#### Leaks in garbage-collected code
-
-A GC frees only unreachable objects. An ever-growing static map used as a cache, a listener that was registered and never removed, or a thread-local that is never cleared keeps objects reachable forever. The fix is to remove the reference, bound the cache, or use weak references (`WeakHashMap`, `weakref`).
-
-Connects to: constructors and destructors, shallow vs deep copy, virtual destructors, memory management in the OS.
+Connects to: constructors and destructors, shallow vs deep copy, virtual destructors, stack vs heap memory.
 
 ### questions
 Q: What is RAII?
-A: Resource Acquisition Is Initialization: a C++ idiom where an object acquires a resource in its constructor and releases it in its destructor. Because destructors run automatically when the object goes out of scope, even during exceptions, the resource can never be forgotten. std::lock_guard, std::unique_ptr and file streams all work this way.
+A: Resource Acquisition Is Initialization: an idiom where an object acquires a resource in its constructor and releases it in its destructor. Because destructors run automatically when the object goes out of scope, even during exceptions, the resource can never be forgotten. std::lock_guard, std::unique_ptr and file streams all work this way.
 
-Q: When does Java free an object?
-A: At some point after it becomes unreachable, meaning no chain of references leads to it from a GC root such as a thread's stack or a static field. The exact time depends on the collector and memory pressure, so Java code must not rely on it for releasing files, sockets or locks.
+Q: When is a C++ object destroyed?
+A: It depends on its storage duration. A local object is destroyed at the end of its scope, in reverse order of construction. A static object is destroyed at program exit. A heap object is destroyed when it is deleted, or when the last unique_ptr or shared_ptr owning it goes away.
 
-Q: How does CPython decide when to free an object?
-A: Each object keeps a reference count, and it is freed as soon as the count drops to zero. Reference cycles never reach zero on their own, so a separate cycle collector periodically finds and frees unreachable groups of objects.
+Q: What happens when two objects hold shared_ptrs to each other, and how do you fix it?
+A: Each keeps the other's reference count above zero, so neither is ever destroyed, even after all outside owners are gone: a memory leak. Make one direction a weak_ptr, which observes the object without owning it, typically the back pointer from child to parent.
 
-Q: Can a garbage-collected program leak memory?
-A: Yes. The collector frees only unreachable objects, so anything still referenced stays alive: a static cache that only grows, listeners that are never unregistered, or long-lived collections holding old entries. The fix is to drop the references, bound the cache or use weak references.
+Q: How does garbage collection differ from C++'s approach to cleanup?
+A: A garbage collector frees objects some time after nothing can reach them, and it handles only memory, so files and locks still need explicit closing. C++ has no collector: objects are destroyed at predictable points, and their destructors release memory and every other resource at the same time.
 
-Q: Why are finalizers a poor way to release resources?
-A: They run at an unpredictable time, maybe never before the program exits, and can slow collection or even resurrect objects. Java deprecated finalize for removal. Explicit close through try-with-resources, or destructors in C++, release resources at a known point.
+Q: Why prefer make_unique and make_shared over calling new directly?
+A: They never leave a raw owning pointer around, so an exception between allocation and taking ownership cannot leak it, and the code has no naked new or delete to get wrong. make_shared also allocates the object and its reference counts in one block.

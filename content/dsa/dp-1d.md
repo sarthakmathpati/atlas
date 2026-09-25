@@ -65,25 +65,6 @@ long long waysWithSteps(int n, const vector<int>& steps) {
 }
 ```
 
-```python
-def tile_2xn(n):
-    """Ways to tile a 2 x n board with 2 x 1 dominoes: the last column is a vertical domino
-    (from n - 1) or two horizontal dominoes (from n - 2)."""
-    a, b = 1, 1                    # tilings of width 0 and 1
-    for _ in range(n - 1):
-        a, b = b, a + b
-    return b if n >= 1 else 1
-
-def paint_fence(n, k):
-    """No three consecutive posts share a color."""
-    if n == 0:
-        return 0
-    same, diff = 0, k               # last two posts same color / different
-    for _ in range(n - 1):
-        same, diff = diff, (same + diff) * (k - 1)
-    return same + diff
-```
-
 #### Recognizing it
 
 The words to listen for are "positions in a line", "each step you may move 1 or 2" (or any small set of moves), and "how many ways" or "what is the minimum cost to reach the end". Before coding, say the state in one sentence ("`dp[i]` is the cheapest way to stand on step i"), list the ways to arrive at i, and check the first two positions by hand, because off-by-one mistakes at the start (can you begin on step 1 for free?) are the most common bug in this pattern.
@@ -196,24 +177,6 @@ int robCircle(const vector<int>& a) {
 }
 ```
 
-```python
-from collections import Counter
-
-def delete_and_earn(nums):
-    """Taking value v earns v but removes every v - 1 and v + 1."""
-    points = Counter(nums)
-    skip = take = 0
-    prev_value = None
-    for v in sorted(points):
-        gain = v * points[v]
-        if prev_value == v - 1:                # adjacent values conflict
-            skip, take = max(skip, take), skip + gain
-        else:                                  # no conflict with the previous value
-            skip, take = max(skip, take), max(skip, take) + gain
-        prev_value = v
-    return max(skip, take)
-```
-
 #### Complexity
 
 $O(n)$ time, $O(1)$ space. Delete and earn: $O(n \log n)$ for sorting distinct values (or $O(n + \max)$ with a bucket array).
@@ -318,36 +281,6 @@ bool wordBreak(const string& s, const vector<string>& dict) {
             if (dp[i - len] && words.count(s.substr(i - len, len))) dp[i] = true;
     return dp[n];
 }
-```
-
-```python
-def num_decodings(s):
-    prev2, prev1 = 1, 1 if s and s[0] != "0" else 0   # dp[i-2], dp[i-1] for i = 2
-    if not s:
-        return 0
-    for i in range(2, len(s) + 1):
-        cur = 0
-        if s[i - 1] != "0":
-            cur += prev1
-        if 10 <= int(s[i - 2:i]) <= 26:
-            cur += prev2
-        prev2, prev1 = prev1, cur
-    return prev1
-
-def word_break_all(s, words):
-    """Every sentence that segments s (memoized on the start index)."""
-    word_set, memo = set(words), {}
-    def from_index(i):
-        if i == len(s):
-            return [""]
-        if i not in memo:
-            memo[i] = [
-                s[i:j] + (" " + rest if rest else "")
-                for j in range(i + 1, len(s) + 1) if s[i:j] in word_set
-                for rest in from_index(j)
-            ]
-        return memo[i]
-    return from_index(0)
 ```
 
 #### Complexity

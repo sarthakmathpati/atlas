@@ -93,7 +93,7 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 | `npm run dev` | Regenerate data, start the dev server |
 | `npm run build:syllabus [-- --strict]` | Parse and validate `content/` |
 | `npm run build:layout [-- --force]` | Recompute map positions (skipped if structure unchanged) |
-| `npm run check:content-code [-- <subject>]` | Compile every C++ block and parse every Python block in `content/` |
+| `npm run check:content-code [-- <subject>]` | Compile every C++ block in `content/` (Python and Java blocks too, for the `lang` topics) |
 | `npm run typecheck` / `lint` / `test` | Checks |
 | `npm run build` / `build:artifact` | GitHub Pages build / single-file artifact + `check-artifact.mjs` |
 | `npm run release:artifact` | Build and zip the artifact into `release/` |
@@ -306,20 +306,27 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 54. **Content conventions**: questions, answers and signals are plain text (they render without
     Markdown); a question ends with `?` or `.`; a pattern's first signal is a clue that doesn't name
     it (the hint nudge shows "A clue to look for: …"); must-know deep articles are 300 to 900 words
-    including code; code is C++ (plus Python where it helps), and every ```` ```cpp ```` and
-    ```` ```python ```` block must pass `npm run check:content-code` (a block starting with
-    `// sketch` or `# sketch` is skipped). A `###` heading that isn't one of the six sections fails
-    the build. When a subject is finished, add it to `FINISHED` in `tests/syllabus/content.test.ts`
-    so the strict rules stay enforced for it.
+    including code; code is C++ only (decision 58), and every ```` ```cpp ```` block must pass
+    `npm run check:content-code` (a block starting with `// sketch` is skipped). A `###` heading
+    that isn't one of the six sections fails the build. When a subject is finished, add it to
+    `FINISHED` in `tests/syllabus/content.test.ts` so the strict rules stay enforced for it.
 55. **Drill bank** (`src/data/drills.seed.ts`, 276 prompts): each prompt's first answer id is its
     main pattern, and every one of the 90 patterns is the main answer of at least three prompts;
     further ids are also fully correct. Tested in `tests/seed/drills.test.ts`.
 56. **Hint nudge wording**: "A clue to look for: <first signal>." (works for noun and verb
     phrases); level 1 never contains the pattern's name (tested for every seed problem).
-57. **Content code checks beyond C++ and Python** (Phase 5, OOP and OS): `java` blocks are
-    allowed where the idea is Java's own and are compiled with `javac` (each block in its own
-    package with the common `java.util` imports; a block holds types, or members that get wrapped
-    in a class). The C++ prelude also includes POSIX and Linux headers (`unistd.h`, `sys/wait.h`,
-    `sys/mman.h`, `semaphore.h`, `sys/epoll.h`, `sys/resource.h`, …), so C++ checks need Linux;
+57. **Content code checks** (Phase 5, OOP and OS): the C++ prelude includes POSIX and Linux
+    headers (`unistd.h`, `sys/wait.h`, `sys/mman.h`, `semaphore.h`, `sys/epoll.h`,
+    `sys/resource.h`, `sys/utsname.h`, `ucontext.h`, …), so C++ checks need Linux;
     a block's `int main` is renamed to a function with a deduced return type. Code lines stay
     within 100 characters, and examples never print URLs (the artifact URL check would fail).
+    The checker still parses `python` and compiles `java` blocks (with `javac`, one package per
+    block) for the `lang` subject's Java and Python topics.
+58. **C++ only** (the owner's choice, session 7): concept content has no Python or Java code and
+    no comparisons with them, in DSA, OOP, OS and every later subject; ideas are explained through
+    C++ and its standard library. `tests/syllabus/content.test.ts` fails on a `python`/`java`
+    block or the words "Python"/"Java" in any concept's name, scope or text, except in
+    `lang.java-core` and `lang.python-core` (still in the syllabus, dimmed while the primary
+    language is C++). Other languages appear only as a named real-world example of a systems idea
+    (Go's goroutines for M:N threading), never as code. "equals and hashCode in Java" became
+    "Equality and hashing" with its id kept (`renamed: true` in content, `(id: …)` in the spec).

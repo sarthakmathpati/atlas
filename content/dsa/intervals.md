@@ -56,22 +56,6 @@ vector<vector<int>> mergeIntervals(vector<vector<int>> iv) {
 }
 ```
 
-```python
-def merge_intervals(intervals):
-    out = []
-    for start, end in sorted(intervals):
-        if out and start <= out[-1][1]:
-            out[-1][1] = max(out[-1][1], end)
-        else:
-            out.append([start, end])
-    return out
-
-def free_time(schedules):
-    """Common free gaps given everyone's busy intervals."""
-    merged = merge_intervals([iv for person in schedules for iv in person])
-    return [[a[1], b[0]] for a, b in zip(merged, merged[1:])]
-```
-
 #### Complexity
 
 Sorting dominates: $O(n \log n)$ time. The merge pass is $O(n)$. Space $O(n)$ for the output ($O(\log n)$ to $O(n)$ for the sort).
@@ -193,35 +177,6 @@ vector<vector<int>> insertInterval(const vector<vector<int>>& iv, vector<int> nw
 }
 ```
 
-```python
-def insert_interval(intervals, new):
-    out, i, n = [], 0, len(intervals)
-    s, e = new
-    while i < n and intervals[i][1] < s:
-        out.append(intervals[i])
-        i += 1
-    while i < n and intervals[i][0] <= e:
-        s, e = min(s, intervals[i][0]), max(e, intervals[i][1])
-        i += 1
-    out.append([s, e])
-    out.extend(intervals[i:])
-    return out
-
-def remove_interval(intervals, to_remove):
-    """Remove the part of each (sorted, disjoint) interval covered by to_remove."""
-    rs, re = to_remove
-    out = []
-    for s, e in intervals:
-        if e <= rs or s >= re:          # no overlap (half-open semantics)
-            out.append([s, e])
-        else:
-            if s < rs:
-                out.append([s, rs])
-            if e > re:
-                out.append([re, e])
-    return out
-```
-
 #### Why three phases are enough
 
 Everything before the overlapping run ends before the new interval starts, and everything after it starts after the (possibly grown) new interval ends. The merged interval only grows while it absorbs the run, and the run is contiguous because the list is sorted and disjoint. So one forward scan sees each interval once and places it in exactly one phase.
@@ -235,7 +190,7 @@ $O(n)$ time and $O(n)$ output space. With binary search the boundaries take $O(\
 - The new interval before all others, after all others, or covering all of them.
 - Empty list: the result is just the new interval.
 - Touching: `[1,2]` and new `[2,3]`: with `end < start` for "before" and `start <= end` for "overlap" they merge into `[1,3]`.
-- Mutating the input's inner arrays in Python when copying (use copies if the caller keeps the input).
+- Sorting or merging the caller's vector in place when they still need it; take it by value (a copy) or say that you modify it.
 
 #### Variants
 
@@ -343,24 +298,6 @@ int minArrows(vector<vector<int>> balloons) {
         if (b[0] > shot) { arrows++; shot = b[1]; }   // not hit: needs a new arrow
     return arrows;
 }
-```
-
-```python
-def max_non_overlapping(intervals):
-    kept, last_end = [], float("-inf")
-    for s, e in sorted(intervals, key=lambda iv: iv[1]):
-        if s >= last_end:
-            kept.append([s, e])
-            last_end = e
-    return kept
-
-def min_arrows(balloons):
-    arrows, shot = 0, float("-inf")
-    for s, e in sorted(balloons, key=lambda b: b[1]):
-        if s > shot:
-            arrows += 1
-            shot = e
-    return arrows
 ```
 
 #### Why sorting by end is correct (exchange argument)
@@ -486,24 +423,6 @@ long long coveredLength(const vector<pair<long long, long long>>& iv) {
     }
     return total;
 }
-```
-
-```python
-import heapq
-
-def skyline(buildings):
-    """buildings: [left, right, height]; returns key points [x, height]."""
-    events = sorted([(l, -h, r) for l, r, h in buildings] + [(r, 0, 0) for _, r, _ in buildings])
-    result, live = [], [(0, float("inf"))]          # max-heap of (-height, right edge)
-    for x, neg_h, r in events:
-        while live[0][1] <= x:                      # drop buildings that have ended
-            heapq.heappop(live)
-        if neg_h:
-            heapq.heappush(live, (neg_h, r))
-        height = -live[0][0]
-        if not result or result[-1][1] != height:
-            result.append([x, height])
-    return result
 ```
 
 #### Complexity

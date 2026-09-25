@@ -47,36 +47,6 @@ int countNodes(TreeNode* root) {
 }
 ```
 
-```python
-class TreeNode:
-    def __init__(self, val=0, left=None, right=None):
-        self.val, self.left, self.right = val, left, right
-
-def build_level_order(values):
-    """Build a tree from a level-order list with None for missing nodes."""
-    if not values or values[0] is None:
-        return None
-    root = TreeNode(values[0])
-    queue, i = [root], 1
-    for node in queue:
-        if i < len(values) and values[i] is not None:
-            node.left = TreeNode(values[i])
-            queue.append(node.left)
-        i += 1
-        if i < len(values) and values[i] is not None:
-            node.right = TreeNode(values[i])
-            queue.append(node.right)
-        i += 1
-    return root
-
-def is_full(root):
-    if root is None:
-        return True
-    if (root.left is None) != (root.right is None):
-        return False                     # exactly one child
-    return is_full(root.left) and is_full(root.right)
-```
-
 #### Worked example
 
 ```
@@ -209,27 +179,6 @@ vector<int> postorderIterative(TreeNode* root) {
     reverse(out.begin(), out.end());
     return out;
 }
-```
-
-```python
-def preorder_iterative(root):
-    out, st = [], [root] if root else []
-    while st:
-        node = st.pop()
-        out.append(node.val)
-        if node.right:
-            st.append(node.right)    # pushed first, so visited after the left subtree
-        if node.left:
-            st.append(node.left)
-    return out
-
-def inorder_recursive(root, out=None):
-    out = [] if out is None else out
-    if root:
-        inorder_recursive(root.left, out)
-        out.append(root.val)
-        inorder_recursive(root.right, out)
-    return out
 ```
 
 #### Recursive or iterative?
@@ -380,30 +329,6 @@ int widthOfBinaryTree(TreeNode* root) {
 }
 ```
 
-```python
-from collections import deque
-
-def zigzag(root):
-    out, q, left_to_right = [], deque([root] if root else []), True
-    while q:
-        level = [q.popleft() for _ in range(len(q))]
-        vals = [n.val for n in level]
-        out.append(vals if left_to_right else vals[::-1])
-        left_to_right = not left_to_right
-        for n in level:
-            q.extend(c for c in (n.left, n.right) if c)
-    return out
-
-def right_side_view(root):
-    view, q = [], deque([root] if root else [])
-    while q:
-        view.append(q[-1].val)            # the last node of this level
-        for _ in range(len(q)):
-            n = q.popleft()
-            q.extend(c for c in (n.left, n.right) if c)
-    return view
-```
-
 #### BFS or DFS for per-level questions?
 
 Anything phrased "per level" can also be done with DFS by passing the depth and writing into `result[depth]`: the right side view becomes "the first node seen at each depth when visiting right before left". DFS uses $O(h)$ space instead of $O(w)$, which is better for wide, shallow trees. BFS is more natural when the order within a level matters or when you want to stop at the first level that meets a condition.
@@ -544,35 +469,6 @@ int maxPathSum(TreeNode* root) {
 }
 ```
 
-```python
-def is_balanced(root):
-    def height(node):                    # -1 means "not balanced below here"
-        if node is None:
-            return 0
-        lh = height(node.left)
-        if lh < 0:
-            return -1
-        rh = height(node.right)
-        if rh < 0 or abs(lh - rh) > 1:
-            return -1
-        return 1 + max(lh, rh)
-    return height(root) >= 0
-
-def longest_univalue_path(root):
-    best = 0
-    def down(node):
-        nonlocal best
-        if node is None:
-            return 0
-        l, r = down(node.left), down(node.right)
-        l = l + 1 if node.left and node.left.val == node.val else 0
-        r = r + 1 if node.right and node.right.val == node.val else 0
-        best = max(best, l + r)
-        return max(l, r)
-    down(root)
-    return best
-```
-
 #### Complexity
 
 One postorder pass: $O(n)$ time, $O(h)$ space. The naive balanced check that recomputes heights at every node is $O(n^2)$ on a chain, which is why the combined "height or −1" return matters.
@@ -699,30 +595,6 @@ int pathSumIII(TreeNode* root, long long target) {
 }
 ```
 
-```python
-def has_path_sum(root, target):
-    if root is None:
-        return False
-    target -= root.val
-    if root.left is None and root.right is None:
-        return target == 0
-    return has_path_sum(root.left, target) or has_path_sum(root.right, target)
-
-def all_root_to_leaf_paths(root):
-    paths, path = [], []
-    def dfs(node):
-        if node is None:
-            return
-        path.append(node.val)
-        if node.left is None and node.right is None:
-            paths.append(list(path))
-        dfs(node.left)
-        dfs(node.right)
-        path.pop()                     # backtrack
-    dfs(root)
-    return paths
-```
-
 #### Complexity
 
 Each node is visited once: $O(n)$ time, $O(h)$ stack. Collecting all paths costs $O(n \cdot h)$ for copying the output. Path sum III is $O(n)$ with the prefix map (versus $O(n^2)$ by starting a search at every node).
@@ -838,33 +710,6 @@ TreeNode* lca(TreeNode* root, TreeNode* p, TreeNode* q) {
     if (l && r) return root;                           // p and q on different sides
     return l ? l : r;                                  // pass up whatever was found
 }
-```
-
-```python
-def lca_with_parents(p, q):
-    """Nodes have a .parent pointer; walk up like intersecting two linked lists."""
-    a, b = p, q
-    while a is not b:
-        a = a.parent if a else q
-        b = b.parent if b else p
-    return a
-
-def lca_safe(root, p, q):
-    """Returns None unless both p and q are in the tree."""
-    found = 0
-    def dfs(node):
-        nonlocal found
-        if node is None:
-            return None
-        left, right = dfs(node.left), dfs(node.right)
-        if node is p or node is q:
-            found += 1
-            return node
-        if left and right:
-            return node
-        return left or right
-    ans = dfs(root)
-    return ans if found == 2 else None
 ```
 
 #### Complexity

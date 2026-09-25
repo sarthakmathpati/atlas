@@ -67,15 +67,6 @@ int main() {
 }
 ```
 
-```python
-import os
-
-fd = os.open("notes.txt", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
-n = os.write(fd, b"hello kernel\n")
-os.close(fd)
-print(f"pid {os.getpid()} wrote {n} bytes")
-```
-
 Neither program knows which disk sector holds the file, which physical memory holds its variables, or which CPU core it runs on. That ignorance is the abstraction working.
 
 #### Kernel vs OS
@@ -215,7 +206,7 @@ A system call is how a program asks the operating system to do something it is n
 - A **system call** is the programming interface between a process and the kernel: a controlled entry into kernel mode to request a service.
 - Categories: **process control** (`fork`, `exec`, `exit`, `wait`), **file management** (`open`, `read`, `write`, `close`, `lseek`), **device management** (`ioctl`), **information** (`getpid`, `time`), **communication** (`pipe`, `socket`, `mmap`, `shmget`), **protection** (`chmod`, `setuid`).
 - Mechanism on Linux x86-64: the C library wrapper puts the **syscall number** in `rax` and arguments in registers, executes `syscall`; the kernel looks up the handler in the **system call table**, validates arguments, does the work and returns a value (a negative error becomes `-1` plus `errno` in C).
-- Programs rarely call them directly: `printf`, `fopen`, `std::thread` and Python's `open` are library functions that make system calls underneath. **POSIX** standardizes the Unix-style interface; Windows exposes the Win32 API over its native calls.
+- Programs rarely call them directly: `printf`, `fopen`, `std::ofstream` and `std::thread` are library functions that make system calls underneath. **POSIX** standardizes the Unix-style interface; Windows exposes the Win32 API over its native calls.
 - Each call has a fixed cost (the mode switch, checks, cache effects), so **buffering** batches work: `printf` fills a buffer and calls `write` once per few kilobytes.
 - `strace` (Linux) and `dtruss` (macOS) list the system calls a program makes; a great debugging tool.
 
@@ -267,18 +258,6 @@ Things to notice:
 | `printf` became one `write(1, …)` | the C library formats in user space and makes one call |
 
 Buffering matters: a loop that `printf`s 1,000 short lines to a file produced only **3** `write` calls with glibc, because stdio flushes about 4 KB at a time. Writing each line with `write` directly would make 1,000 calls.
-
-#### Python makes the same calls
-
-```python
-import os
-
-r, w = os.pipe()                       # pipe(2): two new descriptors
-pid = os.getpid()                      # getpid(2)
-os.write(w, f"hello from {pid}\n".encode())   # write(2)
-os.close(w)
-print(os.read(r, 100).decode().strip()) # read(2)
-```
 
 #### Common system calls by category
 

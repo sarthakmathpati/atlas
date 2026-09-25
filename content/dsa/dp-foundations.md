@@ -73,25 +73,6 @@ int minCoinsDp(const vector<int>& coins, int amount) {         // O(amount * coi
 }
 ```
 
-```python
-from functools import lru_cache
-
-def climb_stairs(n):
-    a, b = 1, 1                  # ways[i-2], ways[i-1]
-    for _ in range(n - 1):
-        a, b = b, a + b
-    return b if n >= 1 else 1
-
-def min_coins_memo(coins, amount):
-    @lru_cache(maxsize=None)
-    def best(a):                 # min coins for amount a, or inf
-        if a == 0:
-            return 0
-        return min((best(a - c) + 1 for c in coins if c <= a), default=float("inf"))
-    ans = best(amount)
-    return -1 if ans == float("inf") else ans
-```
-
 #### Complexity
 
 Coin change: `amount + 1` states, each trying every coin: $O(\text{amount} \cdot k)$ time, $O(\text{amount})$ space. In general, count states and multiply by the transition cost; then check it against the constraints.
@@ -142,7 +123,7 @@ There are two ways to fill in DP answers. Memoization starts from the big questi
 - **Tabulation (bottom-up)**: loop over states in an order where dependencies are ready. No recursion, often faster, enables **space optimization**. Requires knowing the order.
 - Same asymptotic complexity in most problems.
 - Choose memoization when the state space is sparse or the order is awkward (DP on trees, on intervals, with complex states); tabulation when the order is simple and memory or speed matters.
-- Deep recursion (n = 10⁵) favors tabulation, especially in Python (recursion limit).
+- Deep recursion (n = 10⁵ or more) favors tabulation: there is no call stack to overflow.
 - Convert between them: the memo's recursive calls tell you the dependencies; tabulation fills states so those dependencies come first.
 
 ### deep
@@ -190,25 +171,6 @@ long long uniquePathsBottomUp(int R, int C) {
 }
 ```
 
-```python
-from functools import cache
-
-def unique_paths_top_down(R, C):
-    @cache
-    def paths(r, c):
-        if r == 0 or c == 0:
-            return 1
-        return paths(r - 1, c) + paths(r, c - 1)
-    return paths(R - 1, C - 1)
-
-def unique_paths_bottom_up(R, C):
-    row = [1] * C                      # one row suffices (see space optimization)
-    for _ in range(1, R):
-        for c in range(1, C):
-            row[c] += row[c - 1]
-    return row[-1]
-```
-
 #### Comparison
 
 | | Memoization | Tabulation |
@@ -227,7 +189,7 @@ Both: states × transition cost. Unique paths: $O(R \cdot C)$ time; memo and tab
 
 - Memo keys that miss a parameter (caching `f(i)` when the result also depends on `j`).
 - A sentinel like −1 that can also be a real answer; use a separate "computed" flag or `optional`.
-- Python `@cache` on a function with mutable arguments (lists aren't hashable), or reusing the cache between test cases with different inputs.
+- Reusing a memo table between test cases with different inputs (clear it, or make it local), or keying it by arguments that don't determine the answer.
 - Wrong fill order in tabulation: reading `dp[r][c+1]` before it's computed.
 
 Connects to: what DP is, memoization intro, space optimization, transitions and base cases.
@@ -240,7 +202,7 @@ Q: When is memoization easier or better?
 A: When the recurrence follows naturally from a brute-force recursion, when the computation order is awkward (trees, intervals, complex states), or when only a small fraction of states is actually reachable. It avoids computing states you never need.
 
 Q: When is tabulation better?
-A: When recursion would be very deep, when speed matters (no call overhead), and when you want to reduce memory with rolling arrays, which depends on a known fill order. It's also safer in Python, which has a low recursion limit.
+A: When recursion would be very deep, when speed matters (no call overhead), and when you want to reduce memory with rolling arrays, which depends on a known fill order. It also cannot overflow the call stack.
 
 Q: How do you convert a memoized solution into a tabulated one?
 A: Look at which states each call depends on, choose a loop order in which those states are always computed first (for example, increasing index or increasing length), initialize the base cases, and replace recursive calls with table reads.
@@ -301,19 +263,6 @@ int minCostPaint(const vector<array<int, 3>>& cost) {
     }
     return *min_element(dp.begin(), dp.end());
 }
-```
-
-```python
-def longest_arithmetic_subsequence(nums):
-    """State (i, diff): the longest arithmetic subsequence ending at i with difference diff."""
-    dp = [{} for _ in nums]
-    best = 1 if nums else 0
-    for i in range(len(nums)):
-        for j in range(i):
-            d = nums[i] - nums[j]
-            dp[i][d] = dp[j].get(d, 1) + 1
-            best = max(best, dp[i][d])
-    return best
 ```
 
 The second example shows a state with an extra parameter (the common difference) stored sparsely in hash maps: the future of a subsequence depends on its last element and its difference, nothing else.
@@ -414,22 +363,6 @@ int numDecodings(const string& s) {
     }
     return (int)dp[n];
 }
-```
-
-```python
-def min_cost_tickets(days, costs):
-    """Travel days (sorted); passes of 1, 7, 30 days with given costs. Minimum total cost."""
-    travel = set(days)
-    last = days[-1]
-    dp = [0] * (last + 1)                    # dp[d]: min cost to cover travel days up to d
-    for d in range(1, last + 1):
-        if d not in travel:
-            dp[d] = dp[d - 1]                # nothing to cover today
-            continue
-        dp[d] = min(dp[d - 1] + costs[0],    # last decision: which pass covers day d
-                    dp[max(0, d - 7)] + costs[1],
-                    dp[max(0, d - 30)] + costs[2])
-    return dp[last]
 ```
 
 #### Choosing base cases well
@@ -539,25 +472,6 @@ int lcsTwoRows(const string& a, const string& b) {
 }
 ```
 
-```python
-def knapsack_01_one_row(weights, values, cap):
-    dp = [0] * (cap + 1)
-    for w, v in zip(weights, values):
-        for c in range(cap, w - 1, -1):      # downward: dp[c - w] is still last item's row
-            dp[c] = max(dp[c], dp[c - w] + v)
-    return dp[cap]
-
-def edit_distance_one_row(a, b):
-    row = list(range(len(b) + 1))            # distances from "" to prefixes of b
-    for i in range(1, len(a) + 1):
-        diag, row[0] = row[0], i             # diag holds the old row[j-1] (the top-left cell)
-        for j in range(1, len(b) + 1):
-            above = row[j]
-            row[j] = diag if a[i - 1] == b[j - 1] else 1 + min(diag, above, row[j - 1])
-            diag = above
-    return row[len(b)]
-```
-
 #### A procedure that always works
 
 1. Write the full-table solution and make sure it is correct.
@@ -643,7 +557,7 @@ Q: Why do counting problems ask for the answer modulo 1e9+7?
 A: The counts grow exponentially and overflow any fixed-width integer. Taking the result modulo a large prime keeps numbers small while still letting the judge check the exact answer's residue. 1e9 + 7 is prime and small enough that the product of two residues fits in 64 bits.
 
 Q: How do you subtract safely under a modulus?
-A: Compute ((a − b) % M + M) % M. In C++ and Java, % can return a negative number for a negative left operand, so adding M before the final modulus keeps the result in [0, M).
+A: Compute ((a − b) % M + M) % M. In C++, % can return a negative number for a negative left operand, so adding M before the final modulus keeps the result in [0, M).
 
 Q: Can you divide under a modulus?
 A: Not directly. Multiply by the modular inverse instead: for a prime modulus M and b not divisible by M, the inverse is b^(M − 2) mod M by Fermat's little theorem, computed with fast exponentiation.

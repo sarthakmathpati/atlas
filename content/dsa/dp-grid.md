@@ -70,24 +70,6 @@ int minPathSumGrid(const vector<vector<int>>& g) {
 }
 ```
 
-```python
-from math import comb
-
-def unique_paths_formula(R, C):
-    """Choose which of the R + C - 2 moves are the R - 1 downward ones."""
-    return comb(R + C - 2, R - 1)
-
-def min_path_sum(grid):
-    R, C = len(grid), len(grid[0])
-    row = [float("inf")] * C
-    row[0] = 0
-    for r in range(R):
-        row[0] += grid[r][0]
-        for c in range(1, C):
-            row[c] = grid[r][c] + min(row[c], row[c - 1])
-    return row[-1]
-```
-
 #### Complexity
 
 $O(R \cdot C)$ time. Space $O(R \cdot C)$ for the full table, $O(C)$ with one row. The combinatorial formula is $O(\min(R, C))$ but doesn't handle obstacles.
@@ -233,19 +215,6 @@ int maximalSquare(const vector<vector<char>>& m) {
     }
     return best * best;
 }
-```
-
-```python
-def count_squares(matrix):
-    R, C = len(matrix), len(matrix[0])
-    dp = [[0] * C for _ in range(R)]
-    total = 0
-    for r in range(R):
-        for c in range(C):
-            if matrix[r][c]:
-                dp[r][c] = 1 if r == 0 or c == 0 else 1 + min(dp[r - 1][c], dp[r][c - 1], dp[r - 1][c - 1])
-                total += dp[r][c]            # squares of side 1..dp[r][c] end here
-    return total
 ```
 
 #### Complexity

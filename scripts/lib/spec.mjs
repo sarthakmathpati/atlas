@@ -47,18 +47,22 @@ function parseList(value) {
     .filter(Boolean);
 }
 
-/** Parses one concept bullet: "- [M] (pattern) Kadane's algorithm: maximum subarray sum ..." */
+/** Parses one concept bullet: "- [M] (pattern) Kadane's algorithm: maximum subarray sum ...".
+ *  "(id: old-slug)" keeps an older id after a rename. */
 export function parseConceptBullet(line) {
   const m = line.match(/^- \[([MIA])\]\s*(.*)$/);
   if (!m) return null;
   let rest = m[2];
   let tracks = null;
   let isPattern = false;
+  let idSlug = null;
   for (;;) {
     const tag = rest.match(/^\(([^)]*)\)\s*/);
     if (!tag) break;
     const words = tag[1].split(",").map((w) => w.trim());
-    if (words.length === 1 && words[0] === "pattern") isPattern = true;
+    const kept = tag[1].match(/^id:\s*([a-z0-9-]+)$/);
+    if (kept) idSlug = kept[1]; // "(id: old-slug)": the id kept after a rename
+    else if (words.length === 1 && words[0] === "pattern") isPattern = true;
     else if (words.every((w) => TRACK_WORDS.has(w))) tracks = words;
     else break; // a parenthesis that is part of the name
     rest = rest.slice(tag[0].length);
@@ -66,7 +70,7 @@ export function parseConceptBullet(line) {
   const colon = rest.indexOf(":");
   const name = (colon < 0 ? rest : rest.slice(0, colon)).trim();
   const scope = (colon < 0 ? rest : rest.slice(colon + 1)).trim();
-  return { importance: IMPORTANCE[m[1]], tracks, isPattern, name, scope };
+  return { importance: IMPORTANCE[m[1]], tracks, isPattern, idSlug, name, scope };
 }
 
 /** Returns subjects with nested topics and concepts, in spec order. */
@@ -110,7 +114,7 @@ export function parseSpecSyllabus(spec) {
       const concept = parseConceptBullet(line);
       if (concept) {
         concept.order = topic.concepts.length + 1;
-        concept.id = `${topic.id}.${slugify(concept.name)}`;
+        concept.id = `${topic.id}.${concept.idSlug ?? slugify(concept.name)}`;
         topic.concepts.push(concept);
       }
     }

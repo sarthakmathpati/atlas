@@ -68,31 +68,6 @@ long long maxArea(const vector<int>& h) {
 }
 ```
 
-```python
-def is_palindrome(s):
-    l, r = 0, len(s) - 1
-    while l < r:
-        if not s[l].isalnum():
-            l += 1
-        elif not s[r].isalnum():
-            r -= 1
-        elif s[l].lower() != s[r].lower():
-            return False
-        else:
-            l, r = l + 1, r - 1
-    return True
-
-def max_area(h):
-    l, r, best = 0, len(h) - 1, 0
-    while l < r:
-        best = max(best, min(h[l], h[r]) * (r - l))
-        if h[l] < h[r]:
-            l += 1
-        else:
-            r -= 1
-    return best
-```
-
 Time $O(n)$, space $O(1)$.
 
 #### Why moving the shorter wall is safe
@@ -213,23 +188,6 @@ void moveZeroes(vector<int>& a) {
     for (int read = 0; read < (int)a.size(); read++)
         if (a[read] != 0) swap(a[write++], a[read]);
 }
-```
-
-```python
-def keep_at_most_k(a, k):
-    write = 0
-    for x in a:
-        if write < k or a[write - k] != x:
-            a[write] = x
-            write += 1
-    return write
-
-def move_zeroes(a):
-    write = 0
-    for read in range(len(a)):
-        if a[read] != 0:
-            a[write], a[read] = a[read], a[write]
-            write += 1
 ```
 
 Time $O(n)$, space $O(1)$.
@@ -359,25 +317,6 @@ int findDuplicate(const vector<int>& a) {
 }
 ```
 
-```python
-def is_happy(n):
-    def nxt(x):
-        return sum(int(d) ** 2 for d in str(x))
-    slow, fast = n, nxt(n)
-    while fast != 1 and slow != fast:
-        slow, fast = nxt(slow), nxt(nxt(fast))
-    return fast == 1
-
-def find_duplicate(a):
-    slow, fast = a[0], a[a[0]]
-    while slow != fast:
-        slow, fast = a[slow], a[a[fast]]
-    slow = 0
-    while slow != fast:
-        slow, fast = a[slow], a[fast]
-    return slow
-```
-
 #### Why the second phase finds the cycle start
 
 Let the distance from the start to the cycle entrance be $\mu$ and the cycle length $\lambda$. When they meet, slow has walked $d$ steps and fast $2d$, and the difference $d$ is a multiple of $\lambda$. Slow is $d - \mu$ steps into the cycle; walking $\mu$ more steps puts it at $d$ steps into the cycle from the entrance, which is back at the entrance because $d$ is a multiple of $\lambda$. A pointer walking $\mu$ steps from the start also arrives at the entrance, so they meet there.
@@ -501,33 +440,6 @@ void mergeIntoFirst(vector<int>& a, int m, const vector<int>& b, int n) {
 }
 ```
 
-```python
-def merge_sorted(a, b):
-    out, i, j = [], 0, 0
-    while i < len(a) and j < len(b):
-        if a[i] <= b[j]:
-            out.append(a[i])
-            i += 1
-        else:
-            out.append(b[j])
-            j += 1
-    out.extend(a[i:])
-    out.extend(b[j:])
-    return out
-
-def intersect_sorted(a, b):
-    out, i, j = [], 0, 0
-    while i < len(a) and j < len(b):
-        if a[i] == b[j]:
-            out.append(a[i])
-            i, j = i + 1, j + 1
-        elif a[i] < b[j]:
-            i += 1
-        else:
-            j += 1
-    return out
-```
-
 Time $O(n + m)$. The in-place version uses $O(1)$ extra space.
 
 #### Edge cases and bugs
@@ -644,38 +556,6 @@ vector<vector<int>> threeSum(vector<int> a) {
     }
     return out;
 }
-```
-
-```python
-def k_sum(a, target, k):
-    """All unique k-tuples (as lists) from a with the given sum; a must be sorted."""
-    def two_sum(start, t):
-        out, l, r = [], start, len(a) - 1
-        while l < r:
-            s = a[l] + a[r]
-            if s < t or (l > start and a[l] == a[l - 1]):
-                l += 1
-            elif s > t or (r < len(a) - 1 and a[r] == a[r + 1]):
-                r -= 1
-            else:
-                out.append([a[l], a[r]])
-                l, r = l + 1, r - 1
-        return out
-
-    def solve(start, t, k):
-        if k == 2:
-            return two_sum(start, t)
-        out = []
-        for i in range(start, len(a) - k + 1):
-            if i > start and a[i] == a[i - 1]:
-                continue
-            for rest in solve(i + 1, t - a[i], k - 1):
-                out.append([a[i]] + rest)
-        return out
-
-    return solve(0, target, k)
-
-# four_sums = k_sum(sorted(nums), target, 4)
 ```
 
 #### Complexity
@@ -798,22 +678,6 @@ long long trap(const vector<int>& h) {
     }
     return water;
 }
-```
-
-```python
-def trap(h):
-    l, r = 0, len(h) - 1
-    left_max = right_max = water = 0
-    while l < r:
-        if h[l] < h[r]:
-            left_max = max(left_max, h[l])
-            water += left_max - h[l]
-            l += 1
-        else:
-            right_max = max(right_max, h[r])
-            water += right_max - h[r]
-            r -= 1
-    return water
 ```
 
 Time $O(n)$, space $O(1)$.

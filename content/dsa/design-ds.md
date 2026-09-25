@@ -20,7 +20,7 @@ An LRU cache keeps a limited number of items and, when it's full, throws out the
 - **Hash map** key → list node; **doubly linked list** ordered from most to least recently used.
 - `get`: if present, move the node to the front and return its value. `put`: update and move to the front, or insert at the front; if over capacity, remove the **back** node and erase its key from the map.
 - Use **sentinel head and tail** nodes; store the **key** in each node so eviction can erase the map entry.
-- C++: `list<pair<K,V>>` plus `unordered_map<K, list::iterator>` with `splice`. Java: `LinkedHashMap` with access order and `removeEldestEntry`. Python: `OrderedDict` with `move_to_end` and `popitem(last=False)`.
+- In C++: `list<pair<K, V>>` for recency order plus `unordered_map<K, list<pair<K, V>>::iterator>`; `splice` moves an entry to the front in O(1).
 - Follow-ups: thread safety (a lock, or sharded caches), TTL expiry, LFU instead of LRU.
 
 ### deep
@@ -74,62 +74,15 @@ public:
 };
 ```
 
-```python
-class Node:
-    __slots__ = ("key", "value", "prev", "next")
-    def __init__(self, key=0, value=0):
-        self.key, self.value, self.prev, self.next = key, value, None, None
-
-class LRUCacheManual:
-    """Explicit doubly linked list with sentinels (what interviewers usually want to see)."""
-    def __init__(self, capacity):
-        self.capacity, self.map = capacity, {}
-        self.head, self.tail = Node(), Node()          # head.next = most recent
-        self.head.next, self.tail.prev = self.tail, self.head
-
-    def _remove(self, node):
-        node.prev.next, node.next.prev = node.next, node.prev
-
-    def _add_front(self, node):
-        node.prev, node.next = self.head, self.head.next
-        self.head.next.prev = node
-        self.head.next = node
-
-    def get(self, key):
-        node = self.map.get(key)
-        if node is None:
-            return -1
-        self._remove(node)
-        self._add_front(node)
-        return node.value
-
-    def put(self, key, value):
-        if self.capacity <= 0:
-            return
-        if key in self.map:
-            node = self.map[key]
-            node.value = value
-            self._remove(node)
-            self._add_front(node)
-            return
-        if len(self.map) == self.capacity:
-            lru = self.tail.prev
-            self._remove(lru)
-            del self.map[lru.key]                      # the node stores its key for this
-        node = Node(key, value)
-        self.map[key] = node
-        self._add_front(node)
-```
-
 #### Complexity
 
 `get` and `put` are $O(1)$ average (hash map operations plus constant pointer updates). Space $O(\text{capacity})$.
 
 #### Why each piece is there
-The node keeps its own key because eviction starts from the list, not the map: you find the least recent node at the tail and then need its key to delete the map entry. The sentinels remove every special case for an empty list or for the first and last node, so `_remove` and `_add_front` are two lines each. A singly linked list would not do, because removing a node from the middle needs its predecessor, and finding it would take linear time.
+Each list entry keeps its own key because eviction starts from the list, not the map: `order.back().first` names the map entry to erase. `splice` relinks a node at the front in O(1) without invalidating iterators, which is why the map can safely store list iterators. A singly linked list would not do, because removing a node from the middle needs its predecessor, and finding it would take linear time.
 
 #### Library shortcuts, and when to avoid them
-Python's `OrderedDict` (with `move_to_end` and `popitem(last=False)`) and Java's `LinkedHashMap` (with access order and `removeEldestEntry`) already are a hash map threaded through a linked list. They are fine to mention, and fine in production code, but most interviewers ask you to build the list yourself, so write the manual version unless told otherwise.
+`std::list` saves you from writing the linked list, and most interviewers accept it. Some ask you to build the list yourself: then write a doubly linked list of nodes with `prev` and `next` pointers and use sentinel head and tail nodes, so `remove(node)` and `addFront(node)` are two lines each with no special cases for an empty list or the first and last node.
 
 #### Edge cases and bugs
 

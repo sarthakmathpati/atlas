@@ -314,9 +314,11 @@ function loadContent(contentDir) {
         if (meta.tracks) checkTracks(meta.tracks, where);
         const slug = block.id.slice(topic.id.length + 1);
         if (!ID_PART.test(slug)) throw new BuildError(`${where}: bad concept id "${block.id}"`);
-        if (slug !== slugify(meta.name)) {
+        // `renamed: true` marks a concept whose name changed after it shipped: the id stays, so
+        // saved progress keeps pointing at it.
+        if (slug !== slugify(meta.name) && meta.renamed !== true) {
           warnings.push(
-            `${where}: id "${block.id}" does not match the slug of its name ("${slugify(meta.name)}"). Fine after a rename; add an idAliases entry if the id changed.`,
+            `${where}: id "${block.id}" does not match the slug of its name ("${slugify(meta.name)}"). After a rename, keep the id and add "renamed: true" (or change it and add an ID_ALIASES entry).`,
           );
         }
         concepts.push({

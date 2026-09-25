@@ -19,8 +19,7 @@ Computers store integers as rows of bits, zeros and ones, and bitwise operators 
 - **Two's complement**: negative x is stored as `~|x| + 1`; an n-bit signed int ranges from −2ⁿ⁻¹ to 2ⁿ⁻¹ − 1; the top bit is the sign.
 - XOR facts: `x ^ x = 0`, `x ^ 0 = x`, commutative and associative, so pairs cancel.
 - Pitfalls: operator precedence (`a & b == c` parses as `a & (b == c)`; use parentheses), shifting by ≥ the bit width is undefined in C++, `1 << 31` overflows a 32-bit int (use `1LL` or `1U`).
-- Right shift of negatives: arithmetic (sign-extending) in Java `>>` and Python, logical in Java `>>>`; C++20 defines it as arithmetic.
-- Python integers are unbounded: mask with `& 0xFFFFFFFF` to imitate 32-bit behavior.
+- Right shift of a negative signed value is arithmetic (it copies the sign bit) since C++20 and implementation-defined before; shift an `unsigned` value when you need zeros shifted in.
 
 ### deep
 #### Intuition
@@ -74,16 +73,6 @@ uint32_t reverseBits(uint32_t x) {
 bool oppositeSigns(int a, int b) { return (a ^ b) < 0; }   // sign bits differ
 ```
 
-```python
-def to_signed_32(x):
-    """Interpret the low 32 bits of a Python int as a signed 32-bit value."""
-    x &= 0xFFFFFFFF
-    return x - (1 << 32) if x & (1 << 31) else x
-
-def hamming_distance(a, b):
-    return bin(a ^ b).count("1")   # differing bits are exactly the 1s of a XOR b
-```
-
 #### Complexity
 
 Each bitwise operation is $O(1)$ on machine words. Loops over bits are $O(w)$ for a $w$-bit word (32 or 64).
@@ -93,7 +82,7 @@ Each bitwise operation is $O(1)$ on machine words. Loops over bits are $O(w)$ fo
 - Precedence: `==` binds tighter than `&`, `^`, `|`; always parenthesize `(x & mask) == 0`.
 - `1 << 31` is undefined for `int` in older C++ (overflow); `1 << 32` is undefined for any 32-bit type.
 - `~0` is −1 (all ones), not 1.
-- Python's `~x` is `-x - 1` and `>>` never loses the sign; emulate fixed width with masks.
+- `~x` equals `-x - 1` in two's complement; cast to `unsigned` before bit tricks on negative values.
 - Mixing signed and unsigned in C++ comparisons leads to surprising results.
 
 #### Variants
@@ -115,10 +104,10 @@ Q: What do left and right shifts compute?
 A: x << k multiplies x by 2^k (if it doesn't overflow), and x >> k divides a non-negative x by 2^k, rounding down. For negative numbers, an arithmetic right shift keeps the sign and rounds toward negative infinity.
 
 Q: What is a common precedence bug with bitwise operators?
-A: Writing x & 1 == 0, which parses as x & (1 == 0) in C, C++ and Java because comparison binds tighter than bitwise AND. Parenthesize: (x & 1) == 0.
+A: Writing x & 1 == 0, which parses as x & (1 == 0) in C and C++ because comparison binds tighter than bitwise AND. Parenthesize: (x & 1) == 0.
 
-Q: What is the difference between >> and >>> in Java?
-A: >> is an arithmetic shift that copies the sign bit into the vacated positions, so negative numbers stay negative. >>> is a logical shift that fills with zeros, treating the value as unsigned.
+Q: What is the difference between shifting a signed and an unsigned value right in C++?
+A: For unsigned types, >> is a logical shift that fills the vacated bits with zeros. For a negative signed value it is an arithmetic shift that copies the sign bit, guaranteed since C++20, so -8 >> 1 is -4. Cast to unsigned when you need zeros shifted in.
 
 ## dsa.bits.single-bit-tricks
 name: "Single-bit tricks"
@@ -169,20 +158,6 @@ bool isPowerOfTwo(long long x) { return x > 0 && (x & (x - 1)) == 0; }
 int lowestIndex(unsigned long long x) { return __builtin_ctzll(x); }
 ```
 
-```python
-def bits_set(x):
-    """Indices of the set bits of a non-negative int, lowest first."""
-    out = []
-    while x:
-        low = x & -x                 # isolate the lowest set bit
-        out.append(low.bit_length() - 1)
-        x &= x - 1                   # clear it
-    return out
-
-def is_power_of_four(n):
-    return n > 0 and n & (n - 1) == 0 and n & 0x55555555 != 0   # the single 1 is at an even position
-```
-
 #### Where these show up
 
 Flags packed into one integer (a set of features, a visited set of up to 64 items) are read and changed with exactly these four operations. `x & -x` drives Fenwick trees, `x & (x - 1)` counts bits and tests powers of two, and "is bit i set" is the inner test of every bitmask DP. Memorize the four one-liners and the two lowest-bit identities; most bit problems combine them.
@@ -196,7 +171,7 @@ Every operation is $O(1)$. Iterating over set bits with `x &= x - 1` takes $O(\t
 - `1 << 40` with a 32-bit `1`: use `1LL << 40`.
 - `x & -x` for the most negative value (`INT_MIN`): `-x` overflows in signed arithmetic; use unsigned types.
 - `isPowerOfTwo(0)` must be false; hence `x > 0`.
-- Python's `0x55555555` covers 32 bits; larger inputs need a wider mask.
+- The mask `0x55555555` covers 32 bits; 64-bit inputs need `0x5555555555555555ULL`.
 
 #### Variants
 
@@ -290,29 +265,13 @@ pair<int, int> twoSingles(const vector<int>& a) {
 }
 ```
 
-```python
-def single_number_thrice(nums):
-    """Every number appears three times except one; bitwise state machine."""
-    ones = twos = 0
-    for x in nums:
-        ones = (ones ^ x) & ~twos       # bits seen 1 time (mod 3)
-        twos = (twos ^ x) & ~ones       # bits seen 2 times (mod 3)
-    return ones
-
-def xor_range(a, b):
-    """XOR of all integers from a to b (inclusive), using the period-4 pattern of 0^1^...^n."""
-    def upto(n):
-        return [n, 1, n + 1, 0][n % 4] if n >= 0 else 0
-    return upto(b) ^ upto(a - 1)
-```
-
 #### Complexity
 
 $O(n)$ time, $O(1)$ space for all of these.
 
 #### Edge cases and bugs
 
-- Negative numbers work with XOR; in Python, the "three times" machine works for negatives too because Python ints behave like infinite two's complement.
+- Negative numbers work, since XOR and per-bit counting act on the two's complement bits; build the answer in an `unsigned` to avoid signed-shift trouble.
 - `diff & -diff` with `diff = INT_MIN` overflows for signed ints; use unsigned.
 - XOR swap on the same memory location zeroes it.
 
@@ -377,7 +336,7 @@ scope: "popcount, Brian Kernighan's method, DP counting bits"
 Counting set bits means counting how many 1s appear in a number's binary form, called its popcount. The quick trick is to repeatedly erase the lowest 1 until the number becomes zero, counting the erasures. To get counts for every number up to n, reuse earlier answers: a number has the same count as itself shifted right, plus its last bit.
 
 ### interview
-- Built-ins: C++ `__builtin_popcount` / `__builtin_popcountll` / C++20 `std::popcount`, Java `Integer.bitCount`, Python `int.bit_count()` (3.10+) or `bin(x).count("1")`.
+- Built-ins: `__builtin_popcount` / `__builtin_popcountll` (GCC and Clang) and C++20 `std::popcount` (for unsigned types).
 - **Brian Kernighan**: `while (x) { x &= x - 1; count++; }`: O(number of set bits).
 - **Counting bits for 0..n** in O(n): `bits[i] = bits[i >> 1] + (i & 1)`, or `bits[i] = bits[i & (i - 1)] + 1`.
 - **Hamming distance** = popcount(a ^ b). **Total Hamming distance** over pairs: per bit, ones × zeros.
@@ -463,28 +422,6 @@ long long nextSamePopcount(long long x) {
 }
 ```
 
-```python
-def subsets_with_sum(nums, target):
-    """All index subsets (as masks) whose sum equals target, by brute force over masks."""
-    n, found = len(nums), []
-    for mask in range(1 << n):
-        if sum(nums[i] for i in range(n) if mask >> i & 1) == target:
-            found.append(mask)
-    return found
-
-def k_subsets(n, k):
-    """All masks of n bits with exactly k ones, in increasing order."""
-    if k == 0:
-        return [0]
-    out, x = [], (1 << k) - 1
-    while x < 1 << n:
-        out.append(x)
-        low = x & -x
-        ripple = x + low
-        x = ripple | (((x ^ ripple) >> 2) // low)
-    return out
-```
-
 #### Why submask enumeration over all masks is O(3ⁿ)
 
 Each item is, relative to a pair (mask, submask), in one of three states: outside the mask, in the mask but not the submask, or in both. So the number of (mask, submask) pairs is $3^n$.
@@ -552,7 +489,7 @@ scope: "add without plus, divide two integers, power of two checks"
 Basic arithmetic can be rebuilt from bit operations, which is how hardware does it. Adding two numbers is XOR for the digits that don't carry, plus AND shifted left for the carries, repeated until no carry is left. Division can be done by subtracting shifted copies of the divisor, like long division in base two.
 
 ### interview
-- **Add without +**: `while (b) { carry = (a & b) << 1; a ^= b; b = carry; }`. In C++ use unsigned to avoid signed overflow in the shift; in Python mask to 32 bits and convert back.
+- **Add without +**: `while (b) { carry = (a & b) << 1; a ^= b; b = carry; }`. Use unsigned arithmetic so the carry shift never overflows a signed int, then convert back.
 - **Subtract**: `a + (~b + 1)`.
 - **Divide two integers** without `*`, `/`, `%`: work with absolute values in 64 bits; for bit k from high to low, if `(divisor << k) <= remaining`, subtract it and add `1 << k` to the quotient. O(32). Handle the overflow case `INT_MIN / -1`.
 - **Multiply** by shifts and adds (Russian peasant): add `a << i` for each set bit i of b.
@@ -560,7 +497,7 @@ Basic arithmetic can be rebuilt from bit operations, which is how hardware does 
 
 ### questions
 Q: How do you add two integers without using + or −?
-A: XOR gives the sum without carries, and (a & b) << 1 gives the carries. Replace a with the XOR and b with the carries, and repeat until the carry is zero. Use unsigned arithmetic in C++, or 32-bit masks in Python, so negative numbers work.
+A: XOR gives the sum without carries, and (a & b) << 1 gives the carries. Replace a with the XOR and b with the carries, and repeat until the carry is zero. Use unsigned arithmetic so shifting the carries never overflows, which also makes negative numbers work.
 
 Q: How do you divide two integers using only shifts and subtraction?
 A: Take absolute values in a 64-bit type. For each bit position from high to low, if the divisor shifted left by k fits into what remains of the dividend, subtract it and set bit k of the quotient. Apply the sign at the end and clamp the one overflowing case, INT_MIN / −1.

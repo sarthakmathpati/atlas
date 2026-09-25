@@ -15,46 +15,44 @@ scope: "copy constructors, clone, copy assignment"
 A shallow copy duplicates an object's top layer but shares anything it points to, while a deep copy duplicates everything all the way down. Photocopying an address book page gives you the same addresses, but both copies still point at the same houses. A deep copy would be like building a second set of houses, so painting one never changes the other.
 
 ### interview
-- **Shallow copy**: copies each field's value; for pointers or references that value is an address, so the copy and the original **share** the pointed-to data.
-- **Deep copy**: also copies what the fields point to, recursively, so the copy is fully **independent**.
-- **C++**: the compiler-generated copy constructor and copy assignment copy member by member. With a raw owning pointer that is shallow, and both destructors free the same memory (**double free**). Fix with a user-written deep copy (rule of three) or, better, members like `vector` and `string` that copy themselves.
-- **Java**: `Object.clone()` is shallow and needs `Cloneable`; arrays' `clone()` is shallow too. Copy constructors or static factories (`new ArrayList<>(other)`) are usually clearer, and still shallow for the elements.
-- **Python**: assignment copies nothing; `copy.copy`, slicing and `list(x)` are shallow; `copy.deepcopy` is deep and handles cycles with a memo.
-- Immutable parts (strings, numbers, tuples of immutables) can be shared safely, so a shallow copy is enough for them.
+- **Shallow copy**: copies each member's value; for a pointer that value is an address, so the copy and the original **share** the pointed-to data.
+- **Deep copy**: also copies what the members point to, so the copy is fully **independent**.
+- The compiler-generated copy constructor and copy assignment copy **member by member**. With a raw owning pointer that is shallow, and both destructors free the same memory (**double free**).
+- Fix it with a user-written deep copy (rule of three) or, better, with members that copy themselves: `vector`, `string` and other containers copy their elements, so their copies are deep.
+- Containers of pointers copy only the pointers: copying a `vector<shared_ptr<T>>` shares every `T`; `unique_ptr` members make a class move-only until you write a copy.
+- Copying through a base-class pointer needs a virtual `clone()` (the prototype pattern), because constructors cannot be virtual.
 
 ### deep
 #### Intuition
 
-An object is a tree of values and references. A copy has to decide, at every reference, whether to copy the reference (share) or copy the thing it points to (duplicate). Shallow copies share below the first level; deep copies duplicate everything reachable.
+An object is a tree of values and pointers. A copy has to decide, at every pointer, whether to copy the pointer (share) or copy the thing it points to (duplicate). Shallow copies share below the first level; deep copies duplicate everything the object owns.
 
-#### Worked example in Python
+#### Worked example: what does a copy share?
 
-```python
-import copy
+```cpp
+int main() {
+    vector<vector<int>> grid = {{0, 0}, {0, 0}};
+    auto deep = grid;                                   // vector copies are deep: new rows
 
-grid = [[0, 0], [0, 0]]
-alias = grid                     # no copy at all
-shallow = copy.copy(grid)        # new outer list, same inner lists
-deep = copy.deepcopy(grid)       # new outer and inner lists
+    vector<shared_ptr<vector<int>>> rows = {make_shared<vector<int>>(2, 0),
+                                            make_shared<vector<int>>(2, 0)};
+    auto shallow = rows;                                // copies the pointers, not the rows
 
-grid[0][0] = 9
-print(alias[0][0], shallow[0][0], deep[0][0])   # 9 9 0
+    auto& alias = grid;                                 // not a copy at all
 
-grid.append([1, 1])
-print(len(alias), len(shallow), len(deep))      # 3 2 2
-
-rows = [[0] * 2] * 2             # the classic trap: one inner list, referenced twice
-rows[0][0] = 5
-print(rows)                      # [[5, 0], [5, 0]]
+    grid[0][0] = 9;
+    (*rows[0])[0] = 9;
+    cout << alias[0][0] << " " << deep[0][0] << " " << (*shallow[0])[0] << "\n";   // 9 0 9
+}
 ```
 
-| after `grid[0][0] = 9` | outer list shared? | inner lists shared? | sees the 9? |
+| after the write | outer container shared? | rows shared? | sees the 9? |
 |---|---|---|---|
-| alias | yes | yes | yes |
-| shallow | no | yes | yes |
-| deep | no | no | no |
+| `alias` (a reference) | yes | yes | yes |
+| `deep` (`vector<vector<int>>` copy) | no | no | no |
+| `shallow` (`vector<shared_ptr<...>>` copy) | no | yes | yes |
 
-#### C++: when the default copy is wrong
+#### When the default copy is wrong
 
 ```cpp
 class Buffer {
@@ -88,64 +86,36 @@ int main() {
 
 Without the two copy functions, `b` would share `a`'s array: `b[0] = 1` would change `a`, and at the end of `main` both destructors would `delete[]` the same pointer. The simplest fix is to store `vector<int>` instead of `int*`; then the defaults are already deep and you write nothing (the rule of zero).
 
-#### Java: clone and copy constructors
-
-```java
-class Team implements Cloneable {
-    String name;
-    List<String> members = new ArrayList<>();
-
-    @Override
-    public Team clone() {
-        try {
-            Team t = (Team) super.clone();            // shallow: members list is shared
-            t.members = new ArrayList<>(members);     // copy the list to make it independent
-            return t;
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError(e);              // cannot happen: we implement Cloneable
-        }
-    }
-
-    Team(String name) { this.name = name; }
-    Team(Team other) {                                // a copy constructor is often clearer
-        this(other.name);
-        members.addAll(other.members);
-    }
-}
-```
-
-`clone` is awkward: `Cloneable` has no methods, `super.clone()` skips constructors, and `final` fields cannot be reassigned after it. Effective Java recommends copy constructors or copy factories instead.
-
 #### Choosing
 
 - Copy deeply what the object **owns** (composition) and share what it only **refers to** (aggregation); a deep copy of an order should copy its lines but not its customer.
-- Immutable parts never need copying.
-- Deep copies of graphs must handle cycles (`deepcopy`'s memo dictionary) or they recurse forever.
+- Immutable parts, such as `shared_ptr<const T>`, can be shared safely, since nobody can change them.
+- Deep copies of graphs with cycles need a map from old node to new node, or they recurse forever.
 
 #### Pitfalls
 
-- `[[0] * m] * n` in Python creates n references to one row.
-- Returning an internal list from a getter and assuming callers get a copy.
-- In C++, writing a destructor that frees memory but leaving the default copy operations.
-- Expecting `new ArrayList<>(list)` to copy the elements themselves.
+- Writing a destructor that frees memory but keeping the default copy operations.
+- Returning a non-const reference to an internal container and assuming callers get a copy.
+- Expecting a copy of a container of pointers to copy the objects themselves.
+- Copying a derived object through a base reference, which slices it; use a virtual `clone()`.
 
 Connects to: rule of three and five, prototype, immutability, object lifecycle.
 
 ### questions
 Q: What is the difference between a shallow copy and a deep copy?
-A: A shallow copy duplicates the object's fields, but fields that are references still point to the same underlying objects, so both copies share them. A deep copy also duplicates the referenced objects recursively, so the copy is fully independent of the original.
+A: A shallow copy duplicates the object's members, but members that are pointers still point to the same underlying objects, so both copies share them. A deep copy also duplicates the pointed-to objects, so the copy is fully independent of the original.
 
 Q: Why is the default copy constructor dangerous for a class with a raw owning pointer?
 A: It copies the pointer value, so two objects point to the same memory. A change through one is visible through the other, and when both are destroyed, both destructors free the same memory, which is a double free. The class needs a deep copy constructor and assignment operator, or should hold a vector or unique_ptr instead.
 
-Q: Is Java's clone a deep copy?
-A: No. Object.clone copies fields one by one, so referenced objects such as lists are shared. A deep clone must copy those fields itself after calling super.clone, and many developers prefer copy constructors or copy factories because clone has awkward rules.
+Q: Does copying a std::vector make a deep copy?
+A: It copies every element with the element's own copy constructor, so a vector of ints, strings or vectors is copied deeply. If the elements are raw pointers or shared_ptrs, only the pointers are copied, and the pointed-to objects end up shared between the two vectors.
 
-Q: What does copy.deepcopy do that copy.copy does not?
-A: copy.copy creates a new container whose elements are the same objects as the original's. copy.deepcopy recursively copies the elements too, using a memo dictionary so shared references and cycles are copied once and the structure is preserved.
+Q: How do you copy an object when you only have a pointer to its base class?
+A: Constructors cannot be virtual, so add a virtual clone function to the base that returns a unique_ptr to the base, and override it in each derived class with make_unique of the derived type constructed from *this. The derived copy constructor does the actual work.
 
 Q: When is a shallow copy good enough?
-A: When everything it shares is immutable, such as strings, numbers or frozen value objects, since nobody can change the shared parts. It is also right for references the object does not own, like a pointer from an order to its customer.
+A: When everything it shares is immutable, such as objects held through shared_ptr to const, since nobody can change the shared parts. It is also right for pointers to objects the class does not own, like a pointer from an order to its customer.
 
 ## oop.language-specifics.rule-of-three-and-five-in-cpp
 name: "Rule of three and five in C++"
@@ -267,124 +237,104 @@ Q: What is the copy-and-swap idiom?
 A: The assignment operator takes its argument by value, which makes a copy or a move, then swaps its members with that argument. The old contents are released when the parameter is destroyed. It handles self-assignment and gives the strong exception guarantee.
 
 ## oop.language-specifics.equals-and-hashcode-in-java
-name: "equals and hashCode in Java"
+name: "Equality and hashing"
+renamed: true
 importance: important
-scope: "the contract and what breaks when violated"
+scope: "operator== and the hash must agree, and what breaks when they don't"
 
 ### simple
-In Java, equals decides whether two objects mean the same thing, and hashCode decides which bucket a hash table puts them in. It is like a library where books are shelved by a number: two copies of the same book must get the same shelf number, or you will never find the second one. So whenever you define equals, you must define hashCode to match.
+A hash table needs two rules that agree with each other: one that says when two keys mean the same thing, and one that turns a key into a bucket number. It is like a library where books are shelved by a number: two copies of the same book must get the same shelf number, or you will never find the second one. In C++ the two rules are `operator==` and the hash function you give to `unordered_map` or `unordered_set`.
 
 ### interview
-- Default `Object.equals` is **identity** (`==`); override it to compare **values**, and always with the signature `equals(Object o)`.
-- **equals contract**: reflexive, symmetric, transitive, consistent, and `x.equals(null)` is false.
-- **hashCode contract**: equal objects **must** have equal hash codes; the value must stay the same while the fields used by `equals` do not change; unequal objects **may** collide (fewer collisions give better performance).
-- Override `equals` without `hashCode` and hash collections break: a `HashSet` accepts "duplicates" and `contains` fails for an equal object, because the two land in different buckets.
-- Mutating a field used in `hashCode` after inserting into a `HashSet` or as a `HashMap` key strands the entry in the wrong bucket.
-- Use `Objects.equals` and `Objects.hash`, or a **record** (Java 16), which generates both. Python's analog is `__eq__` with `__hash__` (defining `__eq__` alone makes a class unhashable).
+- The contract: **equal keys must have equal hashes**. In C++ the pair is `operator==` and a hash functor (or a `std::hash` specialization) for unordered containers.
+- Equality must be an **equivalence**: reflexive, symmetric and transitive, and it must not change while a key sits in a container.
+- Unequal keys **may** share a hash; fewer collisions only mean better speed.
+- Break the contract (hash a member that `==` ignores, or hash an address) and equal keys land in different buckets: duplicates get stored and lookups fail.
+- A key that changes while inside a container is lost: its bucket was chosen from the old value. `unordered_set` elements and map keys are `const` for this reason, but keys reached through pointers are not protected.
+- Ordered containers use `operator<` instead: `std::set` treats a and b as the same when neither is less than the other, so a `<` that disagrees with `==` makes `set` and `unordered_set` disagree.
 
 ### deep
 #### Why the two must agree
 
-`HashMap.get(key)` first computes `key.hashCode()` to pick a bucket, then calls `equals` only on entries in that bucket. If two equal objects have different hash codes, they sit in different buckets and `equals` is never even asked.
+`unordered_set::find(key)` first hashes the key to pick a bucket, then calls `==` only on the entries in that bucket. If two equal keys have different hashes, they sit in different buckets and `==` is never even asked.
 
-#### Worked example: the broken version
+#### Worked example: a hash that breaks the contract
 
-```java
-class Point {
-    final int x, y;
-    Point(int x, int y) { this.x = x; this.y = y; }
-    @Override public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Point)) return false;
-        Point p = (Point) o;
-        return x == p.x && y == p.y;
+```cpp
+struct Account {
+    int id;
+    string nickname;                                   // display only: not part of equality
+    bool operator==(const Account& o) const { return id == o.id; }
+};
+
+struct BadHash {                                       // breaks the contract: uses nickname too
+    size_t operator()(const Account& a) const {
+        return hash<string>{}(a.nickname) ^ hash<int>{}(a.id);
     }
-    // hashCode NOT overridden: falls back to identity-based Object.hashCode
-}
+};
 
-public class Demo {
-    public static void main(String[] args) {
-        Set<Point> seen = new HashSet<>();
-        seen.add(new Point(1, 2));
-        System.out.println(new Point(1, 2).equals(new Point(1, 2)));   // true
-        System.out.println(seen.contains(new Point(1, 2)));            // almost always false
-        seen.add(new Point(1, 2));
-        System.out.println(seen.size());                               // almost always 2
-    }
+struct GoodHash {                                      // hashes exactly what == compares
+    size_t operator()(const Account& a) const { return hash<int>{}(a.id); }
+};
+
+int main() {
+    unordered_set<Account, BadHash> bad{{7, "main"}, {7, "savings"}};
+    unordered_set<Account, GoodHash> good{{7, "main"}, {7, "savings"}};
+    cout << bad.size() << " " << bad.count({7, "other"}) << " | "
+         << good.size() << " " << good.count({7, "other"}) << "\n";   // 2 0 | 1 1
 }
 ```
 
-| step | hashCode of the new point | bucket searched | result |
-|---|---|---|---|
-| `add(p1)` | identity hash, say h1 | h1's bucket | stored |
-| `contains(p2)` | a different identity hash h2 | h2's bucket, empty | false |
-| `add(p2)` | h2 | h2's bucket | stored again, size 2 |
+| container | stores `{7, "main"}` and `{7, "savings"}` as | finds `{7, "other"}`? |
+|---|---|---|
+| `BadHash` | two entries, though `==` calls them equal | no: it looks in another bucket |
+| `GoodHash` | one entry | yes |
 
-("Almost always" because two identity hashes could collide by chance.)
+(With `BadHash` the outcome depends on bucket placement, so it is "almost always" wrong rather than always; that is what makes such bugs hard to find.)
 
-#### The correct version
+#### Hashing a composite key
 
-```java
-final class GoodPoint {
-    private final int x, y;
-    GoodPoint(int x, int y) { this.x = x; this.y = y; }
+C++ has no `std::hash` for `pair`, `tuple` or your own structs. Combine the hashes of exactly the members that `==` compares:
 
-    @Override public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        GoodPoint p = (GoodPoint) o;
-        return x == p.x && y == p.y;
+```cpp
+struct Point {
+    int x, y;
+    bool operator==(const Point&) const = default;     // C++20: compares x and y
+};
+
+struct PointHash {
+    size_t operator()(const Point& p) const {
+        size_t h = hash<int>{}(p.x);
+        return h ^ (hash<int>{}(p.y) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2));   // mix
     }
-
-    @Override public int hashCode() { return Objects.hash(x, y); }   // same fields as equals
-}
-
-record Coord(int x, int y) {}    // generates equals, hashCode and toString from x and y
+};
 ```
+
+Avoid plain `hx ^ hy`: it is symmetric, so `(1, 2)` and `(2, 1)` collide, and every `(x, x)` hashes to 0.
 
 #### What else breaks
 
-- **Overloading instead of overriding**: `public boolean equals(Point p)` does not override `equals(Object)`; collections call the `Object` version and get identity. `@Override` turns this into a compile error.
-- **Mutable keys**: put a point in a `HashSet`, change its `x`, and `contains` looks in the new bucket while the entry sits in the old one. It cannot be found or removed.
-- **Symmetry with subclasses**: if `ColorPoint extends Point` adds a color to `equals`, then `point.equals(colorPoint)` may be true while `colorPoint.equals(point)` is false. `getClass()` comparison avoids this but makes subclasses never equal to parents; `instanceof` with a `final` class is the other clean choice.
-- **Sorted sets**: `TreeSet` uses `compareTo`, not `equals`; if they disagree, a `TreeSet` and a `HashSet` of the same elements can contain different items (`BigDecimal("1.0")` and `BigDecimal("1.00")` are not equal but compare as 0).
+- **Changing a key**: in an `unordered_set<Point*, DerefHash, DerefEq>` that hashes the pointed-to point, changing `p->x` strands the entry in the old bucket; it can no longer be found or erased.
+- **Equality vs equivalence**: a case-insensitive `set<string>` keeps one of "Apple" and "apple", while an `unordered_set<string>` keeps both. Mixing them for the same data gives inconsistent answers.
+- **Floating-point keys**: `0.0 == -0.0` while their bit patterns differ, and NaN is not equal to itself. Avoid them as hash keys.
 
-#### The same idea elsewhere
-
-```python
-class Point:
-    def __init__(self, x, y):
-        self.x, self.y = x, y
-
-    def __eq__(self, other):
-        return isinstance(other, Point) and (self.x, self.y) == (other.x, other.y)
-
-    def __hash__(self):                     # needed: defining __eq__ sets __hash__ to None
-        return hash((self.x, self.y))
-
-
-print(Point(1, 2) in {Point(1, 2)})        # True
-```
-
-In C++, an `unordered_set<Point>` needs `operator==` and a `std::hash<Point>` specialization that agree in the same way.
-
-Connects to: hash table internals, immutability, abstract class vs interface.
+Connects to: hash table internals, immutability, operator overloading and friend functions.
 
 ### questions
-Q: What is the contract between equals and hashCode?
-A: If two objects are equal according to equals, they must return the same hashCode. hashCode must return the same value while the fields used by equals do not change. Unequal objects may share a hash code, but fewer collisions make hash tables faster.
+Q: What is the contract between equality and hashing?
+A: If two keys are equal according to operator==, the hash function must return the same value for both, and that value must not change while the key is stored. Unequal keys may share a hash, but fewer collisions make hash tables faster.
 
-Q: What happens if you override equals but not hashCode?
-A: Equal objects keep the identity-based hash codes from Object, so hash-based collections put them in different buckets. A HashSet then stores duplicates, and contains or get fail for an object equal to one already stored.
+Q: What happens if the hash function uses a member that operator== ignores?
+A: Two keys that compare equal can get different hashes, so they land in different buckets. The unordered container then stores both as separate entries, and looking up an equal key usually fails because it searches the wrong bucket.
 
-Q: Why is public boolean equals(Point other) a bug?
-A: It overloads equals instead of overriding equals(Object). Collections and most library code call the Object version, which still compares identity, so the custom logic is silently ignored. Adding the Override annotation turns this mistake into a compile error.
+Q: Why is it dangerous to change a key after inserting it into a hash container?
+A: The entry was placed in a bucket computed from the old value. After the change, lookups compute a new hash and search a different bucket, so the entry can no longer be found or erased. That is why unordered_set elements and map keys are const.
 
-Q: Why is it dangerous to mutate an object that is a key in a HashMap?
-A: The entry was placed in a bucket based on the hash code at insertion time. If a field used by hashCode changes, lookups compute a new hash and search a different bucket, so the entry can no longer be found or removed, which also leaks memory.
+Q: How do you use your own struct as a key in unordered_map?
+A: Define operator== and a hash functor that combines the hashes of exactly the members operator== compares, then pass it as the Hash template argument, or specialize std::hash for the type. Combine with a mixing step rather than a plain XOR to avoid systematic collisions.
 
-Q: What properties must equals satisfy?
-A: Reflexive (x equals x), symmetric (if x equals y then y equals x), transitive (x equals y and y equals z imply x equals z), consistent (repeated calls agree while nothing changes), and x.equals(null) must return false.
+Q: How does std::set decide that two keys are the same?
+A: It never calls operator==. Two keys are equivalent when neither is less than the other under the set's comparator. If that comparator disagrees with operator==, such as a case-insensitive comparison, a set and an unordered_set of the same strings can hold different items.
 
 ## oop.language-specifics.immutability
 name: "Immutability"
@@ -395,12 +345,12 @@ scope: "immutable objects, benefits for thread safety"
 An immutable object can never change after it is created; to get a different value you make a new object. A printed book works like this: you cannot edit the words, so you print a new edition instead. Because nobody can change it, anyone can share it and read it at the same time without trouble.
 
 ### interview
-- An **immutable** object's observable state is fixed after construction: `String`, `Integer`, `LocalDate` in Java; `str`, `tuple`, `frozenset` in Python; `const` objects in C++.
-- Recipe (Java): make the class `final` (or give it private constructors), all fields `private final`, no setters, **defensive copies** of mutable arguments and of anything returned, and do not let `this` escape the constructor.
-- **Thread safety**: with no writes after construction there are no data races, so immutable objects can be shared across threads with no locks. Java's `final` fields are guaranteed visible to other threads once the constructor finishes.
-- Other benefits: safe hash map keys, cacheable hash codes, simple reasoning, free sharing (interning, caching), and no half-updated states.
-- Cost: every change allocates a new object. Repeated `s += x` on strings in a loop is O(n²); use a mutable builder (`StringBuilder`, `"".join`) for heavy construction.
-- A `final` reference is not an immutable object: `final List<String> xs` can still be `add`ed to.
+- An **immutable** object's observable state is fixed after construction. In C++ you get it with `const` objects, classes whose members are private and whose every public function is `const`, and sharing through `shared_ptr<const T>`.
+- Recipe: private members, all state set in the constructor, only `const` member functions, "modifiers" that return a **new** object (`Money plus(const Money&) const`), and copies of any containers passed in.
+- **Thread safety**: with no writes after construction there are no data races, so immutable objects can be shared across threads with no locks. The standard library guarantees that concurrent calls to `const` member functions of its types are safe.
+- Other benefits: safe hash keys, results that can be cached, simple reasoning, free sharing, and no half-updated states.
+- Cost: every change builds a new object. Building a big value step by step is better done with a mutable builder (a `string` with `+=`, a `vector` with `push_back`) that is then frozen.
+- `T* const p` (a constant pointer) is not the same as `const T* p` (a pointer to constant data); only the second protects the object.
 
 ### deep
 #### Intuition
@@ -409,101 +359,85 @@ Most concurrency bugs and many plain bugs come from one piece of code changing d
 
 #### Worked example: a money value
 
-```java
-final class Money {                              // final: no mutable subclass can sneak in
-    private final long paise;
-    private final String currency;
-
-    Money(long paise, String currency) {
-        this.paise = paise;
-        this.currency = Objects.requireNonNull(currency);
+```cpp
+class Money {
+    long long paise;
+    string currency;
+public:
+    Money(long long p, string c) : paise(p), currency(std::move(c)) {}
+    Money plus(const Money& o) const {                  // returns a new object instead of changing this
+        if (currency != o.currency) throw invalid_argument("currency mismatch");
+        return Money(paise + o.paise, currency);
     }
-    Money plus(Money other) {                    // returns a new object instead of changing this
-        if (!currency.equals(other.currency)) throw new IllegalArgumentException("currency");
-        return new Money(paise + other.paise, currency);
-    }
-    long paise() { return paise; }
-}
+    long long value() const { return paise; }
+    const string& unit() const { return currency; }
+};
 
-final class Invoice {
-    private final List<Money> items;
-    Invoice(List<Money> items) { this.items = List.copyOf(items); }  // defensive, unmodifiable copy
-    List<Money> items() { return items; }        // safe to return: callers cannot modify it
+int main() {
+    const Money a(500, "INR");
+    Money b = a.plus(Money(250, "INR"));
+    Money c = a;                                        // sharing a's value is harmless
+    cout << a.value() << " " << b.value() << " " << c.value() << "\n";   // 500 750 500
 }
 ```
 
 | code | a | b | c |
 |---|---|---|---|
-| `Money a = new Money(500, "INR")` | 500 | - | - |
-| `Money b = a.plus(new Money(250, "INR"))` | 500 | 750 | - |
-| `Money c = a` | 500 | 750 | 500, the same object as a, and that is fine |
+| `const Money a(500, "INR")` | 500 | - | - |
+| `Money b = a.plus(Money(250, "INR"))` | 500 | 750 | - |
+| `Money c = a` | 500 | 750 | 500 |
 
-`a` never changes, so sharing it with `c` (or another thread) is harmless. Without `List.copyOf`, the caller who passed the list could keep editing it after the invoice was built.
+Members are private but not `const`, so `Money` can still be assigned as a whole (`b = a;`), which containers need; no single field can be changed from outside. Declaring members `const` makes the class impossible to assign, which is usually more trouble than help.
 
-#### Python and C++
-
-```python
-from dataclasses import dataclass, replace
-
-
-@dataclass(frozen=True)
-class Money:
-    paise: int
-    currency: str
-
-
-a = Money(500, "INR")
-b = replace(a, paise=750)        # a new object; a is unchanged
-print(a, b, a == Money(500, "INR"), hash(a) == hash(Money(500, "INR")))
-# Money(paise=500, currency='INR') Money(paise=750, currency='INR') True True
-```
+#### Sharing across threads
 
 ```cpp
-class Money {
-    const long long paise;                       // const members: fixed after construction
-    const string currency;
-public:
-    Money(long long p, string c) : paise(p), currency(std::move(c)) {}
-    Money plus(const Money& o) const { return Money(paise + o.paise, currency); }
-    long long value() const { return paise; }
+struct Config {
+    const string region;
+    const int maxUsers;
 };
+
+int main() {
+    auto cfg = make_shared<const Config>(Config{"ap-south", 100});   // built once, then frozen
+    vector<thread> readers;
+    atomic<int> total{0};
+    for (int i = 0; i < 4; ++i)
+        readers.emplace_back([cfg, &total] { total += cfg->maxUsers; });   // reads need no lock
+    for (auto& t : readers) t.join();
+    cout << total << "\n";                              // 400
+}
 ```
 
-In C++ it is more common to keep members non-`const` (so the type stays assignable) and expose only `const` methods, or to share `shared_ptr<const T>`.
+To change the configuration, build a new `Config` and swap the pointer that readers take their copy from (atomically, or under a mutex): readers keep using the old snapshot until they fetch the new one.
 
 #### Why it is thread-safe
 
-A data race needs at least one write. An immutable object is written only inside its constructor, before other threads can see it (as long as `this` does not escape). Java adds a guarantee for `final` fields: any thread that obtains a reference to the object after construction sees those fields' final values, even without synchronization.
-
-#### Costs and remedies
-
-- Creating many short-lived objects adds allocation and garbage-collection work; this is usually cheap, and persistent data structures share most of their structure between versions.
-- Building a big value step by step: use a mutable builder, then freeze (`StringBuilder` then `toString`, a list then `tuple`).
-- Deep immutability needs every field to be immutable too; a record holding an `ArrayList` is only shallowly immutable.
+A data race needs at least one write. An immutable object is written only in its constructor, before other threads can see it (as long as `this` does not escape the constructor). After that, any number of threads may read it at the same time.
 
 #### Pitfalls
 
-- A `final` field pointing at a mutable object.
-- Getters that return internal arrays.
-- Letting `this` escape from the constructor (registering a listener), which lets another thread see a half-built object.
+- A `const` pointer member (`T* const p`) whose target is still mutable.
+- Returning a non-const reference or pointer to internal state from a `const` function.
+- `mutable` members (often caches) inside "immutable" objects: they are fine only if every access is synchronized.
+- Casting away `const` with `const_cast` and writing: undefined behavior if the object was defined `const`.
 
-Connects to: encapsulation, equals and hashCode, shallow vs deep copy, builder pattern, thread safety.
+Connects to: encapsulation, equality and hashing, shallow vs deep copy, builder pattern, thread safety.
 
 ### questions
-Q: How do you make a class immutable in Java?
-A: Declare the class final, make every field private and final, provide no setters, make defensive copies of mutable objects passed into the constructor, and never return references to internal mutable objects. Also avoid letting this escape during construction.
+Q: How do you make a class immutable in C++?
+A: Keep its members private, set all state in the constructor, make every public member function const, and have operations that would modify it return a new object instead. Copy any containers passed in, and never return non-const references to internal data.
 
 Q: Why are immutable objects thread-safe?
 A: A data race needs at least one thread writing while another accesses the same data. An immutable object is only written during construction, so after it is safely published any number of threads can read it without locks.
 
-Q: What is the difference between a final variable and an immutable object?
-A: final means the variable cannot be made to point to another object. The object it points to can still change if its class allows it, as with a final ArrayList that you can still add to. Immutability is a property of the object itself.
+Q: What is the difference between const T* and T* const?
+A: const T* is a pointer to constant data: the pointer may be moved to another object, but the object cannot be changed through it. T* const is a constant pointer: it always points to the same object, but that object can still be modified. Only the first gives immutability of the data.
 
 Q: What is the downside of immutability, and how do you work around it?
-A: Every change creates a new object, which costs allocation and can be slow in loops, such as building a string with repeated concatenation. Use a mutable builder for construction and convert to the immutable form at the end, or use persistent data structures that share structure.
+A: Every change creates a new object, which costs allocation and copying and can be slow in loops. Build the value with a mutable object, such as a string or vector, and freeze it at the end, or share large unchanged parts between versions with shared_ptr to const.
 
-Q: Why do immutable objects make good hash map keys?
-A: Their hash code never changes, so an entry always stays in the bucket where it was inserted. The hash can even be computed once and cached, as Java's String does.
+Q: Why do immutable objects make good hash keys?
+A: Their hash never changes, so an entry always stays in the bucket where it was inserted. The hash can even be computed once in the constructor and stored.
 
 ## oop.language-specifics.operator-overloading-and-friend-functions
 name: "Operator overloading and friend functions"
@@ -519,7 +453,7 @@ Operator overloading lets your own types use symbols like plus and double equals
 - `operator<<` for printing must be a non-member, because the left operand is `ostream`; it is often a **friend** to read private fields.
 - A **friend** function or class may access private and protected members. Friendship is granted by the class, is not inherited, not transitive and not mutual.
 - Canonical forms: implement `+=` as a member returning `*this`, then `+` in terms of it; prefix `++` returns a reference, postfix `++` takes a dummy `int` and returns the old value. C++20 can default `==` and `<=>` to generate all comparisons.
-- Java has no user operator overloading; Python uses dunder methods (`__add__`, `__radd__`, `__eq__`, `__lt__`, `__getitem__`).
+- `operator()` makes a **function object** (comparators, hashers, and the classes the compiler writes for lambdas). Mark conversion operators **`explicit`** (`explicit operator bool`) so they work in `if` but never sneak into arithmetic.
 
 ### deep
 #### Intuition
@@ -595,30 +529,31 @@ public:
 };
 ```
 
-#### Python's version
+#### Call and conversion operators
 
-```python
-class Vec2:
-    def __init__(self, x, y):
-        self.x, self.y = x, y
+```cpp
+struct ByLength {                          // a function object: operator() makes it callable
+    bool operator()(const string& a, const string& b) const { return a.size() < b.size(); }
+};
 
-    def __add__(self, other):
-        return Vec2(self.x + other.x, self.y + other.y)
+class Handle {
+    int fd = -1;
+public:
+    explicit Handle(int f) : fd(f) {}
+    explicit operator bool() const { return fd >= 0; }   // if (h) works; int n = h does not
+};
 
-    def __mul__(self, k):              # v * 3
-        return Vec2(self.x * k, self.y * k)
-
-    __rmul__ = __mul__                 # 3 * v: Python tries int.__mul__, then Vec2.__rmul__
-
-    def __eq__(self, other):
-        return (self.x, self.y) == (other.x, other.y)
-
-    def __repr__(self):
-        return f"Vec2({self.x}, {self.y})"
-
-
-print(Vec2(1, 2) + Vec2(3, 4), 3 * Vec2(1, 2))   # Vec2(4, 6) Vec2(3, 6)
+int main() {
+    vector<string> w{"pear", "fig", "banana"};
+    sort(w.begin(), w.end(), ByLength{});
+    cout << w[0] << " " << w[2] << "\n";       // fig banana
+    Handle ok(3), bad(-1);
+    if (ok && !bad) cout << "ok\n";            // ok
+    // int n = ok;                             // error: the conversion is explicit
+}
 ```
+
+A lambda is shorthand for such a class: the compiler writes a struct with an `operator()` and stores the captures as its fields. Before `explicit` conversions (C++11), a plain `operator bool` let `handle + 1` compile, which is why older code used the "safe bool" idiom.
 
 #### Pitfalls
 
@@ -627,7 +562,7 @@ print(Vec2(1, 2) + Vec2(3, 4), 3 * Vec2(1, 2))   # Vec2(4, 6) Vec2(3, 6)
 - Returning a reference to a local from `operator+`.
 - Defining `==` without `!=` before C++20, or `<` inconsistently with `==`.
 
-Connects to: polymorphism, encapsulation, access modifiers, equals and hashCode.
+Connects to: polymorphism, encapsulation, access modifiers, equality and hashing.
 
 ### questions
 Q: Which C++ operators cannot be overloaded?

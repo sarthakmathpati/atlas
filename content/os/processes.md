@@ -89,16 +89,25 @@ When you run a program, the kernel's `exec`:
 
 Around that address space, the kernel also keeps a process control block with the PID, state, open file table and scheduling information.
 
-#### Python view
+#### Seeing it on Linux
 
-```python
-import os
+```cpp
+#include <fstream>
 
-print(os.getpid(), os.getppid())         # this process and its parent (for example the shell)
-with open(f"/proc/{os.getpid()}/maps") as f:
-    for line in list(f)[:3]:             # the first mappings: the interpreter's own code
-        print(line.split()[0], line.split()[-1])
+int main() {
+    cout << getpid() << " " << getppid() << "\n";    // this process and its parent (the shell)
+    ifstream maps("/proc/self/maps");
+    string line;
+    for (int i = 0; i < 3 && getline(maps, line); i++) {   // the first mappings: our own code
+        istringstream fields(line);
+        string range, perms, offset, dev, inode, path;
+        fields >> range >> perms >> offset >> dev >> inode >> path;
+        cout << range << " " << perms << " " << path << "\n";
+    }
+}
 ```
+
+Each line of `/proc/self/maps` is one region of the address space: its address range, permissions (`r-xp` for code, `rw-p` for data and heap) and the file it maps, if any.
 
 #### Pitfalls
 
@@ -190,20 +199,28 @@ At 30 ms P1 does not preempt P2 automatically; it becomes ready, and the schedul
 
 #### Seeing states on Linux
 
-```python
-import os
-import time
+```cpp
+#include <fstream>
 
-pid = os.fork()
-if pid == 0:
-    time.sleep(2)            # the child sleeps: state S
-    os._exit(0)
-time.sleep(0.2)
-with open(f"/proc/{pid}/stat") as f:
-    print("child state:", f.read().split()[2])   # S
-with open(f"/proc/{os.getpid()}/stat") as f:
-    print("my state:", f.read().split()[2])      # R: reading its own stat while running
-os.waitpid(pid, 0)
+char stateOf(pid_t pid) {                            // the third field of /proc/<pid>/stat
+    ifstream f("/proc/" + to_string(pid) + "/stat");
+    string pidField, comm;
+    char state = '?';
+    f >> pidField >> comm >> state;
+    return state;
+}
+
+int main() {
+    pid_t pid = fork();
+    if (pid == 0) {
+        sleep(2);                                    // the child sleeps: state S
+        _exit(0);
+    }
+    usleep(200000);
+    cout << "child state: " << stateOf(pid) << "\n";   // S
+    cout << "my state: " << stateOf(getpid()) << "\n"; // R: reading its own stat while running
+    waitpid(pid, nullptr, 0);
+}
 ```
 
 #### Pitfalls
@@ -385,16 +402,6 @@ int main() {
 
 After it runs, `out.txt` contains "hello from the child", and the parent prints the child's PID and exit code 0.
 
-```python
-import os
-
-pid = os.fork()
-if pid == 0:                                   # child
-    os.execvp("echo", ["echo", "hi from exec"])
-_, status = os.waitpid(pid, 0)                 # parent
-print("exit code", os.waitstatus_to_exitcode(status))   # 0
-```
-
 #### Worked example: counting processes
 
 ```cpp
@@ -529,16 +536,16 @@ Alternatively `signal(SIGCHLD, SIG_IGN)` tells the kernel the parent does not ca
 
 #### Orphans
 
-```python
-import os
-import time
-
-pid = os.fork()
-if pid == 0:
-    time.sleep(0.5)                              # outlive the parent
-    print("orphan's new parent:", os.getppid())  # 1, or a subreaper such as systemd --user
-    os._exit(0)
-print("parent exiting, child is", pid)          # the parent exits without waiting
+```cpp
+int main() {
+    pid_t pid = fork();
+    if (pid == 0) {
+        sleep(1);                                    // outlive the parent
+        printf("orphan's new parent: %d\n", getppid());   // 1, or a subreaper such as systemd
+        return 0;
+    }
+    printf("parent exiting, child is %d\n", pid);    // the parent exits without waiting
+}
 ```
 
 The kernel re-parents the orphan to PID 1 (or the nearest ancestor marked as a child subreaper), and that process's reaping loop cleans it up later.
@@ -664,27 +671,6 @@ int main() {
     printf("counter = %ld\n", s->counter);       // 400000; without the semaphore, usually less
     munmap(s, sizeof(Shared));
 }
-```
-
-#### Python
-
-```python
-from multiprocessing import Pipe, Process, Queue
-
-
-def worker(conn, q):
-    conn.send({"status": "ok"})        # a pipe carrying pickled objects
-    q.put(42)                          # a queue built on pipes and locks
-    conn.close()
-
-
-if __name__ == "__main__":
-    parent_end, child_end = Pipe()
-    q = Queue()
-    p = Process(target=worker, args=(child_end, q))
-    p.start()
-    print(parent_end.recv(), q.get())  # {'status': 'ok'} 42
-    p.join()
 ```
 
 #### Signals are not a data channel

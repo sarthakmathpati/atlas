@@ -75,29 +75,6 @@ vector<int> dailyTemperatures(const vector<int>& t) {
 }
 ```
 
-```python
-def previous_smaller(a):
-    """Index of the nearest element to the left that is strictly smaller, or -1."""
-    ans, st = [-1] * len(a), []
-    for i, x in enumerate(a):
-        while st and a[st[-1]] >= x:     # pop everything not smaller than x
-            st.pop()
-        ans[i] = st[-1] if st else -1    # read the answer before pushing
-        st.append(i)
-    return ans
-
-def next_greater_circular(a):
-    n = len(a)
-    ans, st = [-1] * n, []
-    for i in range(2 * n):               # the second lap lets elements see the start
-        x = a[i % n]
-        while st and a[st[-1]] < x:
-            ans[st.pop()] = x
-        if i < n:
-            st.append(i)
-    return ans
-```
-
 #### Which stack for which question
 
 | Question | Stack order (bottom to top) | Pop while | Answer read |
@@ -240,19 +217,6 @@ long long maximalRectangle(const vector<vector<char>>& m) {
 }
 ```
 
-```python
-def largest_rectangle(heights):
-    h = heights + [0]
-    st, best = [], 0
-    for i, x in enumerate(h):
-        while st and h[st[-1]] >= x:
-            height = h[st.pop()]
-            left = st[-1] if st else -1
-            best = max(best, height * (i - left - 1))
-        st.append(i)
-    return best
-```
-
 #### Complexity
 
 Each bar is pushed and popped once: $O(n)$ time, $O(n)$ space. Maximal rectangle: $O(R \cdot C)$ time, $O(C)$ space.
@@ -372,29 +336,6 @@ long long sumSubarrayMins(const vector<int>& a) {
     }
     return total;
 }
-```
-
-```python
-def sum_subarray_extreme(a, want_min=True):
-    """Sum over all subarrays of their minimum (or maximum), with the tie rule applied."""
-    n = len(a)
-    better = (lambda x, y: x < y) if want_min else (lambda x, y: x > y)
-    left, right, st = [0] * n, [0] * n, []
-    for i in range(n):                           # previous strictly better
-        while st and not better(a[st[-1]], a[i]):
-            st.pop()
-        left[i] = i - (st[-1] if st else -1)
-        st.append(i)
-    st = []
-    for i in range(n - 1, -1, -1):               # next better or equal
-        while st and better(a[i], a[st[-1]]):
-            st.pop()
-        right[i] = (st[-1] if st else n) - i
-        st.append(i)
-    return sum(a[i] * left[i] * right[i] for i in range(n))
-
-def sum_subarray_ranges(a):
-    return sum_subarray_extreme(a, False) - sum_subarray_extreme(a, True)
 ```
 
 #### The tie rule
@@ -530,34 +471,6 @@ int shortestSubarray(const vector<int>& a, long long K) {
     }
     return best == INT_MAX ? -1 : best;
 }
-```
-
-```python
-from collections import deque
-
-def max_sliding_window(a, k):
-    dq, out = deque(), []
-    for i, x in enumerate(a):
-        while dq and a[dq[-1]] <= x:
-            dq.pop()
-        dq.append(i)
-        if dq[0] <= i - k:
-            dq.popleft()
-        if i >= k - 1:
-            out.append(a[dq[0]])
-    return out
-
-def constrained_subsequence_sum(a, k):
-    """Max sum of a subsequence where consecutive picks are at most k apart."""
-    dp, dq = [0] * len(a), deque()             # dq: indices with dp decreasing
-    for i, x in enumerate(a):
-        if dq and dq[0] < i - k:
-            dq.popleft()
-        dp[i] = x + max(0, dp[dq[0]] if dq else 0)
-        while dq and dp[dq[-1]] <= dp[i]:
-            dq.pop()
-        dq.append(i)
-    return max(dp)
 ```
 
 #### Why the shortest-subarray deque works

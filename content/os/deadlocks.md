@@ -201,31 +201,6 @@ int main() {
 }
 ```
 
-```python
-def find_cycle(waits_for):
-    color, stack = {}, []
-
-    def dfs(u):
-        color[u] = 1
-        stack.append(u)
-        for v in waits_for.get(u, []):
-            if color.get(v) == 1:
-                return stack[stack.index(v):]      # the cycle
-            if v not in color and (c := dfs(v)):
-                return c
-        color[u] = 2
-        stack.pop()
-        return None
-
-    for s in waits_for:
-        if s not in color and (c := dfs(s)):
-            return c
-    return None
-
-
-print(find_cycle({"T1": ["T2"], "T2": ["T3"], "T3": ["T1"], "T4": ["T1"]}))   # ['T1', 'T2', 'T3']
-```
-
 Note that P3 (and T4) are stuck too, because they wait on a deadlocked process, but they are not part of the cycle; aborting a process in the cycle frees them as well.
 
 #### From allocation graph to wait-for graph
@@ -261,7 +236,7 @@ Deadlock prevention means designing the rules so that one of the four deadlock c
 - Break **hold and wait**: request **all resources at once** before starting, or release everything before asking for more. Downsides: low utilization (resources idle while held) and possible starvation of processes needing many popular resources.
 - Break **no preemption**: if a request cannot be granted, **release what you hold** and retry (`try_lock` with back-off), or let the system preempt resources whose state can be saved (CPU registers, memory pages). Does not work for resources like a half-printed page or a mutex protecting inconsistent data.
 - Break **circular wait**: impose a **global order** on resources and always acquire in increasing order (lock hierarchies, ordering by account id or memory address). The **most practical** technique.
-- Library help: `std::scoped_lock` / `std::lock` lock several mutexes at once without deadlock; Java's `tryLock` with timeouts; databases acquire row locks in key order.
+- Library help: `std::scoped_lock` / `std::lock` lock several mutexes at once without deadlock; `std::timed_mutex::try_lock_for` to give up after a timeout; databases acquire row locks in key order.
 - Prevention is decided at design time and has zero runtime bookkeeping, unlike avoidance.
 
 ### deep
@@ -337,27 +312,6 @@ int main() {
     for (auto& t : ts) t.join();
     cout << x.balance << " " << y.balance << "\n";   // 1000 1000: every transfer finished
 }
-```
-
-```python
-import threading
-
-locks = {name: threading.Lock() for name in ["db", "cache", "log"]}
-ORDER = {"db": 0, "cache": 1, "log": 2}            # the lock hierarchy
-
-
-def with_locks(names, work):
-    ordered = sorted(names, key=ORDER.__getitem__)  # always acquire in the global order
-    for n in ordered:
-        locks[n].acquire()
-    try:
-        return work()
-    finally:
-        for n in reversed(ordered):
-            locks[n].release()
-
-
-print(with_locks(["log", "db"], lambda: "done"))   # locks db, then log
 ```
 
 #### Choosing
@@ -548,25 +502,39 @@ Resources A, B, C with 7, 2 and 6 instances; Available = (0, 0, 0).
 
 P0 requests nothing, so it finishes: Work = (0, 1, 0). P2 finishes: (3, 1, 3). Now P1 (2, 0, 2), P3 and P4 all fit, and every process finishes: no deadlock. If P2 then requested one more C, Work after P0 would be (0, 1, 0), and no other process's request fits: P1, P2, P3 and P4 are deadlocked.
 
-```python
-def deadlocked(available, alloc, request):
-    work = list(available)
-    finish = [not any(a) for a in alloc]           # holding nothing: cannot be deadlocked
-    changed = True
-    while changed:
-        changed = False
-        for i, done in enumerate(finish):
-            if not done and all(r <= w for r, w in zip(request[i], work)):
-                work = [w + a for w, a in zip(work, alloc[i])]
-                finish[i] = changed = True
-    return [i for i, done in enumerate(finish) if not done]
+```cpp
+using Vec = vector<int>;
 
+vector<int> deadlocked(Vec work, const vector<Vec>& alloc, const vector<Vec>& request) {
+    int n = alloc.size(), m = work.size();
+    vector<bool> finish(n);
+    for (int i = 0; i < n; i++)                      // holding nothing: cannot be deadlocked
+        finish[i] = all_of(alloc[i].begin(), alloc[i].end(), [](int a) { return a == 0; });
+    for (bool changed = true; changed;) {
+        changed = false;
+        for (int i = 0; i < n; i++) {
+            if (finish[i]) continue;
+            bool fits = true;
+            for (int r = 0; r < m; r++) fits = fits && request[i][r] <= work[r];
+            if (!fits) continue;
+            for (int r = 0; r < m; r++) work[r] += alloc[i][r];   // it finishes and releases
+            finish[i] = changed = true;
+        }
+    }
+    vector<int> stuck;
+    for (int i = 0; i < n; i++)
+        if (!finish[i]) stuck.push_back(i);
+    return stuck;
+}
 
-alloc = [[0, 1, 0], [2, 0, 0], [3, 0, 3], [2, 1, 1], [0, 0, 2]]
-request = [[0, 0, 0], [2, 0, 2], [0, 0, 0], [1, 0, 0], [0, 0, 2]]
-print(deadlocked([0, 0, 0], alloc, request))        # []
-request[2] = [0, 0, 1]
-print(deadlocked([0, 0, 0], alloc, request))        # [1, 2, 3, 4]
+int main() {
+    vector<Vec> alloc = {{0, 1, 0}, {2, 0, 0}, {3, 0, 3}, {2, 1, 1}, {0, 0, 2}};
+    vector<Vec> request = {{0, 0, 0}, {2, 0, 2}, {0, 0, 0}, {1, 0, 0}, {0, 0, 2}};
+    cout << deadlocked({0, 0, 0}, alloc, request).size() << "\n";   // 0: no deadlock
+    request[2] = {0, 0, 1};
+    for (int p : deadlocked({0, 0, 0}, alloc, request)) cout << "P" << p << " ";
+    cout << "\n";                                                    // P1 P2 P3 P4
+}
 ```
 
 #### Choosing a victim
@@ -639,21 +607,22 @@ Two polite threads each hold one lock and need the other's; whenever one sees a 
 
 With the same fixed delay they stay in lockstep. A random delay breaks the symmetry: sooner or later one thread retries while the other is still waiting, and it gets both locks.
 
-```python
-import random
+```cpp
+int roundsUntilSuccess(bool randomized, unsigned seed = 1, int limit = 1000) {
+    mt19937 rng(seed);
+    uniform_int_distribution<int> pick(1, 3);
+    for (int round = 1; round <= limit; round++) {
+        int delayA = randomized ? pick(rng) : 1;     // when A will grab its first lock
+        int delayB = randomized ? pick(rng) : 1;     // when B will grab its first lock
+        if (delayA != delayB) return round;          // one went first and got both locks
+    }
+    return -1;                                       // still colliding: livelock
+}
 
-
-def rounds_until_success(randomized, seed=1, limit=1000):
-    rng = random.Random(seed)
-    for rnd in range(1, limit + 1):
-        delay_a = rng.choice([1, 2, 3]) if randomized else 1   # when A will grab its first lock
-        delay_b = rng.choice([1, 2, 3]) if randomized else 1   # when B will grab its first lock
-        if delay_a != delay_b:        # one thread went first and got both locks
-            return rnd
-    return None                       # still colliding: livelock
-
-
-print(rounds_until_success(False), rounds_until_success(True))   # None 1
+int main() {
+    cout << roundsUntilSuccess(false) << " " << roundsUntilSuccess(true) << "\n";
+    // -1 (never), then a small number of rounds
+}
 ```
 
 The model is simplified (real threads have jitter), but it shows the principle: identical, deterministic back-off can collide forever, while random back-off succeeds within a few rounds on average. Ethernet's exponential back-off after collisions uses the same idea.

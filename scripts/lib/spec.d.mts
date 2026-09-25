@@ -7,6 +7,8 @@ export interface SpecConcept {
   importance: SpecImportance;
   tracks: ("sde" | "quant")[] | null;
   isPattern: boolean;
+  /** Set by "(id: old-slug)": the id kept after a rename. */
+  idSlug: string | null;
   order: number;
 }
 export interface SpecTopic {

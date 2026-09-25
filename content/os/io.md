@@ -185,29 +185,26 @@ The producer keeps filling one buffer while the writer drains the other, so neit
 
 #### Code: a tiny spooler
 
-```python
-from collections import deque
+```cpp
+class Spooler {                                      // whole jobs queue up for one device
+    queue<pair<string, int>> jobs;
+public:
+    void submit(const string& user, int pages) { jobs.push({user, pages}); }
+    void run() {                                     // the device prints one job at a time
+        while (!jobs.empty()) {
+            auto [user, pages] = jobs.front();
+            jobs.pop();
+            cout << "printing " << pages << " pages for " << user << "\n";
+        }
+    }
+};
 
-
-class Spooler:
-    """Whole jobs queue up; the device prints them one at a time, never interleaved."""
-
-    def __init__(self):
-        self.queue = deque()
-
-    def submit(self, user, pages):
-        self.queue.append((user, pages))
-
-    def run(self):
-        while self.queue:
-            user, pages = self.queue.popleft()
-            print(f"printing {pages} pages for {user}")
-
-
-s = Spooler()
-s.submit("asha", 3)
-s.submit("ben", 2)
-s.run()
+int main() {
+    Spooler s;
+    s.submit("asha", 3);
+    s.submit("ben", 2);
+    s.run();                                         // asha's 3 pages, then ben's 2
+}
 ```
 
 Without spooling, two programs writing to a printer at once would produce interleaved pages; with it, each job prints whole.
@@ -244,7 +241,7 @@ With blocking I/O, a program asks for data and waits, doing nothing, until it ar
 - **Synchronous vs asynchronous**: non-blocking I/O is still synchronous (you perform the read when data is ready). **Asynchronous** I/O submits a request and is told when it has **completed** (POSIX AIO, Linux **io_uring**, Windows IOCP).
 - Four models: blocking, non-blocking with busy polling (wasteful), **I/O multiplexing** (readiness events, then non-blocking calls: the event-loop model of nginx, Node.js, Redis), and truly asynchronous completion.
 - Regular files are always "ready" on Linux, so non-blocking flags do not help disk reads; that is one reason for io_uring and thread pools for file I/O.
-- Language runtimes hide this: Python `asyncio`, JavaScript promises, Go goroutines and Java virtual threads let you write blocking-looking code on top of non-blocking I/O.
+- Libraries hide this: C++20 coroutines on an event loop library (such as Boost.Asio) let you write blocking-looking code with `co_await` on top of non-blocking I/O.
 
 ### deep
 #### The four models
@@ -278,19 +275,6 @@ int main() {
 }
 ```
 
-```python
-import os
-
-r, w = os.pipe()
-os.set_blocking(r, False)
-try:
-    os.read(r, 16)
-except BlockingIOError:
-    print("not ready yet")          # EAGAIN surfaces as BlockingIOError
-os.write(w, b"ping")
-print(os.read(r, 16))               # b'ping'
-```
-
 #### Worked example: 10,000 idle connections
 
 | design | threads | memory for stacks (8 MB virtual each) | who waits |
@@ -302,22 +286,7 @@ Most connections are idle most of the time. The event loop pays only for connect
 
 #### Asynchronous code that reads like blocking code
 
-```python
-import asyncio
-
-
-async def fetch(name, delay):
-    await asyncio.sleep(delay)      # yields to the event loop instead of blocking the thread
-    return name
-
-
-async def main():
-    results = await asyncio.gather(fetch("a", 0.2), fetch("b", 0.2), fetch("c", 0.2))
-    print(results)                  # ['a', 'b', 'c'] after about 0.2 s, not 0.6 s
-
-
-asyncio.run(main())
-```
+Callbacks on raw `epoll` get hard to follow. C++20 coroutines let a function suspend at `co_await` while its I/O is pending, and an event loop library (Boost.Asio is the common choice) resumes it when `epoll` reports the descriptor ready. The code reads top to bottom like blocking code, yet one thread serves thousands of connections, because a suspended coroutine keeps only its frame on the heap instead of a whole thread stack.
 
 #### Pitfalls
 
@@ -389,20 +358,6 @@ int main() {
 }
 ```
 
-```python
-import os
-import selectors
-
-sel = selectors.DefaultSelector()           # epoll on Linux, kqueue on macOS
-a_r, a_w = os.pipe()
-b_r, b_w = os.pipe()
-sel.register(a_r, selectors.EVENT_READ, "pipe a")
-sel.register(b_r, selectors.EVENT_READ, "pipe b")
-os.write(b_w, b"hello")
-for key, _ in sel.select(timeout=1):
-    print(key.data, os.read(key.fd, 16))    # pipe b b'hello'
-```
-
 #### Why epoll scales
 
 | | select | poll | epoll |
@@ -443,24 +398,28 @@ A few Linux tools and ideas come up again and again in interviews and on the job
 ### deep
 #### Reading /proc from code
 
-```python
-import os
-import signal
+```cpp
+#include <fstream>
 
+volatile sig_atomic_t received = 0;
 
-def status_fields(pid, names):
-    with open(f"/proc/{pid}/status") as f:
-        rows = dict(line.split(":", 1) for line in f if ":" in line)
-    return {n: rows[n].strip() for n in names}
+int main() {
+    ifstream status("/proc/self/status");
+    for (string line; getline(status, line);)
+        for (const char* key : {"Name:", "State:", "Threads:", "VmRSS:"})
+            if (line.rfind(key, 0) == 0) cout << line << "\n";   // e.g. State: R (running)
 
+    int fds = 0;
+    for (const auto& entry : filesystem::directory_iterator("/proc/self/fd")) {
+        (void)entry;
+        fds++;
+    }
+    cout << "open descriptors: " << fds << "\n";
 
-print(status_fields(os.getpid(), ["Name", "State", "Threads", "VmRSS"]))
-print("open descriptors:", len(os.listdir("/proc/self/fd")))
-
-received = []
-signal.signal(signal.SIGUSR1, lambda signum, frame: received.append(signum))
-os.kill(os.getpid(), signal.SIGUSR1)          # send ourselves a signal
-print("handled:", [signal.Signals(s).name for s in received])   # ['SIGUSR1']
+    signal(SIGUSR1, [](int sig) { received = sig; });
+    kill(getpid(), SIGUSR1);                         // send ourselves a signal
+    cout << "handled: " << (received == SIGUSR1 ? "SIGUSR1" : "none") << "\n";
+}
 ```
 
 #### A debugging session (worked example)
