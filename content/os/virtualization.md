@@ -64,17 +64,18 @@ Without nested paging, a guest virtual address needs two translations: guest vir
 
 #### Code: are we in a VM?
 
-```python
-def hypervisor_hint():
-    try:
-        with open("/proc/cpuinfo") as f:
-            flags = next((line for line in f if line.startswith("flags")), "")
-        return "hypervisor" in flags.split()        # CPUID reports a hypervisor bit to guests
-    except OSError:
-        return None                                 # not Linux, or /proc unavailable
+```cpp
+#include <fstream>
 
-
-print(hypervisor_hint())
+int main() {
+    ifstream cpuinfo("/proc/cpuinfo");
+    string line;
+    while (getline(cpuinfo, line) && line.rfind("flags", 0) != 0) {}
+    istringstream flags(line);
+    bool guest = false;
+    for (string f; flags >> f;) guest = guest || f == "hypervisor";   // CPUID's hypervisor bit
+    cout << (guest ? "running under a hypervisor" : "no hypervisor flag") << "\n";
+}
 ```
 
 Connects to: containers vs VMs, kernel mode vs user mode, multi-level and inverted page tables, TLB.
@@ -136,14 +137,21 @@ The container count ignores safety margins, but the difference is real: containe
 
 #### What a container really is
 
-```python
-import os
+```cpp
+#include <fstream>
+#include <sys/utsname.h>
 
-# Inside a container these show isolated values; on a plain host they show the host's.
-print("pid namespace:", os.readlink("/proc/self/ns/pid"))
-print("hostname:", os.uname().nodename)          # from the UTS namespace
-with open("/proc/self/cgroup") as f:
-    print("cgroup:", f.readline().strip())       # which control group limits this process
+int main() {
+    // Inside a container these show isolated values; on a plain host they show the host's.
+    char ns[64] = {};
+    readlink("/proc/self/ns/pid", ns, sizeof ns - 1);
+    utsname u{};
+    uname(&u);                                       // the hostname comes from the UTS namespace
+    string cgroup;
+    getline(ifstream("/proc/self/cgroup"), cgroup);  // the control group limiting this process
+    cout << "pid namespace: " << ns << "\n";      // e.g. pid:[4026531836]
+    cout << "hostname: " << u.nodename << "\ncgroup: " << cgroup << "\n";
+}
 ```
 
 There is no "container" object in the Linux kernel: a container is ordinary processes started with their own namespaces and placed in a cgroup, plus a root file system from an image (layered with overlayfs).
@@ -218,11 +226,14 @@ echo <pid-of-that-bash> | sudo tee /sys/fs/cgroup/demo/cgroup.procs
 
 Add a root file system from an image with a mount namespace and `pivot_root`, drop capabilities and apply a seccomp filter, and you have most of what Docker does.
 
-```python
-import os
-
-for ns in ("pid", "net", "mnt", "uts", "user"):
-    print(ns, os.readlink(f"/proc/self/ns/{ns}"))   # the same inode numbers mean the same namespace
+```cpp
+int main() {
+    for (string ns : {"pid", "net", "mnt", "uts", "user"}) {
+        char target[64] = {};
+        readlink(("/proc/self/ns/" + ns).c_str(), target, sizeof target - 1);
+        cout << ns << " " << target << "\n";         // the same inode number = the same namespace
+    }
+}
 ```
 
 Connects to: containers vs VMs, fork, exec and wait, zombie and orphan processes, Linux essentials for interviews.

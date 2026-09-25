@@ -37,7 +37,7 @@ Two to four short sentences with one everyday analogy.
 
 ### deep
 A 300 to 900 word article (required for `importance: must`). Use `####` for sub-headings inside it.
-Code in C++ first, then Python. Math with KaTeX: `$E[X]$`, `$$\sum_{i=1}^n i$$`.
+Code in C++ only. Math with KaTeX: `$E[X]$`, `$$\sum_{i=1}^n i$$`.
 
 ### questions
 Q: An interview-style question?
@@ -83,16 +83,18 @@ article), and headings inside code fences are ignored.
 - **signals** (patterns): 3 to 6 plain-text bullets. The first one is the hint ladder's clue, so it
   must not contain the pattern's name.
 - **template** (patterns): one fenced code block, C++ first.
-- **Code**: C++ (C++20) and Python. Java where the idea is Java's own (interfaces with default
-  methods, `equals` and `hashCode`, checked exceptions). Every `cpp`, `python` and `java` block
-  must compile or parse: run `npm run check:content-code -- <subject>`. The checker provides
-  `bits/stdc++.h`, `using namespace std`, `ListNode` and `TreeNode` for C++, and the common
-  `java.util` imports for Java (a Java block holds types, or members that get wrapped in a class;
-  top-level `public` is fine). Start a block with `// sketch` (or `# sketch`) when it is
-  deliberately partial. Run the snippets against their worked examples before committing.
+- **Code**: C++ (C++20) only. The owner studies in C++, so no Python or Java code and no
+  comparisons with them in any text (names, scopes, bullets, questions); explain ideas through
+  C++ and its standard library. The `lang` subject's Java and Python topics are the only
+  exception, and `tests/syllabus/content.test.ts` enforces the rule everywhere else. Every `cpp`
+  block must compile: run `npm run check:content-code -- <subject>`. The checker provides
+  `bits/stdc++.h`, POSIX and Linux headers, `using namespace std`, `ListNode` and `TreeNode`.
+  Start a block with `// sketch` when it is deliberately partial. Run the snippets against their worked examples before committing.
   Keep code lines within 100 characters (the reading column fits about 80 before it scrolls),
   and never put a URL in content: the artifact build rejects unknown URLs.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
-Never change a concept id once people have progress on it. If you must, add the old id to
-`idAliases` in `src/lib/storage/migrations.ts` so saved progress follows the concept.
+Never change a concept id once people have progress on it. To rename a concept, change its
+`name:`, keep its id, and add `renamed: true` (the spec bullet gets `(id: old-slug)`). If the id
+really must change, add the old id to `ID_ALIASES` in `src/lib/storage/migrations.ts` so saved
+progress follows the concept.

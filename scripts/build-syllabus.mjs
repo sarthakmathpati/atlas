@@ -318,7 +318,7 @@ function loadContent(contentDir) {
         // saved progress keeps pointing at it.
         if (slug !== slugify(meta.name) && meta.renamed !== true) {
           warnings.push(
-            `${where}: id "${block.id}" does not match the slug of its name ("${slugify(meta.name)}"). After a rename, keep the id and add "renamed: true".`,
+            `${where}: id "${block.id}" does not match the slug of its name ("${slugify(meta.name)}"). After a rename, keep the id and add "renamed: true" (or change it and add an ID_ALIASES entry).`,
           );
         }
         concepts.push({

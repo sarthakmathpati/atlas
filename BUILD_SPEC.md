@@ -670,7 +670,7 @@ A: …
 **Deep level** (required for `[M]`, recommended for `[I]`, optional for `[A]`): a markdown article of roughly 300 to 900 words:
 - Intuition first, then the formal idea.
 - A worked example traced step by step (a small table or list of states is great).
-- Code in C++ first, then Python, in fenced code blocks, for anything implementable. Keep code clean and interview-style.
+- Code in C++ only (the owner's language), in fenced code blocks, for anything implementable. Keep code clean and interview-style. No Python or Java code, and no comparisons with them; the `lang` subject's Java and Python topics are the only exception.
 - Time and space complexity with a one-line justification.
 - Edge cases and common bugs.
 - Variants and how they change the solution.

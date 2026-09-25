@@ -213,30 +213,36 @@ A larger $\alpha$ reacts faster to recent behavior; $\alpha = 0$ ignores history
 
 #### Code: picking the next job
 
-```python
-import heapq
+```cpp
+struct Proc { string id; int arrival, burst; };
 
+// Non-preemptive SJF: returns (id, start, end) for each job in the order it runs.
+vector<tuple<string, int, int>> sjf(vector<Proc> procs) {
+    sort(procs.begin(), procs.end(), [](auto& a, auto& b) { return a.arrival < b.arrival; });
+    using Key = tuple<int, int, string>;             // shortest burst, then earliest arrival
+    priority_queue<Key, vector<Key>, greater<Key>> ready;
+    vector<tuple<string, int, int>> out;
+    size_t i = 0;
+    for (int t = 0; i < procs.size() || !ready.empty();) {
+        for (; i < procs.size() && procs[i].arrival <= t; i++)
+            ready.push({procs[i].burst, procs[i].arrival, procs[i].id});
+        if (ready.empty()) {
+            t = procs[i].arrival;                    // idle until the next arrival
+            continue;
+        }
+        auto [burst, arrival, id] = ready.top();
+        ready.pop();
+        out.push_back({id, t, t + burst});
+        t += burst;
+    }
+    return out;
+}
 
-def sjf(procs):
-    """procs: list of (id, arrival, burst). Non-preemptive SJF; returns (id, start, end) slices."""
-    procs = sorted(procs, key=lambda p: p[1])
-    t, i, ready, out = 0, 0, [], []
-    while i < len(procs) or ready:
-        while i < len(procs) and procs[i][1] <= t:
-            pid, arr, burst = procs[i]
-            heapq.heappush(ready, (burst, arr, pid))   # shortest burst first, then earliest arrival
-            i += 1
-        if not ready:
-            t = procs[i][1]                             # idle until the next arrival
-            continue
-        burst, _, pid = heapq.heappop(ready)
-        out.append((pid, t, t + burst))
-        t += burst
-    return out
-
-
-print(sjf([("P1", 0, 8), ("P2", 1, 4), ("P3", 2, 9), ("P4", 3, 5)]))
-# [('P1', 0, 8), ('P2', 8, 12), ('P4', 12, 17), ('P3', 17, 26)]
+int main() {
+    for (auto [id, start, end] : sjf({{"P1", 0, 8}, {"P2", 1, 4}, {"P3", 2, 9}, {"P4", 3, 5}}))
+        cout << id << " " << start << "-" << end << "  ";
+    cout << "\n";                                    // P1 0-8  P2 8-12  P4 12-17  P3 17-26
+}
 ```
 
 #### Pitfalls
@@ -575,31 +581,33 @@ B keeps getting the CPU within moments of waking, while A settles into the botto
 
 #### Code: a small MLFQ
 
-```python
-from collections import deque
+```cpp
+// All jobs arrive at time 0 and never block; quanta[level] is each level's time slice.
+void mlfq(const vector<pair<string, int>>& jobs, const vector<int>& quanta) {
+    vector<deque<string>> queues(quanta.size());
+    map<string, int> remaining;
+    for (const auto& [name, burst] : jobs) {
+        queues[0].push_back(name);
+        remaining[name] = burst;
+    }
+    for (int t = 0;;) {
+        int level = 0;
+        while (level < (int)queues.size() && queues[level].empty()) level++;
+        if (level == (int)queues.size()) break;      // every queue is empty
+        string name = queues[level].front();
+        queues[level].pop_front();
+        int run = min(quanta[level], remaining[name]);
+        cout << name << " Q" << level << " " << t << "-" << t + run << "\n";
+        t += run;
+        if ((remaining[name] -= run) > 0)            // used a full slice: demote
+            queues[min(level + 1, (int)queues.size() - 1)].push_back(name);
+    }
+}
 
-
-def mlfq(jobs, quanta):
-    """jobs: {name: burst}, all arriving at 0 and never blocking; quanta per level."""
-    queues = [deque() for _ in quanta]
-    for name in jobs:
-        queues[0].append(name)
-    rem, t, log = dict(jobs), 0, []
-    while any(queues):
-        level = next(i for i, q in enumerate(queues) if q)
-        name = queues[level].popleft()
-        run = min(quanta[level], rem[name])
-        log.append((name, level, t, t + run))
-        t += run
-        rem[name] -= run
-        if rem[name]:
-            queues[min(level + 1, len(quanta) - 1)].append(name)   # used a full slice: demote
-    return log
-
-
-for entry in mlfq({"A": 30, "B": 6}, [8, 16, 1000]):
-    print(entry)
-# ('A', 0, 0, 8), ('B', 0, 8, 14), ('A', 1, 14, 30), ('A', 2, 30, 36)
+int main() {
+    mlfq({{"A", 30}, {"B", 6}}, {8, 16, 1000});
+    // A Q0 0-8, B Q0 8-14, A Q1 14-30, A Q2 30-36
+}
 ```
 
 Connects to: round robin, priority scheduling, FCFS and SJF, Linux CFS.
@@ -791,18 +799,24 @@ $$\text{share}_A = \frac{1024}{1024 + 335} \approx 75\%, \qquad \text{share}_B \
 
 Over time A gets about 3 ms of real CPU for every 1 ms B gets, which matches the 75% and 25% shares, while their vruntimes stay level.
 
-```python
-def cfs(weights, total_ms, slice_ms=1):
-    vr = {t: 0.0 for t in weights}
-    used = {t: 0 for t in weights}
-    for _ in range(total_ms // slice_ms):
-        t = min(vr, key=vr.get)                     # the leftmost task in the red-black tree
-        used[t] += slice_ms
-        vr[t] += slice_ms * 1024 / weights[t]
-    return used
+```cpp
+map<string, int> cfs(const map<string, int>& weights, int totalMs) {
+    set<pair<double, string>> tree;                  // ordered by vruntime, like CFS's rbtree
+    map<string, int> used;
+    for (const auto& [task, w] : weights) tree.insert({0.0, task});
+    for (int ms = 0; ms < totalMs; ms++) {
+        auto [vruntime, task] = *tree.begin();       // the leftmost task runs next
+        tree.erase(tree.begin());
+        used[task]++;
+        tree.insert({vruntime + 1024.0 / weights.at(task), task});   // 1 ms, scaled by weight
+    }
+    return used;
+}
 
-
-print(cfs({"A": 1024, "B": 335}, 1000))   # about {'A': 753, 'B': 247}
+int main() {
+    for (auto [task, ms] : cfs({{"A", 1024}, {"B", 335}}, 1000)) cout << task << " " << ms << "  ";
+    cout << "\n";                                    // about A 753  B 247
+}
 ```
 
 Connects to: multilevel queue and feedback queue scheduling, priority scheduling, red-black trees.

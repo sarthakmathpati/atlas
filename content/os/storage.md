@@ -158,20 +158,15 @@ $$12 \cdot 4\,\text{KB} + 1024 \cdot 4\,\text{KB} + 1024^2 \cdot 4\,\text{KB} + 
 
 #### Linked allocation with FAT
 
-```python
-# FAT: fat[b] is the next block after b, or -1 at the end of the file.
-fat = {5: 9, 9: 2, 2: 14, 14: -1}
-
-
-def blocks_of(start):
-    chain, b = [], start
-    while b != -1:
-        chain.append(b)
-        b = fat[b]
-    return chain
-
-
-print(blocks_of(5))   # [5, 9, 2, 14]: reaching the 4th block means following 3 links
+```cpp
+int main() {
+    // fat[b] is the block after b in the file, or -1 at the end.
+    map<int, int> fat = {{5, 9}, {9, 2}, {2, 14}, {14, -1}};
+    vector<int> chain;
+    for (int b = 5; b != -1; b = fat.at(b)) chain.push_back(b);
+    for (int b : chain) cout << b << " ";
+    cout << "\n";   // 5 9 2 14: reaching the 4th block means following 3 links
+}
 ```
 
 Because the FAT is cached in memory, following links costs memory lookups rather than disk reads, which made FAT practical despite linked allocation.
@@ -416,21 +411,6 @@ Three data disks and one parity block in a stripe (bytes shown in binary):
 
 If D2 fails: D1 ⊕ D3 ⊕ parity = 1011 ⊕ 1100 ⊕ 0001 = 0110, which is D2.
 
-```python
-def parity(blocks):
-    p = bytes(len(blocks[0]))
-    for b in blocks:
-        p = bytes(x ^ y for x, y in zip(p, b))
-    return p
-
-
-data = [b"RAID", b"five", b"demo"]
-p = parity(data)
-lost = 1
-rebuilt = parity([b for i, b in enumerate(data) if i != lost] + [p])
-print(rebuilt)   # b'five'
-```
-
 ```cpp
 int main() {
     vector<uint8_t> d = {0b1011, 0b0110, 0b1100};
@@ -497,19 +477,30 @@ A journaling file system writes a note about what it is going to change before c
 | 3 | commit present: replay writes the bitmap and inode |
 | 4 | replay again: writes are idempotent, the result is the same |
 
-```python
-def recover(journal, disk):
-    """Replay only transactions that have a commit record."""
-    for tx in journal:
-        if tx.get("committed"):
-            disk.update(tx["writes"])    # idempotent: replaying twice gives the same result
-    return disk
+```cpp
+struct Transaction {
+    map<string, string> writes;
+    bool committed;
+};
 
+// Replay only transactions that have a commit record.
+void recover(const vector<Transaction>& journal, map<string, string>& disk) {
+    for (const auto& tx : journal)
+        if (tx.committed)
+            for (const auto& [block, value] : tx.writes) disk[block] = value;   // idempotent
+}
 
-disk = {"bitmap": "old", "inode": "old"}
-journal = [{"writes": {"bitmap": "new", "inode": "new"}, "committed": True},
-           {"writes": {"inode": "newer"}, "committed": False}]           # crashed before commit
-print(recover(journal, disk))    # {'bitmap': 'new', 'inode': 'new'}
+int main() {
+    map<string, string> disk = {{"bitmap", "old"}, {"inode", "old"}};
+    vector<Transaction> journal = {
+        {{{"bitmap", "new"}, {"inode", "new"}}, true},
+        {{{"inode", "newer"}}, false},               // crashed before its commit record
+    };
+    recover(journal, disk);
+    recover(journal, disk);                          // replaying twice changes nothing
+    for (const auto& [block, value] : disk) cout << block << "=" << value << " ";
+    cout << "\n";                                    // bitmap=new inode=new
+}
 ```
 
 Connects to: file concepts, logs and write-ahead logging, RAID levels, free space management.

@@ -21,7 +21,7 @@ A process is a running program with its own private memory, and threads are seve
 - Threads are **cheaper** to create and switch than processes (no new address space, no TLB flush between them), and they communicate simply by sharing memory, which also means they need **synchronization**.
 - Processes give **isolation**: a crash or memory corruption in one does not affect others, and permissions can differ. A segfault in any thread kills the **whole process**.
 - On Linux both are "tasks" created by `clone()`; a thread is a task that shares the address space and file table with its creator (same PID, different TID).
-- Choose processes for isolation, fault tolerance or security (browser tabs, worker processes, escaping Python's GIL); choose threads for shared state and low overhead (a thread pool in a server).
+- Choose processes for isolation, fault tolerance or security (browser tabs, worker processes, running untrusted code); choose threads for shared state and low overhead (a thread pool in a server).
 
 ### deep
 #### What is shared
@@ -73,29 +73,6 @@ int main() {
 
 The threads needed an atomic (or a mutex) because they touched the same memory at the same time; the processes needed nothing, and could not share the result without IPC.
 
-```python
-import threading
-from multiprocessing import Process
-
-data = []
-
-
-def add():
-    data.append(1)
-
-
-if __name__ == "__main__":
-    ts = [threading.Thread(target=add) for _ in range(3)]
-    for t in ts:
-        t.start()
-    for t in ts:
-        t.join()
-    p = Process(target=add)            # the append happens in another process's copy
-    p.start()
-    p.join()
-    print(len(data))                   # 3
-```
-
 #### How Linux sees it
 
 Linux has one kind of schedulable entity, the task. `fork` creates a task with its own copy of the address space; `pthread_create` calls `clone` with flags such as `CLONE_VM | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD`, so the new task shares those resources. `getpid()` returns the thread group id (the same for all threads), and `gettid()` returns each thread's own id. `ps -eLf` lists threads.
@@ -107,7 +84,7 @@ Linux has one kind of schedulable entity, the task. `fork` creates a task with i
 | isolate crashes or untrusted code | processes | browser tabs, a worker per request in Apache prefork |
 | different privileges | processes | a privileged helper plus an unprivileged main process |
 | heavy sharing of in-memory state | threads | an in-memory cache shared by request handlers |
-| cheap parallelism on many cores | threads (or processes in Python because of the GIL) | a thread pool computing results |
+| cheap parallelism on many cores | threads | a thread pool computing results |
 | scale across machines | processes (services) | anything distributed |
 
 #### Pitfalls
@@ -126,7 +103,7 @@ Q: What are the advantages of threads over processes?
 A: Threads are cheaper to create and to switch between because they share an address space, and they can communicate by reading and writing shared memory without IPC. This makes them well suited to parallel work on shared data and to keeping programs responsive.
 
 Q: What are the advantages of processes over threads?
-A: Isolation. A crash or memory corruption in one process does not affect others, processes can run with different permissions, and they avoid accidental sharing that causes races. They also let Python programs use several cores despite the global interpreter lock.
+A: Isolation. A crash or memory corruption in one process does not affect others, processes can run with different permissions, and they avoid accidental sharing that causes races.
 
 Q: What happens to the other threads if one thread crashes with a segmentation fault?
 A: The whole process is terminated, including all its threads, because the signal is delivered to the process and they share one address space whose integrity can no longer be trusted.
@@ -146,7 +123,7 @@ Threads can be managed either by a library inside your program or by the operati
 ### interview
 - **User-level threads** are created, scheduled and switched by a **library in user space**; the kernel sees only one schedulable entity. Switching is very fast (no system call), but a **blocking system call blocks all** of them, and they **cannot run in parallel** on several cores.
 - **Kernel-level threads** are known to and scheduled by the **kernel**: they run in parallel on multiple cores and block independently, but creating and switching them involves the kernel and costs more.
-- **Many-to-one**: many user threads on one kernel thread (early Java "green threads", GNU Pth). **One-to-one**: each user thread is a kernel thread (Linux NPTL pthreads, Windows threads, Java platform threads). **Many-to-many (M:N)**: many user threads multiplexed over a pool of kernel threads (Go goroutines, Java 21 **virtual threads**, Erlang processes).
+- **Many-to-one**: many user threads on one kernel thread (GNU Pth, early green-thread libraries). **One-to-one**: each user thread is a kernel thread (Linux NPTL pthreads behind `std::thread`, Windows threads). **Many-to-many (M:N)**: many user threads multiplexed over a pool of kernel threads (Go goroutines, Erlang processes).
 - M:N runtimes avoid the blocking problem by parking a user thread when it would block and running another on the same kernel thread, typically with non-blocking I/O underneath.
 - Trade-off summary: user threads for huge numbers of cheap tasks, kernel threads for real parallelism; M:N runtimes try to get both, at the cost of a complex scheduler.
 
@@ -162,37 +139,60 @@ many-to-one          one-to-one            many-to-many
 
 | model | parallel on cores? | one blocking call blocks… | cost per thread | examples |
 |---|---|---|---|---|
-| many-to-one | no | all threads | tiny | early Java green threads, GNU Pth |
-| one-to-one | yes | only that thread | a kernel thread each | Linux pthreads (NPTL), Windows, Java platform threads |
-| many-to-many | yes | only that user thread, if the runtime handles it | tiny | Go goroutines, Java virtual threads, Erlang |
+| many-to-one | no | all threads | tiny | GNU Pth, early green-thread libraries |
+| one-to-one | yes | only that thread | a kernel thread each | Linux pthreads (NPTL), `std::thread`, Windows |
+| many-to-many | yes | only that user thread, if the runtime handles it | tiny | Go goroutines, Erlang |
 
 #### Worked example: a user-level scheduler in a few lines
 
-Python generators can act as user-level threads: each `yield` is a voluntary switch, and a tiny round-robin scheduler decides who runs next. The kernel sees only one thread.
+The POSIX `ucontext` functions (`getcontext`, `makecontext`, `swapcontext`) let a program switch between stacks it owns, which is all a user-level thread library needs: each `swapcontext` is a voluntary switch, and a tiny round-robin scheduler decides who runs next. The kernel sees only one thread.
 
-```python
-from collections import deque
+```cpp
+#include <ucontext.h>
 
+struct Task {
+    string name;
+    int steps;
+    ucontext_t ctx{};
+    vector<char> stack = vector<char>(64 * 1024);    // each user thread has its own stack
+    bool done = false;
+};
 
-def worker(name, steps):
-    for i in range(steps):
-        print(f"{name} step {i}")
-        yield                          # give up the CPU voluntarily (a user-level switch)
+ucontext_t schedulerCtx;
+Task* current = nullptr;
 
+void yieldCpu() { swapcontext(&current->ctx, &schedulerCtx); }   // a user-level switch
 
-def run(tasks):
-    ready = deque(tasks)
-    while ready:
-        task = ready.popleft()
-        try:
-            next(task)                 # resume the task until its next yield
-            ready.append(task)
-        except StopIteration:
-            pass                       # the task finished
+void worker() {
+    Task* me = current;
+    for (int i = 0; i < me->steps; i++) {
+        cout << me->name << " step " << i << "\n";
+        yieldCpu();                                  // give up the CPU voluntarily
+    }
+    me->done = true;                                 // returning resumes uc_link: the scheduler
+}
 
+void run(deque<Task*> ready) {
+    for (Task* t : ready) {
+        getcontext(&t->ctx);
+        t->ctx.uc_stack.ss_sp = t->stack.data();
+        t->ctx.uc_stack.ss_size = t->stack.size();
+        t->ctx.uc_link = &schedulerCtx;
+        makecontext(&t->ctx, worker, 0);
+    }
+    while (!ready.empty()) {                         // round robin, all in one kernel thread
+        current = ready.front();
+        ready.pop_front();
+        swapcontext(&schedulerCtx, &current->ctx);   // resume the task until it yields
+        if (!current->done) ready.push_back(current);
+    }
+}
 
-run([worker("A", 2), worker("B", 3)])
-# A step 0, B step 0, A step 1, B step 1, B step 2
+int main() {
+    Task a{"A", 2}, b{"B", 3};
+    run({&a, &b});
+    // A step 0, B step 0, A step 1, B step 1, B step 2 (one per line)
+}
 ```
 
 | round | ready queue before | runs | printed |
@@ -205,9 +205,9 @@ run([worker("A", 2), worker("B", 3)])
 | 6 | B | B | B step 2 |
 | 7 | B | B | finishes; the queue is empty |
 
-The weakness is visible too: if worker A called `time.sleep(5)` instead of yielding, the whole scheduler (every "thread") would stop for five seconds, because the kernel puts the only real thread to sleep. That is the many-to-one blocking problem, and it is why `asyncio` replaces blocking calls with `await`able non-blocking versions.
+The weakness is visible too: if worker A called `sleep(5)` instead of yielding, the whole scheduler (every "thread") would stop for five seconds, because the kernel puts the only real thread to sleep. That is the many-to-one blocking problem, and it is why user-level thread libraries and coroutine frameworks replace blocking calls with non-blocking versions driven by an event loop.
 
-#### Kernel threads in C++
+#### Kernel threads for comparison
 
 ```cpp
 int main() {
@@ -228,7 +228,7 @@ int main() {
 
 #### How M:N runtimes cope with blocking
 
-Go's scheduler runs goroutines (G) on OS threads (M) through logical processors (P). When a goroutine makes a blocking system call, its M is detached and another M takes over the P, so other goroutines keep running; network I/O uses the netpoller (epoll) so goroutines park without blocking any thread. Java virtual threads similarly unmount from their carrier thread when they block on supported I/O.
+Go's scheduler runs goroutines (G) on OS threads (M) through logical processors (P). When a goroutine makes a blocking system call, its M is detached and another M takes over the P, so other goroutines keep running; network I/O uses the netpoller (epoll) so goroutines park without blocking any thread.
 
 Connects to: threads vs processes, context switching, blocking vs non-blocking I/O, I/O multiplexing, concurrency basics.
 
@@ -237,13 +237,13 @@ Q: What is the difference between user-level and kernel-level threads?
 A: User-level threads are managed entirely by a library in user space and the kernel sees only one thread, so they are fast to create and switch but cannot run in parallel and all block when one makes a blocking system call. Kernel-level threads are managed and scheduled by the kernel, can run on multiple cores and block independently, but cost more to create and switch.
 
 Q: Describe the many-to-one, one-to-one and many-to-many models.
-A: Many-to-one maps all user threads onto a single kernel thread, so there is no parallelism. One-to-one maps each user thread to its own kernel thread, as Linux pthreads and Windows do. Many-to-many multiplexes many user threads over a smaller pool of kernel threads, as Go goroutines and Java virtual threads do.
+A: Many-to-one maps all user threads onto a single kernel thread, so there is no parallelism. One-to-one maps each user thread to its own kernel thread, as Linux pthreads and Windows do. Many-to-many multiplexes many user threads over a smaller pool of kernel threads, as Go goroutines do.
 
 Q: Why does a blocking system call hurt user-level threads?
 A: The kernel only knows about the one kernel thread behind them. When any user thread makes a blocking call, the kernel blocks that kernel thread, so the library cannot run any of the other user threads until the call returns.
 
-Q: How do Go goroutines avoid blocking the whole program on I/O?
-A: Go uses an M:N scheduler. Network I/O goes through a poller based on epoll or similar, so a goroutine waiting on the network is parked while its OS thread runs others. For blocking system calls, the runtime hands the logical processor to another OS thread so other goroutines keep running.
+Q: How does an M:N runtime keep one blocking call from stopping every user thread?
+A: Network I/O goes through a poller based on epoll, so a user thread waiting on the network is parked while its kernel thread runs others. For a blocking system call, the runtime hands the remaining user threads to another kernel thread so they keep running. Go's goroutine scheduler is the best-known example.
 
 ## os.threads.benefits-and-costs-of-multithreading
 name: "Benefits and costs of multithreading"
@@ -259,7 +259,7 @@ Using several threads lets a program do more than one thing at a time, like keep
 - **Costs**: memory for each thread's stack, creation and **context-switch** overhead, **synchronization** overhead and lock contention, **cache effects** such as false sharing, and above all **complexity**: races, deadlocks and bugs that appear only sometimes.
 - **Amdahl's law** limits speedup: with a parallel fraction $p$ on $n$ cores, speedup $\le 1 / ((1 - p) + p/n)$. With $p = 0.9$ even infinitely many cores give at most 10×.
 - CPU-bound work: about one thread per core. I/O-bound work: more threads (or async I/O) because most are waiting.
-- In CPython the **GIL** lets only one thread run Python bytecode at a time, so threads help I/O-bound work but not CPU-bound pure-Python work; use processes (or the free-threaded build).
+- C++ threads run truly in parallel on different cores, so CPU-bound work scales until memory bandwidth, shared cache lines or locks get in the way.
 - Prefer higher-level tools: thread pools, futures, parallel algorithms and message passing over hand-managed threads and locks.
 
 ### deep
@@ -317,29 +317,13 @@ int main() {
 
 If each thread did `partial[t] += v[i]` inside the loop, neighboring `partial` entries on the same cache line would bounce between cores (**false sharing**) and the parallel version could be slower than the serial one.
 
-#### Code: I/O-bound work in Python
+#### I/O-bound work
 
-```python
-import time
-from concurrent.futures import ThreadPoolExecutor
-
-
-def fetch(i):
-    time.sleep(0.2)          # stands in for a network call; releases the GIL while waiting
-    return i
-
-
-start = time.perf_counter()
-with ThreadPoolExecutor(max_workers=8) as pool:
-    results = list(pool.map(fetch, range(8)))
-print(results, round(time.perf_counter() - start, 1))   # [0, 1, ..., 7] 0.2 rather than 1.6
-```
-
-The same pool running a pure-Python CPU loop would take about as long as one thread, because of the GIL; `ProcessPoolExecutor` fixes that.
+Threads help I/O-bound work even on one core, because the waits overlap: eight requests that each wait 200 ms for the network finish in about 200 ms on eight threads, instead of 1.6 s one after another. Beyond a few hundred connections, an event loop (`epoll`) does the same job without a thread per request.
 
 #### Costs in detail
 
-- **Memory**: each thread reserves a stack (8 MB of virtual space by default for Linux pthreads, 1 MB by default for Java threads on 64-bit Linux); thousands of threads add up.
+- **Memory**: each thread reserves a stack (8 MB of virtual space by default for Linux pthreads; `pthread_attr_setstacksize` changes it); thousands of threads add up.
 - **Scheduling**: more runnable threads than cores means more context switches and colder caches.
 - **Synchronization**: locks serialize work (Amdahl again) and contention causes threads to sleep and wake.
 - **Correctness**: races, deadlocks, livelocks and memory-ordering bugs are hard to reproduce and test.
@@ -359,5 +343,5 @@ A: The speedup from parallelizing a program is limited by its serial part: with 
 Q: How many threads should a program use?
 A: For CPU-bound work, roughly one per core, since more only adds switching. For I/O-bound work, more threads can help because most are waiting, though asynchronous I/O often scales better. Measure rather than guess.
 
-Q: Why do Python threads not speed up CPU-bound code?
-A: CPython's global interpreter lock allows only one thread to execute Python bytecode at a time, so CPU-bound threads take turns rather than running in parallel. Threads still help I/O-bound work because the lock is released while waiting; for CPU-bound work, use multiple processes or native extensions.
+Q: What is false sharing and how do you avoid it?
+A: Two threads write to different variables that sit on the same cache line, so the line bounces between their cores even though no data is shared, and every write becomes a cache miss. Keep per-thread data on separate cache lines with alignas(64) padding, or accumulate in a local variable and write the result once at the end.
