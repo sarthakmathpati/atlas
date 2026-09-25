@@ -18415,10 +18415,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18439,10 +18439,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18463,10 +18463,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18487,10 +18487,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18509,10 +18509,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18538,10 +18538,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18562,10 +18562,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18584,10 +18584,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18606,10 +18606,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18635,10 +18635,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18664,10 +18664,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18686,10 +18686,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18711,10 +18711,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18738,10 +18738,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18762,10 +18762,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18789,10 +18789,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18816,10 +18816,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 5,
+    "any": true
    }
   },
   {
@@ -18838,10 +18838,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18860,10 +18860,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18882,10 +18882,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18906,10 +18906,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
@@ -18930,10 +18930,10 @@
    "estMinutes": 25,
    "isPattern": false,
    "written": {
-    "core": false,
-    "deep": false,
-    "questions": 0,
-    "any": false
+    "core": true,
+    "deep": true,
+    "questions": 4,
+    "any": true
    }
   },
   {
