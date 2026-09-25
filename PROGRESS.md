@@ -21,6 +21,9 @@ text.
 Session 9 finished **SQL** (34 / 34 concepts, a deep article for every one, 20 of them
 must-know; 146 questions, 116 SQL blocks written for MySQL 8, every one run on a real MySQL 8.0
 and PostgreSQL 16 with all 113 result tables compared cell by cell).
+Session 9 checkpoint: System Design is under way (57 / 79 concepts written: method,
+scalability, caching, data storage, distributed systems, messaging, reliability, architecture
+and building blocks; the 22 classic problems remain).
 **Next up:** Phase 5 continues with System Design (section 5.3 order: DSA, OOP, OS,
 CN, DBMS, SQL, System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles,
 Markets, Architecture, Aptitude, Engineering essentials, Career), one or two subjects per
