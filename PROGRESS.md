@@ -25,11 +25,12 @@ Session 9 also finished **System Design** (79 / 79 concepts, a deep article for 
 of them must-know; 307 questions, 74 C++ simulations, each run and checked against its output).
 Session 10 finished **Language core** (46 / 46 concepts, all 22 must-know with deep articles; the
 C++ topics and `lang.general` have a deep article for every concept, while the Java and Python
-topics are kept short, with deep articles only for their must-know concepts, as the owner asked).
-**Next up:** Phase 5 continues with Concurrency (in progress in session 10), then LLD, Probability,
-Math, Puzzles, Markets, Architecture, Aptitude, Engineering essentials, Career (section 5.3 order),
-one or two subjects per session, never two content sessions at once. Follow `content/README.md` →
-"Writing conventions", run `npm run check:content-code -- <subject>`, and add each finished subject
+topics are kept short, with deep articles only for their must-know concepts, as the owner asked;
+198 questions) and **Concurrency** (20 / 20 concepts, a deep article for every one, 9 of them must-know; 85
+questions, 26 C++ blocks, every threaded one run repeatedly under ThreadSanitizer).
+**Next up:** Phase 5 continues with LLD, then Probability, Math, Puzzles, Markets, Architecture,
+Aptitude, Engineering essentials, Career (section 5.3 order), one or two subjects per session,
+never two content sessions at once. Follow `content/README.md` → "Writing conventions", run `npm run check:content-code -- <subject>`, and add each finished subject
 to `FINISHED` in `tests/syllabus/content.test.ts`. Never change concept metadata (ids, names,
 scopes, prerequisites, importance) while writing content: the map layout depends on it, and
 `tests/syllabus/layout.test.ts` fails if it moves. For SQL, PostgreSQL 16 is installed in the cloud
@@ -46,7 +47,7 @@ rubrics (section 8.4), unless they are already complete.
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 10: Language core complete (46 / 46, 22 / 22 must-know deep, 36 deep in all: every C++ and `lang.general` concept, plus the must-know Java and Python ones); every C++ block run under ASan and UBSan at -O1 and -O2, Java 21 and Python 3.11 examples run; the code check gained GCC's policy-based tree headers and a marker for blocks that warn or show undefined behavior on purpose. 357 tests. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 9: SQL complete (34 / 34, 20 / 20 must-know deep, 34 deep in all); every query run on MySQL 8 and PostgreSQL 16. System Design complete (79 / 79, 34 / 34 must-know deep, 79 deep in all); 74 C++ simulations run with sanitizers; Redis commands checked on Redis 7. 353 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
+| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 10: Language core complete (46 / 46, 22 / 22 must-know deep, 36 deep in all: every C++ and `lang.general` concept, plus the must-know Java and Python ones); every C++ block run under ASan and UBSan at -O1 and -O2, Java 21 and Python 3.11 examples run; the code check gained GCC's policy-based tree headers, `<coroutine>` and a marker for blocks that warn or show undefined behavior on purpose. Concurrency complete (20 / 20, 9 / 9 must-know deep, 20 deep in all); every threaded example run many times under ASan, GCC and clang ThreadSanitizer and at -O2. Backticks in scope text now show as inline code (`CodeSpans`). 362 tests. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 9: SQL complete (34 / 34, 20 / 20 must-know deep, 34 deep in all); every query run on MySQL 8 and PostgreSQL 16. System Design complete (79 / 79, 34 / 34 must-know deep, 79 deep in all); 74 C++ simulations run with sanitizers; Redis commands checked on Redis 7. 353 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -101,7 +102,7 @@ deep for every must-know concept; signals and template for every pattern.
 | oop | 53 / 53 | 24 / 24 | – |
 | lld | 0 / 32 | 0 / 11 | – |
 | os | 65 / 65 | 29 / 29 | – |
-| conc | 0 / 20 | 0 / 9 | – |
+| conc | 20 / 20 | 9 / 9 | – |
 | arch | 0 / 19 | 0 / 4 | – |
 | cn | 55 / 55 | 32 / 32 | – |
 | dbms | 56 / 56 | 24 / 24 | – |
@@ -157,6 +158,33 @@ deep for every must-know concept; signals and template for every pattern.
   the shell now, because the top bar and Settings need them.
 - **Ask Claude drawer, "Explain with Claude", API key, Review my code, Dry run, Suggest with
   Claude:** each shows an honest "arrives in phase 6" message; nothing pretends to work.
+- **Phase 5 notes (session 10, Concurrency):** all 20 concepts have simple, interview, questions
+  and a deep article (must-know articles 480 to 670 words), written around the C++ standard library
+  (`thread`, `jthread`, `async`, mutexes and lock wrappers, `condition_variable`, `shared_mutex`,
+  C++20 semaphores, latches, barriers and coroutines, atomics and memory orders), with the OS
+  theory left to the `os.sync` articles. Every threaded example was run at least 10 times under
+  ThreadSanitizer (GCC 13, and clang 18 after `apt-get install libclang-rt-18-dev`), several times
+  under AddressSanitizer and UBSan, and 30 to 50 times at -O2; all of them print the same output on
+  every run. Interleavings that would otherwise be luck are forced with barriers (the overdraft race
+  condition, two threads each holding one lock), and programs print invariants rather than
+  timing-dependent splits. Machine-dependent numbers are labelled as one run and give the range seen:
+  concurrency versus parallelism (4 threads: 0.45 to 0.63 s on 4 cores, about 1.7 s pinned to one
+  core, as long as running them one after another), false sharing (1.6 to 1.7 s packed versus
+  0.13 to 0.16 s padded), thread creation (about 45 µs), and a store-buffering litmus test (both
+  loads read 0 in 500 to 130,000 of 200,000 rounds with relaxed or release/acquire; never with
+  seq_cst, over 60 runs). Undefined-behavior examples (a racy counter, relaxed publishing,
+  double-checked locking on a plain pointer) are labelled and compiled only; the text quotes
+  ThreadSanitizer's reports about them. The ABA problem is replayed step by step on one thread, so
+  it is deterministic. Found on the way: GCC 13's ThreadSanitizer does not intercept
+  `pthread_mutex_clocklock`, so `timed_mutex::try_lock_for` gives a false "unlock of an unlocked
+  mutex" report (clang 18's is clean); a timeout demo whose result depended on which timeout fired
+  first (fixed with a second barrier); `bits/stdc++.h` in g++ 13 leaves out `<coroutine>` (added to
+  the checker's prelude). Also this session: code lines in the new content were kept within 100
+  characters (a few older DSA, OOP, OS and DBMS lines are slightly longer); scope text with
+  backticks (Language core uses them) now shows inline code on the concept page, the map tooltip,
+  the list view and the explain-it-back dialog. Screens reviewed: deep articles in both subjects at
+  1280 px (light and dark) and 390 px (light and dark), the list view and the design kit; no console
+  errors, no page overflow.
 - **Phase 5 notes (session 10, Language core):** all 46 concepts have simple, interview and
   questions; deep articles for all 22 must-know concepts (360 to 740 words) and for every other
   C++ and `lang.general` concept. The Java and Python topics stay in the syllabus for other primary

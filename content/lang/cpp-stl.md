@@ -705,7 +705,7 @@ int main() {
 
     // Count inversions: pairs i < j with a[i] > a[j].
     vector<int> a = {3, 1, 2, 5, 4, 2};
-    ordered_set<pair<int, int>> seen;                         // (value, index): duplicates stay apart
+    ordered_set<pair<int, int>> seen;             // (value, index): duplicates stay apart
     long long inversions = 0;
     for (int i = 0; i < (int)a.size(); ++i) {
         inversions += i - seen.order_of_key({a[i], INT_MAX}); // earlier elements greater than a[i]

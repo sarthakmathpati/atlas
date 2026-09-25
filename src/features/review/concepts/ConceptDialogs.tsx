@@ -12,7 +12,7 @@ import { cx } from "@/components/ui/cx";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field, Input, Select, Switch, Textarea, type SelectOption } from "@/components/ui/Field";
 import { IMPORTANCE_LABEL, STATUS_LABEL, STATUS_ORDER } from "@/components/ui/labels";
-import { Skeleton } from "@/components/ui/Misc";
+import { CodeSpans, Skeleton } from "@/components/ui/Misc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { subjects, topicById, topicsBySubject } from "@/data/syllabus";
@@ -347,7 +347,9 @@ function ConceptReviewDialog() {
                 <BookOpenText size={16} aria-hidden="true" />
                 What it covers
               </p>
-              <p className="text-base text-text">{concept.scope}</p>
+              <p className="text-base text-text">
+                <CodeSpans text={concept.scope} />
+              </p>
               <p className="text-sm text-muted">
                 The interview points for this concept are still being written.
               </p>

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/Chip";
 import { BottomSheet, Dialog, Drawer } from "@/components/ui/Dialog";
 import { Field, Input, Select, Slider, Switch, Textarea } from "@/components/ui/Field";
-import { Callout, EmptyState, Kbd, Skeleton } from "@/components/ui/Misc";
+import { Callout, CodeSpans, EmptyState, Kbd, Skeleton } from "@/components/ui/Misc";
 import { MOD_KEY } from "@/components/ui/platform";
 import { MultiCombobox } from "@/components/ui/MultiCombobox";
 import { Menu, Popover } from "@/components/ui/Popover";
@@ -282,6 +282,9 @@ export default function KitPage() {
             <span className="flex items-center gap-1 text-sm text-muted">
               <Kbd>{MOD_KEY}</Kbd>
               <Kbd>K</Kbd> opens search
+            </span>
+            <span className="text-sm text-muted">
+              <CodeSpans text="Scope text with `inline code`, as in `std::vector`" />
             </span>
           </div>
           <div className="flex flex-wrap gap-2">

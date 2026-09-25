@@ -42,7 +42,7 @@ public:
         return true;
     }
 
-    optional<T> pop() {                           // blocks while empty; nullopt when closed and drained
+    optional<T> pop() {                           // blocks while empty; nullopt: closed and empty
         unique_lock lock(m_);
         notEmpty_.wait(lock, [&] { return !q_.empty() || closed_; });
         if (q_.empty()) return nullopt;

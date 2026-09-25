@@ -157,7 +157,8 @@ struct Node {
 };
 
 int main() {
-    cout << sizeof(int*) << " " << sizeof(unique_ptr<int>) << " " << sizeof(shared_ptr<int>) << "\n";
+    cout << sizeof(int*) << " " << sizeof(unique_ptr<int>) << " "
+         << sizeof(shared_ptr<int>) << "\n";
     auto u = make_unique<int>(5);
     auto u2 = std::move(u);                   // ownership moves; u becomes null
     cout << (u == nullptr) << " " << *u2 << "\n";
@@ -407,7 +408,8 @@ template <integral T>                               // C++20 concept: integers o
 T gcdOf(T a, T b) { return b == 0 ? a : gcdOf(b, a % b); }
 
 int main() {
-    cout << largest(vector<int>{3, 9, 2}) << " " << largest(vector<string>{"pear", "apple"}) << "\n";
+    cout << largest(vector<int>{3, 9, 2}) << " "
+         << largest(vector<string>{"pear", "apple"}) << "\n";
     Stack<string> s;
     s.push("a");
     s.push("b");

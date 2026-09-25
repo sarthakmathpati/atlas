@@ -48,7 +48,7 @@ void timed(const char* label, F f) {
     printf("%-22s wall %.2f s, cpu %.2f s, cpu/wall %.1f\n", label, wall, cpu, cpu / wall);
 }
 
-double sink[4];                                   // keeps the results, so the work is not optimized away
+double sink[4];                                  // keeps results: the work cannot be optimized out
 
 void fourTasks() {
     vector<thread> ts;
@@ -144,13 +144,13 @@ int main() {
     vector<long long> results(4);
     vector<thread> workers;
     for (int i = 0; i < 4; ++i)
-        workers.emplace_back(square, i, ref(results));   // arguments are copied unless wrapped in ref
+        workers.emplace_back(square, i, ref(results));   // args are copied unless wrapped in ref
     for (auto& t : workers) t.join();                     // wait for all four
     for (long long r : results) cout << r << " ";
     cout << "\n";
 
     {
-        jthread ticker([](stop_token stop) {              // C++20: joins itself, can be asked to stop
+        jthread ticker([](stop_token stop) {              // C++20: joins itself, can be stopped
             int ticks = 0;
             while (!stop.stop_requested()) {
                 ++ticks;

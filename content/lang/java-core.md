@@ -129,7 +129,10 @@ import java.util.*;
 
 public class Refs {
     static void mutate(List<Integer> list) { list.add(4); }          // changes the shared object
-    static void reassign(List<Integer> list) { list = new ArrayList<>(); list.add(99); }  // local only
+    static void reassign(List<Integer> list) {                        // rebinds the local copy only
+        list = new ArrayList<>();
+        list.add(99);
+    }
     static void bump(int x) { x++; }                                  // a copy of the value
 
     public static void main(String[] args) {
@@ -332,7 +335,11 @@ public class Colls {
         list.removeIf(w -> w.equals("fig"));             // the safe way
         System.out.println(list);
         List<Integer> fixed = List.of(1, 2, 3);
-        try { fixed.add(4); } catch (UnsupportedOperationException e) { System.out.println("immutable"); }
+        try {
+            fixed.add(4);
+        } catch (UnsupportedOperationException e) {
+            System.out.println("immutable");
+        }
     }
 }
 ```

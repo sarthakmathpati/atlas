@@ -789,9 +789,9 @@ Reading `table[4]` is UB, so the compiler may assume the loop returns before `i`
 
 | tool | catches | how |
 |---|---|---|
-| `-fsanitize=undefined` | signed overflow, bad shifts, null dereference, misaligned access | stops with `runtime error: signed integer overflow: ...` |
-| `-fsanitize=address` | out-of-bounds, use after free, leaks | stops with `global-buffer-overflow`, `heap-use-after-free` |
-| `-D_GLIBCXX_DEBUG` | out-of-range `operator[]`, invalid iterators in libstdc++ | `attempt to subscript container with out-of-bounds index 3, but container only holds 3 elements` |
+| `-fsanitize=undefined` | signed overflow, bad shifts, null dereference, misaligned access | stops with `runtime error: signed integer overflow` |
+| `-fsanitize=address` | out-of-bounds, use after free, leaks | stops with `heap-use-after-free` and similar |
+| `-D_GLIBCXX_DEBUG` | out-of-range `operator[]`, invalid iterators in libstdc++ | stops with `attempt to subscript container with out-of-bounds index` |
 | `-Wall -Wextra` | uninitialized uses, returning a local's address, wrong member order | compile-time warnings |
 | `-fsanitize=thread` | data races | reports the two conflicting accesses |
 

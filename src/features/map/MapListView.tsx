@@ -13,6 +13,7 @@ import { useCustomConceptStore } from "@/stores/customConceptStore";
 import { conceptHref } from "@/app/router";
 import { ImportanceChip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
+import { CodeSpans } from "@/components/ui/Misc";
 import { prefersReducedMotion } from "@/components/ui/hooks";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { STATUS_LABEL } from "@/components/ui/labels";
@@ -59,7 +60,9 @@ function ConceptRow({ concept, highlighted }: { concept: Concept; highlighted: b
             {hidden && <Chip className="border-dashed">Hidden from the map</Chip>}
           </div>
           {concept.scope !== concept.name && (
-            <p className="mt-1 pl-[22px] text-sm text-muted">{concept.scope}</p>
+            <p className="mt-1 pl-[22px] text-sm text-muted">
+              <CodeSpans text={concept.scope} />
+            </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 pl-[22px] sm:pl-0">

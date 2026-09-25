@@ -63,8 +63,8 @@ int main() {
         });
     for (auto& th : ts) th.join();
     int left = inv.count("bolt");
-    cout << "added 40000, taken + left = " << taken + left << ", taken is even: " << (taken % 2 == 0)
-         << "\n";
+    cout << "added 40000, taken + left = " << taken + left
+         << ", taken is even: " << (taken % 2 == 0) << "\n";
 }
 ```
 

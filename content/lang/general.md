@@ -69,9 +69,12 @@ int main() {
         reverse(v.begin(), v.end());
     }) << "\n";
     vector<Tracked> data(n);
-    cout << "100 calls by value:   " << cost([&] { for (int i = 0; i < 100; ++i) sizeByValue(data); }) << "\n";
-    cout << "100 calls by ref:     " << cost([&] { for (int i = 0; i < 100; ++i) sizeByRef(data); }) << "\n";
-    cout << "range-for by value:   " << cost([&] { long long s = 0; for (auto x : data) s += x.v; (void)s; }) << "\n";
+    cout << "100 calls by value:   "
+         << cost([&] { for (int i = 0; i < 100; ++i) sizeByValue(data); }) << "\n";
+    cout << "100 calls by ref:     "
+         << cost([&] { for (int i = 0; i < 100; ++i) sizeByRef(data); }) << "\n";
+    cout << "range-for by value:   "
+         << cost([&] { long long s = 0; for (auto x : data) s += x.v; (void)s; }) << "\n";
 }
 ```
 

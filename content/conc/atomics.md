@@ -197,9 +197,11 @@ long bothReadZero(int rounds) {
 
 int main() {
     const int rounds = 200000;
-    cout << "relaxed:         " << bothReadZero<memory_order_relaxed, memory_order_relaxed>(rounds) << "\n";
-    cout << "release/acquire: " << bothReadZero<memory_order_release, memory_order_acquire>(rounds) << "\n";
-    cout << "seq_cst:         " << bothReadZero<memory_order_seq_cst, memory_order_seq_cst>(rounds) << "\n";
+    const auto relaxed = memory_order_relaxed, rel = memory_order_release,
+               acq = memory_order_acquire, sc = memory_order_seq_cst;
+    cout << "relaxed:         " << bothReadZero<relaxed, relaxed>(rounds) << "\n";
+    cout << "release/acquire: " << bothReadZero<rel, acq>(rounds) << "\n";
+    cout << "seq_cst:         " << bothReadZero<sc, sc>(rounds) << "\n";
 }
 ```
 
@@ -331,7 +333,8 @@ struct Stack {
 
 string show(const Stack& s) {
     string out;
-    for (Node* n = s.top.load(); n; n = n->next) out += (out.empty() ? "" : " ") + to_string(n->value);
+    for (Node* n = s.top.load(); n; n = n->next)
+        out += (out.empty() ? "" : " ") + to_string(n->value);
     return out.empty() ? "(empty)" : out;
 }
 

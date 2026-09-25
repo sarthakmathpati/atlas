@@ -1,4 +1,4 @@
-// Kbd, EmptyState, Skeleton and Callout (section 12.7).
+// Kbd, CodeSpans, EmptyState, Skeleton and Callout (section 12.7).
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cx } from "./cx";
@@ -14,6 +14,30 @@ export function Kbd({ children, className }: { children: ReactNode; className?: 
     >
       {children}
     </kbd>
+  );
+}
+
+/**
+ * Plain text in which `backticked` spans show as inline code, for one-line syllabus text such as
+ * a concept's scope ("pass by value vs `const` reference"). No other Markdown is interpreted.
+ */
+export function CodeSpans({ text }: { text: string }) {
+  const parts = text.split(/`([^`]+)`/);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <code
+            key={i}
+            className="rounded-[4px] border border-rule bg-code px-[0.3em] font-mono text-[0.875em]"
+          >
+            {part}
+          </code>
+        ) : (
+          part
+        ),
+      )}
+    </>
   );
 }
 
