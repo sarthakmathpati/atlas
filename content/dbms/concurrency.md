@@ -381,7 +381,7 @@ A deadlock happens when two transactions each hold a lock the other needs, so bo
 ### interview
 - Arises under locking when transactions acquire locks in **different orders**: T1 locks row 1 then row 2, T2 locks row 2 then row 1. The same four conditions as operating system deadlocks apply.
 - **Detection**: build a **wait-for graph** (edge $T_i \to T_j$ when $T_i$ waits for a lock held by $T_j$); a **cycle** is a deadlock. Pick a **victim** (least work done, youngest, fewest locks) and abort it; it releases its locks.
-- PostgreSQL checks after a transaction has waited `deadlock_timeout` (1 s by default) and aborts the transaction that ran the check; MySQL InnoDB detects immediately and rolls back the transaction with the smaller undo log.
+- PostgreSQL checks after a transaction has waited `deadlock_timeout` (1 s by default) and aborts the transaction that ran the check; MySQL InnoDB detects a cycle as soon as a lock wait forms and rolls back the smaller transaction (the one that changed the fewest rows).
 - **Prevention with timestamps**: **wait-die** (an older transaction may wait for a younger one; a younger one requesting from an older one dies and restarts with its old timestamp) and **wound-wait** (an older one wounds, meaning aborts, a younger holder; a younger one waits). Both avoid cycles and starvation.
 - **Timeouts**: abort after waiting too long; simple but imprecise.
 - Application side: touch rows in a **consistent order** (sort ids), keep transactions short, and **retry** on deadlock errors.

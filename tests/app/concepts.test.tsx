@@ -98,12 +98,19 @@ describe("map and concept screens", () => {
     await user.keyboard("{Escape}");
 
     await user.click(screen.getByRole("button", { name: "Flashcards" }));
-    const dialog = await screen.findByRole("dialog", { name: "Flashcards: DBMS vs file systems" });
+    // The dialog waits for the subject's text chunk, which is lazy loaded (slow under a busy suite).
+    const dialog = await screen.findByRole(
+      "dialog",
+      { name: "Flashcards: DBMS vs file systems" },
+      { timeout: 4000 },
+    );
     // One card per written question; rate every card Easy to finish the session.
     const cards = conceptById.get(DB_CONCEPT)!.written.questions;
     expect(cards).toBeGreaterThan(0);
     for (let i = 0; i < cards; i++) {
-      await user.click(await within(dialog).findByRole("button", { name: "Show answer" }));
+      await user.click(
+        await within(dialog).findByRole("button", { name: "Show answer" }, { timeout: 4000 }),
+      );
       await user.click(within(dialog).getByRole("button", { name: /^Easy/ }));
     }
     expect(await within(dialog).findByText("Session saved")).toBeInTheDocument();
