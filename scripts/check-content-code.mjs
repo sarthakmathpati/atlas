@@ -10,7 +10,9 @@
 // parsed with `ast.parse`. Java blocks (```java) are compiled with one `javac` run, each block in
 // its own package with the common java.util imports; top-level `public` is dropped so a block may
 // hold several classes, and a block without a top-level type is wrapped in a class. A block whose
-// first line is `// sketch` or `# sketch` is skipped (for deliberately partial code). Needs g++,
+// first line is `// sketch` or `# sketch` is skipped (for deliberately partial code). A C++ block whose
+// first line starts with `// Undefined behavior` or `// Warns` shows a bug or a compiler warning on
+// purpose: it must still compile, but its warnings are expected and not reported. Needs g++,
 // python3 and javac; missing tools are reported and skipped.
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
@@ -35,6 +37,9 @@ const PRELUDE = [
   "#include <thread>",
   "#include <mutex>",
   "#include <condition_variable>",
+  // GCC's policy-based tree, for the order-statistics set in lang.cpp-stl.
+  "#include <ext/pb_ds/assoc_container.hpp>",
+  "#include <ext/pb_ds/tree_policy.hpp>",
   // POSIX headers for the OS and CN subjects (fork, pipes, mmap, semaphores, sockets, epoll,
   // uname, user-level context switches, addresses and name lookup).
   "#include <arpa/inet.h>",
@@ -100,6 +105,8 @@ function blocksOf(text) {
 }
 
 const skipped = (code) => /^\s*(\/\/|#) sketch\b/.test(code);
+// Blocks that demonstrate undefined behavior or a compiler warning on purpose.
+const warnsOnPurpose = (code) => /^\s*\/\/ (Undefined behavior|Warns)\b/.test(code);
 
 function compile(file, cwd) {
   return new Promise((resolve) => {
@@ -145,7 +152,7 @@ async function checkCpp(blocks, tmp) {
   const failures = [];
   results.forEach(({ status, stderr }, i) => {
     if (status !== 0) failures.push({ block: blocks[i], message: stderr });
-    else if (/warning:/.test(stderr))
+    else if (/warning:/.test(stderr) && !warnsOnPurpose(blocks[i].code))
       failures.push({ block: blocks[i], message: stderr, warning: true });
   });
   return failures;
