@@ -319,7 +319,8 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     headers (`unistd.h`, `sys/wait.h`, `sys/mman.h`, `semaphore.h`, `sys/epoll.h`,
     `sys/resource.h`, `sys/utsname.h`, `ucontext.h`, …), so C++ checks need Linux;
     a block's `int main` is renamed to a function with a deduced return type. Code lines stay
-    within 100 characters, and examples never print URLs (the artifact URL check would fail).
+    within 100 characters, and examples never print real URLs (the artifact URL check would
+    fail; only the reserved example domains are allowed, decision 59).
     The checker still parses `python` and compiles `java` blocks (with `javac`, one package per
     block) for the `lang` subject's Java and Python topics.
 58. **C++ only** (the owner's choice, session 7): concept content has no Python or Java code and
@@ -330,3 +331,11 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     language is C++). Other languages appear only as a named real-world example of a systems idea
     (Go's goroutines for M:N threading), never as code. "equals and hashCode in Java" became
     "Equality and hashing" with its id kept (`renamed: true` in content, `(id: …)` in the spec).
+59. **Example URLs in content** (session 8, CN): networking needs real-looking URLs (URL anatomy,
+    CORS origins, redirects), so `check-artifact.mjs` allows the reserved documentation domains
+    `example.com`, `example.org` and `example.net` (and their subdomains). Content keeps such URLs
+    inside code (inline or fenced), because remark-gfm would turn bare URLs into links. Public IP
+    addresses in examples come from the documentation ranges (192.0.2.0/24, 198.51.100.0/24,
+    203.0.113.0/24). The code-check prelude also has the socket headers (`arpa/inet.h`, `netdb.h`,
+    `netinet/in.h`, `netinet/tcp.h`, `netinet/ip_icmp.h`, `ifaddrs.h`, `net/if.h`, `sys/uio.h`,
+    `sys/random.h`); CN socket examples run over loopback, and ping needs root for its raw socket.

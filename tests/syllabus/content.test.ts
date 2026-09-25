@@ -11,7 +11,7 @@ import {
 import { conceptById, concepts } from "@/data/syllabus";
 import { buildSyllabus } from "../../scripts/build-syllabus.mjs";
 
-const FINISHED = ["dsa", "oop", "os"];
+const FINISHED = ["dsa", "oop", "os", "cn"];
 
 const { syllabus, report } = buildSyllabus();
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length;

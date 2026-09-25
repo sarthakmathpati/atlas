@@ -5,8 +5,8 @@
 //   npm run check:content-code -- dsa oop   only these subjects
 //
 // C++ blocks (```cpp) are compiled with `g++ -std=c++20 -fsyntax-only`, each inside its own
-// namespace with the usual headers (plus POSIX and Linux ones such as unistd.h and sys/epoll.h,
-// so C++ checks need Linux), so snippets may reuse names. Python blocks (```python) are
+// namespace with the usual headers (plus POSIX and Linux ones such as unistd.h, sys/epoll.h and
+// netinet/in.h, so C++ checks need Linux), so snippets may reuse names. Python blocks (```python) are
 // parsed with `ast.parse`. Java blocks (```java) are compiled with one `javac` run, each block in
 // its own package with the common java.util imports; top-level `public` is dropped so a block may
 // hold several classes, and a block without a top-level type is wrapped in a class. A block whose
@@ -35,20 +35,29 @@ const PRELUDE = [
   "#include <thread>",
   "#include <mutex>",
   "#include <condition_variable>",
-  // POSIX headers for the OS subject (fork, pipes, mmap, semaphores, sockets, epoll, uname,
-  // user-level context switches).
+  // POSIX headers for the OS and CN subjects (fork, pipes, mmap, semaphores, sockets, epoll,
+  // uname, user-level context switches, addresses and name lookup).
+  "#include <arpa/inet.h>",
   "#include <fcntl.h>",
+  "#include <ifaddrs.h>",
+  "#include <net/if.h>",
+  "#include <netdb.h>",
+  "#include <netinet/in.h>",
+  "#include <netinet/ip_icmp.h>",
+  "#include <netinet/tcp.h>",
   "#include <poll.h>",
   "#include <pthread.h>",
   "#include <semaphore.h>",
   "#include <signal.h>",
   "#include <sys/epoll.h>",
   "#include <sys/mman.h>",
+  "#include <sys/random.h>",
   "#include <sys/resource.h>",
   "#include <sys/socket.h>",
   "#include <sys/stat.h>",
   "#include <sys/syscall.h>",
   "#include <sys/types.h>",
+  "#include <sys/uio.h>",
   "#include <sys/utsname.h>",
   "#include <sys/wait.h>",
   "#include <ucontext.h>",

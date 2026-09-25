@@ -13,7 +13,10 @@ scheduling, Banker's algorithm, page replacement, disk scheduling and inode numb
 by small simulators. Concept text loads per subject on demand, so the startup bundle stays small.
 Session 7 made all written content **C++ only**, as the owner asked: no Python or Java code and no
 comparisons with them in DSA, OOP or OS (and a test keeps it that way for every later subject).
-**Next up:** Phase 5 continues with CN, then DBMS (section 5.3 order: DSA, OOP, OS, CN, DBMS, SQL,
+Session 8 finished **CN** (55 / 55 concepts, a deep article for every one, 32 of them must-know;
+all C++; 48 code blocks, every runnable one executed and its output compared with the text) and
+is writing **DBMS**.
+**Next up:** Phase 5 continues with DBMS (section 5.3 order: DSA, OOP, OS, CN, DBMS, SQL,
 System Design, Language core, Concurrency, LLD, Probability, Math, Puzzles, Markets, Architecture,
 Aptitude, Engineering essentials, Career), one or two subjects per session, never two content
 sessions at once. Follow `content/README.md` → "Writing conventions", run
@@ -30,7 +33,7 @@ sessions at once. Follow `content/README.md` → "Writing conventions", run
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
+| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59). 341 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -87,7 +90,7 @@ deep for every must-know concept; signals and template for every pattern.
 | os | 65 / 65 | 29 / 29 | – |
 | conc | 0 / 20 | 0 / 9 | – |
 | arch | 0 / 19 | 0 / 4 | – |
-| cn | 0 / 55 | 0 / 32 | – |
+| cn | 55 / 55 | 32 / 32 | – |
 | dbms | 0 / 56 | 0 / 24 | – |
 | sql | 0 / 34 | 0 / 20 | – |
 | sysd | 0 / 79 | 0 / 34 | – |
@@ -141,6 +144,24 @@ deep for every must-know concept; signals and template for every pattern.
   the shell now, because the top bar and Settings need them.
 - **Ask Claude drawer, "Explain with Claude", API key, Review my code, Dry run, Suggest with
   Claude:** each shows an honest "arrives in phase 6" message; nothing pretends to work.
+- **Phase 5 notes (session 8, CN):** all 55 concepts have simple, interview, questions and a
+  deep article (must-know articles 500 to 790 words). Code is C++ only: 48 blocks, all compiled by
+  `check:content-code`, and every runnable one executed under AddressSanitizer and UBSan with its
+  output compared line by line with the text by a scratch script (outputs that depend on the
+  machine, such as ephemeral ports, ping and handshake times, are labelled as one run). Real
+  socket demos run over loopback: ports and 4-tuples, TCP vs UDP message boundaries, the kernel
+  finishing the handshake before `accept`, TCP states read from `/proc/net/tcp` (FIN_WAIT_2,
+  CLOSE_WAIT, TIME_WAIT), a minimal HTTP server and client, a `poll` echo server, and ping over
+  a raw socket (needs root). Simulations cover CRC, switch learning, ARP, subnetting, NAT, DHCP
+  leases, longest prefix match with a trie, distance vector rounds, fragmentation, RTO
+  estimation, flow control, a Reno cwnd trace, head-of-line blocking, a DNS resolver cache,
+  REST idempotency, toy RSA and Diffie-Hellman, SHA-256 (checked against hashlib), a certificate
+  chain, a stateful firewall, CORS decisions, JWT decoding, a reverse proxy, load balancing and a
+  CDN cache. Found and fixed on the way: a wrong CRC and RSA value in first drafts, a load
+  balancer example whose numbers did not match, and a TCP-states demo whose output order depended
+  on the kernel's hash table. Nagle's classic write-write-read stall did not reproduce on the test
+  kernel (Linux ACKs small pushed segments promptly), so that article explains it with a timeline
+  and says so instead of quoting a measurement.
 - **Phase 5 notes (session 7, C++ only):** the owner studies in C++ only, so DSA lost its 149
   Python blocks (each repeated a C++ block) and its language comparisons. OOP had 78 Python and
   Java blocks: repeats were removed and every other example rewritten in C++ (for example
