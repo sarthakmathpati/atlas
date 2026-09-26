@@ -159,6 +159,24 @@ describe("build-syllabus validation", () => {
     expect(() => build({ topicA: bad })).toThrow(/"### questions-extra" is not a section heading/);
   });
 
+  it("accepts links to real concepts in content and rejects broken or other in-app links", () => {
+    const withLink = (target: string) =>
+      TOPIC_A.replace(
+        'scope: "the first thing"',
+        `scope: "the first thing"\n\n### deep\nSee [the second idea](${target}) next.`,
+      );
+    expect(() => build({ topicA: withLink("#/concept/demo.alpha.second-idea") })).not.toThrow();
+    expect(() => build({ topicA: withLink("#/concept/demo.alpha.missing") })).toThrow(
+      /link to missing concept "demo.alpha.missing"/,
+    );
+    expect(() => build({ topicA: withLink("#/concept/demo.alpha.first-idea") })).toThrow(
+      /links to itself/,
+    );
+    expect(() => build({ topicA: withLink("#/map?focus=demo.alpha.second-idea") })).toThrow(
+      /in-app links must be #\/concept\/<id>/,
+    );
+  });
+
   it("warns (without failing) about missing content, and fails with --strict", () => {
     const { report } = build();
     expect(report.perSubject.get("demo")).toMatchObject({

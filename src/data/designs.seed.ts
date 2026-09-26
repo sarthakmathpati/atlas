@@ -252,7 +252,7 @@ const LLD: DesignPrompt[] = [
     name: "In-memory key-value store",
     difficulty: "medium",
     prompt:
-      "Design an in-memory key-value store that supports get, set and delete, with an optional time-to-live per key. It must also support transactions with begin, commit and rollback, including transactions nested inside other transactions.",
+      "Design an in-memory key-value store that supports get, set and delete, with an optional time-to-live per key. It must also support transactions with begin, commit and rollback, including transactions nested inside other transactions. Keep it to a single process, and explain how the store stays correct when several threads use it at once.",
     rubric: [
       "Core storage and the public API",
       "Expiry: checking lazily on read versus cleaning up in the background",
@@ -372,7 +372,7 @@ const HLD: DesignPrompt[] = [
     name: "Pastebin",
     difficulty: "medium",
     prompt:
-      "Design a service where users paste text, get a short link to share it, and can set an expiry and privacy level. Expect 10 million new pastes a month, far more reads, and pastes up to 1 MB.",
+      "Design a service where users paste text, get a short link to share it, and can set an expiry and privacy level. Expect 10 million new pastes a month, far more reads, and pastes up to 1 MB. Cover how pastes are stored and served, and how expired pastes are cleaned up.",
     rubric: [
       "Generating keys for new pastes",
       "Content in object storage, metadata in a database",
@@ -385,7 +385,7 @@ const HLD: DesignPrompt[] = [
     name: "Key-value store",
     difficulty: "hard",
     prompt:
-      "Design a distributed key-value store that holds more data than one machine can, stays available when machines fail, and serves reads and writes in a few milliseconds. Explain how a client finds the right node and what consistency it gets.",
+      "Design a distributed key-value store that holds more data than one machine can, stays available when machines fail, and serves reads and writes in a few milliseconds. Explain how a client finds the right node and what consistency it gets. Focus on partitioning, replication and what happens when a node fails.",
     rubric: [
       "Partitioning with consistent hashing and virtual nodes",
       "Replication and quorums (R + W > N)",
@@ -398,7 +398,7 @@ const HLD: DesignPrompt[] = [
     name: "Web crawler",
     difficulty: "medium",
     prompt:
-      "Design a web crawler that downloads a billion pages a month to build a search index. It must respect robots.txt, never overload any single website, avoid fetching the same page twice, and keep pages reasonably fresh.",
+      "Design a web crawler that downloads a billion pages a month to build a search index. It must respect robots.txt, never overload any single website, avoid fetching the same page twice, and keep pages reasonably fresh. Focus on the order in which URLs are fetched, politeness toward each website, and deduplication.",
     rubric: [
       "URL frontier with priorities and per-host politeness queues",
       "Distributed fetchers and DNS caching",
@@ -411,7 +411,7 @@ const HLD: DesignPrompt[] = [
     name: "Notification system",
     difficulty: "medium",
     prompt:
-      "Design a notification system that sends push, SMS and email for many product teams: about 50 million notifications a day, with spikes. Users set preferences, and some messages, like one-time passwords, must arrive within seconds.",
+      "Design a notification system that sends push, SMS and email for many product teams: about 50 million notifications a day, with spikes. Users set preferences, and some messages, like one-time passwords, must arrive within seconds. Explain how urgent messages avoid waiting behind large campaigns, and how failed sends are retried without duplicates.",
     rubric: [
       "An API in front of a queue per channel",
       "Priorities so urgent messages skip the line",
@@ -437,7 +437,7 @@ const HLD: DesignPrompt[] = [
     name: "Chat application",
     difficulty: "medium",
     prompt:
-      "Design a messaging app with one-to-one and group chats for 50 million daily users. Messages arrive in real time, show sent, delivered and read receipts, and sync across each user's devices.",
+      "Design a messaging app with one-to-one and group chats for 50 million daily users. Messages arrive in real time, show sent, delivered and read receipts, and sync across each user's devices. Focus on how messages reach users who are online or offline, and how group chats fan out.",
     rubric: [
       "Persistent connections (WebSockets) and connection servers",
       "Routing and ordering messages within a conversation",
@@ -450,7 +450,7 @@ const HLD: DesignPrompt[] = [
     name: "Photo sharing app",
     difficulty: "medium",
     prompt:
-      "Design a photo-sharing app where users upload photos, follow each other, and scroll a feed of photos. Expect 100 million uploads a day and much heavier read traffic.",
+      "Design a photo-sharing app where users upload photos, follow each other, and scroll a feed of photos. Expect 100 million uploads a day and much heavier read traffic. Cover the upload path, how images are served, and how each user's feed is built.",
     rubric: [
       "Upload flow straight to object storage and a resizing pipeline",
       "Metadata storage",
@@ -463,7 +463,7 @@ const HLD: DesignPrompt[] = [
     name: "Video streaming platform",
     difficulty: "medium",
     prompt:
-      "Design a video platform where creators upload videos and viewers stream them on phones and TVs with smooth playback. Plan for millions of viewers at once across many countries.",
+      "Design a video platform where creators upload videos and viewers stream them on phones and TVs with smooth playback. Plan for millions of viewers at once across many countries. Cover what happens between an upload and the first playable stream, and how video reaches viewers far from your servers.",
     rubric: [
       "Upload and transcoding into several resolutions",
       "Adaptive bitrate streaming with short segments",
@@ -476,7 +476,7 @@ const HLD: DesignPrompt[] = [
     name: "File storage and sync",
     difficulty: "medium",
     prompt:
-      "Design a cloud drive where users edit files on several devices, changes sync within seconds, and large files upload reliably over flaky networks.",
+      "Design a cloud drive where users edit files on several devices, changes sync within seconds, and large files upload reliably over flaky networks. Files can be several gigabytes, and two devices may change the same file while one of them is offline. Focus on uploads, the sync protocol and conflicts.",
     rubric: [
       "Chunking with content hashes for deduplication and resumable uploads",
       "A metadata service with file versions",
@@ -489,7 +489,7 @@ const HLD: DesignPrompt[] = [
     name: "Ride-hailing",
     difficulty: "medium",
     prompt:
-      "Design the backend of a ride-hailing app for a large city. Drivers send their location every few seconds, riders request a ride, and the system matches a nearby driver within seconds and tracks the trip.",
+      "Design the backend of a ride-hailing app for a large city. Drivers send their location every few seconds, riders request a ride, and the system matches a nearby driver within seconds and tracks the trip. Focus on finding nearby drivers quickly and making sure each trip gets exactly one driver.",
     rubric: [
       "Ingesting a high rate of location updates",
       "Geospatial indexing (geohash or quadtree) to find nearby drivers",
@@ -515,7 +515,7 @@ const HLD: DesignPrompt[] = [
     name: "E-commerce and flash sales",
     difficulty: "medium",
     prompt:
-      "Design the ordering system of an online store that runs flash sales, where a million users try to buy 10,000 discounted units in the same second. The store must never sell more units than it has.",
+      "Design the ordering system of an online store that runs flash sales, where a million users try to buy 10,000 discounted units in the same second. The store must never sell more units than it has. Hold units for buyers while they pay, and keep the rest of the store usable during the rush.",
     rubric: [
       "Inventory counters with atomic decrements",
       "Queueing and throttling the incoming rush",
@@ -528,7 +528,7 @@ const HLD: DesignPrompt[] = [
     name: "Ticket booking",
     difficulty: "medium",
     prompt:
-      "Design a ticketing system for concerts where popular shows sell out in minutes. Users see a seat map, hold seats for a few minutes while paying, and must never receive a seat someone else bought.",
+      "Design a ticketing system for concerts where popular shows sell out in minutes. Users see a seat map, hold seats for a few minutes while paying, and must never receive a seat someone else bought. Plan for a rush of fans the moment sales open.",
     rubric: [
       "Seat inventory and holds with an expiry",
       "Locking versus optimistic concurrency for seats",
@@ -541,7 +541,7 @@ const HLD: DesignPrompt[] = [
     name: "Payment system",
     difficulty: "medium",
     prompt:
-      "Design the payment backend for an online marketplace that charges buyers through external payment providers and pays sellers later. No payment may be charged twice or lost, even when requests time out and are retried.",
+      "Design the payment backend for an online marketplace that charges buyers through external payment providers and pays sellers later. No payment may be charged twice or lost, even when requests time out and are retried. Explain how money movements are recorded and checked against the providers' own reports.",
     rubric: [
       "Idempotency keys on every payment request",
       "A double-entry ledger",
@@ -554,7 +554,7 @@ const HLD: DesignPrompt[] = [
     name: "Leaderboard",
     difficulty: "medium",
     prompt:
-      "Design a real-time leaderboard for a mobile game with 50 million players. Players see the global top 100 and their own rank, updated within seconds of a new score.",
+      "Design a real-time leaderboard for a mobile game with 50 million players. Players see the global top 100 and their own rank, updated within seconds of a new score. Daily and weekly boards reset on schedule, alongside the all-time board.",
     rubric: [
       "Sorted sets for ranking",
       "Sharding scores and still answering a player's global rank",
@@ -567,7 +567,7 @@ const HLD: DesignPrompt[] = [
     name: "Distributed cache",
     difficulty: "medium",
     prompt:
-      "Design a distributed in-memory cache used by many services, holding hundreds of gigabytes with sub-millisecond reads. Nodes can be added or can fail without most keys moving or disappearing.",
+      "Design a distributed in-memory cache used by many services, holding hundreds of gigabytes with sub-millisecond reads. Nodes can be added or can fail without most keys moving or disappearing. Explain how very popular keys are handled and how the cache stays consistent with the database behind it.",
     rubric: [
       "Consistent hashing and how clients route requests",
       "Eviction policies and memory limits",
@@ -580,7 +580,7 @@ const HLD: DesignPrompt[] = [
     name: "Distributed message queue",
     difficulty: "medium",
     prompt:
-      "Design a distributed message queue that producers write to and many consumer groups read from. It must handle millions of messages per second, keep order within a partition, and keep data for several days.",
+      "Design a distributed message queue that producers write to and many consumer groups read from. It must handle millions of messages per second, keep order within a partition, and keep data for several days. Explain what happens when a broker fails and how consumers keep track of their progress.",
     rubric: [
       "Topics and partitions stored as append-only logs",
       "Replication, leader election and acknowledgements",
@@ -606,7 +606,7 @@ const HLD: DesignPrompt[] = [
     name: "Collaborative document editing",
     difficulty: "hard",
     prompt:
-      "Design a collaborative document editor where several people edit the same document at once and see each other's changes and cursors within a second. Edits made offline merge when the user reconnects.",
+      "Design a collaborative document editor where several people edit the same document at once and see each other's changes and cursors within a second. Edits made offline merge when the user reconnects. Explain how concurrent edits to the same sentence are merged, and how version history is kept.",
     rubric: [
       "Operational transforms versus CRDTs",
       "The real-time channel and presence",
@@ -619,7 +619,7 @@ const HLD: DesignPrompt[] = [
     name: "Metrics and monitoring system",
     difficulty: "hard",
     prompt:
-      "Design a monitoring system that collects metrics such as CPU usage and request latency from 100,000 servers every 10 seconds, stores them, draws dashboards and fires alerts.",
+      "Design a monitoring system that collects metrics such as CPU usage and request latency from 100,000 servers every 10 seconds, stores them, draws dashboards and fires alerts. Dashboards should load in a few seconds even over a month of data. Explain how data is stored for the long term and how alert rules are evaluated.",
     rubric: [
       "Push versus pull collection and the ingestion pipeline",
       "Time-series storage, compression, downsampling and retention",

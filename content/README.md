@@ -100,6 +100,19 @@ article), and headings inside code fences are ignored.
   use), show output as a Markdown table after a line starting "Result:" (or "Result: no rows."),
   end a statement that must fail with a `-- error ...` comment, start a PostgreSQL-only block with
   `-- PostgreSQL`, and say where the two databases differ. Use original tables and data.
+- **Links**: link another concept with `[text](#/concept/<id>)` (for example in "Connects to:"),
+  rather than repeating what its article already says. The build rejects missing ids, links to
+  the concept itself and any other in-app link. On the map, a link opens that concept in the panel.
+- **LLD**: show class relationships as a text diagram (`*--` composition, `o--` aggregation,
+  `-->` association, `..>` dependency, `..|>` realizes, `--|>` inherits, multiplicities in
+  quotes). Every design compiles and runs a short demo whose output follows it under "Output:".
+  A classic ends with `#### Interview checklist`, naming each "must discuss" point of its
+  `lld-<slug>` prompt in bold, word for word.
+- **Probability**: give the exact answer first, then confirm it with a seeded C++ simulation
+  (`mt19937_64 rng(2026)`; no `std::*_distribution` or `std::shuffle`, whose output differs
+  between standard libraries). Say how close the run came in standard errors and never present a
+  simulated number as exact. Write math with KaTeX and state each formula's assumptions. Mark
+  anything uncertain with `needsReview: true`.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. To rename a concept, change its

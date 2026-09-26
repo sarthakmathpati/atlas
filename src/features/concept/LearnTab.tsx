@@ -42,7 +42,15 @@ function Block({ title, children, id }: { title: string; children: ReactNode; id
   );
 }
 
-function Levels({ concept, content }: { concept: Concept; content: ConceptContent }) {
+function Levels({
+  concept,
+  content,
+  onOpenConcept,
+}: {
+  concept: Concept;
+  content: ConceptContent;
+  onOpenConcept?: (id: string) => void;
+}) {
   const state = useConceptState(concept.id);
   const status = useConceptStatus(concept.id);
   const initial: Level =
@@ -73,7 +81,7 @@ function Levels({ concept, content }: { concept: Concept; content: ConceptConten
         ]}
       />
       <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-        <MarkdownView>{text}</MarkdownView>
+        <MarkdownView onConceptLink={onOpenConcept}>{text}</MarkdownView>
       </Suspense>
       {level === "interview" && !state?.studied && (
         <Callout
@@ -153,7 +161,12 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
       {!hasCoreContent(concept) ? (
         <MissingContent concept={concept} onWriteNotes={onWriteNotes} />
       ) : content ? (
-        <Levels key={concept.id} concept={concept} content={content} />
+        <Levels
+          key={concept.id}
+          concept={concept}
+          content={content}
+          onOpenConcept={onOpenConcept}
+        />
       ) : failed ? (
         <ContentUnavailable onRetry={retry} />
       ) : (

@@ -439,6 +439,26 @@ function validateGraph({ subjects, topics, concepts }) {
   }
 }
 
+/**
+ * Content may link to another concept with a Markdown link to its page, `[text](#/concept/<id>)`
+ * (the map's panel opens it in place). Every such link must resolve, and no other in-app link is
+ * allowed in content, since routes may change.
+ */
+function validateConceptLinks(concepts) {
+  const ids = new Set(concepts.map((c) => c.id));
+  for (const c of concepts) {
+    const { simple, interview, deep } = c.content;
+    const text = [simple, ...interview, deep].filter(Boolean).join("\n");
+    for (const m of text.matchAll(/\]\((#[^)\s]*)\)/g)) {
+      const id = /^#\/concept\/([a-z0-9.-]+)$/.exec(m[1])?.[1];
+      if (!id)
+        throw new BuildError(`Concept ${c.id}: in-app links must be #/concept/<id> (${m[1]})`);
+      if (!ids.has(id)) throw new BuildError(`Concept ${c.id}: link to missing concept "${id}"`);
+      if (id === c.id) throw new BuildError(`Concept ${c.id} links to itself`);
+    }
+  }
+}
+
 function resolveConnections(concepts, contentDir) {
   const path = join(contentDir, "connections.md");
   if (!existsSync(path)) throw new BuildError("content/connections.md is missing");
@@ -554,6 +574,7 @@ export function buildSyllabus({ strict = false, contentDir = CONTENT_DIR } = {})
   );
 
   validateGraph(loaded);
+  validateConceptLinks(concepts);
   const connections = resolveConnections(concepts, contentDir);
 
   // A subject shows on the map for a track when any of its concepts belongs to that track.
