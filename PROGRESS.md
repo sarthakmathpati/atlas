@@ -142,7 +142,7 @@ deep for every must-know concept; signals and template for every pattern.
 | markets | 28 / 28 | 11 / 11 | – |
 | apt | 16 / 16 | 5 / 5 | – |
 | eng | 27 / 27 | 7 / 7 | – |
-| career | 0 / 16 | 0 / 6 | – |
+| career | 16 / 16 | 6 / 6 | – |
 
 ## Known issues and notes
 
