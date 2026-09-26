@@ -122,6 +122,15 @@ article), and headings inside code fences are ignored.
   an answer key printed by the program. Puzzle articles work an original instance of each classic
   and link the bank's puzzles for practice. Never put `|` inside math in a table cell; use
   `\lvert` and `\rvert`.
+- **Markets**: compute every number exactly where possible and confirm it with a C++ program
+  (seeded simulations as for probability). Use only made-up order books, prices and firms, never
+  real market data or a real firm's practices. Market-making and trading-game concepts include a
+  worked game written as a transcript with the candidate's reasoning. Mark details that vary by
+  exchange with `needsReview: true`.
+- **Architecture**: check every claim about data representation with a program. A benchmark's
+  first line is `// Build with: g++ ...` with its flags; take the best of several batches where the
+  machine is noisy, label the output as one run (the lead-in says "one run") and give the range
+  over five runs in the text. Run benchmarks once under ASan and UBSan too.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. To rename a concept, change its

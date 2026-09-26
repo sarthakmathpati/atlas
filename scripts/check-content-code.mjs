@@ -38,6 +38,7 @@ const PRELUDE = [
   "#include <mutex>",
   "#include <condition_variable>",
   "#include <coroutine>", // bits/stdc++.h leaves it out in g++ 13 (conc.patterns event loop)
+  "#include <immintrin.h>", // x86 SIMD intrinsics (arch.performance), used with [[gnu::target]]
   // GCC's policy-based tree, for the order-statistics set in lang.cpp-stl.
   "#include <ext/pb_ds/assoc_container.hpp>",
   "#include <ext/pb_ds/tree_policy.hpp>",

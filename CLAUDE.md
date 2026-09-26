@@ -401,3 +401,19 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     Mental math concepts end with timed practice lines whose answer keys the programs print.
     Never put a `|` inside math in a Markdown table cell (it splits the cell); use `\lvert`
     and `\rvert`.
+69. **Markets content** (session 13): numbers are exact first (enumeration, DP, closed forms) and
+    confirmed by a C++ program; simulations follow decision 65 and report their distance in
+    standard errors. Order books, prices, firms and games are made up; no real market data and no
+    real firm's practices. Market-making and trading-game articles include a worked game as a
+    transcript (**Interviewer:** / **You:**) with the reasoning said aloud. Venue-dependent details
+    (stop triggers, time-in-force names, pro-rata rules, auction tie-breaks) are marked
+    `needsReview: true`. Articles link Probability, Math and Puzzles concepts and quant puzzles.
+70. **Architecture content** (session 13): claims about data representation (two's complement,
+    IEEE 754, endianness, alignment, UTF-8) are printed by programs checked under GCC and clang.
+    Benchmarks start with `// Build with: g++ ...` (their flags), take the best of several batches
+    where noise matters, show one run after a line that says "one run", and give the range over
+    five runs in the text; machine-specific numbers are never presented as general. The
+    code-check prelude includes `<immintrin.h>`; intrinsics live in `[[gnu::target("avx2")]]`
+    functions behind a `__builtin_cpu_supports` check. The cloud VM exposes no hardware counters:
+    `perf` (from `linux-tools-generic`, run as `/usr/lib/linux-tools-*/perf`) samples the software
+    `cpu-clock` event.
