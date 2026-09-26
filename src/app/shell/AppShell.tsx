@@ -3,6 +3,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useMediaQuery } from "@/components/ui/hooks";
 import { PageSkeleton } from "@/components/ui/Misc";
+import { CopyPromptModal } from "@/features/ai/CopyPromptModal";
 import { CommandPalette } from "@/features/palette/CommandPalette";
 import { getSearchIndex } from "@/features/palette/docs";
 import { CsvImportDialog } from "@/features/problems/CsvImportDialog";
@@ -26,10 +27,11 @@ import { TopBar } from "./TopBar";
 
 const ConceptDialogs = lazy(() => import("@/features/review/concepts/ConceptDialogs"));
 
-/** Flashcards, explain it back, concept reviews, status and "add a concept": loaded on first use. */
+/** Flashcards, quick quizzes, explain it back, concept reviews, status and "add a concept":
+ *  loaded on first use. */
 function ConceptDialogHost() {
   const open = useConceptDialogs((s) =>
-    Boolean(s.flashcards || s.explain || s.review || s.status || s.addConcept !== null),
+    Boolean(s.flashcards || s.quiz || s.explain || s.review || s.status || s.addConcept !== null),
   );
   const [used, setUsed] = useState(false);
   if (open && !used) setUsed(true);
@@ -133,6 +135,7 @@ export function AppShell() {
       <CsvImportDialog />
       <FocusTimerController />
       <ConceptDialogHost />
+      <CopyPromptModal />
     </div>
   );
 }

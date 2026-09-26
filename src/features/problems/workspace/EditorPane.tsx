@@ -1,6 +1,7 @@
 // The workspace's code side (F7 right pane): language picker, starter template toggle, draft
-// status and the attempt timer above the editor; the hint ladder below it when open; and the
-// actions: I'm stuck, Review my code, Dry run (Claude, phase 6), Discard draft, Save attempt.
+// status and the attempt timer above the editor; one panel below it when open (hints, Claude's
+// code review or a dry run); and the actions: I'm stuck, Review my code, Dry run, Discard draft,
+// Save attempt.
 import { Bug, FileCode2, LifeBuoy, Play, Save, Undo2 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { Button } from "@/components/ui/Button";
@@ -15,12 +16,14 @@ import { Skeleton } from "@/components/ui/Misc";
 import { Timer } from "@/components/ui/Timer";
 import type { ProblemInfo } from "@/lib/problems/catalog";
 import type { ProblemState } from "@/lib/types";
-import { LaterClaudeButton } from "../parts";
+import { DryRunPanel, ReviewPanel } from "./ClaudePanels";
 import { HintLadder } from "./HintLadder";
 import { isBlankCode, starterTemplate } from "./templates";
 import type { AttemptSession } from "./useAttemptSession";
 
 const CodeEditor = lazy(() => import("@/components/ui/code/CodeEditor"));
+
+export type WorkspacePanel = "hints" | "review" | "dryrun" | null;
 
 interface EditorPaneProps {
   info: ProblemInfo;
@@ -29,8 +32,10 @@ interface EditorPaneProps {
   autoStart: boolean;
   templateOn: boolean;
   onTemplateChange: (on: boolean) => void;
-  hintsOpen: boolean;
-  onHintsOpen: (open: boolean) => void;
+  panel: WorkspacePanel;
+  onPanel: (panel: WorkspacePanel) => void;
+  /** A re-solve that hasn't been revealed: Claude doesn't see the old insight and notes. */
+  hideOwnWork: boolean;
   onSave: () => void;
   onDiscard: () => void;
   /** Fills the height of its container (desktop split); otherwise a tall block. */
@@ -45,8 +50,9 @@ export function EditorPane({
   autoStart,
   templateOn,
   onTemplateChange,
-  hintsOpen,
-  onHintsOpen,
+  panel,
+  onPanel,
+  hideOwnWork,
   onSave,
   onDiscard,
   fill,
@@ -123,16 +129,46 @@ export function EditorPane({
           />
         </Suspense>
       </div>
-      {hintsOpen && (
+      {panel === "hints" && (
         <HintLadder
           info={info}
           state={state}
           hintsUsed={session.hintsUsed}
           sawSolution={session.sawSolution}
+          code={{ language: session.language, code: session.code }}
+          hideOwnWork={hideOwnWork}
           onHint={(level) => update({ hintsUsed: Math.max(session.hintsUsed, level) as 1 | 2 | 3 })}
           onSolution={() => update({ sawSolution: true })}
-          onClose={() => onHintsOpen(false)}
+          onClose={() => onPanel(null)}
           className="max-h-[45%] shrink-0"
+        />
+      )}
+      {panel === "review" && (
+        <ReviewPanel
+          info={info}
+          code={{ language: session.language, code: session.code }}
+          hideOwnWork={hideOwnWork}
+          review={session.review}
+          reviewedCode={session.reviewedCode}
+          pendingTagIds={session.pendingTagIds}
+          currentInsight={state?.insight}
+          onReviewed={(review, code) => update({ review, reviewedCode: code })}
+          onAddTag={(tagId) =>
+            update({ pendingTagIds: [...new Set([...session.pendingTagIds, tagId])] })
+          }
+          onClose={() => onPanel(null)}
+          className="max-h-[55%] shrink-0"
+        />
+      )}
+      {panel === "dryrun" && (
+        <DryRunPanel
+          info={info}
+          code={{ language: session.language, code: session.code }}
+          hideOwnWork={hideOwnWork}
+          dryRuns={session.dryRuns}
+          onDryRun={(run) => update({ dryRuns: [...session.dryRuns, run].slice(-10) })}
+          onClose={() => onPanel(null)}
+          className="max-h-[55%] shrink-0"
         />
       )}
       <div
@@ -144,34 +180,35 @@ export function EditorPane({
         <Button
           size="sm"
           icon={LifeBuoy}
-          aria-expanded={hintsOpen}
-          onClick={() => onHintsOpen(!hintsOpen)}
+          aria-expanded={panel === "hints"}
+          onClick={() => onPanel(panel === "hints" ? null : "hints")}
           disabled={disabled}
         >
           I'm stuck
         </Button>
-        <LaterClaudeButton
-          compactOnMobile
+        <Button
           size="sm"
-          label="Review my code"
-          title="Review my code"
           icon={Bug}
+          aria-expanded={panel === "review"}
+          onClick={() => onPanel(panel === "review" ? null : "review")}
+          disabled={disabled}
+          className="max-xl:px-2.5"
+          title="Review my code"
         >
-          <p>
-            Claude will read your code for this problem and point out bugs, missed edge cases,
-            complexity and style, then suggest mistake tags for the attempt.
-          </p>
-        </LaterClaudeButton>
+          <span className="max-xl:sr-only">Review my code</span>
+        </Button>
         {info.source !== "quant" && (
-          <LaterClaudeButton compactOnMobile size="sm" label="Dry run" title="Dry run" icon={Play}>
-            <p>
-              Give an input and Claude will trace your code step by step, showing the variables at
-              each step and the output, so you can see where it goes wrong.
-            </p>
-            <p>
-              Atlas doesn't run C++ or Java itself; test on LeetCode and save the final code here.
-            </p>
-          </LaterClaudeButton>
+          <Button
+            size="sm"
+            icon={Play}
+            aria-expanded={panel === "dryrun"}
+            onClick={() => onPanel(panel === "dryrun" ? null : "dryrun")}
+            disabled={disabled}
+            className="max-xl:px-2.5"
+            title="Dry run"
+          >
+            <span className="max-xl:sr-only">Dry run</span>
+          </Button>
         )}
         <span className="flex-1" />
         {draftState !== "none" && (

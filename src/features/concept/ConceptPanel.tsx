@@ -1,11 +1,11 @@
 // The concept panel (F3): header (where it sits, name, status with "Why this color?", importance,
 // minutes, tracks, badges) and the Learn, Practice, Notes and Ask tabs. The map shows it as a side
 // panel or a bottom sheet with back and forward through the concepts visited; #/concept/<id> shows
-// it as a page.
-import { ArrowLeft, ArrowRight, MoreHorizontal, Sparkles, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+// it as a page. The Ask tab is the Ask Claude chat (F20), scoped to this concept.
+import { ArrowLeft, ArrowRight, BookOpen, MoreHorizontal, X } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 import { routeHref } from "@/app/router";
-import { Button, IconButton } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/Button";
 import { Chip, ImportanceChip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
 import { Menu } from "@/components/ui/Popover";
@@ -16,7 +16,7 @@ import { problemsForConcept } from "@/lib/problems/catalog";
 import type { Concept } from "@/lib/types";
 import { useConceptState, useConceptStatus } from "@/stores/conceptStateStore";
 import { useProblemStore } from "@/stores/problemStore";
-import { useUiStore } from "@/stores/uiStore";
+import { ChatPanel, type ChatChip, type ChatStarter } from "../ai/ChatPanel";
 import { conceptMenuItems, hideConcept } from "./conceptActions";
 import { LearnTab } from "./LearnTab";
 import { NotesTab } from "./NotesTab";
@@ -98,21 +98,42 @@ export function ConceptChips({ concept }: { concept: Concept }) {
 }
 
 function AskTab({ concept }: { concept: Concept }) {
-  const setAskOpen = useUiStore((s) => s.setAskOpen);
+  const chips = useMemo<ChatChip[]>(
+    () => [
+      {
+        id: `concept:${concept.id}`,
+        label: concept.name,
+        icon: BookOpen,
+        context: { conceptId: concept.id },
+      },
+    ],
+    [concept.id, concept.name],
+  );
+  const starters: ChatStarter[] = [
+    {
+      label: "Explain it simply",
+      text: `Explain ${concept.name} simply, with an everyday analogy.`,
+    },
+    {
+      label: "At interview level",
+      text: `Explain ${concept.name} at interview level: the key facts, complexity, when to use it and the usual follow-ups.`,
+    },
+    {
+      label: "In depth",
+      text: `Explain ${concept.name} in depth, with a small worked example traced step by step.`,
+    },
+    {
+      label: "Quiz me",
+      text: `Quiz me on ${concept.name}: ask me 3 short questions, one at a time, and wait for each answer.`,
+    },
+  ];
   return (
-    <div className="space-y-3">
-      <p className="text-base text-text">
-        Ask Claude about {concept.name}: it will already know this concept, what you've done with
-        it, and your notes.
-      </p>
-      <p className="text-base text-muted">
-        The chat inside this tab arrives with the Claude features in phase 6. Until then, the Ask
-        Claude panel shows what it will be able to do.
-      </p>
-      <Button icon={Sparkles} onClick={() => setAskOpen(true)}>
-        Open Ask Claude
-      </Button>
-    </div>
+    <ChatPanel
+      threadKey={`concept:${concept.id}`}
+      chips={chips}
+      starters={starters}
+      saveConceptId={concept.id}
+    />
   );
 }
 
@@ -211,11 +232,7 @@ export function ConceptSidePanel({
       </div>
       {/* Keyed by concept, so a linked concept opens at the top rather than at the old scroll. */}
       <div key={concept.id} className="min-h-0 flex-1 overflow-y-auto px-4 pb-10">
-        <ConceptTabs
-          concept={concept}
-          onOpenConcept={onOpenConcept}
-          wide={false}
-        />
+        <ConceptTabs concept={concept} onOpenConcept={onOpenConcept} wide={false} />
       </div>
     </div>
   );

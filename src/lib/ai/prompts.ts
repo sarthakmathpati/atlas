@@ -7,6 +7,19 @@ import type { Tier } from "@/lib/types";
 import type { AITask, ChatTurn } from "./AIProvider";
 import { jsonInstruction } from "./json";
 import {
+  type CodeReview,
+  type ConceptSuggestion,
+  type DesignReview,
+  type DrillGeneration,
+  type DrillGrade,
+  type ExplainGrade,
+  type GeneratedContent,
+  type MistakeAdvice,
+  type MockFeedback,
+  type PuzzleGrade,
+  type QuizQuestion,
+  type ShortAnswerGrade,
+  type StoryCritique,
   codeReviewSchema,
   conceptSuggestionSchema,
   designReviewSchema,
@@ -87,7 +100,7 @@ export function generateContentPrompt(
   context: string,
   concept: string,
   isPattern: boolean,
-): PromptSpec {
+): PromptSpec<GeneratedContent> {
   const shape = `{
   "simple": "2 to 4 sentences with one everyday analogy",
   "interview": ["4 to 7 bullet points: definition, key facts, complexity, when to use it, follow-ups, pitfalls"],
@@ -140,7 +153,7 @@ export function codeReviewPrompt(
   env: PromptEnv,
   context: string,
   opts: { tags: string[]; claimedTime?: string; claimedSpace?: string },
-): PromptSpec {
+): PromptSpec<CodeReview> {
   const claims = [
     opts.claimedTime ? `time ${opts.claimedTime}` : "",
     opts.claimedSpace ? `space ${opts.claimedSpace}` : "",
@@ -212,7 +225,7 @@ export function explainGradePrompt(
     explanation: string;
     followUp?: { question: string; answer: string };
   },
-): PromptSpec {
+): PromptSpec<ExplainGrade> {
   const ask = [
     `My explanation of ${opts.concept}:`,
     opts.explanation.trim(),
@@ -243,7 +256,7 @@ export function quizPrompt(
   env: PromptEnv,
   context: string,
   opts: { scope: string; concepts: { id: string; name: string }[]; count?: number },
-): PromptSpec {
+): PromptSpec<QuizQuestion[]> {
   const count = opts.count ?? 5;
   return {
     task: "quiz",
@@ -262,7 +275,7 @@ export function quizPrompt(
 export function quizGradePrompt(
   env: PromptEnv,
   items: { index: number; question: string; modelAnswer: string; answer: string }[],
-): PromptSpec {
+): PromptSpec<ShortAnswerGrade[]> {
   const list = items
     .map(
       (i) =>
@@ -293,7 +306,7 @@ export function drillGradePrompt(
     approach: string;
     keyInsight: string;
   },
-): PromptSpec {
+): PromptSpec<DrillGrade> {
   return {
     task: "drill-grade",
     tier: "quick",
@@ -320,7 +333,7 @@ export function drillGradePrompt(
 export function drillGeneratePrompt(
   env: PromptEnv,
   opts: { patterns: { id: string; name: string }[]; focus: string[]; count?: number },
-): PromptSpec {
+): PromptSpec<DrillGeneration> {
   const count = opts.count ?? 5;
   return {
     task: "drill-generate",
@@ -376,7 +389,11 @@ export function mockInterviewerPrompt(
   };
 }
 
-export function mockFeedbackPrompt(env: PromptEnv, kind: MockKind, transcript: string): PromptSpec {
+export function mockFeedbackPrompt(
+  env: PromptEnv,
+  kind: MockKind,
+  transcript: string,
+): PromptSpec<MockFeedback> {
   const keys = MOCK_SCORE_KEYS[kind].map((k) => `"${k}": 1-5`).join(", ");
   return {
     task: "mock-feedback",
@@ -398,7 +415,7 @@ export function mockFeedbackPrompt(env: PromptEnv, kind: MockKind, transcript: s
 export function designReviewPrompt(
   env: PromptEnv,
   opts: { prompt: string; rubric: string[]; sections: Record<string, string> },
-): PromptSpec {
+): PromptSpec<DesignReview> {
   const sections = Object.entries(opts.sections)
     .filter(([, v]) => v.trim())
     .map(([k, v]) => `### ${k}\n${v.trim()}`)
@@ -424,7 +441,7 @@ export function storyCritiquePrompt(
   env: PromptEnv,
   story: { title: string; situation: string; task: string; action: string; result: string },
   question?: string,
-): PromptSpec {
+): PromptSpec<StoryCritique> {
   return {
     task: "story-critique",
     tier: "default",
@@ -518,7 +535,7 @@ export function revisionTightenPrompt(env: PromptEnv, sheet: string, words: numb
 export function puzzleGradePrompt(
   env: PromptEnv,
   opts: { prompt: string; reference?: string; answer: string },
-): PromptSpec {
+): PromptSpec<PuzzleGrade> {
   return {
     task: "puzzle-grade",
     tier: "default",
@@ -545,7 +562,7 @@ export function puzzleGradePrompt(
 export function conceptSuggestPrompt(
   env: PromptEnv,
   opts: { title: string; link?: string; notes?: string; allowed: { id: string; name: string }[] },
-): PromptSpec {
+): PromptSpec<ConceptSuggestion> {
   return {
     task: "concept-suggest",
     tier: "quick",
@@ -571,7 +588,7 @@ export function conceptSuggestPrompt(
 export function mistakeAdvicePrompt(
   env: PromptEnv,
   tags: { label: string; category: string; description?: string; examples?: string[] }[],
-): PromptSpec {
+): PromptSpec<MistakeAdvice> {
   return {
     task: "mistake-advice",
     tier: "quick",

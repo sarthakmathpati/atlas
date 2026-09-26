@@ -1,12 +1,15 @@
 // The Learn tab (F3): Simple | Interview | Deep, remembered per concept; connections (Learn first,
 // Unlocks, Connected ideas); interview questions with hidden answers; and the ways to check
-// yourself. A concept without written content shows what it covers and "Explain with Claude".
+// yourself (flashcards, explain it back, a quick quiz from Claude). "Explain with Claude" writes the
+// levels for the owner's own concepts (kept in the note) and explains any concept another way.
 // The text loads with its subject (data/content.ts); a skeleton shows meanwhile.
 import {
   BookmarkCheck,
   BookOpenText,
   Layers,
+  ListChecks,
   MessageSquareText,
+  MessagesSquare,
   PencilLine,
   Sparkles,
 } from "lucide-react";
@@ -15,17 +18,17 @@ import { Button } from "@/components/ui/Button";
 import { Callout, CodeSpans, EmptyState, Skeleton } from "@/components/ui/Misc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { dependentsOf, hasCoreContent } from "@/data/syllabus";
-import { isCustomConceptId } from "@/lib/concepts/custom";
+import { isCustomConceptId, studyContent } from "@/lib/concepts/custom";
 import type { Concept, ConceptContent, ConceptState } from "@/lib/types";
-import { openExplainBack, openFlashcards } from "@/stores/conceptDialogStore";
+import { openExplainBack, openFlashcards, openQuickQuiz } from "@/stores/conceptDialogStore";
 import { useConceptNoteStore } from "@/stores/conceptNoteStore";
 import { setLastLevel, useConceptState, useConceptStatus } from "@/stores/conceptStateStore";
 import { useConceptContent } from "@/stores/contentStore";
 import { useUiStore } from "@/stores/uiStore";
-import { LaterClaudeButton } from "../problems/parts";
 import { toggleStudied } from "./conceptActions";
 import { ConceptLink } from "./ConceptLink";
 import { ContentUnavailable } from "./ContentUnavailable";
+import { ExplainAnotherWay, GenerateContent, GeneratedLevels } from "./ExplainWithClaude";
 
 const MarkdownView = lazy(() => import("@/components/ui/MarkdownView"));
 
@@ -101,42 +104,40 @@ function Levels({
 
 function MissingContent({ concept, onWriteNotes }: { concept: Concept; onWriteNotes: () => void }) {
   const note = useConceptNoteStore((s) => s.notes[concept.id]);
-  if (isCustomConceptId(concept.id)) {
-    return note?.markdown.trim() ? (
-      <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-        <MarkdownView>{note.markdown}</MarkdownView>
-      </Suspense>
-    ) : (
-      <EmptyState
-        icon={PencilLine}
-        title="This is your own concept"
-        compact
-        actions={
-          <Button size="sm" icon={PencilLine} onClick={onWriteNotes}>
-            Write notes
-          </Button>
-        }
-      >
-        What you write in its notes shows here. Claude can draft an explanation once the Claude
-        features arrive in phase 6.
-      </EmptyState>
-    );
-  }
+  const own = isCustomConceptId(concept.id);
   return (
-    <EmptyState
-      icon={BookOpenText}
-      title="The explanation is still being written"
-      compact
-      actions={
-        <LaterClaudeButton size="sm" label="Explain with Claude" title="Explain with Claude">
-          Claude will write the simple and interview levels for {concept.name}, using what it
-          covers. You can keep the answer in this concept's notes. This arrives with the Claude
-          features in phase 6.
-        </LaterClaudeButton>
-      }
-    >
-      Content is added subject by subject. Until then, the scope above says what it covers.
-    </EmptyState>
+    <div className="space-y-5">
+      {note?.generated ? (
+        <GeneratedLevels concept={concept} generated={note.generated} />
+      ) : (
+        <EmptyState
+          icon={own ? PencilLine : BookOpenText}
+          title={own ? "This is your own concept" : "The explanation is still being written"}
+          compact
+          actions={
+            <>
+              {own && (
+                <Button size="sm" icon={PencilLine} onClick={onWriteNotes}>
+                  Write notes
+                </Button>
+              )}
+              <GenerateContent concept={concept} />
+            </>
+          }
+        >
+          {own
+            ? "Write your own notes, or ask Claude to draft a simple explanation, interview points and questions for you to check and keep."
+            : "Until it's written, the scope above says what it covers. Claude can draft an explanation for you to check."}
+        </EmptyState>
+      )}
+      {own && note?.markdown.trim() && (
+        <Block title="Your notes" id={`${concept.id}-own-notes`}>
+          <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+            <MarkdownView>{note.markdown}</MarkdownView>
+          </Suspense>
+        </Block>
+      )}
+    </div>
   );
 }
 
@@ -151,14 +152,17 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
   const setAskOpen = useUiStore((s) => s.setAskOpen);
   const unlocks = dependentsOf.get(concept.id) ?? [];
   const { value: content, failed, retry } = useConceptContent(concept);
-  const questions = content?.questions ?? [];
+  const generated = useConceptNoteStore((s) => s.notes[concept.id]?.generated);
+  const questions = content ? studyContent(content, generated).questions : [];
+  const [explaining, setExplaining] = useState(false);
+  const written = hasCoreContent(concept);
   return (
     <div className="space-y-5">
       <p className="max-w-[70ch] text-base text-muted">
         <span className="font-medium text-text">Covers: </span>
         <CodeSpans text={concept.scope} />
       </p>
-      {!hasCoreContent(concept) ? (
+      {!written ? (
         <MissingContent concept={concept} onWriteNotes={onWriteNotes} />
       ) : content ? (
         <Levels
@@ -198,15 +202,42 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
         <Button size="sm" icon={MessageSquareText} onClick={() => openExplainBack(concept.id)}>
           Explain it back
         </Button>
-        <LaterClaudeButton size="sm" label="Quick quiz" title="Quick quiz with Claude">
-          Claude will write five questions on {concept.name} (multiple choice and short answer),
-          grade them, and record the result. Until phase 6, flashcards and explaining it back check
-          you offline.
-        </LaterClaudeButton>
-        <Button size="sm" icon={Sparkles} variant="ghost" onClick={() => setAskOpen(true)}>
+        <Button
+          size="sm"
+          icon={ListChecks}
+          onClick={() =>
+            openQuickQuiz({
+              conceptIds: [concept.id],
+              title: `Quick quiz: ${concept.name}`,
+              scope: concept.name,
+            })
+          }
+        >
+          Quick quiz
+        </Button>
+        {written && (
+          <Button
+            size="sm"
+            icon={Sparkles}
+            variant="ghost"
+            aria-expanded={explaining}
+            onClick={() => setExplaining((v) => !v)}
+          >
+            Explain with Claude
+          </Button>
+        )}
+        <Button size="sm" icon={MessagesSquare} variant="ghost" onClick={() => setAskOpen(true)}>
           Ask Claude
         </Button>
       </div>
+      {explaining && written && (
+        <ExplainAnotherWay
+          key={concept.id}
+          concept={concept}
+          initialLevel={state?.lastLevelOpened ?? "simple"}
+          onClose={() => setExplaining(false)}
+        />
+      )}
 
       {questions.length > 0 && (
         <Block title="Interview questions" id={`${concept.id}-questions`}>

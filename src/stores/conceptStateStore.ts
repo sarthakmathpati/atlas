@@ -316,6 +316,9 @@ export function recordChecks(
       reviewedAt: stamp,
       intensity: intensity(),
       session: options.session,
+      // Drill answers move the schedule only when fully correct (11.1).
+      drill: e.kind === "drill",
+      fullyCorrect: check.score >= 1,
     });
     if (srs.lastReviewedAt === stamp && state.srs.lastReviewedAt !== stamp)
       reviewed.push(e.conceptId);

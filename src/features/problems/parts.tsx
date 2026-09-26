@@ -1,9 +1,6 @@
 // Small pieces shared by the problem library, the workspace, Review and Mistakes.
-import { Sparkles, Star, type LucideIcon } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Star } from "lucide-react";
 import { cx } from "@/components/ui/cx";
-import { Dialog } from "@/components/ui/Dialog";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { RESULT_LABEL, RESULT_SHORT, type ReviewInfo } from "@/lib/problems/progress";
 import type { AttemptResult, ProblemState } from "@/lib/types";
@@ -113,62 +110,5 @@ export function StarToggle({
     >
       <Star size={16} aria-hidden="true" fill={starred ? "currentColor" : "none"} />
     </button>
-  );
-}
-
-/**
- * A Claude feature that arrives in phase 6: the button explains what it will do instead of
- * pretending to work (the honest placeholder the rest of the app uses too).
- */
-export function LaterClaudeButton({
-  label,
-  title,
-  children,
-  icon = Sparkles,
-  size = "md",
-  variant = "secondary",
-  className,
-  compactOnMobile,
-}: {
-  label: string;
-  title: string;
-  children: React.ReactNode;
-  icon?: LucideIcon;
-  size?: "sm" | "md";
-  variant?: "secondary" | "ghost";
-  className?: string;
-  /** Show only the icon below 1280 px (the label stays for screen readers and as a title). */
-  compactOnMobile?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button
-        size={size}
-        variant={variant}
-        icon={icon}
-        onClick={() => setOpen(true)}
-        className={cx(compactOnMobile && "max-xl:px-2.5", className)}
-        title={compactOnMobile ? label : undefined}
-      >
-        <span className={cx(compactOnMobile && "max-xl:sr-only")}>{label}</span>
-      </Button>
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title={title}
-        size="sm"
-        footer={
-          <Button variant="primary" onClick={() => setOpen(false)}>
-            Got it
-          </Button>
-        }
-      >
-        <div className="space-y-3 px-4 py-4 text-base text-muted sm:px-5">
-          {children}
-          <p>This arrives with the Claude features in phase 6.</p>
-        </div>
-      </Dialog>
-    </>
   );
 }

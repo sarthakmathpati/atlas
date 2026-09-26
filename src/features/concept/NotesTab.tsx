@@ -30,6 +30,11 @@ interface ExplainDetail {
   text?: string;
   covered?: string[];
   missed?: string[];
+  /** Claude grades (F13). */
+  score5?: number;
+  misconceptions?: string[];
+  betterExplanation?: string;
+  followUp?: { question: string; answer?: string };
 }
 
 function Preview({ markdown }: { markdown: string }) {
@@ -105,8 +110,8 @@ export function NotesTab({ concept, wide }: { concept: Concept; wide: boolean })
         </h3>
         {answers.length === 0 ? (
           <p className="text-base text-muted">
-            Answers from Claude that you choose to keep appear here. Asking Claude arrives in phase
-            6.
+            Answers from Claude that you choose to keep appear here: use Save to concept under an
+            answer in Ask Claude, or Save to notes after Explain with Claude.
           </p>
         ) : (
           <ul className="divide-y divide-rule rounded-control border border-rule">
@@ -174,14 +179,41 @@ export function NotesTab({ concept, wide }: { concept: Concept; wide: boolean })
                   <details>
                     <summary className="cursor-pointer text-base text-text">
                       {relativeDate(localDate(new Date(c.createdAt)), today)}:{" "}
-                      <span className="font-medium">{Math.round(c.score * 100)}%</span>
-                      {d.mode === "self" && <span className="text-muted"> (self-check)</span>}
+                      {d.mode === "claude" && d.score5 !== undefined ? (
+                        <>
+                          <span className="font-medium">{d.score5} / 5</span>
+                          <span className="text-muted"> (graded by Claude)</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-medium">{Math.round(c.score * 100)}%</span>
+                          {d.mode === "self" && <span className="text-muted"> (self-check)</span>}
+                        </>
+                      )}
                     </summary>
                     {d.text && (
                       <p className="mt-2 whitespace-pre-wrap text-base text-text">{d.text}</p>
                     )}
                     {d.missed && d.missed.length > 0 && (
                       <p className="mt-2 text-sm text-muted">Missed: {d.missed.join("; ")}</p>
+                    )}
+                    {d.misconceptions && d.misconceptions.length > 0 && (
+                      <p className="mt-1 text-sm text-muted">
+                        Misconceptions: {d.misconceptions.join("; ")}
+                      </p>
+                    )}
+                    {d.followUp?.answer && (
+                      <p className="mt-1 text-sm text-muted">
+                        Follow-up: {d.followUp.question} Your answer: {d.followUp.answer}
+                      </p>
+                    )}
+                    {d.betterExplanation && (
+                      <div className="mt-2 rounded-control bg-surface-sunken px-3 py-2">
+                        <p className="mb-1 text-sm font-medium text-muted">
+                          Claude's stronger explanation
+                        </p>
+                        <Preview markdown={d.betterExplanation} />
+                      </div>
                     )}
                   </details>
                 </li>

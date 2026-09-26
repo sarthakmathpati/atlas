@@ -132,7 +132,7 @@ describe("map and concept screens", () => {
     await screen.findByRole("heading", { level: 1, name: "Data models" }, { timeout: 4000 });
     await user.click(screen.getByRole("button", { name: "Explain it back" }));
     const dialog = await screen.findByRole("dialog", { name: /Explain it back/ });
-    const check = within(dialog).getByRole("button", { name: "Check my explanation" });
+    const check = within(dialog).getByRole("button", { name: "Check it myself" });
     expect(check).toBeDisabled();
     await user.type(within(dialog).getByRole("textbox"), "word ".repeat(40));
     expect(check).toBeEnabled();

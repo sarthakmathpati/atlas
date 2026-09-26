@@ -8,6 +8,7 @@ import { cx } from "@/components/ui/cx";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { MultiCombobox, type ComboOption } from "@/components/ui/MultiCombobox";
+import { matchTags } from "@/lib/mistakes/match";
 import { CATEGORY_LABEL } from "@/lib/mistakes/stats";
 import { problemLabel, type ProblemInfo } from "@/lib/problems/catalog";
 import { RESULT_LABEL, RESULT_ORDER } from "@/lib/problems/progress";
@@ -79,7 +80,15 @@ function SaveAttemptForm({
   const [time, setTime] = useState("");
   const [space, setSpace] = useState("");
   const [approach, setApproach] = useState("");
-  const [tagIds, setTagIds] = useState<string[]>([]);
+  // Tags taken from Claude's review start selected; the rest of its suggestions are listed first.
+  const [tagIds, setTagIds] = useState<string[]>(() => session.pendingTagIds);
+  const suggestedTagIds = useMemo(
+    () =>
+      matchTags(session.review?.suggestedMistakeTags ?? [], tags)
+        .map((m) => m.tag?.id)
+        .filter((id): id is string => Boolean(id)),
+    [session.review, tags],
+  );
   const [insight, setInsight] = useState(() => (insightVisible ? (state?.insight ?? "") : ""));
   const [nudged, setNudged] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
@@ -140,6 +149,8 @@ function SaveAttemptForm({
         mode,
         // During a re-solve the old insight stays unless a new one is written.
         insight: insightVisible || insight.trim() ? insight : undefined,
+        review: session.review,
+        dryRuns: session.dryRuns,
       });
       toast(saved.message, { tone: "success" });
       onSaved(saved);
@@ -228,6 +239,7 @@ function SaveAttemptForm({
           options={tagOptions}
           value={tagIds}
           onChange={setTagIds}
+          suggested={suggestedTagIds}
           placeholder="Search mistakes, such as off-by-one"
           onCreate={(label) => {
             const tag = addMistakeTag(label, "other");

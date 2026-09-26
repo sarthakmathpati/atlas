@@ -10,7 +10,7 @@ import type { AIErrorCode, AIResult } from "@/lib/ai/AIProvider";
 import type { CopyPromptView } from "@/lib/ai/CopyPromptProvider";
 import { failure } from "@/lib/ai/errors";
 import { FALLBACK_NOTE, resolveMode, type ResolvedMode } from "@/lib/ai/mode";
-import type { PromptSpec } from "@/lib/ai/prompts";
+import { testConnectionPrompt, type PromptSpec } from "@/lib/ai/prompts";
 import { runAI } from "@/lib/ai/run";
 import type { AIService } from "@/lib/ai/service";
 import { DEFAULT_TIER_MODELS } from "@/lib/constants";
@@ -180,4 +180,43 @@ export async function askAI<T>(
     },
     { refresh: options.refresh },
   );
+}
+
+export interface TierTestResult {
+  tier: Tier;
+  model: string;
+  ok: boolean;
+  message: string;
+}
+
+/** Settings → Test connection: one tiny request per tier with the saved key and its model. */
+export async function testApiConnection(signal?: AbortSignal): Promise<TierTestResult[]> {
+  const { service } = useAIStore.getState();
+  const tiers: Tier[] = ["quick", "default", "complex"];
+  if (!service?.apiAllowed) {
+    return tiers.map((tier) => ({
+      tier,
+      model: modelFor(tier),
+      ok: false,
+      message: failure("unavailable", "api").message,
+    }));
+  }
+  const provider = await service.provider("api");
+  const out: TierTestResult[] = [];
+  for (const tier of tiers) {
+    const result = await provider.ask({ ...testConnectionPrompt(tier), signal, noCache: true });
+    out.push({
+      tier,
+      model: modelFor(tier),
+      ok: result.ok,
+      message: result.ok ? "Works." : result.message,
+    });
+    // A wrong key fails the same way for every model: no need to try the others.
+    if (
+      !result.ok &&
+      (result.code === "auth" || result.code === "no_key" || result.code === "network")
+    )
+      break;
+  }
+  return out;
 }
