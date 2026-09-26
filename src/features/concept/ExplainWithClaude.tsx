@@ -30,10 +30,12 @@ export function GenerateContent({ concept }: { concept: Concept }) {
   const request = useAIRequest<GeneratedContent>();
   const { mode } = useAIMode();
   const start = () =>
-    void request.start(async () =>
-      fitPrompt(await gatherContext({ conceptId: concept.id }), (ctx) =>
-        generateContentPrompt(promptEnv(), ctx, concept.name, concept.isPattern),
-      ),
+    void request.start(
+      async () =>
+        fitPrompt(await gatherContext({ conceptId: concept.id }), (ctx) =>
+          generateContentPrompt(promptEnv(), ctx, concept.name, concept.isPattern),
+        ),
+      { title: `An explanation of ${concept.name}` },
     );
   const keep = (data: GeneratedContent) => {
     setGeneratedContent(concept.id, {
@@ -170,10 +172,12 @@ export function ExplainAnotherWay({
   const request = useAIRequest();
   const { mode } = useAIMode();
   const explain = () =>
-    void request.start(async () =>
-      fitPrompt(await gatherContext({ conceptId: concept.id }), (ctx) =>
-        explainConceptPrompt(promptEnv(), ctx, concept.name, level),
-      ),
+    void request.start(
+      async () =>
+        fitPrompt(await gatherContext({ conceptId: concept.id }), (ctx) =>
+          explainConceptPrompt(promptEnv(), ctx, concept.name, level),
+        ),
+      { title: `${concept.name}, explained at the ${LEVEL_LABEL[level].toLowerCase()} level` },
     );
   const save = () => {
     const id = addSavedAnswer(concept.id, {

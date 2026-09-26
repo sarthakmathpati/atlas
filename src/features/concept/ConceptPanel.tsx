@@ -133,6 +133,7 @@ function AskTab({ concept }: { concept: Concept }) {
       chips={chips}
       starters={starters}
       saveConceptId={concept.id}
+      className="max-w-3xl"
     />
   );
 }

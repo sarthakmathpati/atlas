@@ -309,7 +309,7 @@ export function QuickAddDialog() {
                   disabled={claude.busy || !(title || text).trim()}
                   onClick={askClaude}
                 >
-                  Ask Claude
+                  Ask Claude for patterns
                 </Button>
                 {suggested && suggested.length > 0 && suggestedBy === "claude" && <ClaudeTag />}
                 {suggested && suggested.length === 0 && (

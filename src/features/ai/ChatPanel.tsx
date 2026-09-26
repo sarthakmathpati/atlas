@@ -7,8 +7,6 @@ import {
   Check,
   Copy,
   Eraser,
-  Lightbulb,
-  ListChecks,
   RotateCcw,
   Settings,
   Square,
@@ -179,7 +177,11 @@ function AssistantMessage({
           actions={
             <>
               {message.error.action === "settings" && (
-                <Button size="sm" icon={Settings} href={`${routeHref("/settings")}#claude`}>
+                <Button
+                  size="sm"
+                  icon={Settings}
+                  href={routeHref("/settings", undefined, { section: "claude" })}
+                >
                   Open Settings
                 </Button>
               )}
@@ -202,7 +204,6 @@ function AssistantMessage({
                 key={a.key}
                 size="sm"
                 variant="ghost"
-                icon={a.key === "quiz" ? ListChecks : a.key === "example" ? Lightbulb : undefined}
                 onClick={() => onAction(a.key)}
                 className="text-muted"
               >
@@ -265,11 +266,13 @@ export function ChatPanel({
 
   // Keep the newest text in view while it streams (only when already near the bottom).
   const lastLength = lastMessage?.content.length ?? 0;
+  const lastState = lastMessage?.state;
   useEffect(() => {
     const el = listRef.current;
     if (!el || !fill) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 160) el.scrollTop = el.scrollHeight;
-  }, [messages.length, lastLength, fill]);
+    // A finished answer or an error can add a notice below the text: follow it too.
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 240) el.scrollTop = el.scrollHeight;
+  }, [messages.length, lastLength, lastState, fill]);
 
   const send = (text: string) => {
     if (!text.trim() || busy) return;

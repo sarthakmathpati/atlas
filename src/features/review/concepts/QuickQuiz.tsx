@@ -2,7 +2,7 @@
 // answer). The reply is validated before anything is shown; multiple choice is marked at once and
 // short answers are graded by Claude in one batch call (or by the owner, if grading fails).
 // Each quiz records one check per concept (the average of its questions) and moves its reviews.
-import { CheckCircle2, CircleX, ListChecks, RotateCcw } from "lucide-react";
+import { CheckCircle2, CircleDot, CircleX, ListChecks, RotateCcw } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
@@ -32,6 +32,9 @@ const SELF_MARKS = [
   { score: 0.5, label: "Partly" },
   { score: 0, label: "Missed it" },
 ] as const;
+
+/** Stable, so it runs once when the results first render (they open at the top). */
+const scrollToStart = (el: HTMLElement | null) => el?.scrollIntoView({ block: "start" });
 
 function QuestionText({ text }: { text: string }) {
   return <AIMarkdown compact>{text}</AIMarkdown>;
@@ -304,7 +307,7 @@ export function QuickQuizBody({ request, onDone }: { request: QuizRequest; onDon
   const total = results.reduce((n, r) => n + r.score, 0);
   return (
     <div className="flex flex-col">
-      <div className="flex flex-col gap-4 px-4 py-4 sm:px-5">
+      <div ref={scrollToStart} className="flex scroll-mt-4 flex-col gap-4 px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1" role="status">
           <p className="text-2xl font-semibold text-text tabular-nums">
             {Number.isInteger(total) ? total : total.toFixed(1)} / {results.length}
@@ -314,19 +317,16 @@ export function QuickQuizBody({ request, onDone }: { request: QuizRequest; onDon
         <ol className="flex flex-col gap-4">
           {questions.map((q, index) => {
             const r = results[index]!;
-            const good = r.score >= 0.75;
-            const Icon = good ? CheckCircle2 : CircleX;
+            const Icon = r.score >= 1 ? CheckCircle2 : r.score > 0 ? CircleDot : CircleX;
+            const tone =
+              r.score >= 1 ? "text-success" : r.score > 0 ? "text-warning" : "text-danger";
             return (
               <li
                 key={index}
                 className="space-y-1.5 rounded-control border border-rule px-3 py-2.5"
               >
                 <div className="flex gap-2">
-                  <Icon
-                    size={18}
-                    aria-hidden="true"
-                    className={cx("mt-0.5 shrink-0", good ? "text-success" : "text-danger")}
-                  />
+                  <Icon size={18} aria-hidden="true" className={cx("mt-0.5 shrink-0", tone)} />
                   <div className="min-w-0 flex-1 text-base text-text">
                     <QuestionText text={q.question} />
                   </div>

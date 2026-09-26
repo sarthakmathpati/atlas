@@ -220,7 +220,7 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
     const dialog = await screen.findByRole("dialog", { name: "Add a problem" });
     await user.type(within(dialog).getByRole("textbox"), "Sliding puzzle of window blinds");
     await user.click(within(dialog).getByRole("button", { name: "Add it as a new problem" }));
-    await user.click(within(dialog).getByRole("button", { name: "Ask Claude" }));
+    await user.click(within(dialog).getByRole("button", { name: "Ask Claude for patterns" }));
     await answer(mode, user);
     const ids = new Set(patternConcepts.map((c) => c.name));
     const chips = await within(dialog).findAllByRole(

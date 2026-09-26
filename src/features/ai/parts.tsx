@@ -91,7 +91,11 @@ export function AIErrorView<T>({
         actions={
           <>
             {action === "settings" && (
-              <Button size="sm" icon={Settings} href={`${routeHref("/settings")}#claude`}>
+              <Button
+                size="sm"
+                icon={Settings}
+                href={routeHref("/settings", undefined, { section: "claude" })}
+              >
                 Open Settings
               </Button>
             )}

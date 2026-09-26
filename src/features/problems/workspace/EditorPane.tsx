@@ -173,7 +173,8 @@ export function EditorPane({
       )}
       <div
         className={cx(
-          "flex shrink-0 flex-wrap items-center gap-2 border-t border-rule bg-surface px-3 py-2",
+          // A container: labels shrink to icons when the pane is narrow, not only the screen.
+          "@container flex shrink-0 flex-wrap items-center gap-2 border-t border-rule bg-surface px-3 py-2",
           !fill && "sticky bottom-0 z-10",
         )}
       >
@@ -192,10 +193,10 @@ export function EditorPane({
           aria-expanded={panel === "review"}
           onClick={() => onPanel(panel === "review" ? null : "review")}
           disabled={disabled}
-          className="max-xl:px-2.5"
+          className="@max-2xl:px-2.5"
           title="Review my code"
         >
-          <span className="max-xl:sr-only">Review my code</span>
+          <span className="@max-2xl:sr-only">Review my code</span>
         </Button>
         {info.source !== "quant" && (
           <Button
@@ -204,10 +205,10 @@ export function EditorPane({
             aria-expanded={panel === "dryrun"}
             onClick={() => onPanel(panel === "dryrun" ? null : "dryrun")}
             disabled={disabled}
-            className="max-xl:px-2.5"
+            className="@max-2xl:px-2.5"
             title="Dry run"
           >
-            <span className="max-xl:sr-only">Dry run</span>
+            <span className="@max-2xl:sr-only">Dry run</span>
           </Button>
         )}
         <span className="flex-1" />
