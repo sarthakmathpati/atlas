@@ -42,6 +42,12 @@ export default defineConfig([
       "no-restricted-properties": [
         "error",
         { object: "window", property: "claude", message: "Use lib/runtime (claude.use) instead." },
+        { object: "window", property: "fetch", message: "Use the AI store (askAI) instead." },
+        { object: "globalThis", property: "fetch", message: "Use the AI store (askAI) instead." },
+      ],
+      "no-restricted-globals": [
+        "error",
+        { name: "fetch", message: "Feature code never calls fetch; go through lib/ai (askAI)." },
       ],
     },
   },

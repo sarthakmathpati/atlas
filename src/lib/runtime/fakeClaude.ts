@@ -2,13 +2,19 @@
 // tests and available for local experiments. It follows the documented `db` contract closely:
 // path grammar (TypeErrors), plain-object bodies up to 256 KiB, 5,000 documents, where / orderBy
 // / limit queries, onSnapshot delivery, and `{ code, message }` rejections. Tests can inject
-// failures to exercise error handling.
+// failures to exercise error handling. `createFakeSample` does the same for `sample`: input
+// checks, streaming through `onText` (whole text so far), cancel, the 5-minute answer cache,
+// tolerant `json()` and every rejection code.
 import type {
   ClaudeDb,
   ClaudeDownloads,
   ClaudeEntry,
   ClaudeSample,
   ClaudeUser,
+  SampleInput,
+  SampleModelTier,
+  SampleOptions,
+  SampleResult,
   DbCollectionReference,
   DbDocumentReference,
   DbDocumentSnapshot,
@@ -409,4 +415,183 @@ export function createFakeClaude(options: FakeClaudeOptions = {}): ClaudeEntry {
   return {
     use: async (name) => (caps[name] ?? null) as never,
   };
+}
+
+// ----- sample -------------------------------------------------------------------------------------
+
+const MAX_PROMPT_BYTES = 65536;
+const TIERS: readonly SampleModelTier[] = ["quick", "default", "complex"];
+
+/** What a fake answer can be: text, or a rejection (`{ code, message, text? }`). */
+export type FakeSampleReply =
+  | string
+  | { text: string; truncated?: boolean; tier?: SampleModelTier }
+  | { reject: { code: string; message?: string; text?: string } };
+
+export type FakeSampleResponder = (
+  input: SampleInput,
+  meta: { verb: "sample" | "json"; tier: SampleModelTier; call: number },
+) => FakeSampleReply | Promise<FakeSampleReply>;
+
+export interface FakeSampleOptions {
+  responder?: FakeSampleResponder;
+  /** How many onText updates a reply streams in (default 3). */
+  chunks?: number;
+  /** Milliseconds between updates (default 0: each on its own macrotask). */
+  delayMs?: number;
+}
+
+export interface FakeSampleCall {
+  verb: "sample" | "json";
+  input: SampleInput;
+  options: SampleOptions;
+}
+
+export interface FakeSample extends ClaudeSample {
+  readonly calls: FakeSampleCall[];
+  setResponder(responder: FakeSampleResponder): void;
+  /** The next call rejects with this error (after streaming `text`, if given). */
+  failNext(error: { code: string; message?: string; text?: string }): void;
+  limits(): Promise<{ maxPromptBytes: number }>;
+}
+
+function inputBytes(input: SampleInput): number {
+  const text = typeof input === "string" ? input : input.map((t) => t.content).join("");
+  return new TextEncoder().encode(text).length;
+}
+
+function inputProblem(input: unknown): string | null {
+  if (typeof input === "string") return input.trim() === "" ? "input is empty" : null;
+  if (!Array.isArray(input) || input.length === 0) return "input must be a string or turns";
+  for (const t of input as { role?: unknown; content?: unknown }[]) {
+    if (t.role !== "user" && t.role !== "assistant") return "a turn has an unknown role";
+    if (typeof t.content !== "string" || t.content.trim() === "") return "a turn is empty";
+  }
+  const first = (input[0] as { role: string }).role;
+  const last = (input[input.length - 1] as { role: string }).role;
+  if (first !== "user" || last !== "user") return "turns must start and end with a user turn";
+  return null;
+}
+
+/** The runtime's tolerant JSON reading (whole text, one fence, first bracket to last). */
+function readJson(text: string): { ok: true; value: unknown } | { ok: false } {
+  const attempt = (t: string) => {
+    try {
+      return { ok: true as const, value: JSON.parse(t.trim()) as unknown };
+    } catch {
+      return { ok: false as const };
+    }
+  };
+  const whole = attempt(text);
+  if (whole.ok) return whole;
+  const fence = /```[a-zA-Z0-9_-]*[ \t]*\r?\n([\s\S]*?)```/.exec(text);
+  if (fence) {
+    const inner = attempt(fence[1] ?? "");
+    if (inner.ok) return inner;
+  }
+  const start = [text.indexOf("{"), text.indexOf("[")].filter((i) => i >= 0);
+  const end = Math.max(text.lastIndexOf("}"), text.lastIndexOf("]"));
+  if (start.length && end > Math.min(...start))
+    return attempt(text.slice(Math.min(...start), end + 1));
+  return { ok: false };
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** An in-memory `sample` capability that follows the 0.2.54 contract. */
+export function createFakeSample(options: FakeSampleOptions = {}): FakeSample {
+  let responder: FakeSampleResponder = options.responder ?? (() => "OK");
+  let nextFailure: { code: string; message?: string; text?: string } | null = null;
+  const calls: FakeSampleCall[] = [];
+  const cache = new Map<string, SampleResult>();
+  const chunks = Math.max(1, options.chunks ?? 3);
+  const delay = options.delayMs ?? 0;
+
+  const run = async (
+    verb: "sample" | "json",
+    input: SampleInput,
+    opts: SampleOptions = {},
+  ): Promise<SampleResult> => {
+    // The request leaves on the next microtask; nothing is sent when already aborted.
+    await Promise.resolve();
+    calls.push({ verb, input, options: opts });
+    const problem = inputProblem(input);
+    if (problem) throw { code: "invalid_request", message: problem };
+    if (opts.modelTier !== undefined && !TIERS.includes(opts.modelTier))
+      throw { code: "invalid_request", message: "unknown modelTier" };
+    if (opts.signal?.aborted) throw { code: "cancelled", message: "The call was cancelled." };
+    if (inputBytes(input) > MAX_PROMPT_BYTES)
+      throw { code: "prompt_too_large", message: "The input is over 64 KiB." };
+    const tier = opts.modelTier ?? "default";
+    const key = JSON.stringify([verb, input, tier]);
+    if (opts.cache !== false && cache.has(key)) {
+      const hit = cache.get(key)!;
+      await sleep(delay);
+      opts.onText?.({ text: hit.text, delta: hit.text });
+      return hit;
+    }
+
+    const failing = nextFailure;
+    nextFailure = null;
+    const reply: FakeSampleReply = failing
+      ? { reject: failing }
+      : await responder(input, { verb, tier, call: calls.length });
+    const rejection = typeof reply === "object" && "reject" in reply ? reply.reject : null;
+    const text =
+      typeof reply === "string" ? reply : "text" in reply ? reply.text : (rejection?.text ?? "");
+    // Stream what there is, in a few pieces, unless cancelled part way.
+    let shown = "";
+    const size = Math.max(1, Math.ceil(text.length / chunks));
+    for (let i = 0; i < text.length; i += size) {
+      await sleep(delay);
+      if (opts.signal?.aborted)
+        throw { code: "cancelled", message: "The call was cancelled.", text: shown || undefined };
+      const delta = text.slice(i, i + size);
+      shown += delta;
+      if (shown.trim()) opts.onText?.({ text: shown, delta });
+    }
+    await sleep(delay);
+    if (opts.signal?.aborted)
+      throw { code: "cancelled", message: "The call was cancelled.", text: shown || undefined };
+    if (rejection) {
+      const error: { code: string; message: string; text?: string } = {
+        code: rejection.code,
+        message: rejection.message ?? rejection.code,
+      };
+      if (rejection.code !== "refused" && shown) error.text = shown;
+      throw error;
+    }
+    if (!text.trim()) throw { code: "empty_completion", message: "Claude produced no text." };
+    const result: SampleResult = {
+      text,
+      truncated:
+        typeof reply === "object" && "truncated" in reply ? Boolean(reply.truncated) : false,
+      modelTierApplied:
+        typeof reply === "object" && "tier" in reply && reply.tier ? reply.tier : tier,
+    };
+    if (verb === "sample" && opts.cache !== false) cache.set(key, result);
+    return result;
+  };
+
+  const fn = ((input: SampleInput, opts?: SampleOptions) =>
+    run("sample", input, opts)) as FakeSample;
+  const json = async (input: SampleInput, opts?: SampleOptions) => {
+    const result = await run("json", input, opts);
+    const parsed = readJson(result.text);
+    if (!parsed.ok || result.truncated)
+      throw { code: "invalid_json", message: "The reply held no JSON value.", text: result.text };
+    return parsed.value as never;
+  };
+  Object.assign(fn, {
+    json,
+    calls,
+    setResponder: (r: FakeSampleResponder) => {
+      responder = r;
+    },
+    failNext: (e: { code: string; message?: string; text?: string }) => {
+      nextFailure = e;
+    },
+    limits: async () => ({ maxPromptBytes: MAX_PROMPT_BYTES }),
+  });
+  return fn;
 }

@@ -2,6 +2,7 @@
 // storage notices (quota, retries, read-only) into toasts.
 import { useEffect } from "react";
 import { hydrateActivity } from "@/stores/activityStore";
+import { attachAI, detachAI } from "@/stores/aiStore";
 import { useClockStore, tickClock } from "@/stores/clockStore";
 import { flushNotes, hydrateConceptNotes } from "@/stores/conceptNoteStore";
 import { hydrateConceptStates, refreshAllConcepts } from "@/stores/conceptStateStore";
@@ -17,6 +18,13 @@ import { useServicesState } from "./servicesContext";
 export function StoreHydrator() {
   const state = useServicesState();
   const repository = state.status === "ready" ? state.services.repository : null;
+  const ai = state.status === "ready" ? state.services.ai : null;
+
+  useEffect(() => {
+    if (!ai) return;
+    void attachAI(ai);
+    return () => detachAI();
+  }, [ai]);
 
   useEffect(() => {
     if (!repository) return;

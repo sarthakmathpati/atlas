@@ -1,9 +1,11 @@
 // Detects the runtime and opens storage once, after the first paint (BUILD_SPEC.md 2.3, 2.4).
 // The shell renders immediately with a skeleton; this provider fills in the services when ready.
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { createAIService } from "@/lib/ai/service";
 import { chooseFileSaver } from "@/lib/files/FileSaver";
 import { detectRuntime, type RuntimeInfo } from "@/lib/runtime/detect";
 import { openRepository, prepareRepository } from "@/lib/storage";
+import { getApiKey, modelFor, onSampleBlocked, presentCopyPrompt } from "@/stores/aiStore";
 import { ServicesContext, type ServicesState } from "./servicesContext";
 
 interface ServicesProviderProps {
@@ -32,7 +34,10 @@ export function ServicesProvider({ children, detect = detectRuntime }: ServicesP
           return;
         }
         opened = repository;
-        await prepareRepository(repository);
+        // A first visit with built-in Claude starts in that mode (BUILD_SPEC.md 2.3).
+        await prepareRepository(repository, new Date(), {
+          aiMode: runtime.sample ? "sample" : "copy",
+        });
         if (cancelled) return;
         setState({
           status: "ready",
@@ -40,6 +45,12 @@ export function ServicesProvider({ children, detect = detectRuntime }: ServicesP
             runtime,
             repository,
             fileSaver: chooseFileSaver(runtime),
+            ai: createAIService(runtime, {
+              presentCopy: presentCopyPrompt,
+              getKey: getApiKey,
+              modelFor,
+              onSampleBlocked,
+            }),
             storageNotice: notice,
           },
         });
