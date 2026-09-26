@@ -101,8 +101,10 @@ article), and headings inside code fences are ignored.
   end a statement that must fail with a `-- error ...` comment, start a PostgreSQL-only block with
   `-- PostgreSQL`, and say where the two databases differ. Use original tables and data.
 - **Links**: link another concept with `[text](#/concept/<id>)` (for example in "Connects to:"),
-  rather than repeating what its article already says. The build rejects missing ids, links to
-  the concept itself and any other in-app link. On the map, a link opens that concept in the panel.
+  rather than repeating what its article already says, and a quant puzzle to practice on with
+  `[text](#/problems/q-<slug>)` (never give away its answer next to the link). The build rejects
+  missing ids, links to the concept itself and any other in-app link. On the map, a concept link
+  opens that concept in the panel; a puzzle link opens the puzzle.
 - **LLD**: show class relationships as a text diagram (`*--` composition, `o--` aggregation,
   `-->` association, `..>` dependency, `..|>` realizes, `--|>` inherits, multiplicities in
   quotes). Every design compiles and runs a short demo whose output follows it under "Output:".

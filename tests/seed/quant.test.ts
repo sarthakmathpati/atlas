@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { QUANT_PUZZLES } from "@/data/quant.seed";
 import { conceptById, topicById } from "@/data/syllabus";
 import { checkAnswer, closeEnough, evaluateExpression } from "@/lib/quant/answerCheck";
+import { quantPuzzleIds } from "../../scripts/build-syllabus.mjs";
 
 const byId = new Map(QUANT_PUZZLES.map((p) => [p.id, p]));
 
@@ -558,6 +559,11 @@ describe("quant puzzle bank", () => {
       for (const c of p.conceptIds) expect(conceptById.has(c), `${p.id} → ${c}`).toBe(true);
       expect(p.answerNote!.length).toBeGreaterThan(40);
     }
+  });
+
+  it("lists the same ids the syllabus build reads for links in content", () => {
+    // build-syllabus.mjs can't import this TypeScript file, so it reads the `id:` lines instead.
+    expect([...quantPuzzleIds()].sort()).toEqual(QUANT_PUZZLES.map((p) => p.id).sort());
   });
 
   it("has answers that match an independent computation", () => {

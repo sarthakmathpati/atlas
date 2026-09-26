@@ -29,6 +29,7 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const CONTENT_DIR = join(ROOT, "content");
 const OUT_PATH = join(ROOT, "src", "data", "syllabus.generated.json");
 const CONTENT_OUT_DIR = join(ROOT, "src", "data", "content");
+const QUANT_SEED_PATH = join(ROOT, "src", "data", "quant.seed.ts");
 
 export const SYLLABUS_FORMAT_VERSION = 2;
 const IMPORTANCE = new Set(["must", "important", "advanced"]);
@@ -441,22 +442,40 @@ function validateGraph({ subjects, topics, concepts }) {
 
 /**
  * Content may link to another concept with a Markdown link to its page, `[text](#/concept/<id>)`
- * (the map's panel opens it in place). Every such link must resolve, and no other in-app link is
+ * (the map's panel opens it in place), or to a quant puzzle, `[text](#/problems/q-<slug>)`, to
+ * practice on instead of repeating it. Every such link must resolve, and no other in-app link is
  * allowed in content, since routes may change.
  */
-function validateConceptLinks(concepts) {
+function validateContentLinks(concepts, puzzleIds) {
   const ids = new Set(concepts.map((c) => c.id));
   for (const c of concepts) {
     const { simple, interview, deep } = c.content;
     const text = [simple, ...interview, deep].filter(Boolean).join("\n");
     for (const m of text.matchAll(/\]\((#[^)\s]*)\)/g)) {
+      const puzzle = /^#\/problems\/(q-[a-z0-9-]+)$/.exec(m[1])?.[1];
+      if (puzzle) {
+        if (!puzzleIds.has(puzzle))
+          throw new BuildError(`Concept ${c.id}: link to missing quant puzzle "${puzzle}"`);
+        continue;
+      }
       const id = /^#\/concept\/([a-z0-9.-]+)$/.exec(m[1])?.[1];
       if (!id)
-        throw new BuildError(`Concept ${c.id}: in-app links must be #/concept/<id> (${m[1]})`);
+        throw new BuildError(
+          `Concept ${c.id}: in-app links must be #/concept/<id> or #/problems/<quant puzzle id> (${m[1]})`,
+        );
       if (!ids.has(id)) throw new BuildError(`Concept ${c.id}: link to missing concept "${id}"`);
       if (id === c.id) throw new BuildError(`Concept ${c.id} links to itself`);
     }
   }
+}
+
+/**
+ * Ids of the quant puzzles content may link to, read from the seed file's `id: "q-…"` lines (the
+ * seed is TypeScript, so it isn't imported here; tests/seed/quant.test.ts checks this list).
+ */
+export function quantPuzzleIds(path = QUANT_SEED_PATH) {
+  const text = readFileSync(path, "utf8");
+  return new Set([...text.matchAll(/^\s*id: "(q-[a-z0-9-]+)",$/gm)].map((m) => m[1]));
 }
 
 function resolveConnections(concepts, contentDir) {
@@ -574,7 +593,7 @@ export function buildSyllabus({ strict = false, contentDir = CONTENT_DIR } = {})
   );
 
   validateGraph(loaded);
-  validateConceptLinks(concepts);
+  validateContentLinks(concepts, quantPuzzleIds());
   const connections = resolveConnections(concepts, contentDir);
 
   // A subject shows on the map for a track when any of its concepts belongs to that track.
