@@ -142,6 +142,15 @@ article), and headings inside code fences are ignored.
   check rejects `http://localhost`. Program code is C++; shell, Dockerfile, YAML, JSON and HTTP are
   fine as tools. If something can't run (a Kubernetes cluster, hosted CI), show the files and
   explain what they would do; never invent output. Mark cloud product names `needsReview: true`.
+- **Career**: build examples around one made-up candidate (a final-year student in India with two
+  internships and a few projects) and say that every person, company and number is invented; never
+  use real people, a real company's internal practices or answers copied from interview-prep sites.
+  Show answers weak and strong side by side with what changed and why. Numbers that are worked out
+  (percentages, word counts and speaking times, pay, tax, decision scores) come from a C++
+  program's output; story facts are stated premises. The story bank program copies the app's
+  behavioral question bank by id, and a test keeps it equal to `src/data/behavioral.seed.ts`. Mark
+  formats that vary by firm, college or year, and tax rules (state the year and regime), with
+  `needsReview: true`.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. To rename a concept, change its

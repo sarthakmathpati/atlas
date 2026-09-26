@@ -3,68 +3,55 @@
 Read `CLAUDE.md` first, then this file, then `BUILD_SPEC.md`. Update this file at the end of every
 work session and at least every hour.
 
-**Current state:** Phases 0 to 4 are done (sessions 1 to 4, 24 Sep 2026). Phase 5 (content) is
-under way. Session 5 finished DSA (all 249 concepts, every must-know with a deep article, every
-pattern with signals and a template) and wrote the pattern drill bank (276 original prompts).
-Session 6 finished **OOP** (53 / 53 concepts, a deep article for every one, 24 of them must-know;
-246 flashcard questions) and **OS** (65 / 65 concepts, a deep article for every one, 29 of them
-must-know; 287 questions). Every C++ block compiles and was run against its worked example;
-scheduling, Banker's algorithm, page replacement, disk scheduling and inode numbers were computed
-by small simulators. Concept text loads per subject on demand, so the startup bundle stays small.
-Session 7 made all written content **C++ only**, as the owner asked: no Python or Java code and no
-comparisons with them in DSA, OOP or OS (and a test keeps it that way for every later subject).
-Session 8 finished **CN** (55 / 55 concepts, a deep article for every one, 32 of them must-know;
-250 flashcard questions, 48 C++ blocks) and **DBMS** (56 / 56 concepts, a deep article for
-every one, 24 of them must-know; 247 questions, 41 C++ blocks plus SQL checked on PostgreSQL
-16). All C++; every runnable block was executed and its output compared line by line with the
-text.
-Session 9 finished **SQL** (34 / 34 concepts, a deep article for every one, 20 of them
-must-know; 146 questions, 116 SQL blocks written for MySQL 8, every one run on a real MySQL 8.0
-and PostgreSQL 16 with all 113 result tables compared cell by cell).
-Session 9 also finished **System Design** (79 / 79 concepts, a deep article for every one, 34
-of them must-know; 307 questions, 74 C++ simulations, each run and checked against its output).
-Session 10 finished **Language core** (46 / 46 concepts, all 22 must-know with deep articles; the
-C++ topics and `lang.general` have a deep article for every concept, while the Java and Python
-topics are kept short, with deep articles only for their must-know concepts, as the owner asked;
-198 questions) and **Concurrency** (20 / 20 concepts, a deep article for every one, 9 of them must-know; 85
-questions, 26 C++ blocks, every threaded one run repeatedly under ThreadSanitizer).
-Session 11 finished **LLD** (32 / 32 concepts, a deep article for every one, 11 of them must-know;
-158 questions; every class design compiles and runs a demo under AddressSanitizer and UBSan, and
-each classic article covers every rubric point of its design prompt, checked by a test) and
-**Probability** (62 / 62 concepts, a deep article for every one, 30 of them must-know; 309
-questions; every number exact and confirmed by a seeded C++ simulation that says how close it
-came). It also wrote 57 original quant puzzles (section 8.2 asks for 40 or more), each answer
-recomputed independently in the tests, and added links between concepts inside content.
-Session 12 finished **Math** (31 / 31 concepts, a deep article for every one, 9 of them must-know;
-135 questions; every numeric answer exact and confirmed by one of 31 C++ programs that print the
-same output with GCC and clang) and **Puzzles** (21 / 21 concepts, a deep article for every one,
-8 of them must-know; 85 questions; each classic family worked on an original instance, proved,
-and checked by one of 21 brute-force searches or seeded simulations), and let content link to
-quant puzzles (`#/problems/q-…`, CLAUDE.md decision 67).
-Session 13 finished **Markets** (28 / 28 concepts, a deep article for every one, 11 of them
-must-know; 140 questions; 28 C++ programs, each run under ASan and UBSan with identical output from
-GCC and clang, every simulated number reported with its distance in standard errors).
-Session 13 also finished **Architecture** (19 / 19 concepts, a deep article for every one, 4 of
-them must-know; 82 questions): every claim about data representation is checked by a program
-under GCC and clang, and performance effects are measured by 13 benchmarks, each labelled as one
-machine's run with the range over five runs.
-Session 14 finished **Aptitude** (16 / 16 concepts, a deep article for every one, 5 of them
-must-know; 80 questions; 15 C++ programs that solve every worked example exactly or by brute force,
-print the answer keys of timed practice lines, and give identical output with GCC and clang).
-Session 14 also finished **Engineering essentials** (27 / 27 concepts, a deep article for every
-one, 7 of them must-know; 135 questions): every git, shell, Linux, curl, ssh, cron, Docker and
-kubectl example was run on the session's machine and its real output pasted (Git with fixed
-names and dates, so the hashes repeat), and the 14 C++ programs (a SHA-1 that recomputes Git's
-object ids, a notes server, test runners, mocks, a debugging example) were run under sanitizers.
-**Next up:** Phase 5 finishes with Career (section 5.3 order), one or two subjects per session,
-never two content sessions at once. Follow `content/README.md` → "Writing conventions", run `npm run check:content-code -- <subject>`, and add each finished subject
-to `FINISHED` in `tests/syllabus/content.test.ts`. Never change concept metadata (ids, names,
-scopes, prerequisites, importance) while writing content: the map layout depends on it, and
-`tests/syllabus/layout.test.ts` fails if it moves. For SQL, PostgreSQL 16 is installed in the cloud
-environment (start it with `pg_ctlcluster 16 main start`) to run every query for real. The extra
-quant puzzles (section 8.2) and the design prompts with rubrics (section 8.4) are complete, so only
-concept content remains in Phase 5. The Puzzles and Markets subjects can link to the new puzzles
-through their concepts (each puzzle is tagged with 1 to 3 concepts).
+**Current state:** Phases 0 to 5 are done. Phases 0 to 4 (sessions 1 to 4, 24 Sep 2026) built the
+app: the data layer and both runtimes, the design system and shell, the problem tracker, and the
+map with concepts. **Phase 5 (content) finished in session 15 (26 Sep 2026): all 18 subjects are
+written.** Every one of the 909 concepts has a simple level, interview points and 3 to 5 flashcard
+questions (4,056 questions); all 400 must-know concepts have a deep article, and 398 others have
+one too (798 in all); all 90 DSA patterns have signals and a C++ template. `npm run
+build:syllabus -- --strict` passes, and `tests/syllabus/content.test.ts` keeps the strict rules on
+for every subject. Code in concept text is C++ only (the `lang` Java and Python topics excepted):
+907 C++ blocks, all compiled by `npm run check:content-code` except 13 marked as sketches, and every
+runnable program was run under sanitizers with its output compared line by line with the text.
+Eight concepts carry `needsReview`, where facts vary by venue, firm, college, year or product. The
+practice banks are complete: 435 LeetCode problems, 98 quant puzzles (57 original, every answer
+recomputed in the tests), 46 design prompts with rubrics, 276 drill prompts and 30 behavioral
+questions.
+
+What each subject was checked against (session in brackets):
+
+- **Language core** (10): C++ core, STL and modern C++, plus short Java and Python topics for other
+  primary languages; every C++ claim run under ASan and UBSan, undefined behavior only quoted from
+  tools.
+- **DSA** (5): 249 concepts and 90 patterns, snippets run against worked examples and brute force.
+- **OOP** (6, C++ only since 7): principles and patterns in C++, every example run.
+- **LLD** (11): every classic design compiles and runs a demo under ASan, UBSan and
+  ThreadSanitizer, and covers its design prompt's rubric (tested).
+- **OS** (6): simulators for scheduling, deadlocks, paging and disks; Linux demos from `/proc`.
+- **Concurrency** (10): threaded examples print the same output every run, checked under GCC and
+  clang ThreadSanitizer.
+- **Architecture** (13): data representation checked by programs; 13 labelled benchmarks.
+- **CN** (8): loopback socket demos and protocol simulations.
+- **DBMS** (8): simulations plus SQL, isolation levels and plans on PostgreSQL 16.
+- **SQL** (9): 116 MySQL 8 blocks run on MySQL 8.0 and PostgreSQL 16, results compared cell by cell.
+- **System design** (9): 74 C++ simulations; each classic covers its prompt's rubric.
+- **Probability** (11): exact answers confirmed by seeded simulations reported in standard errors.
+- **Math and Puzzles** (12): exact answers confirmed by brute force, exact arithmetic or simulation.
+- **Markets** (13): made-up books and games; every simulation within 1.9 standard errors.
+- **Aptitude** (14): original items, exact fractions, brute force over every model for logic.
+- **Engineering essentials** (14): real command output from recorded sessions.
+- **Career** (15): one made-up candidate; weak and strong answers side by side; a timed 90-second
+  script; a story bank checked against the app's 30 behavioral questions; resume bullets and the
+  Atlas project deep dive; an exact made-up offer under India's FY 2025-26 tax (`needsReview`).
+
+**Next up:** Phase 6, "Claude inside" (BUILD_SPEC.md section 13): `AIProvider` with all three
+implementations (built-in Claude through the artifact's `sample` capability, the owner's API key in
+the standalone app, and copy-prompt), the context builder and prompt library (section 10), F21
+settings and the copy-prompt modal, then F20 Ask Claude and the concept Ask tab, "Explain with
+Claude" (now mainly for the owner's own concepts), AI hints (F11), code review and dry run (F12),
+grading for explain it back (F13), quick quizzes (F14), and drill grading and generation (F10).
+Re-check the default model ids (CLAUDE.md decision 14) first. Phase 6's prompts can quote the
+written content.
 
 ## Phases (BUILD_SPEC.md section 13)
 
@@ -75,7 +62,7 @@ through their concepts (each puzzle is tagged with 1 to 3 concepts).
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 14: Engineering essentials complete (27 / 27, 7 / 7 must-know deep, 27 deep in all; real command output from recorded sessions, 14 C++ programs; Docker ran for real, Kubernetes could not and says so). Aptitude complete (16 / 16, 5 / 5 must-know deep, 16 deep in all; 15 C++ programs run under ASan and UBSan with identical GCC and clang output; exact fractions for quantitative answers, brute force for arrangements, relations, syllogisms, series, codes and data sufficiency; timed practice with printed keys). 424 tests. Session 13: Markets complete (28 / 28, 11 / 11 must-know deep, 28 deep in all; 28 C++ programs with identical GCC and clang output, every simulated number within 1.9 standard errors of its exact value) and Architecture complete (19 / 19, 4 / 4 must-know deep, 19 deep in all; representation claims checked by programs, 13 labelled benchmarks with five-run ranges); the code check's prelude gained `<immintrin.h>`. 420 tests. Session 12: Math complete (31 / 31, 9 / 9 must-know deep, 31 deep in all) and Puzzles complete (21 / 21, 8 / 8 must-know deep, 21 deep in all); all 52 C++ programs run under ASan and UBSan and print the same output with GCC 13 and clang 18; content can link to quant puzzles (checked by the build and a test); the map panel opens a linked concept at the top. 412 tests. Session 11: LLD complete (32 / 32, 11 / 11 must-know deep, 32 deep in all; every design runs a demo under ASan and UBSan, all under ThreadSanitizer too; each classic covers its prompt's rubric, tested) and Probability complete (62 / 62, 30 / 30 must-know deep, 62 deep in all; 62 seeded simulations with identical output from GCC and clang). 57 original quant puzzles; links between concepts in content (checked by the build, opened in the map panel). 402 tests. Session 10: Language core complete (46 / 46, 22 / 22 must-know deep, 36 deep in all: every C++ and `lang.general` concept, plus the must-know Java and Python ones); every C++ block run under ASan and UBSan at -O1 and -O2, Java 21 and Python 3.11 examples run; the code check gained GCC's policy-based tree headers, `<coroutine>` and a marker for blocks that warn or show undefined behavior on purpose. Concurrency complete (20 / 20, 9 / 9 must-know deep, 20 deep in all); every threaded example run many times under ASan, GCC and clang ThreadSanitizer and at -O2. Backticks in scope text now show as inline code (`CodeSpans`). 362 tests. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 9: SQL complete (34 / 34, 20 / 20 must-know deep, 34 deep in all); every query run on MySQL 8 and PostgreSQL 16. System Design complete (79 / 79, 34 / 34 must-know deep, 79 deep in all); 74 C++ simulations run with sanitizers; Redis commands checked on Redis 7. 353 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
+| 5. Content | Done | Sessions 5 to 15, one or two subjects each, never in parallel; every concept written, `--strict` passes, 435 tests. Session 15: Career complete (16 / 16, 6 / 6 must-know deep, 16 deep in all; 11 C++ programs with identical GCC and clang output; the story bank is checked against the behavioral question bank by a test); every subject is now in `FINISHED`; a stray `dump.rdb` removed. Session 14: Engineering essentials complete (27 / 27, 7 / 7 must-know deep, 27 deep in all; real command output from recorded sessions, 14 C++ programs; Docker ran for real, Kubernetes could not and says so). Aptitude complete (16 / 16, 5 / 5 must-know deep, 16 deep in all; 15 C++ programs run under ASan and UBSan with identical GCC and clang output; exact fractions for quantitative answers, brute force for arrangements, relations, syllogisms, series, codes and data sufficiency; timed practice with printed keys). 424 tests. Session 13: Markets complete (28 / 28, 11 / 11 must-know deep, 28 deep in all; 28 C++ programs with identical GCC and clang output, every simulated number within 1.9 standard errors of its exact value) and Architecture complete (19 / 19, 4 / 4 must-know deep, 19 deep in all; representation claims checked by programs, 13 labelled benchmarks with five-run ranges); the code check's prelude gained `<immintrin.h>`. 420 tests. Session 12: Math complete (31 / 31, 9 / 9 must-know deep, 31 deep in all) and Puzzles complete (21 / 21, 8 / 8 must-know deep, 21 deep in all); all 52 C++ programs run under ASan and UBSan and print the same output with GCC 13 and clang 18; content can link to quant puzzles (checked by the build and a test); the map panel opens a linked concept at the top. 412 tests. Session 11: LLD complete (32 / 32, 11 / 11 must-know deep, 32 deep in all; every design runs a demo under ASan and UBSan, all under ThreadSanitizer too; each classic covers its prompt's rubric, tested) and Probability complete (62 / 62, 30 / 30 must-know deep, 62 deep in all; 62 seeded simulations with identical output from GCC and clang). 57 original quant puzzles; links between concepts in content (checked by the build, opened in the map panel). 402 tests. Session 10: Language core complete (46 / 46, 22 / 22 must-know deep, 36 deep in all: every C++ and `lang.general` concept, plus the must-know Java and Python ones); every C++ block run under ASan and UBSan at -O1 and -O2, Java 21 and Python 3.11 examples run; the code check gained GCC's policy-based tree headers, `<coroutine>` and a marker for blocks that warn or show undefined behavior on purpose. Concurrency complete (20 / 20, 9 / 9 must-know deep, 20 deep in all); every threaded example run many times under ASan, GCC and clang ThreadSanitizer and at -O2. Backticks in scope text now show as inline code (`CodeSpans`). 362 tests. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 9: SQL complete (34 / 34, 20 / 20 must-know deep, 34 deep in all); every query run on MySQL 8 and PostgreSQL 16. System Design complete (79 / 79, 34 / 34 must-know deep, 79 deep in all); 74 C++ simulations run with sanitizers; Redis commands checked on Redis 7. 353 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -113,7 +100,7 @@ Status: **Not started**, **Foundation** (data or logic exists, no UI yet), **In 
 | F24 | Settings | 2 | In progress | Profile (name, track, interview date, main language, other languages to count, daily time, balance, focus subjects, hide premium), Appearance (theme, reduced motion, map labels, advanced concepts), Learning (review intensity, streak freeze, focus and break lengths, timer auto-start), Claude (mode, models), Data, About (version, runtime, storage used, data version, shortcuts, design kit). Re-run the welcome questions from Profile. Later: API key (Phase 6). |
 | F25 | Path to a concept | 4 | Done | "Show my path here" (map menu, panel menu, search command): unmet prerequisites in learning order with status and minutes, total time, highlighted on the map at every zoom (the rest dims), Add to plan (next one or two), Set as focus. Tested on hand-checked examples. |
 | F26 | Design practice (LLD and HLD) | 8 | Foundation | 46 original prompts with rubrics, one per `lld.classics` / `sysd.classics` concept, each at least 3 sentences (checked). Every LLD classic's article covers its prompt's "must discuss" points (tested). |
-| F27 | Behavioral story bank | 8 | Foundation | The 30 spec questions with suggested story tags. |
+| F27 | Behavioral story bank | 8 | Foundation | The 30 spec questions with suggested story tags. Career content teaches STAR, the story bank (its program copies the question bank by id, kept equal by a test), the 90-second script with a word count and speaking time, and values questions, ready for the Stories page. |
 | F28 | Quant practice: puzzles and mental math | 8 | Foundation | The 41 spec puzzles and 57 original ones across probability, math, puzzles and markets (easy to hard), every checkable answer verified by independent computation in tests; safe answer checker (`lib/quant/answerCheck.ts`: fractions, decimals, %, e, pi, sqrt, variables, yes/no; no eval). The puzzle page and answer checking arrive in phase 8. |
 | F29 | Focus timer, activity heatmap and streak | 7 | In progress | Focus timer in the top bar (focus and break; lengths in Settings); the activity clock adds minutes to today without double counting (the attempt timer is a source too); attempts, solves, re-solves and concepts touched are counted per day; streak with the weekly freeze (tested); minutes and streak shown small in the top bar. Heatmap on the dashboard in Phase 7. |
 | F30 | Accessibility, keyboard, mobile and performance | 9 | In progress | Shortcuts: Ctrl/Cmd + K, `/`, `g` + t/m/p/r/d/s, `a`, `?`, Esc (single keys ignored while typing or in a dialog). Skip link, page headings take focus after navigation, landmarks, labelled icon buttons, 44 px touch targets on phones, reduced-motion override, contrast-checked tokens (code and chart colors too). Map: list view with statuses and status mixes (the accessible alternative), bubbles are labelled buttons (Enter opens, Shift+F10 or the context-menu key opens the menu), map key explains the symbols. Full audit in Phase 9. |
@@ -123,28 +110,69 @@ Status: **Not started**, **Foundation** (data or logic exists, no UI yet), **In 
 Counts from `npm run build:syllabus`. Required: simple, interview and questions for every concept;
 deep for every must-know concept; signals and template for every pattern.
 
-| Subject | Concepts with core content | Must-know with deep | Patterns with signals and template |
-|---|---|---|---|
-| lang | 46 / 46 | 22 / 22 | – |
-| dsa | 249 / 249 | 115 / 115 | 90 / 90 |
-| oop | 53 / 53 | 24 / 24 | – |
-| lld | 32 / 32 | 11 / 11 | – |
-| os | 65 / 65 | 29 / 29 | – |
-| conc | 20 / 20 | 9 / 9 | – |
-| arch | 19 / 19 | 4 / 4 | – |
-| cn | 55 / 55 | 32 / 32 | – |
-| dbms | 56 / 56 | 24 / 24 | – |
-| sql | 34 / 34 | 20 / 20 | – |
-| sysd | 79 / 79 | 34 / 34 | – |
-| prob | 62 / 62 | 30 / 30 | – |
-| math | 31 / 31 | 9 / 9 | – |
-| puzzles | 21 / 21 | 8 / 8 | – |
-| markets | 28 / 28 | 11 / 11 | – |
-| apt | 16 / 16 | 5 / 5 | – |
-| eng | 27 / 27 | 7 / 7 | – |
-| career | 16 / 16 | 6 / 6 | – |
+| Subject | Concepts with core content | Must-know with deep | Deep articles | Questions | C++ blocks in deep | needsReview | Patterns with signals and template |
+|---|---|---|---|---|---|---|---|
+| lang | 46 / 46 | 22 / 22 | 35 | 198 | 43 | 0 | – |
+| dsa | 249 / 249 | 115 / 115 | 149 | 1,086 | 152 | 0 | 90 / 90 |
+| oop | 53 / 53 | 24 / 24 | 53 | 246 | 111 | 0 | – |
+| lld | 32 / 32 | 11 / 11 | 32 | 158 | 31 | 0 | – |
+| os | 65 / 65 | 29 / 29 | 65 | 287 | 84 | 0 | – |
+| conc | 20 / 20 | 9 / 9 | 20 | 85 | 28 | 0 | – |
+| arch | 19 / 19 | 4 / 4 | 19 | 82 | 22 | 1 | – |
+| cn | 55 / 55 | 32 / 32 | 55 | 250 | 48 | 0 | – |
+| dbms | 56 / 56 | 24 / 24 | 56 | 247 | 41 | 0 | – |
+| sql | 34 / 34 | 20 / 20 | 34 | 146 | 0 (116 SQL) | 0 | – |
+| sysd | 79 / 79 | 34 / 34 | 79 | 307 | 75 | 0 | – |
+| prob | 62 / 62 | 30 / 30 | 62 | 309 | 62 | 0 | – |
+| math | 31 / 31 | 9 / 9 | 31 | 135 | 31 | 0 | – |
+| puzzles | 21 / 21 | 8 / 8 | 21 | 85 | 21 | 0 | – |
+| markets | 28 / 28 | 11 / 11 | 28 | 140 | 28 | 2 | – |
+| apt | 16 / 16 | 5 / 5 | 16 | 80 | 15 | 0 | – |
+| eng | 27 / 27 | 7 / 7 | 27 | 135 | 14 | 1 | – |
+| career | 16 / 16 | 6 / 6 | 16 | 80 | 11 | 4 | – |
+| **All** | **909 / 909** | **400 / 400** | **798** | **4,056** | **817** | **8** | **90 / 90** |
+
+The C++ counts are blocks inside deep articles; DSA's 90 pattern templates bring the total to 907.
 
 ## Known issues and notes
+
+- **Phase 5 notes (session 15, Career):** all 16 concepts have simple, interview, questions and a
+  deep article (must-know articles 610 to 898 words), 80 questions. Every example follows one
+  made-up candidate, Kiran, a final-year computer science student in India with two internships
+  (a freight-tracking startup and a fintech payments team), a hackathon, a programming club contest
+  and a few projects; the articles say every person, company and number is invented, and no real
+  company's practices or copied answers appear (CLAUDE.md decision 73). STAR and values answers are
+  shown weak and strong side by side in one table, each followed by what changed and why. "Tell me
+  about yourself" is a 210-word script in three timed parts (1:30 at an assumed 140 words a minute,
+  1:45 at 120, 1:19 at 160), counted by a program whose script a scratch check compared with the
+  prose word for word. The story bank program checks six stories and two prepared answers against
+  the app's 30 behavioral questions by id and suggested tags (a new test keeps its copy equal to
+  `BEHAVIORAL_QUESTIONS`); it found that two questions rely on one story. The app has no page per
+  question yet, so this is how the content links to the bank. Resume bullets are shown before and
+  after, with percentages computed from raw before and after numbers. The Atlas project deep dive
+  takes every fact from the repository (architecture, the stable-layout hash, trade-offs from the
+  decisions, and metrics measured at the end of Phase 5: 435 tests, a 9.09 MB artifact, 907 C++
+  blocks), says the AI providers are still an interface, and advises being open that Atlas was
+  built with an AI coding assistant. Job search: a made-up application funnel (rates labelled as
+  assumptions), an OA stress test that catches an off-by-one in a sliding window, an interview-day
+  transcript whose clarifying questions become the tests, and exact expected values for guessing
+  under negative marking. Offers: a made-up offer computed in whole rupees (CTC ₹24,93,269 gives
+  ₹17,45,300 of first-year cash, 70.0%), with a joining bonus paid in two halves, a one-year cliff,
+  a 10/20/30/40 comparison and a tax table showing marginal relief at ₹12 lakh, under India's new
+  regime for FY 2025-26 as stated in the text; negotiation scripts with a program valuing three
+  asks over four years; a weighted decision swept over all 1,771 weightings in steps of 0.05. All
+  11 programs were run under ASan and UBSan with GCC 13 and at -O2 with clang 18 (identical
+  output), and a scratch runner compared every output line with the text. `needsReview: true` on
+  finding openings (campus rules vary by college and year), online assessment strategy (formats
+  vary), the quant firm process and understanding compensation (tax rules change every budget).
+  Caught while writing: two must-know articles over 900 words (trimmed), a claim that a harsher
+  penalty needs two options left (the table said one), an architecture diagram too wide for the
+  reading column (redrawn), and the stray `dump.rdb` (an 89-byte Redis file with no keys) committed
+  in session 9, now removed and ignored; the GitHub article uses it as a real example. The content
+  loader test used an unwritten concept, and none are left, so it now uses one of the owner's own
+  concepts. Screens reviewed: STAR, tell me about yourself, project deep dives, GitHub, interview
+  day tactics, compensation and choosing between offers at 1280 and 390 px in light and dark, and
+  the map panel at 1440 and 390 px; no console errors, no page overflow.
 
 - **Phase 5 notes (session 14, Engineering essentials):** all 27 concepts have simple, interview,
   questions and a deep article (must-know articles 623 to 882 words), 135 questions. Every command
@@ -356,7 +384,7 @@ deep for every must-know concept; signals and template for every pattern.
   Markdown with KaTeX (about 430 KB), Recharts (about 370 KB, design kit only). The artifact file
   inlines everything: 5.9 MB after OOP and OS, 6.23 MB after CN and DBMS (limit 15 MB; each
   subject adds about 0.15 to 0.25 MB); at this rate the remaining 13 subjects add about 2 to 3 MB,
-  so it should stay under the limit, but watch `check-artifact` after each content session. If it gets close, compress the content chunks in the artifact build.
+  so it should stay under the limit, but watch `check-artifact` after each content session. If it gets close, compress the content chunks in the artifact build. With all 18 subjects written (end of Phase 5) the artifact is 9.09 MB, with 5.25 MB of concept text; later phases add code, not content, so compressing the text is optional for now.
 - **Quant bank:** the spec table has 41 puzzles, not 40. Four prompts carry a short answer-format
   hint (for example "(Answer in minutes.)"); `q-twenty-one` has a two-part spoken answer, so it is
   self-graded against its note.

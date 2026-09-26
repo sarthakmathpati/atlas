@@ -432,7 +432,7 @@ ties at the top: 33
 #### Reading the result
 
 - **Different weights, different winners.** Putting learning first picks the startup (7.40); equal weights and money first pick the large firm (7.50 and 8.10).
-- **The flip point is low.** With the other three criteria weighted equally, the startup wins only while compensation carries less than about 0.143 of the weight. If money matters even a little, C wins.
+- **The flip point is low.** With the other three criteria weighted equally, the startup wins only while compensation carries less than about 0.143 of the weight; give it more and C wins.
 - **Robustness.** Across every weighting in steps of 0.05, C wins 62.3% of them and B 35.7%. A wins 0.2%: C beats it on three of four criteria, so A can drop out early and the real decision is B against C.
 - **Ties are rare but real**: 33 weightings put two offers level at the top, a reminder that close scores mean the numbers can't decide alone.
 

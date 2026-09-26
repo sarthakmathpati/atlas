@@ -36,21 +36,24 @@ KIRAN
 kiran@example.com | +91 00000 00000 | github.com/your-username | Bengaluru
 
 EDUCATION
-B.Tech in Computer Science, an engineering college in India       2023 to 2027
+B.Tech in Computer Science, an engineering college in India     2023 to 2027
 CGPA 8.4/10. Courses: data structures, operating systems, databases, networks
 
 EXPERIENCE
-Software Engineering Intern, payments team, a fintech company     May to Jul 2026
+Software Engineering Intern, payments team, a fintech company   May to Jul 2026
   (two impact bullets)
-Backend Intern, a freight-tracking startup                         May to Jul 2025
+Backend Intern, a freight-tracking startup                       May to Jul 2025
   (two impact bullets)
 
 PROJECTS
 Campus bus tracker (TypeScript, SQLite)       Order-book simulator (C++20)
   (one or two bullets each)
 
-SKILLS      C++, SQL, TypeScript, Git, Linux, Docker
-ACHIEVEMENTS  Ran the programming club's annual contest; 2nd of 38 teams, college hackathon
+SKILLS
+C++, SQL, TypeScript, Git, Linux, Docker
+
+ACHIEVEMENTS
+Ran the programming club's annual contest; 2nd of 38 teams at a college hackathon
 ```
 
 #### Bullets, before and after
@@ -119,7 +122,7 @@ A: Readers skim quickly, and a student rarely has more than a page of relevant, 
 Q: What if you have no numbers for an achievement?
 A: Estimate honestly and mark it as approximate, or describe concrete evidence of impact: who used it, what they stopped having to do, what was adopted. Never invent a figure, because interviewers ask how it was measured.
 
-Q: Why avoid phrases like responsible for or worked on?
+Q: Why avoid phrases like "responsible for" or "worked on"?
 A: They describe a position, not an action or a result, so the reader can't tell what you did. Replace them with a verb for your own action and the outcome it produced.
 
 Q: How should you tailor a resume for different roles?
@@ -155,14 +158,19 @@ Atlas, this app, makes a good worked example because every fact is in its reposi
 **Architecture.**
 
 ```text
-content/*.md --build-syllabus--> syllabus + per-subject text JSON --build-layout--> layout.json
-                                        |
-React UI (map, problems, review) --> Zustand stores --> Repository  --> IndexedDB | claude.ai db | memory
-                                                    --> AIProvider  --> built-in | API key | copy prompt
-                                                    --> FileSaver   --> download | claude.ai downloads | dialog
+content/*.md
+    | build-syllabus: parse, validate, split the text per subject
+    v
+syllabus.json + text JSON per subject --build-layout--> layout.json
+    |
+    v
+React pages (map, problems, review) --> Zustand stores, one per domain
+    |-- Repository --> IndexedDB | claude.ai db | memory
+    |-- FileSaver  --> download | claude.ai downloads | copy dialog
+    `-- AIProvider --> an interface for now; providers in phase 6
 ```
 
-Feature code never touches storage, AI or files directly; each adapter is chosen once at startup from the detected runtime, and a lint rule forbids importing the storage library anywhere else.
+Feature code never touches storage, files or AI directly. The storage and file adapters are chosen once at startup from the detected runtime, and a lint rule forbids importing the storage library anywhere else.
 
 **A hard problem: a map that never moves.** Concept positions come from a seeded force layout, but content is edited every session. The layout file stores a hash of the structure (ids, order, importance and prerequisites), so text edits never move a bubble, and a test fails when the committed layout no longer matches the structure. One session added prerequisites by mistake; that test caught it.
 
@@ -188,7 +196,7 @@ Connects to: [discussing trade-offs](#/concept/sysd.method.discussing-trade-offs
 
 ### questions
 Q: How should you open a project deep dive?
-A: With a 30-second summary: the problem, who it is for, what you built and one measured result. It frames everything after and lets the interviewer choose where to dig.
+A: With a 30-second summary: the problem, who it is for, what you built and one measured result. It frames everything that follows and lets the interviewer choose where to dig.
 
 Q: How do you present a trade-off in your project?
 A: Name the choice, the main alternative, why you chose it in this project's terms, and what it cost you. For example, hash-based routes work without server configuration but give less tidy URLs.
@@ -281,7 +289,7 @@ $ git show --stat --format='%h %s' 61fb60d -- dump.rdb
  1 file changed, 0 insertions(+), 0 deletions(-)
 ```
 
-It was harmless (an 89-byte empty cache), and a later commit removed it and added it to `.gitignore`. Had it been a file with a key or password, deleting it later would not have been enough: it stays in the history, so the secret must be revoked and replaced. Check `git status` and `git diff --staged` before every commit.
+It was harmless (`redis-check-rdb` reads 0 keys in it), and a later commit removed it and added it to `.gitignore`. Had it been a file with a key or password, deleting it later would not have been enough: it stays in the history, so the secret must be revoked and replaced. Check `git status` and `git diff --staged` before every commit.
 
 #### Portfolio beyond GitHub
 
@@ -303,7 +311,7 @@ Q: What should the README of a portfolio project contain?
 A: What the project is and why it exists, a screenshot or demo link, how to run it, how it works at a high level, how it is tested, and what you would do next. Put what and why first, because most readers stop after a few lines.
 
 Q: Why do commit messages matter on a portfolio?
-A: They show how you work: small, focused changes with messages that say what changed read like a professional engineer's history. Messages such as update or final2 suggest the opposite.
+A: They show how you work: small, focused changes with messages that say what changed read like a professional engineer's history. Messages such as "update" or "final2" suggest the opposite.
 
 Q: You accidentally committed an API key and deleted it in the next commit. Is that enough?
 A: No. The key is still in the history and anyone with the repository can read it. Revoke the key and issue a new one first; rewriting history is secondary and doesn't help once it has been pushed somewhere public.

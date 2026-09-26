@@ -68,7 +68,7 @@ Connects to: [building a story bank](#/concept/career.behavioral.building-a-stor
 Q: What does each letter of STAR stand for, and where should most of the answer go?
 A: Situation, task, action and result. Most of the time belongs to the actions you personally took, because that is the evidence the interviewer is scoring. Situation and task set the stakes in a few sentences, and the result closes with what changed.
 
-Q: Why is saying we throughout an answer a problem?
+Q: Why is saying "we" throughout an answer a problem?
 A: The interviewer is deciding whether to hire you, not your team, and "we" hides what you actually did. Say "I" for your own actions and name others' contributions honestly, so your part is clear without taking credit for theirs.
 
 Q: Your story has no numbers. How do you make the result convincing?
@@ -90,7 +90,7 @@ scope: "a 90-second story"
 
 ### interview
 - Structure: **present** (who you are and what you care about), **past** (two or three proof points with results, chosen for this role), **future** (why this role is the next step).
-- Target about 90 seconds; at a calm speaking pace that is roughly 200 words, so count words and time yourself aloud.
+- Target about 90 seconds, which is about 210 words at a calm 140 words a minute; count the words and time yourself aloud.
 - Pick proof points for the job: backend roles hear about correctness and systems, quant roles about probability, speed and markets.
 - End by pointing at the role, which hands the interviewer a natural next question.
 - Avoid: reciting the resume line by line, childhood and schooling, grades as the headline, a list of technologies, and a memorized monotone.
@@ -188,7 +188,7 @@ total 210 words: 1:30 at 140 wpm, 1:45 at 120, 1:19 at 160
 Connects to: [the STAR method](#/concept/career.behavioral.the-star-method), [why this company and why this role](#/concept/career.behavioral.why-this-company-and-why-this-role), [project deep dives](#/concept/career.resume.project-deep-dives).
 
 ### questions
-Q: What structure works for tell me about yourself?
+Q: What structure works for "tell me about yourself"?
 A: Present, past, future. Say who you are now and what you care about, give two or three proof points from your past with results that fit this role, and finish with why this role is your next step.
 
 Q: How long should the answer be, and how do you check?
@@ -447,19 +447,19 @@ Answer about growth in the work, not titles: "owning a component end to end, and
 Connects to: [tell me about yourself](#/concept/career.behavioral.tell-me-about-yourself), [questions to ask the interviewer](#/concept/career.behavioral.questions-to-ask-the-interviewer), [company values questions](#/concept/career.behavioral.company-values-questions).
 
 ### questions
-Q: What are the three parts of a strong answer to why this company?
+Q: What are the three parts of a strong answer to "Why this company"?
 A: Something specific about the company that draws you, evidence from your own experience that you fit the work, and what you want to learn or contribute there. Each part should be concrete enough that it could not be said about any other company.
 
 Q: Where do you find specifics about a company?
 A: Use the product, read the job description line by line, read the engineering blog and public talks, follow recent news, and talk to alumni or employees. Write down a few specifics and the story that matches each.
 
-Q: Why is saying the company has a great culture a weak answer?
+Q: Why is "you have a great culture" a weak answer?
 A: It is a compliment with no evidence and could be said about anyone. If culture matters to you, name what you learned about it and where, such as how code reviews work according to an engineer you spoke with.
 
-Q: How does why this role differ from why this company?
+Q: How does "why this role" differ from "why this company"?
 A: Why this company is about the organization and its problems; why this role is about the work you would do every day. Describe the work in concrete terms and connect it to what you have enjoyed and done before.
 
-Q: How would you answer where do you see yourself in three years?
+Q: How would you answer "Where do you see yourself in three years"?
 A: Describe growth in the work itself, such as owning a component end to end and mentoring newer engineers, and connect it to the path this company offers. Avoid titles and plans that suggest you will leave soon.
 
 ## career.behavioral.company-values-questions
@@ -596,7 +596,7 @@ A: A values round often asks several questions, and repeating a story suggests y
 Q: An ownership value is usually probed with what kind of question?
 A: Often a failure or mistake question: something you owned that went wrong, what you did about it and what you changed. Owning the outcome when it went badly shows the value more clearly than a success.
 
-Q: What is wrong with saying I am very customer focused in a values answer?
+Q: What is wrong with saying "I am very customer focused" in a values answer?
 A: It is a claim, not evidence, and it echoes the company's own words. Tell a story where your actions for a user show the value and let the interviewer draw the conclusion.
 
 Q: What should you do if one of the company's values does not fit you well?
