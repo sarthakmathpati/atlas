@@ -137,14 +137,14 @@ export function PuzzlesPage() {
   return (
     <ComingSoon
       title="Quant puzzles"
-      description={`${QUANT_PUZZLES.length} original puzzles covering probability, expected value and strategy.`}
+      description={`${QUANT_PUZZLES.length} original puzzles covering probability, math, logic, games and markets.`}
       icon={Puzzle}
       phase={8}
       phaseName={PRACTICE}
       features={[
         "Answers are checked automatically, including fractions and forms like 1/e.",
         "A hint ladder when you're stuck, and a short explanation after you answer.",
-        "Every attempt counts toward the linked probability and math concepts.",
+        "Every attempt counts toward the concepts it is linked to on the map.",
       ]}
       links={QUANT_PUZZLES.slice(0, 3).map((p) => ({ label: p.title, href: `#/problems/${p.id}` }))}
     />

@@ -359,3 +359,29 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     range seen. Check with ThreadSanitizer from both GCC and clang: GCC 13's misreports
     `timed_mutex` timed locks. Scope text may contain backticks; show it with `CodeSpans`
     (`components/ui/Misc.tsx`), which renders them as inline code.
+63. **Concept links in content** (session 11): content may link to another concept with
+    `[text](#/concept/<id>)` (LLD links to the OOP patterns instead of repeating them). The
+    syllabus build rejects any other `#…` link, a missing id and a link to the concept itself.
+    `MarkdownView` takes `onConceptLink`, so on the map a plain click opens the concept in the
+    panel (with back and forward); elsewhere the link is an ordinary hash route.
+64. **LLD designs** (session 11): class relationships are text diagrams in PlantUML-style
+    notation (`*--` composition, `o--` aggregation, `-->` association, `..>` dependency,
+    `..|>` realizes, `--|>` inherits, multiplicities in quotes). Every design compiles and runs a
+    short demo under ASan and UBSan with its output shown; concurrent parts also ran under
+    ThreadSanitizer. A classic's article ends with `#### Interview checklist`, naming each
+    "must discuss" point of its `lld-<slug>` prompt in bold, word for word
+    (`tests/syllabus/content.test.ts` checks it). Design prompts have at least 3 sentences.
+65. **Probability numbers** (session 11): every answer is exact first (fractions where possible),
+    then confirmed by a C++ simulation with a fixed seed (`mt19937_64 rng(2026)`, uniforms from
+    the top 53 bits, dice by `rng() % 6` (bias below 1e-19), own Fisher-Yates and Box-Muller,
+    never the implementation-defined `std::*_distribution` or `std::shuffle`), so GCC and clang
+    print the same output. The text says how close the run came in standard errors and never
+    presents a simulated number as exact; a run beyond about 2.5 standard errors is rechecked with
+    other seeds (or an independent solve) and the text says what was found. Each formula states its
+    assumptions (independence, replacement, equally likely outcomes). Nothing needed
+    `needsReview`.
+66. **Original quant puzzles** (session 11): 57 beyond the spec's 41 in `quant.seed.ts`, across
+    `prob`, `math`, `puzzles` and `markets`, easy to hard. Every checkable answer is recomputed
+    independently in `tests/seed/quant.test.ts` (enumeration, dynamic programming, integration,
+    search) and compared through `answerCheck`; yes/no answers are checked by brute force.
+    Answers may be expressions (`10*(1-0.9^8)`, `100 - sqrt(5000)`); percentages use `%`.
