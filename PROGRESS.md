@@ -28,7 +28,12 @@ C++ topics and `lang.general` have a deep article for every concept, while the J
 topics are kept short, with deep articles only for their must-know concepts, as the owner asked;
 198 questions) and **Concurrency** (20 / 20 concepts, a deep article for every one, 9 of them must-know; 85
 questions, 26 C++ blocks, every threaded one run repeatedly under ThreadSanitizer).
-**Next up:** Phase 5 continues with LLD, then Probability, Math, Puzzles, Markets, Architecture,
+Session 11 finished **LLD** (32 / 32 concepts, a deep article for every one, 11 of them must-know;
+160 questions; every class design compiles and runs a demo under AddressSanitizer and UBSan, and
+each classic article covers every rubric point of its design prompt, checked by a test) and is
+writing **Probability** (in progress, see the Content table; every number exact and confirmed by a
+seeded C++ simulation).
+**Next up:** Phase 5 continues with Probability (if unfinished), then Math, Puzzles, Markets, Architecture,
 Aptitude, Engineering essentials, Career (section 5.3 order), one or two subjects per session,
 never two content sessions at once. Follow `content/README.md` → "Writing conventions", run `npm run check:content-code -- <subject>`, and add each finished subject
 to `FINISHED` in `tests/syllabus/content.test.ts`. Never change concept metadata (ids, names,
@@ -100,7 +105,7 @@ deep for every must-know concept; signals and template for every pattern.
 | lang | 46 / 46 | 22 / 22 | – |
 | dsa | 249 / 249 | 115 / 115 | 90 / 90 |
 | oop | 53 / 53 | 24 / 24 | – |
-| lld | 0 / 32 | 0 / 11 | – |
+| lld | 32 / 32 | 11 / 11 | – |
 | os | 65 / 65 | 29 / 29 | – |
 | conc | 20 / 20 | 9 / 9 | – |
 | arch | 0 / 19 | 0 / 4 | – |
@@ -108,7 +113,7 @@ deep for every must-know concept; signals and template for every pattern.
 | dbms | 56 / 56 | 24 / 24 | – |
 | sql | 34 / 34 | 20 / 20 | – |
 | sysd | 79 / 79 | 34 / 34 | – |
-| prob | 0 / 62 | 0 / 30 | – |
+| prob | 32 / 62 (in progress) | 22 / 30 | – |
 | math | 0 / 31 | 0 / 9 | – |
 | puzzles | 0 / 21 | 0 / 8 | – |
 | markets | 0 / 28 | 0 / 11 | – |
