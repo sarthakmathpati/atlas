@@ -131,6 +131,17 @@ article), and headings inside code fences are ignored.
   first line is `// Build with: g++ ...` with its flags; take the best of several batches where the
   machine is noisy, label the output as one run (the lead-in says "one run") and give the range
   over five runs in the text. Run benchmarks once under ASan and UBSan too.
+- **Aptitude**: write every question, passage and puzzle yourself. Solve quantitative items in
+  exact fractions and confirm them with a C++ program, say when each shortcut applies and when it
+  breaks, and end each quantitative concept with timed practice lines whose key the program
+  prints. Check logical puzzles by brute force over every model and make sure each has exactly one
+  answer (or say it is not determined). In verbal content, separate grammatical rules from style.
+- **Engineering**: run every command for real and paste its output unchanged, saying which values
+  are machine-specific (PIDs, paths, times, ids). Fix Git author and committer dates so hashes
+  repeat. Call local servers as `curl localhost:PORT/path` (no scheme), because the artifact
+  check rejects `http://localhost`. Program code is C++; shell, Dockerfile, YAML, JSON and HTTP are
+  fine as tools. If something can't run (a Kubernetes cluster, hosted CI), show the files and
+  explain what they would do; never invent output. Mark cloud product names `needsReview: true`.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. To rename a concept, change its
