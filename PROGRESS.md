@@ -41,10 +41,11 @@ same output with GCC and clang) and **Puzzles** (21 / 21 concepts, a deep articl
 8 of them must-know; 85 questions; each classic family worked on an original instance, proved,
 and checked by one of 21 brute-force searches or seeded simulations), and let content link to
 quant puzzles (`#/problems/q-…`, CLAUDE.md decision 67).
-Session 13 (in progress): **Markets** basics, market making and betting are written (14 / 28
-concepts, every number checked by a C++ program under GCC and clang); options, pricing and game
-theory are next, then Architecture.
-**Next up:** Phase 5 continues with Markets, Architecture,
+Session 13 finished **Markets** (28 / 28 concepts, a deep article for every one, 11 of them
+must-know; 140 questions; 28 C++ programs, each run under ASan and UBSan with identical output from
+GCC and clang, every simulated number reported with its distance in standard errors). Architecture
+is next.
+**Next up:** Phase 5 continues with Architecture,
 Aptitude, Engineering essentials, Career (section 5.3 order), one or two subjects per session,
 never two content sessions at once. Follow `content/README.md` → "Writing conventions", run `npm run check:content-code -- <subject>`, and add each finished subject
 to `FINISHED` in `tests/syllabus/content.test.ts`. Never change concept metadata (ids, names,
@@ -128,13 +129,46 @@ deep for every must-know concept; signals and template for every pattern.
 | prob | 62 / 62 | 30 / 30 | – |
 | math | 31 / 31 | 9 / 9 | – |
 | puzzles | 21 / 21 | 8 / 8 | – |
-| markets | 0 / 28 | 0 / 11 | – |
+| markets | 28 / 28 | 11 / 11 | – |
 | apt | 0 / 16 | 0 / 5 | – |
 | eng | 0 / 27 | 0 / 7 | – |
 | career | 0 / 16 | 0 / 6 | – |
 
 ## Known issues and notes
 
+- **Phase 5 notes (session 13, Markets):** all 28 concepts have simple, interview, questions and
+  a deep article (must-know articles 575 to 897 words), 140 questions. Every number is exact first
+  and confirmed by one of 28 C++ programs; each was run under ASan and UBSan with GCC 13 and clang
+  18 (identical output), and a scratch runner compared every output line with the text. Books,
+  prices, firms and games are made up; no real market data or firm is named. Programs: five
+  instruments priced side by side, an order book walked by a market order (microprice, impact), a
+  sequence of order types including a stop cascade, IOC and FOK, a market maker earning the spread
+  (1,000-step paths, exact expected P&L), price-time against pro-rata allocation and an opening
+  auction uncross; a dice market game where the counterparty has seen one die (what each trade
+  reveals), edge over repeated trades (exact DP for sums of dice: 95% chance of profit first at 88
+  trades, dipping at 90 because of ties), Glosten-Milgrom quotes with a million simulated trades
+  and Bayesian quote updates, inventory skew (a small skew cuts P&L noise by 4 times for 3% less
+  profit), a multi-round card trading game with its P&L split into edge and inventory, and an
+  estimation market checked by counting primes; de Méré's two bets, Kelly growth at 0.5 to 3 times
+  Kelly (half Kelly keeps 76% of the growth; the chance of ever halving is 0.482 and 0.123, near the
+  continuous 1/2 and 1/8), gambler's ruin, certainty equivalents against Arrow-Pratt; option payoff
+  tables with a text chart, a put-call parity arbitrage, time value (negative for deep in-the-money
+  European puts; the at-the-money price over sigma S sqrt(T) tends to 1/sqrt(2 pi)), Greeks by
+  formula and by finite differences plus the Black-Scholes equation to 1e-15, delta hedging whose
+  error halves when rebalancing is 4 times as frequent, Black-Scholes against a million-path Monte
+  Carlo (1.43 SE) and a binomial tree, a volatility smile from a two-regime mixture; compounding,
+  NPV and IRR, a cash-and-carry forward arbitrage, Cholesky-correlated portfolio variance, the
+  noise in a 5-year Sharpe ratio (standard error 0.445 against a true 0.375), normal against
+  fat-tailed VaR and expected shortfall (exact Student t in closed form) and VaR failing
+  subadditivity; pure and mixed Nash equilibria, a rock-paper-scissors variant solved exactly and
+  by a million rounds of fictitious play, a 2 by 3 game by the lower envelope, revenue
+  equivalence and the winner's curse. Every simulation landed within 1.9 standard errors of its
+  exact value. `needsReview: true` on "Order types" and "How exchanges match orders", whose
+  details (stop triggers, time-in-force names, pro-rata rules, auction tie-breaks) vary by venue.
+  Caught while writing: a guessed share of losing market-maker paths (9%; the run says 6.7%, since
+  the P&L has fat tails) and an auction tie at two prices that needed an explicit tie-break.
+  Screens reviewed: deep articles with code, output tables and a text chart at 1280 and 390 px in
+  light and dark; no console errors, no page overflow. The artifact is 8.52 MB.
 - **Phase 5 notes (session 12, Math):** all 31 concepts have simple, interview, questions and a
   deep article (must-know articles 609 to 774 words), 135 questions, math in KaTeX with short,
   complete proofs and stated assumptions. Every numeric answer is worked out exactly first and
