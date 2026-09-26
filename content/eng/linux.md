@@ -796,7 +796,7 @@ Q: What does set -euo pipefail do at the top of a bash script?
 A: -e exits when a command fails, -u treats unset variables as errors, and -o pipefail makes a pipeline fail if any command in it fails, not just the last. Together they stop a script at the first problem instead of carrying on with bad data.
 
 Q: Why should you quote variables in shell scripts?
-A: An unquoted variable is split on spaces and its wildcards are expanded, so a file name with a space becomes two arguments and a value like * becomes a list of files. Writing "$var" passes the value through unchanged.
+A: An unquoted variable is split on spaces and its wildcards are expanded, so a file name with a space becomes two arguments and a value like * becomes a list of files. Putting the variable in double quotes passes its value through unchanged.
 
 Q: What does the crontab entry 30 2 * * 1-5 mean?
 A: Run at 02:30 on every weekday, Monday to Friday. The five fields are minute, hour, day of month, month and day of week, and * means every value.

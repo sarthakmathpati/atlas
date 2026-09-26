@@ -427,3 +427,13 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     exist (syllogisms, unlike modern formal logic). Verbal content separates grammatical rules
     from style and usage points and says which is which. A linked quant puzzle's numbers never
     appear in a worked example next to the link.
+72. **Engineering content** (session 14): every command example is run for real on the session's
+    machine and pasted unchanged, with machine-specific values labelled. Git sessions fix
+    `GIT_AUTHOR_DATE` and `GIT_COMMITTER_DATE` (one hour apart from 1 September 2026, 09:00 IST)
+    and names from `example.com`, so hashes are reproducible. Sessions needing a terminal are
+    recorded through an interactive bash on a pseudo-terminal. Local HTTP examples call
+    `curl localhost:PORT/...` without a scheme, because `http://localhost` would fail the artifact
+    URL check; output that embeds other URLs is filtered with `grep -o` and the text says so. Program
+    code stays C++ (a notes server, test runners, mocks); shell, Dockerfile, YAML, JSON and HTTP
+    appear as tools. What can't run here (Kubernetes clusters, hosted CI) is shown as files with
+    an explanation, never invented output. Cloud product names are marked `needsReview`.
