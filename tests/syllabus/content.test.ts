@@ -8,14 +8,40 @@ import {
   loadedSubjectContent,
   loadSubjectContent,
 } from "@/data/content";
+import { BEHAVIORAL_QUESTIONS, STORY_TAGS } from "@/data/behavioral.seed";
 import { DESIGN_PROBLEMS } from "@/data/designs.seed";
-import { conceptById, concepts } from "@/data/syllabus";
+import { conceptById, subjects } from "@/data/syllabus";
+import { customToConcept } from "@/lib/concepts/custom";
 import { buildSyllabus } from "../../scripts/build-syllabus.mjs";
 
-const FINISHED = ["dsa", "oop", "os", "cn", "dbms", "sql", "sysd", "lang", "conc", "lld", "prob", "math", "puzzles", "markets", "arch", "apt", "eng"];
+const FINISHED = [
+  "dsa",
+  "oop",
+  "os",
+  "cn",
+  "dbms",
+  "sql",
+  "sysd",
+  "lang",
+  "conc",
+  "lld",
+  "prob",
+  "math",
+  "puzzles",
+  "markets",
+  "arch",
+  "apt",
+  "eng",
+  "career",
+];
 
 const { syllabus, report } = buildSyllabus();
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
+
+// Phase 5 wrote every subject, so the strict rules now hold for all of them.
+it("finishes every subject", () => {
+  expect([...FINISHED].sort()).toEqual(subjects.map((s) => s.id).sort());
+});
 
 describe.each(FINISHED)("content for %s", (subjectId) => {
   const built = syllabus.concepts.filter((c) => c.subjectId === subjectId);
@@ -67,6 +93,36 @@ describe("LLD classics cover their design prompt's rubric", () => {
   });
 });
 
+// The story bank article checks a made-up candidate's stories against the app's behavioral
+// question bank (section 8.5) in a C++ program, so its copy of the bank must match the seed:
+// the same ids, in order, with the same suggested tags, and only tags the app knows.
+describe("the story bank article uses the behavioral question bank", () => {
+  const deep = syllabus.concepts.find((c) => c.id === "career.behavioral.building-a-story-bank")!
+    .content.deep!;
+  const program = deep.match(/```cpp\n([\s\S]*?)```/)![1]!;
+  const entries = (name: string) => {
+    const block = program.split(`${name} = {`)[1]!.split("};")[0]!;
+    return [...block.matchAll(/\{"([^"]+)",\s*"([^"]+)"\}/g)].map(([, id, tags]) => ({
+      id: id!,
+      tags: tags!.split(" "),
+    }));
+  };
+
+  it("copies every question id and its suggested tags", () => {
+    expect(entries("questions")).toEqual(
+      BEHAVIORAL_QUESTIONS.map((q) => ({ id: q.id, tags: [...q.suggestedTags] })),
+    );
+  });
+
+  it("tags the stories with the app's story tags", () => {
+    const known = new Set<string>(STORY_TAGS);
+    expect(entries("bank")).toHaveLength(8); // six stories and two prepared answers
+    for (const story of entries("bank")) {
+      for (const tag of story.tags) expect(known.has(tag), `${story.id}: ${tag}`).toBe(true);
+    }
+  });
+});
+
 // The owner studies in C++ only (CLAUDE.md decision 58): no Python or Java code, and no
 // comparisons with them, anywhere in concept names, scopes or text. The lang subject's Java and
 // Python topics are the one exception, since they exist for other primary languages.
@@ -94,7 +150,16 @@ describe("C++ only", () => {
 describe("content loader", () => {
   it("loads a subject's text on demand and knows unwritten concepts without loading", async () => {
     const bfs = conceptById.get("dsa.graph-basics.bfs")!;
-    const unwritten = concepts.find((c) => !c.written.any)!;
+    // Every syllabus concept is written now; the owner's own concepts never have text.
+    const unwritten = customToConcept({
+      id: "custom.test",
+      topicId: "dsa.graph-basics",
+      name: "My note",
+      scope: "",
+      importance: "important",
+      createdAt: "2026-09-26T00:00:00.000Z",
+      updatedAt: "2026-09-26T00:00:00.000Z",
+    })!;
     expect(conceptContentNow(unwritten)).toBe(EMPTY_CONTENT);
     expect(loadedSubjectContent("dsa")).toBeUndefined();
     expect(conceptContentNow(bfs)).toBeUndefined();

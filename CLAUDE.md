@@ -437,3 +437,14 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     code stays C++ (a notes server, test runners, mocks); shell, Dockerfile, YAML, JSON and HTTP
     appear as tools. What can't run here (Kubernetes clusters, hosted CI) is shown as files with
     an explanation, never invented output. Cloud product names are marked `needsReview`.
+73. **Career content** (session 15): one made-up candidate, Kiran (a final-year student in India
+    with two internships and a few projects), runs through every example; the articles say that
+    every person, company and number is invented, and nothing names a real company's practices.
+    STAR and values answers are shown weak and strong in one table, followed by "What changed and
+    why". Computed numbers (percentages, word counts, speaking time at an assumed 140 words a
+    minute, pay, tax, weighted scores) come from C++ programs; story facts are premises. The app
+    has no page per behavioral question yet, so the story bank links to the bank inside its program
+    (ids and suggested tags), and `tests/syllabus/content.test.ts` keeps that copy equal to
+    `BEHAVIORAL_QUESTIONS`. Tax uses India's new regime for FY 2025-26, stated in the text, with
+    `needsReview`; so do OA formats, the quant firm process and campus routes. The Atlas project
+    deep dive quotes numbers measured from the repository at the end of Phase 5 and says so.

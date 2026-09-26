@@ -7,11 +7,12 @@ dist-artifact
 coverage
 *.tsbuildinfo
 
-# local screenshots and scratch files
+# local screenshots and scratch files (dump.rdb: Redis writes it into the working directory)
 screenshots
 shots
 .playwright
 *.local
+dump.rdb
 
 # editors and OS
 .DS_Store
