@@ -86,7 +86,8 @@ describe("mistake tags", () => {
 
 describe("combined seed index", () => {
   it("has unique ids across every bank", () => {
-    expect(SEED_PROBLEMS).toHaveLength(435 + 41 + 46);
+    // LeetCode problems, spec quant puzzles, original quant puzzles (Phase 5), design prompts
+    expect(SEED_PROBLEMS).toHaveLength(435 + 41 + 57 + 46);
     expect(seedProblemById.size).toBe(SEED_PROBLEMS.length);
   });
 
