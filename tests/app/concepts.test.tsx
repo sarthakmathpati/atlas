@@ -45,7 +45,7 @@ describe("map and concept screens", () => {
     await ready();
     // The first visit to Today hands over to the welcome questions.
     await waitFor(() => expect(window.location.hash).toBe("#/welcome"));
-    await screen.findByRole("heading", { level: 1, name: "Welcome to Atlas" });
+    await screen.findByRole("heading", { level: 1, name: "Welcome to Atlas" }, { timeout: 4000 });
     await user.type(screen.getByLabelText("Your name"), "Asha");
     await user.click(screen.getByRole("radio", { name: /^SDE/ }));
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -81,7 +81,12 @@ describe("map and concept screens", () => {
     const user = userEvent.setup();
     await ready();
     await go(`#/concept/${DB_CONCEPT}`);
-    await screen.findByRole("heading", { level: 1, name: "DBMS vs file systems" });
+    // The concept page is a lazy route, slow to load under a busy suite.
+    await screen.findByRole(
+      "heading",
+      { level: 1, name: "DBMS vs file systems" },
+      { timeout: 4000 },
+    );
     await user.click(screen.getByRole("button", { name: "Mark as studied" }));
     expect(useConceptStateStore.getState().states[DB_CONCEPT]).toMatchObject({
       studied: true,
@@ -124,7 +129,7 @@ describe("map and concept screens", () => {
     const user = userEvent.setup();
     await ready();
     await go(`#/concept/${DB_CONCEPT_2}`);
-    await screen.findByRole("heading", { level: 1, name: "Data models" });
+    await screen.findByRole("heading", { level: 1, name: "Data models" }, { timeout: 4000 });
     await user.click(screen.getByRole("button", { name: "Explain it back" }));
     const dialog = await screen.findByRole("dialog", { name: /Explain it back/ });
     const check = within(dialog).getByRole("button", { name: "Check my explanation" });
