@@ -43,8 +43,9 @@ and checked by one of 21 brute-force searches or seeded simulations), and let co
 quant puzzles (`#/problems/q-…`, CLAUDE.md decision 67).
 Session 13 finished **Markets** (28 / 28 concepts, a deep article for every one, 11 of them
 must-know; 140 questions; 28 C++ programs, each run under ASan and UBSan with identical output from
-GCC and clang, every simulated number reported with its distance in standard errors). Architecture
-is next.
+GCC and clang, every simulated number reported with its distance in standard errors).
+Session 13 (in progress): **Architecture** data representation and CPU and memory hierarchy are
+written (11 / 19 concepts); performance engineering is next.
 **Next up:** Phase 5 continues with Architecture,
 Aptitude, Engineering essentials, Career (section 5.3 order), one or two subjects per session,
 never two content sessions at once. Follow `content/README.md` → "Writing conventions", run `npm run check:content-code -- <subject>`, and add each finished subject
