@@ -29,6 +29,7 @@ import { useTimer } from "@/components/ui/timer";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { CodeView } from "@/components/ui/code/CodeView";
 import { concepts } from "@/data/syllabus";
+import { AIErrorView, ClaudeTag, StopButton, Thinking } from "@/features/ai/parts";
 import { toast } from "@/stores/toastStore";
 
 const MarkdownView = lazy(() => import("@/components/ui/MarkdownView"));
@@ -372,6 +373,30 @@ export default function KitPage() {
           </div>
           <Callout title="Time for a backup">Your last backup was 9 days ago.</Callout>
           <Callout tone="warning">Saved in this browser only.</Callout>
+        </Demo>
+
+        <Demo title="Claude">
+          <div className="flex flex-wrap items-center gap-3">
+            <ClaudeTag />
+            <ClaudeTag label="Graded by Claude" />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Thinking mode="sample" />
+            <StopButton onStop={() => undefined} />
+          </div>
+          <AIErrorView
+            state={{
+              phase: "error",
+              text: "",
+              mode: "api",
+              error: {
+                code: "network",
+                message: "Couldn't reach Claude. Check your connection and try again.",
+                action: "retry",
+              },
+            }}
+            onRetry={() => undefined}
+          />
         </Demo>
 
         <Demo title="Code view">

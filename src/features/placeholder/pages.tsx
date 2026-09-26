@@ -36,7 +36,7 @@ export function PracticePage() {
       icon: Dumbbell,
       title: "Pattern drill",
       text: "Spot the technique behind short original prompts in two minutes each.",
-      when: "Phase 8",
+      when: null,
     },
     {
       href: "#/quiz",
@@ -95,24 +95,6 @@ export function PracticePage() {
         })}
       </ul>
     </PageFrame>
-  );
-}
-
-export function DrillPage() {
-  return (
-    <ComingSoon
-      title="Pattern drill"
-      description="Recognizing the pattern is most of the battle in an interview."
-      icon={Dumbbell}
-      phase={8}
-      phaseName={PRACTICE}
-      features={[
-        "Sessions of 3 to 10 original prompts, each with a 2-minute countdown.",
-        "Pick the pattern (or two), then see the key insight and whether you were right.",
-        "Accuracy per pattern and the pairs you confuse most often.",
-      ]}
-      links={[{ label: "See all patterns", href: "#/map" }]}
-    />
   );
 }
 
