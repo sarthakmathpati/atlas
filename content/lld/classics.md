@@ -3801,11 +3801,552 @@ importance: advanced
 prereqs: [lld.method.clarifying-requirements]
 scope: "directories, files, paths, permissions"
 
+### simple
+An in-memory file system keeps folders and files in a tree, like the one you browse on your own computer, and lets you create, read, move and delete things by their path. Folders and files are treated alike where possible, the way a box can hold letters or smaller boxes. The design must also refuse the strange requests, such as moving a folder inside itself.
+
+### interview
+- **Composite pattern**: `Node` is the common base of `File` and `Directory`; a directory holds named child nodes, so size, listing and permission checks work uniformly on the tree.
+- **Paths**: split on `/`, ignore empty parts and `.`, pop on `..` (never above the root), then walk from the root through `children` maps; each lookup is O(1) per level with a hash map, or ordered with `std::map` for sorted listings.
+- **Edge cases**: creating a name that exists, moving onto an existing name, **moving a folder into its own subtree** (check that the destination is not the source or below it), deleting a non-empty folder without a recursive flag, deleting the root.
+- **Permissions**: read and write bits for the owner and for everyone else; reading a file needs read on it, creating or deleting needs write on the parent folder, listing needs read on the folder; a superuser skips the checks.
+- **Metadata**: owner, bits, modified time and size; a directory's size is the sum of its subtree, computed recursively (or cached and updated on every write for speed).
+- Keep one error type with clear messages (`mkdir /a: already exists`), and validate everything before changing the tree.
+
+### deep
+#### Classes
+
+```text
+Node <<abstract>>: name, owner, ownerBits, otherBits, modified, parent, size()
+File --|> Node                    data
+Directory --|> Node               children: map<name, unique_ptr<Node>>   (composite)
+Directory "1" *-- "*" Node
+FileSystem *-- Directory (root)   resolve(path), mkdir, write, read, ls, mv, rm, chown
+```
+
+#### Code
+
+```cpp
+struct FsError : runtime_error { using runtime_error::runtime_error; };
+enum Bits { R = 4, W = 2 };
+struct Directory;
+
+struct Node {                                    // composite: files and folders alike
+    string name, owner;
+    int ownerBits = R | W, otherBits = R;
+    long long modified = 0;
+    Directory* parent = nullptr;
+    virtual ~Node() = default;
+    virtual bool isDir() const = 0;
+    virtual long long size() const = 0;
+    bool can(const string& user, int bits) const {
+        if (user == "root") return true;         // superuser
+        int have = user == owner ? ownerBits : otherBits;
+        return (have & bits) == bits;
+    }
+};
+struct File : Node {
+    string data;
+    bool isDir() const override { return false; }
+    long long size() const override { return data.size(); }
+};
+struct Directory : Node {
+    map<string, unique_ptr<Node>> children;
+    bool isDir() const override { return true; }
+    long long size() const override {            // the whole subtree
+        long long total = 0;
+        for (auto& [n, c] : children) total += c->size();
+        return total;
+    }
+};
+
+class FileSystem {
+    Directory root;
+    long long clock = 0;
+    static vector<string> parts(const string& path) {
+        if (path.empty() || path[0] != '/') throw FsError(path + ": paths start with /");
+        vector<string> out;
+        stringstream ss(path);
+        for (string p; getline(ss, p, '/');) {
+            if (p.empty() || p == ".") continue;
+            if (p == "..") { if (!out.empty()) out.pop_back(); }
+            else out.push_back(p);
+        }
+        return out;
+    }
+    Node* find(const vector<string>& ps) {
+        Node* at = &root;
+        for (auto& p : ps) {
+            auto* d = dynamic_cast<Directory*>(at);
+            if (!d || !d->children.count(p)) return nullptr;
+            at = d->children[p].get();
+        }
+        return at;
+    }
+    Node& need(const string& path) {
+        Node* n = find(parts(path));
+        if (!n) throw FsError(path + ": no such file or directory");
+        return *n;
+    }
+    Directory& parentOf(const string& path, string& leaf) {
+        auto ps = parts(path);
+        if (ps.empty()) throw FsError("/: not allowed on the root");
+        leaf = ps.back();
+        ps.pop_back();
+        auto* d = dynamic_cast<Directory*>(find(ps));
+        if (!d) throw FsError(path + ": parent is not a directory");
+        return *d;
+    }
+    static void check(const Node& n, const string& user, int bits, const string& what) {
+        if (!n.can(user, bits)) throw FsError(what + ": permission denied");
+    }
+    template <class T>
+    T& attach(Directory& dir, const string& name, const string& user) {
+        auto node = make_unique<T>();
+        node->name = name;
+        node->owner = user;
+        node->parent = &dir;
+        node->modified = ++clock;
+        T& ref = *node;
+        dir.children[name] = std::move(node);
+        dir.modified = clock;
+        return ref;
+    }
+public:
+    FileSystem() {
+        root.name = "/";
+        root.owner = "root";
+    }
+    void mkdir(const string& path, const string& user) {
+        string leaf;
+        Directory& dir = parentOf(path, leaf);
+        check(dir, user, W, "mkdir " + path);
+        if (dir.children.count(leaf)) throw FsError("mkdir " + path + ": already exists");
+        attach<Directory>(dir, leaf, user);
+    }
+    void write(const string& path, const string& user, const string& text) {
+        string leaf;
+        Directory& dir = parentOf(path, leaf);
+        auto it = dir.children.find(leaf);
+        if (it == dir.children.end()) {          // create: needs write on the folder
+            check(dir, user, W, "write " + path);
+            attach<File>(dir, leaf, user).data = text;
+            return;
+        }
+        auto* f = dynamic_cast<File*>(it->second.get());
+        if (!f) throw FsError("write " + path + ": is a directory");
+        check(*f, user, W, "write " + path);
+        f->data = text;
+        f->modified = ++clock;
+    }
+    string read(const string& path, const string& user) {
+        auto* f = dynamic_cast<File*>(&need(path));
+        if (!f) throw FsError("read " + path + ": is a directory");
+        check(*f, user, R, "read " + path);
+        return f->data;
+    }
+    string ls(const string& path, const string& user) {
+        auto* d = dynamic_cast<Directory*>(&need(path));
+        if (!d) return path;
+        check(*d, user, R, "ls " + path);
+        string out;
+        for (auto& [n, c] : d->children)
+            out += (out.empty() ? "" : " ") + n + (c->isDir() ? "/" : "");
+        return out;
+    }
+    long long du(const string& path) { return need(path).size(); }
+    void chown(const string& path, const string& user, const string& newOwner) {
+        if (user != "root") throw FsError("chown " + path + ": permission denied");
+        need(path).owner = newOwner;
+    }
+    void mv(const string& from, const string& to, const string& user) {
+        string a, b;
+        Directory& src = parentOf(from, a);
+        Directory& dst = parentOf(to, b);
+        if (!src.children.count(a)) throw FsError("mv " + from + ": no such file or directory");
+        check(src, user, W, "mv " + from);
+        check(dst, user, W, "mv " + to);
+        if (dst.children.count(b)) throw FsError("mv " + to + ": already exists");
+        Node* moving = src.children[a].get();
+        for (Node* at = &dst; at; at = at->parent)   // is the destination inside the source?
+            if (at == moving) throw FsError("mv " + from + ": cannot move a folder into itself");
+        auto node = std::move(src.children[a]);
+        src.children.erase(a);
+        node->name = b;
+        node->parent = &dst;
+        node->modified = ++clock;
+        dst.children[b] = std::move(node);
+    }
+    void rm(const string& path, const string& user, bool recursive = false) {
+        string leaf;
+        Directory& dir = parentOf(path, leaf);
+        auto it = dir.children.find(leaf);
+        if (it == dir.children.end()) throw FsError("rm " + path + ": no such file or directory");
+        check(dir, user, W, "rm " + path);
+        auto* d = dynamic_cast<Directory*>(it->second.get());
+        if (d && !d->children.empty() && !recursive)
+            throw FsError("rm " + path + ": directory not empty");
+        dir.children.erase(it);
+    }
+};
+
+int main() {
+    FileSystem fs;
+    auto run = [](const string& label, auto&& action) {
+        try {
+            string result = action();
+            cout << label << ": " << result << "\n";
+        } catch (const FsError& e) {
+            cout << label << ": error, " << e.what() << "\n";
+        }
+    };
+    fs.mkdir("/home", "root");
+    fs.mkdir("/home/asha", "root");
+    fs.chown("/home/asha", "root", "asha");
+    const string home = "/home/asha";
+    auto ok = [](auto&& f) { return [f] { f(); return string("ok"); }; };
+    run("asha writes notes.txt", ok([&] { fs.write(home + "/notes.txt", "asha", "buy milk"); }));
+    run("asha makes docs/plan.md", ok([&] {
+        fs.mkdir(home + "/docs", "asha");
+        fs.write(home + "/docs/plan.md", "asha", "1. design\n2. code\n");
+    }));
+    run("ls /home/asha", [&] { return fs.ls(home, "asha"); });
+    run("size of /home/asha", [&] { return to_string(fs.du(home)) + " bytes"; });
+    run("ravi reads notes.txt", [&] { return fs.read(home + "/notes.txt", "ravi"); });
+    run("ravi writes notes.txt", ok([&] { fs.write(home + "/notes.txt", "ravi", "x"); }));
+    run("ravi creates r.txt there", ok([&] { fs.write(home + "/r.txt", "ravi", "x"); }));
+    run("mkdir docs again", ok([&] { fs.mkdir(home + "/docs", "asha"); }));
+    run("mv docs into docs/old", ok([&] { fs.mv(home + "/docs", home + "/docs/old", "asha"); }));
+    run("rm docs", ok([&] { fs.rm(home + "/docs", "asha"); }));
+    run("mv notes.txt into docs",
+        ok([&] { fs.mv(home + "/notes.txt", home + "/docs/notes.txt", "asha"); }));
+    run("read via ..", [&] { return fs.read(home + "/docs/../docs/./notes.txt", "asha"); });
+    run("rm -r docs", ok([&] { fs.rm(home + "/docs", "asha", true); }));
+    run("ls /home/asha", [&] {
+        string s = fs.ls(home, "asha");
+        return s.empty() ? "(empty)" : s;
+    });
+    run("rm /", ok([&] { fs.rm("/", "root"); }));
+}
+```
+
+Output:
+
+```text
+asha writes notes.txt: ok
+asha makes docs/plan.md: ok
+ls /home/asha: docs/ notes.txt
+size of /home/asha: 26 bytes
+ravi reads notes.txt: buy milk
+ravi writes notes.txt: error, write /home/asha/notes.txt: permission denied
+ravi creates r.txt there: error, write /home/asha/r.txt: permission denied
+mkdir docs again: error, mkdir /home/asha/docs: already exists
+mv docs into docs/old: error, mv /home/asha/docs: cannot move a folder into itself
+rm docs: error, rm /home/asha/docs: directory not empty
+mv notes.txt into docs: ok
+read via ..: buy milk
+rm -r docs: ok
+ls /home/asha: (empty)
+rm /: error, /: not allowed on the root
+```
+
+The size of `/home/asha` is the sum over its subtree: 8 bytes of notes plus 18 of the plan. Ravi may read Asha's file (everyone has read access) but neither change it nor create files in that folder. The move into `docs/old` is refused by walking up from the destination's folder: reaching `docs` itself means the destination is inside the thing being moved. The `..` in the last read is resolved while parsing, before walking the tree.
+
+#### Decisions and variants
+
+- **Uniform treatment**: `size`, `can` and the owner fields live on `Node`, so code that walks the tree (disk usage, search, permission audits) doesn't care which kind it meets; only operations that make sense for one kind (`read`, listing) check the type.
+- **Execute bits and links**: real systems also need search (execute) permission on every folder along a path, and support hard and symbolic links; links turn the tree into a graph, so `mv` and `du` must avoid cycles.
+- **Big folders**: `std::map` gives sorted listings; an `unordered_map` gives faster lookups. Cached directory sizes, updated up the parent chain on each write, make `du` O(1) at the cost of O(depth) writes.
+- **Concurrency**: a single lock around the tree is the simple answer; a lock per directory needs a fixed order (for example root first, then by path) for operations like `mv` that touch two directories.
+
+#### Interview checklist
+
+- **Files and directories treated uniformly (composite pattern)**: `Node` with `File` and `Directory`; a directory owns child nodes.
+- **Parsing and walking paths**: `parts` handles `.`, `..` and repeated slashes; `find` walks from the root.
+- **Edge cases: name clashes, moving a folder into itself, deleting non-empty folders**: "already exists", the parent-chain check in `mv`, and "directory not empty" without the recursive flag (also refusing the root).
+- **Permission checks**: owner and other read and write bits; write on the parent folder to create, move or delete; root skips checks.
+- **Sizes and metadata**: owner, bits, modified time on every node; `size()` sums the subtree.
+
+Connects to: [composite](#/concept/oop.patterns-structural.composite), [file concepts](#/concept/os.storage.file-concepts), [trie structure](#/concept/dsa.tries.trie-structure).
+
+### questions
+Q: How does the composite pattern help in a file system design?
+A: Files and directories share a base node type with common fields and operations such as size, owner and permission checks, and a directory holds child nodes of either kind. Code that walks the tree, like disk usage, treats every node the same way and recursion handles any depth.
+
+Q: How do you stop a folder from being moved into itself?
+A: Before moving, walk up the parent chain from the destination folder; if you reach the folder being moved, the destination is inside it and the move must be refused. Without this check the subtree would be detached from the root and lost.
+
+Q: How do you parse a path such as /a/./b/../c?
+A: Split it on slashes, skip empty parts and single dots, and pop the previous part on double dots without going above the root; the result here is a then c. Then walk from the root through each directory's children.
+
+Q: Which permission is needed to delete a file?
+A: In this design, as in Unix, write permission on the folder that contains it, because deleting changes the folder's list of names. Reading a file needs read permission on the file itself, and listing a folder needs read permission on the folder.
+
+Q: How would you make directory sizes fast to query?
+A: Cache each directory's total size and, on every write, add the size change to each ancestor up to the root. Queries become O(1) and each write costs O(depth) instead of recomputing the whole subtree on demand.
+
 ## lld.classics.online-shopping-cart-and-inventory
 name: "Online shopping cart and inventory"
 importance: advanced
 prereqs: [lld.method.clarifying-requirements]
 scope: "cart, stock reservation, checkout"
+
+### simple
+This design covers the last steps of online shopping: the cart, holding stock while the customer pays, and turning the cart into an order. Holding stock is like a shop assistant putting an item behind the counter for you for fifteen minutes: nobody else can buy it meanwhile, and if you don't come back it returns to the shelf. The design must never sell more units than exist, even when many people check out at once.
+
+### interview
+- Entities: `Product` (SKU, price), `Inventory` (on hand and reserved per SKU), `Cart` (SKU to quantity), `Order` (lines, amounts, state, payment state) and `Reservation` (lines, expiry).
+- **Reserve at checkout, not at add-to-cart**: carts are cheap and often abandoned; stock is held only when the customer starts paying, for a short time (say 15 minutes).
+- **No overselling**: `available = onHand − reserved`; check every line and reserve them all as one atomic step (a lock around the inventory in memory, a conditional update such as `UPDATE ... SET reserved = reserved + q WHERE on_hand - reserved >= q` in a database).
+- **Payment result**: success commits the reservation (on hand and reserved both drop); failure or expiry releases it (reserved drops). Expired reservations are released lazily on the next request or by a sweeper.
+- **Discounts as rules** behind one interface (percentage coupons with a minimum, buy X get Y, bundle prices); state the stacking policy, such as promotions first, then at most one coupon, never below zero.
+- **States**: order created → stock reserved → paid → shipped, or cancelled or expired; payment pending → captured or failed; refunds after capture.
+
+### deep
+#### Classes
+
+```text
+Cart *-- lines: SKU -> quantity                 Product: sku, name, price
+Inventory *-- stock: SKU -> {onHand, reserved}
+Inventory *-- reservations: id -> {lines, expiresAt}
+Checkout --> Inventory, PaymentGateway <<interface>>, DiscountRule <<interface>>
+PercentCoupon ..|> DiscountRule    BuyXGetYFree ..|> DiscountRule
+Order: lines, subtotal, discount, total, OrderState, PaymentState, reservationId
+```
+
+#### Code
+
+```cpp
+struct Product { string sku, name; int price; };
+using Lines = map<string, int>;                  // SKU -> quantity
+using Catalog = map<string, Product>;
+
+class Inventory {
+    struct Stock { int onHand, reserved = 0; };
+    struct Reservation { Lines lines; int expiresAt; };
+    map<string, Stock> stock;
+    map<int, Reservation> reservations;
+    mutex m;
+    int nextId = 1;
+    void releaseLocked(int id) {
+        for (auto& [sku, q] : reservations.at(id).lines) stock.at(sku).reserved -= q;
+        reservations.erase(id);
+    }
+    void expireLocked(int now) {
+        vector<int> old;
+        for (auto& [id, r] : reservations) if (r.expiresAt <= now) old.push_back(id);
+        for (int id : old) releaseLocked(id);
+    }
+public:
+    void add(const string& sku, int units) { lock_guard lock(m); stock[sku].onHand += units; }
+    optional<int> reserve(const Lines& lines, int now, int holdMinutes = 15) {
+        lock_guard lock(m);
+        expireLocked(now);
+        for (auto& [sku, q] : lines) {           // all lines or none
+            auto it = stock.find(sku);
+            if (it == stock.end() || it->second.onHand - it->second.reserved < q) return nullopt;
+        }
+        for (auto& [sku, q] : lines) stock[sku].reserved += q;
+        int id = nextId++;
+        reservations[id] = {lines, now + holdMinutes};
+        return id;
+    }
+    bool commit(int id, int now) {               // payment captured: stock leaves the shelf
+        lock_guard lock(m);
+        expireLocked(now);
+        auto it = reservations.find(id);
+        if (it == reservations.end()) return false;   // expired while paying
+        for (auto& [sku, q] : it->second.lines) {
+            stock[sku].onHand -= q;
+            stock[sku].reserved -= q;
+        }
+        reservations.erase(it);
+        return true;
+    }
+    void release(int id) {
+        lock_guard lock(m);
+        if (reservations.count(id)) releaseLocked(id);
+    }
+    int available(const string& sku, int now) {
+        lock_guard lock(m);
+        expireLocked(now);
+        return stock.at(sku).onHand - stock.at(sku).reserved;
+    }
+};
+
+struct DiscountRule {
+    virtual ~DiscountRule() = default;
+    virtual string name() const = 0;
+    virtual int discount(const Lines& lines, const Catalog& catalog, int soFar) const = 0;
+};
+struct BuyXGetYFree : DiscountRule {             // a promotion
+    string sku;
+    int x, y;
+    BuyXGetYFree(string s, int x, int y) : sku(std::move(s)), x(x), y(y) {}
+    string name() const override {
+        return "buy " + to_string(x) + " get " + to_string(y) + " " + sku;
+    }
+    int discount(const Lines& lines, const Catalog& catalog, int) const override {
+        auto it = lines.find(sku);
+        if (it == lines.end()) return 0;
+        return it->second / (x + y) * y * catalog.at(sku).price;
+    }
+};
+struct PercentCoupon : DiscountRule {            // a coupon on what is left after promotions
+    string code;
+    int percent, minimum;
+    PercentCoupon(string c, int p, int min) : code(std::move(c)), percent(p), minimum(min) {}
+    string name() const override { return "coupon " + code; }
+    int discount(const Lines&, const Catalog&, int soFar) const override {
+        return soFar >= minimum ? soFar * percent / 100 : 0;
+    }
+};
+
+enum class OrderState { Reserved, Paid, PaymentFailed, Expired };
+struct Order { int id, subtotal, discount, total, reservation; OrderState state; string note; };
+
+struct PaymentGateway {
+    virtual ~PaymentGateway() = default;
+    virtual bool charge(int amount) = 0;
+};
+struct ScriptedGateway : PaymentGateway {        // answers from a script, for the demo
+    deque<bool> answers;
+    bool charge(int) override { bool ok = answers.front(); answers.pop_front(); return ok; }
+};
+
+class Checkout {
+    const Catalog& catalog;
+    Inventory& inventory;
+    PaymentGateway& gateway;
+    int nextOrder = 1;
+public:
+    Checkout(const Catalog& c, Inventory& i, PaymentGateway& g)
+        : catalog(c), inventory(i), gateway(g) {}
+    optional<Order> start(const Lines& cart, const vector<const DiscountRule*>& rules, int now) {
+        auto res = inventory.reserve(cart, now);
+        if (!res) return nullopt;
+        int subtotal = 0;
+        for (auto& [sku, q] : cart) subtotal += catalog.at(sku).price * q;
+        int left = subtotal;                     // promotions first, then the coupon
+        string note;
+        for (auto* r : rules) {
+            int d = min(left, r->discount(cart, catalog, left));
+            if (d) note += " [" + r->name() + " -" + to_string(d) + "]";
+            left -= d;
+        }
+        int id = nextOrder++;
+        return Order{id, subtotal, subtotal - left, left, *res, OrderState::Reserved, note};
+    }
+    void pay(Order& o, int now) {
+        if (!gateway.charge(o.total)) {
+            inventory.release(o.reservation);
+            o.state = OrderState::PaymentFailed;
+        } else if (!inventory.commit(o.reservation, now)) {
+            o.state = OrderState::Expired;       // hold ran out: refund the charge
+        } else {
+            o.state = OrderState::Paid;
+        }
+    }
+};
+
+int main() {
+    Catalog catalog{{"tea", {"tea", "Assam tea", 250}},
+                    {"mug", {"mug", "Mug", 400}},
+                    {"bisc", {"bisc", "Biscuits", 50}}};
+    Inventory inv;
+    inv.add("tea", 5);
+    inv.add("mug", 1);
+    inv.add("bisc", 10);
+    ScriptedGateway gateway;
+    gateway.answers = {true, false, true, true};
+    Checkout checkout(catalog, inv, gateway);
+    const char* states[] = {"reserved", "paid", "payment failed", "expired, refund"};
+
+    BuyXGetYFree promo("bisc", 2, 1);
+    PercentCoupon save10("SAVE10", 10, 500);
+    auto asha = checkout.start({{"tea", 2}, {"bisc", 3}}, {&promo, &save10}, 0);
+    cout << "asha: subtotal " << asha->subtotal << asha->note << ", total " << asha->total << "\n";
+    checkout.pay(*asha, 1);
+    cout << "asha pays: " << states[int(asha->state)] << "\n";
+
+    auto ravi = checkout.start({{"mug", 1}}, {}, 2);
+    auto meera = checkout.start({{"mug", 1}}, {}, 3);
+    cout << "ravi holds the last mug; meera's checkout: " << (meera ? "ok" : "out of stock")
+         << "\n";
+    checkout.pay(*ravi, 4);
+    cout << "ravi pays: " << states[int(ravi->state)] << ", mugs available "
+         << inv.available("mug", 4) << "\n";
+    meera = checkout.start({{"mug", 1}}, {}, 5);
+    checkout.pay(*meera, 6);
+    cout << "meera retries and pays: " << states[int(meera->state)] << "\n";
+
+    auto slow = checkout.start({{"tea", 3}}, {}, 10);
+    cout << "kabir holds 3 tea, available now " << inv.available("tea", 10) << "\n";
+    cout << "20 minutes later, available " << inv.available("tea", 30) << "\n";
+    checkout.pay(*slow, 31);
+    cout << "kabir pays late: " << states[int(slow->state)] << "\n";
+
+    Inventory limited;
+    limited.add("ltd", 3);
+    atomic<int> sold = 0;
+    latch go(20);
+    {
+        vector<jthread> buyers;                  // 20 buyers, 3 units, same instant
+        for (int b = 0; b < 20; ++b)
+            buyers.emplace_back([&] {
+                go.arrive_and_wait();
+                if (auto r = limited.reserve({{"ltd", 1}}, 0); r && limited.commit(*r, 0)) ++sold;
+            });
+    }
+    cout << "20 concurrent buyers for 3 units: " << sold << " sold, " << limited.available("ltd", 0)
+         << " left\n";
+}
+```
+
+Output:
+
+```text
+asha: subtotal 650 [buy 2 get 1 bisc -50] [coupon SAVE10 -60], total 540
+asha pays: paid
+ravi holds the last mug; meera's checkout: out of stock
+ravi pays: payment failed, mugs available 1
+meera retries and pays: paid
+kabir holds 3 tea, available now 0
+20 minutes later, available 3
+kabir pays late: expired, refund
+20 concurrent buyers for 3 units: 3 sold, 0 left
+```
+
+Asha's biscuits are "buy 2 get 1": one of three is free (50 off), and the coupon then takes 10% of the remaining 600. Ravi's hold makes the last mug unavailable to Meera; when Ravi's payment fails, the hold is released and Meera's retry succeeds. Kabir's hold expired after 15 minutes, so the tea went back on the shelf; the late payment cannot commit and must be refunded. Twenty simultaneous buyers of three units sell exactly three, because checking availability and reserving happen under one lock. That run was repeated under ThreadSanitizer with no reports.
+
+#### Why reserve instead of decrementing stock at once
+
+Decrementing on add-to-cart would lock up stock in abandoned carts; decrementing only after payment would let two people pay for the last unit. A reservation with an expiry is the middle ground: short, released automatically, and committed only when money is captured. In a database the same logic is two columns and conditional updates, as discussed for [flash sales](#/concept/sysd.classics.e-commerce-and-flash-sales).
+
+#### Interview checklist
+
+- **Product, inventory, cart and order modeling**: `Product`, `Inventory` with on-hand and reserved counts, a cart as SKU lines, and `Order`.
+- **Reserving stock with an expiry**: `reserve` with a 15-minute hold; `expireLocked` releases old holds on every call.
+- **Preventing overselling under concurrent checkouts**: all lines checked and reserved under one lock; 20 buyers, 3 sold.
+- **Discounts and coupons as rules**: `DiscountRule` with `BuyXGetYFree` and `PercentCoupon`, applied in order and never below zero.
+- **Order and payment state transitions**: reserved, then paid, payment failed (release) or expired (refund).
+
+Connects to: [handling concurrency in LLD](#/concept/lld.method.handling-concurrency-in-lld), [strategy](#/concept/oop.patterns-behavioral.strategy), [movie ticket booking](#/concept/lld.classics.movie-ticket-booking).
+
+### questions
+Q: When should stock be reserved in an online store?
+A: At checkout, when the customer starts paying, and only for a short time such as 15 minutes. Reserving at add-to-cart ties up stock in abandoned carts, while decrementing only after payment lets two customers pay for the last unit.
+
+Q: How do you prevent overselling when many customers check out at once?
+A: Track on-hand and reserved counts and reserve every line of the order in one atomic step, only if on hand minus reserved covers each quantity. In memory that is a lock around the check and update; in a database, a conditional update that checks the row count.
+
+Q: What happens to a reservation when payment fails or takes too long?
+A: A failed payment releases the reservation immediately, and an unpaid reservation expires after its hold time and is released lazily or by a sweeper. If payment succeeds after expiry, the commit fails and the charge must be refunded.
+
+Q: How would you model discounts and coupons?
+A: As rules behind one interface that return a discount for the cart, such as buy X get Y free or a percentage coupon with a minimum order. A clear stacking policy applies them in order, for example promotions before coupons, and never lets the total go below zero.
+
+Q: What states does an order pass through?
+A: Stock reserved after checkout starts, then paid when the payment is captured and the reservation committed, then shipped and delivered. Alternatively payment failed, with the reservation released, or expired, with any late charge refunded.
 
 ## lld.classics.meeting-room-scheduler
 name: "Meeting room scheduler"
@@ -3813,11 +4354,477 @@ importance: advanced
 prereqs: [lld.method.clarifying-requirements]
 scope: "bookings, conflicts, recurring meetings"
 
+### simple
+A meeting room scheduler lets people book a room for a time slot, see clashes, and set up meetings that repeat, like every Monday at ten. Each room has a calendar, and a new booking fits only if it doesn't overlap anything already written there. When your room is taken, a helpful scheduler suggests another one that is free and big enough.
+
+### interview
+- Entities: `Room` (name, capacity, its bookings), `Meeting` (title, organizer, attendee count, a **recurrence rule**), and a `Booking` (one occurrence of a meeting in a room).
+- **Conflicts are interval overlaps**: half-open [start, end) intervals overlap when `a.start < b.end && b.start < a.end`. Keep each room's bookings in an ordered map by start time; checking a slot looks only at the booking just before its end, O(log n).
+- **Recurring meetings**: a rule (weekly, a count or an end date) is expanded into concrete occurrences, then the whole series is checked and booked **all or nothing**. **Exceptions** (a skipped holiday, one moved instance) are stored with the rule and remove or replace single occurrences.
+- **Suggesting another room** is a strategy: the smallest free room with enough capacity, or the nearest one, or one on the same floor.
+- **Two people booking the same slot at once**: the conflict check and the insert run in one critical section (a lock per room or for the scheduler), or as a database insert guarded by an exclusion constraint.
+- Open-ended recurrences ("every Monday forever") are expanded only for a window (say a year) and extended later.
+
+### deep
+#### Classes
+
+```text
+Scheduler "1" *-- "*" Room            Room: name, capacity, bookings: map<start, {end, meetingId}>
+Scheduler "1" *-- "*" Meeting         Meeting: title, attendees, Weekly rule, room
+Weekly: first start, duration, count, skipped occurrences     (the recurrence rule)
+Scheduler --> RoomSuggester <<interface>>    SmallestFitting ..|> RoomSuggester
+```
+
+#### Code
+
+```cpp
+constexpr int kDay = 24 * 60;                    // times are minutes since day 0
+string when(int t) {
+    char buf[48];
+    snprintf(buf, sizeof buf, "day %d %02d:%02d", t / kDay, t % kDay / 60, t % 60);
+    return buf;
+}
+struct Slot { int start, end; };                 // [start, end)
+
+struct Weekly {                                  // the recurrence rule
+    int firstStart, minutes, count;
+    set<int> skipped;                            // occurrence numbers cancelled as exceptions
+    vector<Slot> occurrences() const {
+        vector<Slot> out;
+        for (int i = 0; i < count; ++i) {
+            int start = firstStart + i * 7 * kDay;
+            if (!skipped.count(i)) out.push_back({start, start + minutes});
+        }
+        return out;
+    }
+};
+
+struct Room {
+    string name;
+    int capacity;
+    map<int, pair<int, int>> bookings;           // start -> (end, meeting id)
+    bool isFree(Slot s) const {
+        auto it = bookings.lower_bound(s.end);   // first booking starting at or after s.end
+        return it == bookings.begin() || prev(it)->second.first <= s.start;
+    }
+    bool isFree(const vector<Slot>& slots) const {
+        return all_of(slots.begin(), slots.end(), [&](Slot s) { return isFree(s); });
+    }
+};
+
+struct RoomSuggester {
+    virtual ~RoomSuggester() = default;
+    virtual const Room* suggest(const vector<Room>& rooms, const vector<Slot>& slots,
+                                int people) = 0;
+};
+struct SmallestFitting : RoomSuggester {         // don't waste the big hall on six people
+    const Room* suggest(const vector<Room>& rooms, const vector<Slot>& slots,
+                        int people) override {
+        const Room* best = nullptr;
+        for (auto& r : rooms)
+            if (r.capacity >= people && r.isFree(slots) && (!best || r.capacity < best->capacity))
+                best = &r;
+        return best;
+    }
+};
+
+struct Meeting { int id; string title; int people; Weekly rule; string room; };
+
+class Scheduler {
+    vector<Room> rooms;
+    map<int, Meeting> meetings;
+    unique_ptr<RoomSuggester> suggester;
+    mutex m;
+    int nextId = 1;
+    Room& room(const string& name) {
+        for (auto& r : rooms) if (r.name == name) return r;
+        throw out_of_range("no room " + name);
+    }
+public:
+    Scheduler(vector<Room> r, unique_ptr<RoomSuggester> s)
+        : rooms(std::move(r)), suggester(std::move(s)) {}
+    string book(const string& title, int people, Weekly rule, const string& roomName) {
+        lock_guard lock(m);                      // check and insert as one step
+        auto slots = rule.occurrences();
+        Room& r = room(roomName);
+        if (r.capacity < people) return title + ": " + roomName + " is too small";
+        if (!r.isFree(slots)) {
+            const Room* alt = suggester->suggest(rooms, slots, people);
+            return title + ": " + roomName + " is taken" +
+                   (alt ? ", try " + alt->name : ", no room is free");
+        }
+        int id = nextId++;
+        for (Slot s : slots) r.bookings[s.start] = {s.end, id};   // the whole series or nothing
+        meetings[id] = {id, title, people, std::move(rule), roomName};
+        return title + ": booked " + roomName + " x" + to_string(slots.size()) + " (id " +
+               to_string(id) + ")";
+    }
+    string skip(int meetingId, int occurrence) { // an exception: cancel one instance
+        lock_guard lock(m);
+        Meeting& mt = meetings.at(meetingId);
+        int start = mt.rule.firstStart + occurrence * 7 * kDay;
+        mt.rule.skipped.insert(occurrence);
+        room(mt.room).bookings.erase(start);
+        return mt.title + " on " + when(start) + " cancelled";
+    }
+};
+
+int main() {
+    Scheduler cal({{"Focus", 4}, {"Lake", 8}, {"Hall", 30}}, make_unique<SmallestFitting>());
+    int monday10 = 0 * kDay + 10 * 60;
+    cout << cal.book("standup", 6, {monday10, 30, 4, {}}, "Lake") << "\n";
+    Weekly review{14 * kDay + 10 * 60 + 15, 45, 1, {}};    // day 14, 10:15 to 11:00
+    cout << cal.book("design review", 6, review, "Lake") << "\n";
+    cout << cal.book("design review", 6, review, "Focus") << "\n";
+    cout << cal.skip(1, 2) << "\n";                        // the third Monday is a holiday
+    cout << cal.book("design review", 6, review, "Lake") << "\n";
+    Weekly wednesdays{2 * kDay + 15 * 60, 60, 3, {1}};     // 3 Wednesdays, the second skipped
+    cout << cal.book("1:1", 2, wednesdays, "Focus") << "\n";
+
+    atomic<int> won = 0;
+    latch go(2);
+    {
+        vector<jthread> people;                            // two people, same slot, same instant
+        for (string who : {"asha", "ravi"})
+            people.emplace_back([&, who] {
+                go.arrive_and_wait();
+                string r = cal.book(who + "'s sync", 3, {9 * kDay + 14 * 60, 60, 1, {}}, "Focus");
+                if (r.find("booked") != string::npos) ++won;
+            });
+    }
+    cout << "asha and ravi race for Focus on day 9: " << won << " booked\n";
+}
+```
+
+Output:
+
+```text
+standup: booked Lake x4 (id 1)
+design review: Lake is taken, try Hall
+design review: Focus is too small
+standup on day 14 10:00 cancelled
+design review: booked Lake x1 (id 2)
+1:1: booked Focus x2 (id 3)
+asha and ravi race for Focus on day 9: 1 booked
+```
+
+The standup books four Mondays in Lake as one series. The review on day 14 overlaps the third standup, so Lake is refused, and the suggester offers Hall: Focus would be smaller, but it cannot hold six (asking for it directly is refused too). Once the third standup is cancelled as an exception, the review fits in Lake. The Wednesday series books only two occurrences because the second is skipped by its rule. In the race, exactly one of the two simultaneous bookings wins; this was repeated under ThreadSanitizer with no reports.
+
+#### Keeping conflict checks fast
+
+A room's bookings never overlap each other, so in a map ordered by start time only one booking can clash with a new slot: the last one starting before the slot's end. `lower_bound` finds it in O(log n), so booking a series of k occurrences costs O(k log n). This is the same structure as [calendar booking designs](#/concept/dsa.intervals.calendar-booking-designs); counting overlaps for "how many rooms do we need?" is a [sweep line](#/concept/dsa.intervals.sweep-line) problem instead.
+
+#### Recurrence and exceptions
+
+Store the rule, not just its expansion: the rule answers "which days?" for any window, and exceptions attach to it (a skipped occurrence number here; real calendars also store moved occurrences as overrides with their own time). Editing "this and following occurrences" splits the series into two rules at that date. Time zones and daylight saving matter in production: store the rule in the organizer's local time and convert each occurrence, so "10:00 every Monday" stays at 10:00 across clock changes.
+
+#### Interview checklist
+
+- **Room, meeting, booking and recurrence rule modeling**: `Room` with its bookings, `Meeting` with a `Weekly` rule, one booking per occurrence.
+- **Conflict detection as interval overlap, with a structure that stays fast**: half-open slots and `Room::isFree` using `lower_bound`.
+- **Expanding recurring meetings and handling exceptions to them**: `Weekly::occurrences` with `skipped`; `skip` cancels one instance and frees its slot.
+- **A strategy for suggesting another room**: `RoomSuggester` with `SmallestFitting`.
+- **Two people booking the same slot at the same moment**: `book` checks and inserts under one lock; the race produces one booking.
+
+Connects to: [hotel booking](#/concept/lld.classics.hotel-booking), [strategy](#/concept/oop.patterns-behavioral.strategy), [sweep line](#/concept/dsa.intervals.sweep-line).
+
+### questions
+Q: How do you detect a booking conflict efficiently?
+A: Treat bookings as half-open intervals and keep each room's bookings in a map ordered by start time. Since a room's bookings never overlap each other, only the booking just before the new slot's end can clash, so one lower_bound lookup answers the question in O(log n).
+
+Q: How would you store a recurring meeting?
+A: Store the recurrence rule, such as weekly on Monday at 10:00 for 10 weeks, plus a list of exceptions, and expand it into concrete occurrences for booking and display. Keeping the rule lets you edit the series and answer queries for any date range.
+
+Q: How do you handle an exception to a recurring meeting, such as a holiday?
+A: Record the exception on the rule, for example as a skipped occurrence or an override with a new time, and remove or move just that occurrence's booking. The rest of the series stays linked to the same meeting.
+
+Q: How would you suggest another room when the requested one is taken?
+A: Use a suggestion strategy that filters rooms with enough capacity that are free for every occurrence, then ranks them, for example smallest first so large rooms stay available, or nearest to the requested one. Other ranking rules become new strategies.
+
+Q: What happens if two people book the same room and slot at the same moment?
+A: Without care both could see it free and both insert. The conflict check and the insert must be one atomic step, using a lock around the room or scheduler in memory, or an exclusion constraint or conditional insert in a database.
+
 ## lld.classics.task-scheduler
 name: "Task scheduler"
 importance: advanced
 prereqs: [lld.method.clarifying-requirements]
 scope: "delayed and recurring jobs"
+
+### simple
+A task scheduler runs pieces of work later: once after a delay, at a fixed time, or again and again on a schedule, like an alarm clock that can hold many alarms. It keeps the alarms sorted by when they ring next, sleeps until the earliest one, and hands the work to a team of worker threads. It also has to decide what to do when it wakes up late and has missed some alarms.
+
+### interview
+- **Schedule types**: one-off (run once at time t), **fixed rate** (run at t, t + p, t + 2p, ..., measured from the planned start, so no drift) and **fixed delay** (run p after the previous run *finished*, so slow runs push later ones back).
+- **Priority queue** (min-heap) of (next run time, task id); the earliest task is always on top, O(log n) to add or pop.
+- **Dispatch loop**: one thread waits on a condition variable until the top task is due (or a new, earlier task arrives), pops every due task and submits it to a **worker thread pool**, so slow tasks never delay the dispatcher.
+- **Cancellation**: a heap can't remove from the middle cheaply, so mark the task cancelled and skip it when it reaches the top (lazy deletion).
+- **A task that throws**: catch it in the wrapper, record the failure, and apply a policy: keep the schedule, retry with backoff, or cancel after repeated failures. Never let the exception kill a worker thread.
+- **Clock issues**: after a pause (sleep, GC, a busy machine), fixed-rate tasks have missed runs: run once and skip to the next future slot (coalesce), or catch up every run. Use a monotonic clock for delays, since wall-clock time can jump.
+
+### deep
+#### Classes
+
+```text
+Scheduler *-- tasks: id -> Task            Task: name, Kind (Once, FixedRate, FixedDelay), period,
+Scheduler *-- due: min-heap of (time, id)        next run, cancelled, failures, function
+Scheduler --> Clock <<interface>>          FakeClock (tests), SteadyClock (real)
+Scheduler --> Executor <<interface>>       InlineExecutor (tests), ThreadPool (real)
+Scheduler: runDue() = one step of the dispatch loop; loop() = the dispatcher thread
+```
+
+#### Code
+
+```cpp
+using Ms = long long;
+struct Clock {
+    virtual ~Clock() = default;
+    virtual Ms now() const = 0;
+};
+struct FakeClock : Clock {
+    Ms t = 0;
+    Ms now() const override { return t; }
+};
+struct SteadyClock : Clock {                     // monotonic: never jumps backwards
+    Ms now() const override {
+        auto d = chrono::steady_clock::now().time_since_epoch();
+        return chrono::duration_cast<chrono::milliseconds>(d).count();
+    }
+};
+
+struct Executor {
+    virtual ~Executor() = default;
+    virtual void submit(function<void()> job) = 0;
+};
+struct InlineExecutor : Executor {               // runs jobs on the caller's thread (tests)
+    void submit(function<void()> job) override { job(); }
+};
+class ThreadPool : public Executor {
+    deque<function<void()>> jobs;
+    mutex m;
+    condition_variable ready;
+    bool stopping = false;
+    vector<jthread> workers;
+public:
+    explicit ThreadPool(int n) {
+        for (int i = 0; i < n; ++i)
+            workers.emplace_back([this] {
+                for (;;) {
+                    function<void()> job;
+                    {
+                        unique_lock lock(m);
+                        ready.wait(lock, [&] { return stopping || !jobs.empty(); });
+                        if (jobs.empty()) return;
+                        job = std::move(jobs.front());
+                        jobs.pop_front();
+                    }
+                    job();
+                }
+            });
+    }
+    void submit(function<void()> job) override {
+        { lock_guard lock(m); jobs.push_back(std::move(job)); }
+        ready.notify_one();
+    }
+    void shutdown() {                            // finish queued jobs, then join
+        { lock_guard lock(m); stopping = true; }
+        ready.notify_all();
+        workers.clear();
+    }
+};
+
+enum class Kind { Once, FixedRate, FixedDelay };
+struct Task {
+    int id;
+    string name;
+    Kind kind;
+    Ms period, nextRun;
+    function<void()> fn;
+    bool cancelled = false;
+    int failuresInARow = 0;
+};
+
+class Scheduler {
+    const Clock& clock;
+    Executor& executor;
+    map<int, shared_ptr<Task>> tasks;
+    priority_queue<pair<Ms, int>, vector<pair<Ms, int>>, greater<>> due;   // (time, id)
+    mutex m;
+    condition_variable changed;
+    int nextId = 1;
+    void run(const shared_ptr<Task>& t, Ms plannedFor) {
+        bool failed = false;
+        try {
+            t->fn();
+        } catch (const exception& e) {           // a failure never kills a worker
+            failed = true;
+            cout << "  " << t->name << " failed: " << e.what() << "\n";
+        }
+        lock_guard lock(m);
+        t->failuresInARow = failed ? t->failuresInARow + 1 : 0;
+        if (t->failuresInARow == 2) {            // policy: stop after two failures in a row
+            t->cancelled = true;
+            cout << "  " << t->name << " cancelled after 2 failures in a row\n";
+        }
+        if (t->cancelled || t->kind == Kind::Once) return;
+        Ms now = clock.now(), next;
+        if (t->kind == Kind::FixedDelay) {
+            next = now + t->period;              // measured from the end of this run
+        } else {
+            next = plannedFor + t->period;       // measured from the plan: no drift
+            if (next <= now)                     // missed runs: skip to the next future slot
+                next = plannedFor + t->period * ((now - plannedFor) / t->period + 1);
+        }
+        t->nextRun = next;
+        due.push({next, t->id});
+        changed.notify_one();
+    }
+public:
+    Scheduler(const Clock& c, Executor& e) : clock(c), executor(e) {}
+    int schedule(string name, Kind kind, Ms firstRun, Ms period, function<void()> fn) {
+        lock_guard lock(m);
+        int id = nextId++;
+        tasks[id] = make_shared<Task>(
+            Task{id, std::move(name), kind, period, firstRun, std::move(fn)});
+        due.push({firstRun, id});
+        changed.notify_one();                    // it may be earlier than what the loop waits for
+        return id;
+    }
+    void cancel(int id) {                        // lazy: skipped when it reaches the top
+        lock_guard lock(m);
+        tasks.at(id)->cancelled = true;
+    }
+    int runDue() {                               // one step of the dispatch loop
+        vector<pair<shared_ptr<Task>, Ms>> ready;
+        {
+            lock_guard lock(m);
+            Ms now = clock.now();
+            while (!due.empty() && due.top().first <= now) {
+                auto [at, id] = due.top();
+                due.pop();
+                if (!tasks[id]->cancelled) ready.push_back({tasks[id], at});
+            }
+        }
+        for (auto& [t, at] : ready) executor.submit([this, t, at] { run(t, at); });
+        return int(ready.size());
+    }
+    void loop(stop_token stop) {                 // the dispatcher thread
+        while (!stop.stop_requested()) {
+            {
+                unique_lock lock(m);
+                Ms wait = due.empty() ? 50 : max<Ms>(0, due.top().first - clock.now());
+                changed.wait_for(lock, chrono::milliseconds(wait));
+            }
+            runDue();
+        }
+    }
+};
+
+int main() {
+    FakeClock clock;                             // part 1: virtual time, tasks run inline
+    InlineExecutor inlineRunner;
+    Scheduler s(clock, inlineRunner);
+    auto note = [&](const string& what) { cout << "t=" << clock.t << " " << what << "\n"; };
+    s.schedule("report", Kind::Once, 5, 0, [&] { note("report (once)"); });
+    s.schedule("heartbeat", Kind::FixedRate, 0, 10, [&] { note("heartbeat (every 10)"); });
+    s.schedule("sync", Kind::FixedDelay, 0, 10, [&] {
+        note("sync starts, takes 3");
+        clock.t += 3;                            // the work takes time
+    });
+    s.schedule("flaky", Kind::FixedRate, 12, 10, [&] { throw runtime_error("disk full"); });
+    int reminder = s.schedule("reminder", Kind::Once, 25, 0, [&] { note("reminder"); });
+    for (Ms t = 0; t <= 30; ++t) {
+        clock.t = max(clock.t, t);
+        if (t == 20) s.cancel(reminder);
+        s.runDue();
+    }
+    cout << "-- the process is paused from t=30 to t=75 --\n";
+    clock.t = 75;
+    s.runDue();
+    for (Ms t = 76; t <= 80; ++t) {
+        clock.t = max(clock.t, t);
+        s.runDue();
+    }
+
+    ThreadPool pool(3);                          // part 2: real time and worker threads
+    SteadyClock steady;
+    Scheduler real(steady, pool);
+    atomic<int> once = 0, repeats = 0, cancelledRuns = 0;
+    Ms start = steady.now();
+    for (int i = 0; i < 20; ++i)
+        real.schedule("job", Kind::Once, start + i % 5 * 5, 0, [&] { ++once; });
+    real.schedule("tick", Kind::FixedRate, start, 2, [&] { ++repeats; });
+    int late = real.schedule("late", Kind::Once, start + 30, 0, [&] { ++cancelledRuns; });
+    real.cancel(late);
+    {
+        jthread dispatcher([&](stop_token st) { real.loop(st); });
+        this_thread::sleep_for(chrono::milliseconds(100));
+    }                                            // stop the dispatcher first
+    pool.shutdown();                             // then let workers finish
+    cout << "real time: one-off jobs run " << once << " of 20, cancelled job runs "
+         << cancelledRuns << "\n";
+    cout << "fixed-rate tick ran more than 10 times: " << boolalpha << (repeats > 10) << "\n";
+}
+```
+
+Output:
+
+```text
+t=0 heartbeat (every 10)
+t=0 sync starts, takes 3
+t=5 report (once)
+t=10 heartbeat (every 10)
+  flaky failed: disk full
+t=13 sync starts, takes 3
+t=20 heartbeat (every 10)
+  flaky failed: disk full
+  flaky cancelled after 2 failures in a row
+t=26 sync starts, takes 3
+t=30 heartbeat (every 10)
+-- the process is paused from t=30 to t=75 --
+t=75 sync starts, takes 3
+t=78 heartbeat (every 10)
+t=80 heartbeat (every 10)
+real time: one-off jobs run 20 of 20, cancelled job runs 0
+fixed-rate tick ran more than 10 times: true
+```
+
+Read part 1 against the three schedule types. The heartbeat runs at 0, 10, 20 and 30, on its plan. The sync task takes 3 units, so a fixed delay of 10 after each finish gives starts at 0, 13 and 26. The flaky task fails at 12 and 22 and is then cancelled by the two-failures policy; the reminder was cancelled at 20 and never runs. After the pause, both overdue tasks run once, in the order they were due: sync at 75 (busy until 78, since the inline runner is a single worker), then the heartbeat at 78. The heartbeat skips its missed slots (40 to 70) and lines up again at 80, while sync, which only cares about delays, is next due 10 after it finished, at 88. Part 2 uses real threads: the dispatcher sleeps until the next due time and three workers run the jobs; it was repeated under ThreadSanitizer with no reports.
+
+#### Missed runs and drift
+
+| policy | after a pause from 30 to 75, heartbeat every 10 | use when |
+|---|---|---|
+| coalesce (this design) | one late run, next at 80 | the latest state matters (heartbeats, cache refresh) |
+| catch up | runs for 40, 50, 60 and 70, back to back | every run matters (billing periods) |
+| fixed delay | one late run, next 10 after it finishes | spacing between runs matters |
+
+Computing the next fixed-rate run as "planned time + period" rather than "now + period" is what prevents **drift**: small delays in each run would otherwise add up, and a job meant to run at every hour on the hour would slowly slide.
+
+#### Interview checklist
+
+- **Task and schedule types: one-off, fixed rate, fixed delay**: `Kind` and the next-run rule in `run`.
+- **A priority queue ordered by next run time**: `due`, a min-heap of (time, id).
+- **The dispatch loop and the worker thread pool**: `loop` waits on `changed` until the top is due and `runDue` submits to the `Executor`; `ThreadPool` runs jobs on workers.
+- **Cancellation and handling a task that throws**: lazy cancellation skipped at the top of the heap; exceptions caught per run, with a two-failures policy.
+- **Clock issues: missed runs and drift**: coalescing missed fixed-rate runs, planned-time arithmetic against drift, a monotonic clock, and an injected clock for tests.
+
+Connects to: [thread pools](#/concept/conc.patterns.thread-pools), [scheduling with heaps](#/concept/dsa.heaps.scheduling-with-heaps), [condition variables](#/concept/conc.locks.condition-variables).
+
+### questions
+Q: What is the difference between fixed-rate and fixed-delay scheduling?
+A: Fixed rate plans runs at the start time plus multiples of the period, regardless of how long each run takes, so the schedule does not drift. Fixed delay waits the period after the previous run finishes, so a slow run pushes every later run back.
+
+Q: Why use a priority queue in a task scheduler?
+A: The dispatcher always needs the task with the earliest next run time, and a min-heap gives it in O(1) with O(log n) inserts and removals. The dispatcher can then sleep exactly until that time instead of scanning all tasks.
+
+Q: How do you cancel a task that is already in the heap?
+A: Mark it cancelled in a map by id and leave it in the heap; when it reaches the top, the dispatcher sees the flag and discards it. This lazy deletion avoids an expensive search inside the heap.
+
+Q: What should happen when a scheduled task throws an exception?
+A: The wrapper that runs it catches the exception, records the failure and applies a policy, such as keeping the schedule, retrying with backoff, or cancelling after repeated failures. The exception must never escape into the worker thread, which would terminate the program or silently stop the pool.
+
+Q: What should a scheduler do about runs it missed while the process was paused?
+A: Choose and document a policy: coalesce by running once and moving to the next future slot, which suits heartbeats and refreshes, or catch up by running every missed occurrence, which suits jobs where each period matters. Measure delays with a monotonic clock so wall-clock jumps don't cause false misses.
 
 ## lld.classics.stack-overflow
 name: "Stack Overflow"
@@ -3825,8 +4832,558 @@ importance: advanced
 prereqs: [lld.method.clarifying-requirements]
 scope: "questions, answers, votes, reputation"
 
+### simple
+A question-and-answer site lets people ask questions with tags, answer them, comment, and vote, with the asker accepting the answer that helped. Votes turn into reputation points, and reputation unlocks privileges, the way a library trusts regular members with more books. The design is mostly about keeping votes, reputation and permissions consistent.
+
+### interview
+- Entities: `User` (reputation), `Question` (title, body, tags, answers, accepted answer, closed), `Answer`, `Comment`, `Tag`, and `Vote` (one per user per post, changeable). Questions and answers share a `Post` base (author, body, score, votes, comments).
+- **Voting rules**: one vote per user per post; no voting on your own posts; changing a vote first reverses the old one's effect. Each vote changes the post's score and the author's reputation (and a downvote on an answer costs the voter a little).
+- **Reputation events** in one place (a rules table): upvote, downvote, accept; so tuning the numbers never touches the voting code.
+- **Permissions by reputation**: a threshold per action (upvote, comment on others' posts, downvote, close), checked before the action.
+- **Search**: an index from tag to question ids and from title words to question ids; intersect for "tag cpp and word vector"; rank by score or recency.
+- **Extensions**: moderation (flags hide a post after a threshold, close votes, duplicates), badges awarded by listeners on events ([observer](#/concept/oop.patterns-behavioral.observer)), bounties, edit history.
+
+### deep
+#### Classes
+
+```text
+Post <<abstract>>: id, author, body, score, votes (user -> +1/-1), comments, flags
+Question --|> Post        title, tags, answers, accepted, closed
+Answer --|> Post          question
+Site *-- users, questions, answers; tag index, word index
+Site --> Rules            reputation per event, thresholds per privilege
+Site o-- "*" SiteListener <<interface>>     Badges ..|> SiteListener
+```
+
+#### Code
+
+```cpp
+struct Comment { int author; string text; };
+struct Post {
+    int id, author;
+    string body;
+    int score = 0;
+    map<int, int> votes;                         // voter -> +1 or -1
+    vector<Comment> comments;
+    set<int> flaggedBy;
+    virtual ~Post() = default;
+    virtual bool isAnswer() const = 0;
+    bool hidden() const { return flaggedBy.size() >= 3; }
+};
+struct Answer : Post { int question; bool isAnswer() const override { return true; } };
+struct Question : Post {
+    string title;
+    set<string> tags;
+    vector<int> answers;
+    int accepted = 0;
+    string closedAs;
+    bool isAnswer() const override { return false; }
+};
+struct User { int id; string name; int rep; };
+
+struct Rules {                                   // tunable numbers, kept out of the logic
+    int upvoted = 10, downvoted = -2, downvoteCost = -1, accepted = 15, accepter = 2;
+    map<string, int> needs = {{"upvote", 15}, {"comment", 50}, {"downvote", 125}, {"close", 3000}};
+};
+
+struct SiteListener {                            // observer: badges, notifications, audits
+    virtual ~SiteListener() = default;
+    virtual void onAccepted(const User& answerer) = 0;
+};
+struct Badges : SiteListener {
+    set<int> firstAccepted;
+    void onAccepted(const User& u) override {
+        if (firstAccepted.insert(u.id).second)
+            cout << "  badge: " << u.name << " earns First accepted answer\n";
+    }
+};
+
+class Site {
+    Rules rules;
+    map<int, User> users;
+    map<int, unique_ptr<Post>> posts;
+    map<string, set<int>> byTag, byWord;
+    vector<SiteListener*> listeners;
+    int nextId = 1;
+    static vector<string> words(const string& s) {
+        vector<string> out;
+        string w;
+        for (char c : s + " ") {
+            if (isalnum((unsigned char)c) || c == '+') w += char(tolower((unsigned char)c));
+            else if (!w.empty()) { out.push_back(w); w.clear(); }
+        }
+        return out;
+    }
+    void addRep(int user, int delta) { users.at(user).rep = max(1, users.at(user).rep + delta); }
+    string denied(const User& u, const string& action) const {
+        int need = rules.needs.at(action);
+        if (u.rep >= need) return "";
+        return u.name + " needs " + to_string(need) + " reputation to " + action;
+    }
+public:
+    void join(User u) { users[u.id] = u; }
+    void listen(SiteListener& l) { listeners.push_back(&l); }
+    int rep(int user) const { return users.at(user).rep; }
+    int ask(int author, const string& title, const string& body, set<string> tags) {
+        auto q = make_unique<Question>();
+        q->id = nextId++;
+        q->author = author;
+        q->body = body;
+        q->title = title;
+        q->tags = tags;
+        for (auto& t : tags) byTag[t].insert(q->id);
+        for (auto& w : words(title)) byWord[w].insert(q->id);
+        int id = q->id;
+        posts[id] = std::move(q);
+        return id;
+    }
+    int answer(int author, int question, const string& body) {
+        auto& q = dynamic_cast<Question&>(*posts.at(question));
+        if (!q.closedAs.empty()) throw runtime_error("question is closed");
+        auto a = make_unique<Answer>();
+        a->id = nextId++;
+        a->author = author;
+        a->body = body;
+        a->question = question;
+        q.answers.push_back(a->id);
+        int id = a->id;
+        posts[id] = std::move(a);
+        return id;
+    }
+    string vote(int voter, int postId, int value) {   // +1, -1, or 0 to remove
+        Post& p = *posts.at(postId);
+        const User& u = users.at(voter);
+        if (p.author == voter) return u.name + " cannot vote on their own post";
+        if (value == 1) if (auto d = denied(u, "upvote"); !d.empty()) return d;
+        if (value == -1) if (auto d = denied(u, "downvote"); !d.empty()) return d;
+        auto apply = [&](int v, int sign) {       // one vote's effect, or its reversal
+            p.score += sign * v;
+            addRep(p.author, sign * (v > 0 ? rules.upvoted : rules.downvoted));
+            if (v < 0 && p.isAnswer()) addRep(voter, sign * rules.downvoteCost);
+        };
+        if (auto it = p.votes.find(voter); it != p.votes.end()) {
+            apply(it->second, -1);                // changing a vote undoes the old one first
+            p.votes.erase(it);
+        }
+        if (value != 0) {
+            apply(value, +1);
+            p.votes[voter] = value;
+        }
+        return "ok";
+    }
+    string accept(int asker, int answerId) {
+        auto& a = dynamic_cast<Answer&>(*posts.at(answerId));
+        auto& q = dynamic_cast<Question&>(*posts.at(a.question));
+        if (q.author != asker) return "only the asker can accept";
+        if (q.accepted) return "an answer is already accepted";
+        q.accepted = answerId;
+        addRep(a.author, rules.accepted);
+        addRep(asker, rules.accepter);
+        for (auto* l : listeners) l->onAccepted(users.at(a.author));
+        return "ok";
+    }
+    string comment(int author, int postId, const string& text) {
+        Post& p = *posts.at(postId);
+        if (p.author != author)                   // your own posts are always open to you
+            if (auto d = denied(users.at(author), "comment"); !d.empty()) return d;
+        p.comments.push_back({author, text});
+        return "ok";
+    }
+    string close(int moderator, int questionId, const string& reason) {
+        if (auto d = denied(users.at(moderator), "close"); !d.empty()) return d;
+        dynamic_cast<Question&>(*posts.at(questionId)).closedAs = reason;
+        return "ok";
+    }
+    void flag(int user, int postId) { posts.at(postId)->flaggedBy.insert(user); }
+    vector<string> search(const set<string>& tags, const string& text) const {
+        optional<set<int>> hits;
+        auto keep = [&](const set<int>& ids) {
+            if (!hits) { hits = ids; return; }
+            set<int> both;
+            set_intersection(hits->begin(), hits->end(), ids.begin(), ids.end(),
+                             inserter(both, both.end()));
+            hits = both;
+        };
+        for (auto& t : tags) keep(byTag.count(t) ? byTag.at(t) : set<int>{});
+        for (auto& w : words(text)) keep(byWord.count(w) ? byWord.at(w) : set<int>{});
+        vector<string> out;
+        for (int id : hits.value_or(set<int>{})) {
+            auto& q = dynamic_cast<const Question&>(*posts.at(id));
+            string closed = q.closedAs.empty() ? "" : " [closed: " + q.closedAs + "]";
+            if (!q.hidden()) out.push_back(q.title + closed);
+        }
+        return out;
+    }
+};
+
+int main() {
+    Site site;
+    Badges badges;
+    site.listen(badges);
+    enum { asha = 1, ravi, meera, kabir };
+    site.join({asha, "asha", 1});
+    site.join({ravi, "ravi", 200});
+    site.join({meera, "meera", 20});
+    site.join({kabir, "kabir", 3500});
+    auto say = [](const string& what, const string& r) { cout << what << ": " << r << "\n"; };
+
+    int q = site.ask(asha, "How do I reverse a vector in C++?", "...", {"c++", "stl"});
+    int a1 = site.answer(meera, q, "Use std::reverse(v.begin(), v.end()).");
+    int a2 = site.answer(ravi, q, "std::reverse, or build from rbegin() and rend().");
+    say("asha upvotes ravi's answer", site.vote(asha, a2, +1));
+    say("meera upvotes ravi's answer", site.vote(meera, a2, +1));
+    say("ravi downvotes meera's answer", site.vote(ravi, a1, -1));
+    say("ravi changes it to an upvote", site.vote(ravi, a1, +1));
+    say("meera upvotes own answer", site.vote(meera, a1, +1));
+    say("asha accepts ravi's answer", site.accept(asha, a2));
+    say("asha comments on own question", site.comment(asha, q, "Thanks, both work."));
+    say("meera comments on ravi's answer", site.comment(meera, a2, "Nice."));
+    int dup = site.ask(meera, "Reverse a vector in C++", "...", {"c++"});
+    say("meera closes the duplicate", site.close(meera, dup, "duplicate"));
+    say("kabir closes the duplicate", site.close(kabir, dup, "duplicate"));
+    for (auto& r : site.search({"c++"}, "vector")) cout << "search [c++] vector: " << r << "\n";
+    for (int flagger : {ravi, kabir, asha}) site.flag(flagger, dup);
+    cout << "after three flags, search finds " << site.search({"c++"}, "vector").size() << "\n";
+    cout << "reputation: asha " << site.rep(asha) << ", ravi " << site.rep(ravi) << ", meera "
+         << site.rep(meera) << "\n";
+}
+```
+
+Output:
+
+```text
+asha upvotes ravi's answer: asha needs 15 reputation to upvote
+meera upvotes ravi's answer: ok
+ravi downvotes meera's answer: ok
+ravi changes it to an upvote: ok
+meera upvotes own answer: meera cannot vote on their own post
+  badge: ravi earns First accepted answer
+asha accepts ravi's answer: ok
+asha comments on own question: ok
+meera comments on ravi's answer: meera needs 50 reputation to comment
+meera closes the duplicate: meera needs 3000 reputation to close
+kabir closes the duplicate: ok
+search [c++] vector: How do I reverse a vector in C++?
+search [c++] vector: Reverse a vector in C++ [closed: duplicate]
+after three flags, search finds 1
+reputation: asha 3, ravi 225, meera 30
+```
+
+Follow the reputation. Ravi starts at 200: an upvote on the answer (+10), the downvote on Meera's answer (−1, its cost to the voter), undone when the vote changes (+1), and acceptance (+15) end at 225. Meera starts at 20: the downvote (−2), its reversal (+2) and the upvote (+10) end at 30, still below the 50 needed to comment on others' posts. Asha gains 2 for accepting. The duplicate is closed only by the user with the privilege, and once three users flag it, it drops out of search.
+
+#### Where the rules live
+
+All numbers sit in `Rules`: reputation per event and the threshold per privilege. The real site uses similar ideas with its own, occasionally changed values, which is exactly why they belong in data rather than in `if` statements. Votes are stored per user, so changing or removing a vote can reverse its exact effect, and a nightly job can recompute reputation from the vote history if the rules change.
+
+#### Extensions
+
+- **Badges** are listeners on events (accepted answer, score reached 10, 100 days active); new badges are new listeners, and the site code doesn't change.
+- **Moderation**: flags from different users hide a post at a threshold and queue it for review; close votes from several users with the privilege close a question; a duplicate links to its original.
+- **Scale**: counters (score, reputation) are updated in the same transaction as the vote row; search moves to a search engine fed by events; a feed of "hot" questions is a ranking job.
+
+#### Interview checklist
+
+- **User, question, answer, comment, tag and vote modeling**: `Post` base with `Question` and `Answer`, comments on posts, tags on questions, votes as voter-to-value maps.
+- **Voting rules and reputation updates**: one vote per user per post, no self-votes, reversal before change, reputation from `Rules`.
+- **Permissions that depend on reputation**: `Rules::needs` and `denied` before upvote, downvote, comment and close.
+- **Searching by tags and keywords**: tag and title-word indexes intersected in `search`.
+- **Moderation (closing, flagging) and badges as extensions**: `close`, flags that hide a post, and a `Badges` listener.
+
+Connects to: [observer](#/concept/oop.patterns-behavioral.observer), [identifying entities](#/concept/lld.method.identifying-entities), [search systems](#/concept/sysd.data.search-systems).
+
+### questions
+Q: How would you model questions, answers and comments?
+A: A post base class holds what both share, such as author, body, score, votes and comments, and question and answer derive from it: a question adds a title, tags, its answers, an accepted answer and a closed state; an answer refers to its question. Comments are small records attached to any post.
+
+Q: How do you handle a user changing their vote?
+A: Store votes per user per post, and when a vote changes, reverse the old vote's effect on the score and on reputation before applying the new one. This keeps scores and reputation exactly consistent with the stored votes.
+
+Q: How would you implement privileges that depend on reputation?
+A: Keep a table of thresholds per action, such as upvoting, commenting on others' posts, downvoting and closing, and check the user's reputation against it before performing the action. Keeping the numbers in data makes them easy to tune.
+
+Q: How would you search questions by tag and keyword?
+A: Maintain an index from each tag to question ids and from each title word to question ids, intersect the sets for all requested tags and words, and rank the results by score or recency. At scale this moves to a dedicated search engine.
+
+Q: How would badges fit into the design without cluttering the core?
+A: Publish events such as an answer being accepted or a post reaching a score, and let badge listeners subscribe and award badges when their conditions are met. Adding a badge means adding a listener, not changing the voting or answering code.
+
 ## lld.classics.car-rental-and-amazon-locker
 name: "Car rental and Amazon locker"
 importance: advanced
 prereqs: [lld.method.clarifying-requirements]
 scope: "reservations and slot assignment"
+
+### simple
+A car rental desk and a parcel locker wall look different but solve the same problem: hand out one item from a pool for a stretch of time, then take it back. A rental gives a customer a car of the chosen type for some days; a locker gives a parcel the smallest box it fits in until someone collects it. Both must release items people never come for, and never give one item to two people.
+
+### interview
+- **Shared core**: a pool of resources (cars, lockers), each with a calendar of reservations; a `Reservation` has a resource, a time slot, a holder, a status and a deadline. Only the resource type and the assignment rule differ.
+- **Assignment strategies**: cars are chosen by type and free dates (any free car of the requested type, perhaps the least used); lockers by **smallest free size that fits**, so big lockers stay free for big parcels.
+- **Expiry**: a car not picked up by the deadline is a **no-show** (release the car, charge a fee); a parcel not collected within a few days goes **back to the sender** (release the locker, notify).
+- **Concurrency**: choosing a free resource and recording the reservation happen in one critical section, so two customers can't both get the last car or locker.
+- **Fees and notifications**: rental price per day by type, a no-show fee, late-return fees; pickup codes and reminders for lockers; notifications through one interface.
+- Generic code (a template over the resource type) or a common interface lets both systems share reservation, expiry and locking logic.
+
+### deep
+#### Classes
+
+```text
+ReservationBook<R, Need> *-- resources: vector<R>, a calendar per resource, reservations
+ReservationBook --> Assigner<R, Need> <<interface>>    choose(free resources, need)
+ReservationBook --> Notifier <<interface>>
+Car rental:  R = Car {plate, type, daily rate}, Need = type,  FirstOfType ..|> Assigner
+Lockers:     R = Locker {id, size},             Need = size,  SmallestFit ..|> Assigner
+Reservation: resource, [start, end), holder, Status (reserved, in use, done, expired), deadline
+```
+
+#### Code
+
+```cpp
+struct Slot { int start, end; };                 // days, [start, end)
+enum class Status { Reserved, InUse, Done, Expired };
+struct Reservation { int id, resource; Slot slot; string holder; Status status; int deadline; };
+
+struct Notifier {
+    virtual ~Notifier() = default;
+    virtual void send(const string& to, const string& message) = 0;
+};
+struct PrintNotifier : Notifier {
+    void send(const string& to, const string& m) override {
+        cout << "  notify " << to << ": " << m << "\n";
+    }
+};
+
+template <class R, class Need>
+struct Assigner {                                // strategy: which free resource to use
+    virtual ~Assigner() = default;
+    virtual optional<size_t> choose(const vector<R>& all, const vector<size_t>& free,
+                                    const Need& need) const = 0;
+};
+
+template <class R, class Need>
+class ReservationBook {                          // shared by car rental and lockers
+    vector<R> resources;
+    vector<map<int, int>> calendars;             // per resource: start -> end
+    map<int, Reservation> reservations;
+    unique_ptr<Assigner<R, Need>> assigner;
+    mutable mutex m;
+    int nextId = 1;
+    bool isFree(size_t r, Slot s) const {
+        auto it = calendars[r].lower_bound(s.end);
+        return it == calendars[r].begin() || prev(it)->second <= s.start;
+    }
+    void release(Reservation& r, Status why) {
+        calendars[r.resource].erase(r.slot.start);
+        r.status = why;
+    }
+public:
+    ReservationBook(vector<R> rs, unique_ptr<Assigner<R, Need>> a)
+        : resources(std::move(rs)), calendars(resources.size()), assigner(std::move(a)) {}
+    optional<int> reserve(const Need& need, Slot slot, const string& holder, int deadline) {
+        lock_guard lock(m);                      // find, choose and record as one step
+        vector<size_t> free;
+        for (size_t i = 0; i < resources.size(); ++i)
+            if (isFree(i, slot)) free.push_back(i);
+        auto pick = assigner->choose(resources, free, need);
+        if (!pick) return nullopt;
+        int id = nextId++;
+        calendars[*pick][slot.start] = slot.end;
+        reservations[id] = {id, int(*pick), slot, holder, Status::Reserved, deadline};
+        return id;
+    }
+    bool begin(int id) {                         // the car is picked up
+        lock_guard lock(m);
+        auto& r = reservations.at(id);
+        if (r.status != Status::Reserved) return false;
+        r.status = Status::InUse;
+        return true;
+    }
+    bool finish(int id) {                        // the car is returned or the parcel collected
+        lock_guard lock(m);
+        auto& r = reservations.at(id);
+        if (r.status != Status::Reserved && r.status != Status::InUse) return false;
+        release(r, Status::Done);
+        return true;
+    }
+    vector<Reservation> expire(int today) {      // no-shows and uncollected parcels
+        lock_guard lock(m);
+        vector<Reservation> gone;
+        for (auto& [id, r] : reservations)
+            if (r.status == Status::Reserved && r.deadline <= today) {
+                release(r, Status::Expired);
+                gone.push_back(r);
+            }
+        return gone;
+    }
+    Reservation get(int id) const { lock_guard lock(m); return reservations.at(id); }
+    const R& resource(int index) const { return resources.at(index); }
+};
+
+// Car rental: any free car of the requested type.
+struct Car { string plate, type; int dailyRate; };
+struct FirstOfType : Assigner<Car, string> {
+    optional<size_t> choose(const vector<Car>& all, const vector<size_t>& free,
+                            const string& type) const override {
+        for (size_t i : free) if (all[i].type == type) return i;
+        return nullopt;
+    }
+};
+
+// Parcel lockers: the smallest free locker the parcel fits in.
+enum class Size { Small, Medium, Large };
+struct Locker { string id; Size size; };
+struct SmallestFit : Assigner<Locker, Size> {
+    optional<size_t> choose(const vector<Locker>& all, const vector<size_t>& free,
+                            const Size& parcel) const override {
+        optional<size_t> best;
+        for (size_t i : free)
+            if (all[i].size >= parcel && (!best || all[i].size < all[*best].size)) best = i;
+        return best;
+    }
+};
+
+int main() {
+    PrintNotifier notify;
+    ReservationBook<Car, string> cars({{"KA01", "compact", 1500}, {"KA02", "compact", 1500},
+                                       {"KA03", "suv", 3000}},
+                                      make_unique<FirstOfType>());
+    auto rent = [&](const string& who, const string& type, Slot s) {
+        auto id = cars.reserve(type, s, who, s.start + 1);   // pick up within a day
+        cout << who << ", " << type << ", days " << s.start << "-" << s.end << ": ";
+        if (!id) { cout << "none free\n"; return id; }
+        auto& car = cars.resource(cars.get(*id).resource);
+        cout << car.plate << ", Rs " << car.dailyRate * (s.end - s.start) << "\n";
+        return id;
+    };
+    auto asha = rent("asha", "compact", {10, 13});
+    auto ravi = rent("ravi", "compact", {12, 14});
+    rent("meera", "compact", {12, 13});
+    auto kabir = rent("kabir", "suv", {20, 22});
+    cars.begin(*asha);                           // picked up
+    cars.begin(*ravi);
+    for (auto& r : cars.expire(21)) {
+        int fee = cars.resource(r.resource).dailyRate;
+        string plate = cars.resource(r.resource).plate;
+        notify.send(r.holder, "no-show, " + plate + " released, fee Rs " + to_string(fee));
+    }
+    auto state = [&](int id) {
+        const char* names[] = {"reserved", "in use", "done", "expired"};
+        return names[int(cars.get(id).status)];
+    };
+    cout << "kabir's booking: " << state(*kabir) << ", asha's: " << state(*asha) << "\n";
+    rent("meera", "suv", {20, 22});
+
+    ReservationBook<Locker, Size> lockers({{"L1", Size::Small}, {"L2", Size::Medium},
+                                           {"L3", Size::Large}, {"L4", Size::Small}},
+                                          make_unique<SmallestFit>());
+    const char* sizes[] = {"small", "medium", "large"};
+    map<int, int> codeToBooking;
+    map<string, int> codeOf;
+    auto deliver = [&](const string& who, Size s, int day) {
+        auto id = lockers.reserve(s, {day, day + 3}, who, day + 3);   // 3 days to collect
+        cout << sizes[int(s)] << " parcel for " << who << " -> ";
+        if (!id) { cout << "no locker fits\n"; return; }
+        int code = 1000 + *id * 7919 % 9000;     // a pickup code (random in production)
+        codeToBooking[code] = *id;
+        codeOf[who] = code;
+        auto& l = lockers.resource(lockers.get(*id).resource);
+        cout << l.id << " (" << sizes[int(l.size)] << ")\n";
+        notify.send(who, "your parcel is in " + l.id + ", code " + to_string(code));
+    };
+    deliver("asha", Size::Small, 1);
+    deliver("ravi", Size::Medium, 1);
+    deliver("meera", Size::Small, 1);
+    deliver("kabir", Size::Small, 2);
+    deliver("dev", Size::Medium, 2);
+    auto collect = [&](int code) {
+        auto it = codeToBooking.find(code);
+        bool ok = it != codeToBooking.end() && lockers.finish(it->second);
+        cout << "code " << code << ": " << (ok ? "opened" : "refused") << "\n";
+    };
+    collect(1234);
+    collect(codeOf["asha"]);
+    collect(codeOf["asha"]);
+    for (auto& r : lockers.expire(4)) notify.send(r.holder, "not collected, returned to sender");
+
+    ReservationBook<Car, string> lastCar({{"KA09", "suv", 3000}}, make_unique<FirstOfType>());
+    atomic<int> won = 0;
+    latch go(10);
+    {
+        vector<jthread> customers;               // ten customers, one SUV, same dates
+        for (int c = 0; c < 10; ++c)
+            customers.emplace_back([&] {
+                go.arrive_and_wait();
+                if (lastCar.reserve("suv", {30, 31}, "c", 31)) ++won;
+            });
+    }
+    cout << "10 customers race for the last SUV: " << won << " booked\n";
+}
+```
+
+Output:
+
+```text
+asha, compact, days 10-13: KA01, Rs 4500
+ravi, compact, days 12-14: KA02, Rs 3000
+meera, compact, days 12-13: none free
+kabir, suv, days 20-22: KA03, Rs 6000
+  notify kabir: no-show, KA03 released, fee Rs 3000
+kabir's booking: expired, asha's: in use
+meera, suv, days 20-22: KA03, Rs 6000
+small parcel for asha -> L1 (small)
+  notify asha: your parcel is in L1, code 8919
+medium parcel for ravi -> L2 (medium)
+  notify ravi: your parcel is in L2, code 7838
+small parcel for meera -> L4 (small)
+  notify meera: your parcel is in L4, code 6757
+small parcel for kabir -> L3 (large)
+  notify kabir: your parcel is in L3, code 5676
+medium parcel for dev -> no locker fits
+code 1234: refused
+code 8919: opened
+code 8919: refused
+  notify ravi: not collected, returned to sender
+  notify meera: not collected, returned to sender
+10 customers race for the last SUV: 1 booked
+```
+
+The cars show assignment by type and dates: Ravi's overlapping dates get the second compact, and Meera's day 12 finds both compacts busy. Kabir never picked up the SUV by day 21, so it is released with a one-day fee and Meera can have it. The lockers show smallest-fit: small parcels take the small lockers, Kabir's small parcel moves up to the large locker once the small and medium ones are full, and Dev's medium parcel finds nothing that fits. A wrong code and a second use of Asha's code are refused. The parcels delivered on day 1 and never collected are returned on day 4. The last-car race ran repeatedly under ThreadSanitizer with exactly one booking each time.
+
+#### What is shared and what is not
+
+| concern | shared (`ReservationBook`) | per system |
+|---|---|---|
+| calendars and overlap checks | yes | |
+| atomic choose-and-record | yes | |
+| expiry of unused reservations | yes (deadline) | what the deadline means: pickup by day 1 of the rental, collection within 3 days |
+| which resource to give | interface | `FirstOfType`, `SmallestFit` |
+| money | | daily rate and no-show fee; lockers are free to the recipient |
+| notifications | `Notifier` interface | the messages |
+
+This is the [strategy](#/concept/oop.patterns-behavioral.strategy) pattern combined with generic code: templates share the algorithm while the resource type and the rule vary. A class hierarchy with a `Resource` base would work too; the template keeps each system's types precise.
+
+#### Interview checklist
+
+- **Resource, reservation and slot modeling shared by both systems**: `ReservationBook<R, Need>` with per-resource calendars and `Reservation` records.
+- **Assignment strategies: availability by car type and dates, smallest fitting locker**: `FirstOfType` and `SmallestFit` behind `Assigner`.
+- **Expiry and release: no-shows and parcels that are never collected**: `expire(today)` releases reservations past their deadline; callers charge the no-show fee or return the parcel.
+- **Concurrency when assigning the last car or locker**: `reserve` finds, chooses and records under one lock; ten customers, one SUV, one booking.
+- **Fees and notifications**: rental price per day, a no-show fee, and pickup codes and return notices through `Notifier`.
+
+Connects to: [hotel booking](#/concept/lld.classics.hotel-booking), [parking lot](#/concept/lld.classics.parking-lot), [templates](#/concept/lang.cpp-modern.templates).
+
+### questions
+Q: What do car rental and parcel lockers have in common as designs?
+A: Both assign a resource from a pool for a time slot, check availability, expire reservations that are never used and must avoid giving one resource to two people. A shared reservation core handles calendars, expiry and locking, while the resource type and the assignment rule differ.
+
+Q: How should a parcel locker choose a locker for a parcel?
+A: Pick the smallest free locker that the parcel fits in, so larger lockers stay free for larger parcels. If no fitting locker is free, the delivery is refused or queued rather than forced into a wrong size.
+
+Q: What happens when a customer never picks up a rental car?
+A: The reservation has a pickup deadline; once it passes, the car is released for others, the reservation is marked expired, and a no-show fee is charged and notified according to policy.
+
+Q: How do you prevent two customers from getting the last available car?
+A: Finding free cars, choosing one and recording the reservation must be one atomic step, under a lock in memory or with a conditional insert or constraint in a database, so the second request sees the car as taken.
+
+Q: How would you handle parcels that are never collected?
+A: Give each locker reservation a collection deadline, for example three days; a periodic expiry job releases lockers whose parcels were not collected, marks them for return to sender and notifies the recipient and the merchant.

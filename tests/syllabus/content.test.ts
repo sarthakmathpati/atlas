@@ -8,10 +8,11 @@ import {
   loadedSubjectContent,
   loadSubjectContent,
 } from "@/data/content";
+import { DESIGN_PROBLEMS } from "@/data/designs.seed";
 import { conceptById, concepts } from "@/data/syllabus";
 import { buildSyllabus } from "../../scripts/build-syllabus.mjs";
 
-const FINISHED = ["dsa", "oop", "os", "cn", "dbms", "sql", "sysd", "lang", "conc"];
+const FINISHED = ["dsa", "oop", "os", "cn", "dbms", "sql", "sysd", "lang", "conc", "lld"];
 
 const { syllabus, report } = buildSyllabus();
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
@@ -51,6 +52,18 @@ describe.each(FINISHED)("content for %s", (subjectId) => {
       // The first signal is the hint ladder's level 1 clue, which must not give the pattern away.
       expect(c.content.signals![0]!.toLowerCase(), c.id).not.toContain(c.name.toLowerCase());
     }
+  });
+});
+
+// Each classic LLD article ends with an "Interview checklist" that names every "must discuss"
+// point of its design prompt's rubric (section 8.4) and says where the design handles it.
+describe("LLD classics cover their design prompt's rubric", () => {
+  const prompts = DESIGN_PROBLEMS.filter((p) => p.source === "design-lld");
+  it.each(prompts.map((p) => [p.id, p] as const))("%s", (_id, prompt) => {
+    const built = syllabus.concepts.find((c) => c.id === prompt.conceptIds[0])!;
+    const checklist = built.content.deep!.split("#### Interview checklist")[1];
+    expect(checklist, prompt.id).toBeDefined();
+    for (const point of prompt.rubric!) expect(checklist, prompt.id).toContain(`**${point}**`);
   });
 });
 

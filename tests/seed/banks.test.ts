@@ -26,7 +26,8 @@ describe("design prompts", () => {
   it("has a 3 to 6 sentence prompt and 3 to 5 rubric points", () => {
     for (const p of DESIGN_PROBLEMS) {
       const sentences = (p.prompt!.match(/[.?!](\s|$)/g) ?? []).length;
-      expect(sentences, p.id).toBeGreaterThanOrEqual(1);
+      // The spec's own URL shortener example is one sentence and is kept word for word.
+      expect(sentences, p.id).toBeGreaterThanOrEqual(p.id === "hld-url-shortener" ? 1 : 3);
       expect(sentences, p.id).toBeLessThanOrEqual(6);
       expect(p.rubric!.length, p.id).toBeGreaterThanOrEqual(3);
       expect(p.rubric!.length, p.id).toBeLessThanOrEqual(5);
