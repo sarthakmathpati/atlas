@@ -20,6 +20,8 @@ export interface BuildResult {
   report: { perSubject: Map<string, SubjectContentReport>; problems: string[] };
 }
 export function buildSyllabus(options?: { strict?: boolean; contentDir?: string }): BuildResult;
+/** Ids of the quant puzzles in src/data/quant.seed.ts, which content may link to. */
+export function quantPuzzleIds(path?: string): Set<string>;
 export function writtenFlags(content: ConceptContent): WrittenContent;
 export function splitSyllabus(syllabus: BuiltSyllabus): {
   core: Syllabus;

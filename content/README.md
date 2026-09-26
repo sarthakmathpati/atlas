@@ -101,8 +101,10 @@ article), and headings inside code fences are ignored.
   end a statement that must fail with a `-- error ...` comment, start a PostgreSQL-only block with
   `-- PostgreSQL`, and say where the two databases differ. Use original tables and data.
 - **Links**: link another concept with `[text](#/concept/<id>)` (for example in "Connects to:"),
-  rather than repeating what its article already says. The build rejects missing ids, links to
-  the concept itself and any other in-app link. On the map, a link opens that concept in the panel.
+  rather than repeating what its article already says, and a quant puzzle to practice on with
+  `[text](#/problems/q-<slug>)` (never give away its answer next to the link). The build rejects
+  missing ids, links to the concept itself and any other in-app link. On the map, a concept link
+  opens that concept in the panel; a puzzle link opens the puzzle.
 - **LLD**: show class relationships as a text diagram (`*--` composition, `o--` aggregation,
   `-->` association, `..>` dependency, `..|>` realizes, `--|>` inherits, multiplicities in
   quotes). Every design compiles and runs a short demo whose output follows it under "Output:".
@@ -113,6 +115,13 @@ article), and headings inside code fences are ignored.
   between standard libraries). Say how close the run came in standard errors and never present a
   simulated number as exact. Write math with KaTeX and state each formula's assumptions. Mark
   anything uncertain with `needsReview: true`.
+- **Math and puzzles**: compute every answer exactly first and confirm it with a C++ program
+  (brute force, exhaustive search, exact fractions, numerical integration, or a seeded simulation
+  as for probability). Draw random numbers in separate statements, never two in one expression,
+  so GCC and clang print the same output. Mental math concepts end with timed practice lines and
+  an answer key printed by the program. Puzzle articles work an original instance of each classic
+  and link the bank's puzzles for practice. Never put `|` inside math in a table cell; use
+  `\lvert` and `\rvert`.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. To rename a concept, change its

@@ -209,9 +209,9 @@ export function ConceptSidePanel({
         </h2>
         <ConceptChips concept={concept} />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10">
+      {/* Keyed by concept, so a linked concept opens at the top rather than at the old scroll. */}
+      <div key={concept.id} className="min-h-0 flex-1 overflow-y-auto px-4 pb-10">
         <ConceptTabs
-          key={concept.id}
           concept={concept}
           onOpenConcept={onOpenConcept}
           wide={false}

@@ -35,7 +35,13 @@ each classic article covers every rubric point of its design prompt, checked by 
 questions; every number exact and confirmed by a seeded C++ simulation that says how close it
 came). It also wrote 57 original quant puzzles (section 8.2 asks for 40 or more), each answer
 recomputed independently in the tests, and added links between concepts inside content.
-**Next up:** Phase 5 continues with Math, Puzzles, Markets, Architecture,
+Session 12 finished **Math** (31 / 31 concepts, a deep article for every one, 9 of them must-know;
+135 questions; every numeric answer exact and confirmed by one of 31 C++ programs that print the
+same output with GCC and clang) and **Puzzles** (21 / 21 concepts, a deep article for every one,
+8 of them must-know; 85 questions; each classic family worked on an original instance, proved,
+and checked by one of 21 brute-force searches or seeded simulations), and let content link to
+quant puzzles (`#/problems/q-…`, CLAUDE.md decision 67).
+**Next up:** Phase 5 continues with Markets, Architecture,
 Aptitude, Engineering essentials, Career (section 5.3 order), one or two subjects per session,
 never two content sessions at once. Follow `content/README.md` → "Writing conventions", run `npm run check:content-code -- <subject>`, and add each finished subject
 to `FINISHED` in `tests/syllabus/content.test.ts`. Never change concept metadata (ids, names,
@@ -55,7 +61,7 @@ through their concepts (each puzzle is tagged with 1 to 3 concepts).
 | 2. Design system and shell | Done | Tokens (plus code, diff, chart and feedback tokens, contrast-checked), component kit (all of section 12.7, including Markdown with KaTeX, the CodeMirror editor, code and diff views, Recharts wrappers), hash router with every F1 route, shell for desktop and phones, Settings, command palette, focus timer and streak, keyboard shortcuts. 166 tests. Screens reviewed at 360, 390, 800, 1280, 1440 and 2560 px in both themes; artifact tested with a simulated claude.ai runtime (synced and fallback). |
 | 3. Version 1: problem tracker | Done | Library (filters in the URL, sorting, grouping, stats, quick add, CSV import with preview and undo), workspace (split view or tabs, CodeMirror, language and template, timer, 2-second drafts, save dialog, attempts timeline, code viewer, diff, re-solve mode with reveal), offline hint ladder, scheduling and Review page with badges, mistake journal with tag management and merge, Markdown export of notes, palette commands. 256 tests. Screens reviewed at 390, 800, 1280 and 1440 px in both themes; the artifact file tested with a simulated claude.ai runtime (synced storage survives reload, notes download through `downloads`, no network requests). |
 | 4. Version 2: map and concepts | Done | React Flow map (far, middle, near zoom; regions; prerequisite and connection lines; fixed-size labels that never overlap; filters in the URL; focus mode; dragging with saved positions; minimap; search fly-to with pulse; right-click and long-press menus; ink moment), concept panel and page, "Why this color?", manual status and never fade, welcome and self-assessment, path to a concept, offline flashcards and explain it back, concept reviews, the owner's own concepts, Today additions. 314 tests. Screens reviewed at 390, 1280 and 1440 px in both themes; artifact tested with a simulated claude.ai runtime (statuses and notes survive reload, no network requests). |
-| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 11: LLD complete (32 / 32, 11 / 11 must-know deep, 32 deep in all; every design runs a demo under ASan and UBSan, all under ThreadSanitizer too; each classic covers its prompt's rubric, tested) and Probability complete (62 / 62, 30 / 30 must-know deep, 62 deep in all; 62 seeded simulations with identical output from GCC and clang). 57 original quant puzzles; links between concepts in content (checked by the build, opened in the map panel). 402 tests. Session 10: Language core complete (46 / 46, 22 / 22 must-know deep, 36 deep in all: every C++ and `lang.general` concept, plus the must-know Java and Python ones); every C++ block run under ASan and UBSan at -O1 and -O2, Java 21 and Python 3.11 examples run; the code check gained GCC's policy-based tree headers, `<coroutine>` and a marker for blocks that warn or show undefined behavior on purpose. Concurrency complete (20 / 20, 9 / 9 must-know deep, 20 deep in all); every threaded example run many times under ASan, GCC and clang ThreadSanitizer and at -O2. Backticks in scope text now show as inline code (`CodeSpans`). 362 tests. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 9: SQL complete (34 / 34, 20 / 20 must-know deep, 34 deep in all); every query run on MySQL 8 and PostgreSQL 16. System Design complete (79 / 79, 34 / 34 must-know deep, 79 deep in all); 74 C++ simulations run with sanitizers; Redis commands checked on Redis 7. 353 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
+| 5. Content | In progress | Split across sessions, one or two subjects each, never in parallel. Session 12: Math complete (31 / 31, 9 / 9 must-know deep, 31 deep in all) and Puzzles complete (21 / 21, 8 / 8 must-know deep, 21 deep in all); all 52 C++ programs run under ASan and UBSan and print the same output with GCC 13 and clang 18; content can link to quant puzzles (checked by the build and a test); the map panel opens a linked concept at the top. 412 tests. Session 11: LLD complete (32 / 32, 11 / 11 must-know deep, 32 deep in all; every design runs a demo under ASan and UBSan, all under ThreadSanitizer too; each classic covers its prompt's rubric, tested) and Probability complete (62 / 62, 30 / 30 must-know deep, 62 deep in all; 62 seeded simulations with identical output from GCC and clang). 57 original quant puzzles; links between concepts in content (checked by the build, opened in the map panel). 402 tests. Session 10: Language core complete (46 / 46, 22 / 22 must-know deep, 36 deep in all: every C++ and `lang.general` concept, plus the must-know Java and Python ones); every C++ block run under ASan and UBSan at -O1 and -O2, Java 21 and Python 3.11 examples run; the code check gained GCC's policy-based tree headers, `<coroutine>` and a marker for blocks that warn or show undefined behavior on purpose. Concurrency complete (20 / 20, 9 / 9 must-know deep, 20 deep in all); every threaded example run many times under ASan, GCC and clang ThreadSanitizer and at -O2. Backticks in scope text now show as inline code (`CodeSpans`). 362 tests. Session 5: DSA complete (249 / 249, 115 / 115 deep, 90 / 90 patterns); every C++ and Python block compiles (`check:content-code`) and was run against its worked example or a brute force. Pattern drill bank: 276 prompts. Concept text split into per-subject chunks loaded on demand. 327 tests. Session 6: OOP complete (53 / 53, 24 / 24 must-know deep, 53 deep in all) and OS complete (65 / 65, 29 / 29 must-know deep, 65 deep in all); `check:content-code` now also compiles Java blocks and has POSIX headers for C++. 335 tests. Session 9: SQL complete (34 / 34, 20 / 20 must-know deep, 34 deep in all); every query run on MySQL 8 and PostgreSQL 16. System Design complete (79 / 79, 34 / 34 must-know deep, 79 deep in all); 74 C++ simulations run with sanitizers; Redis commands checked on Redis 7. 353 tests. Session 8: CN complete (55 / 55, 32 / 32 must-know deep, 55 deep in all) and DBMS complete (56 / 56, 24 / 24 must-know deep, 56 deep in all); the code check gained socket headers; example URLs use reserved documentation domains (CLAUDE.md decision 59); SQL examples, isolation levels, deadlocks and query plans were checked on a real PostgreSQL 16. 345 tests. Session 7: C++ only at the owner's request (CLAUDE.md decision 58): 149 Python blocks removed from DSA; every Python and Java example in OOP and OS rewritten in C++ and run; text reworded around C++; "equals and hashCode in Java" renamed "Equality and hashing" with its id kept; a test forbids Python or Java in any concept outside the `lang` Java and Python topics. 337 tests. |
 | 6. Version 3: Claude inside | Not started | |
 | 7. Version 4: planning and insight | Not started | |
 | 8. Practice extensions | Not started | |
@@ -117,14 +123,67 @@ deep for every must-know concept; signals and template for every pattern.
 | sql | 34 / 34 | 20 / 20 | – |
 | sysd | 79 / 79 | 34 / 34 | – |
 | prob | 62 / 62 | 30 / 30 | – |
-| math | 0 / 31 | 0 / 9 | – |
-| puzzles | 0 / 21 | 0 / 8 | – |
+| math | 31 / 31 | 9 / 9 | – |
+| puzzles | 21 / 21 | 8 / 8 | – |
 | markets | 0 / 28 | 0 / 11 | – |
 | apt | 0 / 16 | 0 / 5 | – |
 | eng | 0 / 27 | 0 / 7 | – |
 | career | 0 / 16 | 0 / 6 | – |
 
 ## Known issues and notes
+
+- **Phase 5 notes (session 12, Math):** all 31 concepts have simple, interview, questions and a
+  deep article (must-know articles 609 to 774 words), 135 questions, math in KaTeX with short,
+  complete proofs and stated assumptions. Every numeric answer is worked out exactly first and
+  confirmed by a C++ program (`check:content-code` compiles all 31; each was run under ASan and
+  UBSan at -O1 and with clang -O2, and a scratch runner compared every output line with the
+  text): brute-force counts for combinatorics and number theory (four-digit numbers, BANANAS,
+  capped stars and bars, derangements against the recurrence and n!/e, every remainder pattern
+  for the prefix-sum pigeonhole claim, Catalan numbers from all bracket strings, Pascal
+  identities up to row 30, divisor counts, Legendre's formula, CRT, the |a - b| game over every
+  move sequence, all 2^21 handshake graphs), exhaustive checks for proofs (L-tromino tilings for
+  all 64 holes, stamps, Euclid numbers factored, every tournament on up to 7 players), numerical
+  checks for calculus (grid searches, finite differences, a shadow price, Simpson's rule, Taylor
+  errors against their Lagrange bounds, rejection sampling, Euler against RK4) and linear algebra
+  (matrix powers, exact rational Gauss-Jordan for a 3 by 3 inverse, power iteration, a million
+  Cholesky-correlated returns, sampled PCA). Mental math teaches techniques with worked examples
+  and timed practice lines whose answer keys the programs print, plus a Fermi error model and a
+  seeded drill generator; the speed-drill article names no firm and says formats vary (80
+  questions in 8 minutes is described as a widely reported format). Caught while writing: a
+  guessed n!/e value, a guessed count, the misleading "reduce the exponent" example (replaced),
+  and a prerequisite added by mistake (the layout test caught it; metadata is unchanged).
+  Nothing needed `needsReview`.
+- **Phase 5 notes (session 12, Puzzles):** all 21 concepts have simple, interview, questions and
+  a deep article (must-know articles 591 to 896 words), 85 questions. The method topic teaches
+  the toolkit (small cases, symmetry, working backwards, invariants, counting information) and
+  how to talk while solving, with a transcript. Every classic family has a worked example in
+  original wording that is not in the quant bank, proved in the text and checked in C++: an
+  exhaustive search over weighing plans (reproducing 3^k, (3^k - 3)/2 and (3^k - 1)/2 for 2 and 4
+  weighings), BFS and Dijkstra for crossings (and the two-plan bridge rule against 2,000 random
+  groups), every guess-or-pass plan for three hats (531,441), the remainder strategy for up to 6
+  players, knights and knaves by enumeration, a backward-induction solver, egg drop by DP and by
+  playing all 51 thresholds, all 8! horse orders plus an exhaustive search over match plans for
+  the knockout runner-up (n + ceil(log2 n) - 2 for 2 to 6 players), every event of two
+  hourglasses and two uneven ropes, binary and weight-limited poison codes, a clock scan, exact
+  Monty Hall variants plus simulation, exact birthday thresholds (119 people for 4-digit codes,
+  77,164 ids for 32 bits), Penney's game solved and simulated, all 2,598,960 poker hands, the
+  two-envelope table under a real prior, real colliding ants against the ghost shortcut in
+  100,000 runs, Nim against brute force on 512 positions and a mixed Sprague-Grundy game,
+  take-away tables, and auction bids by simulation and grid search. Found on the way: the
+  clock scan landed exactly on 3:00 and 9:00 and first counted 20 right angles (fixed), "take 2
+  or 5" has period 7, not 5 (the text now says so), and a birthday simulation with 200,000 rooms
+  came out 2.75 standard errors low; 7 other seeds scattered evenly around the exact value, so it
+  was a fluke, and the article uses a million rooms (0.1 standard errors). Articles link the
+  matching quant puzzles for practice and Probability and Math concepts instead of repeating
+  them; a linked puzzle's answer is never stated next to the link, though the general bounds
+  the concepts teach (3^k weighings, n - 1 knockout matches) do determine some bank answers.
+- **Session 12 fixes:** a Markdown table cell in `dsa.strings.string-basics` had `|` inside math
+  (`O(|s| + |t|)`), which split the cell; it now uses `\lvert … \rvert`, and so does any new
+  table. The map panel kept its scroll position when a concept link opened another concept; it
+  now starts at the top. Screens reviewed: deep articles with tables, matrices, code and output
+  in Math and Puzzles at 1280 px and 390 px in light and dark, and link clicks in the map panel
+  (a concept link opens in the panel, a puzzle link opens the puzzle); no console errors, no page
+  overflow. The artifact is 8.33 MB (limit 15 MB).
 
 - **Phase 4 notes (session 4):** the map uses React Flow 12 (`@xyflow/react`), pinned; its
   attribution is hidden (a personal project) and its link strings are rewritten at build so the

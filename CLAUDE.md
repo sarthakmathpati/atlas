@@ -361,7 +361,8 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     (`components/ui/Misc.tsx`), which renders them as inline code.
 63. **Concept links in content** (session 11): content may link to another concept with
     `[text](#/concept/<id>)` (LLD links to the OOP patterns instead of repeating them). The
-    syllabus build rejects any other `#…` link, a missing id and a link to the concept itself.
+    syllabus build rejects any other `#…` link (except quant puzzles, decision 67), a missing id
+    and a link to the concept itself.
     `MarkdownView` takes `onConceptLink`, so on the map a plain click opens the concept in the
     panel (with back and forward); elsewhere the link is an ordinary hash route.
 64. **LLD designs** (session 11): class relationships are text diagrams in PlantUML-style
@@ -385,3 +386,18 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     independently in `tests/seed/quant.test.ts` (enumeration, dynamic programming, integration,
     search) and compared through `answerCheck`; yes/no answers are checked by brute force.
     Answers may be expressions (`10*(1-0.9^8)`, `100 - sqrt(5000)`); percentages use `%`.
+67. **Links to quant puzzles in content** (session 12): `[text](#/problems/q-<slug>)` points at a
+    puzzle to practice on instead of repeating it. `build-syllabus.mjs` reads the ids from the
+    `id: "q-…"` lines of `src/data/quant.seed.ts` (it can't import TypeScript) and rejects unknown
+    ones; `tests/seed/quant.test.ts` keeps that list equal to `QUANT_PUZZLES`. Articles use a
+    different instance from the bank for their worked example and never state a linked puzzle's
+    answer next to the link. In the map panel a concept link opens in place (the panel's scroll
+    resets per concept); a puzzle link opens the puzzle page.
+68. **Math and Puzzles content** (session 12): every numeric answer is exact first (fractions or
+    closed forms) and confirmed by a C++ program: brute-force counts, exhaustive game or strategy
+    searches, exact rational elimination, Simpson or Runge-Kutta checks, or a seeded simulation
+    reported in standard errors (decision 65's rules). Two random draws in one expression are
+    unsequenced in C++, so draw them in separate declarations to keep GCC and clang identical.
+    Mental math concepts end with timed practice lines whose answer keys the programs print.
+    Never put a `|` inside math in a Markdown table cell (it splits the cell); use `\lvert`
+    and `\rvert`.

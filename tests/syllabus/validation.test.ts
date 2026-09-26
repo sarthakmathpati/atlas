@@ -177,6 +177,19 @@ describe("build-syllabus validation", () => {
     );
   });
 
+  it("accepts links to real quant puzzles and rejects missing ones or other problems", () => {
+    const withLink = (target: string) =>
+      TOPIC_A.replace(
+        'scope: "the first thing"',
+        `scope: "the first thing"\n\n### deep\nPractice on [a puzzle](${target}).`,
+      );
+    expect(() => build({ topicA: withLink("#/problems/q-monty") })).not.toThrow();
+    expect(() => build({ topicA: withLink("#/problems/q-no-such-puzzle") })).toThrow(
+      /link to missing quant puzzle "q-no-such-puzzle"/,
+    );
+    expect(() => build({ topicA: withLink("#/problems/lc-1") })).toThrow(/in-app links must be/);
+  });
+
   it("warns (without failing) about missing content, and fails with --strict", () => {
     const { report } = build();
     expect(report.perSubject.get("demo")).toMatchObject({
