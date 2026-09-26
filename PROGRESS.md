@@ -35,7 +35,11 @@ each classic article covers every rubric point of its design prompt, checked by 
 questions; every number exact and confirmed by a seeded C++ simulation that says how close it
 came). It also wrote 57 original quant puzzles (section 8.2 asks for 40 or more), each answer
 recomputed independently in the tests, and added links between concepts inside content.
-**Next up:** Phase 5 continues with Math, Puzzles, Markets, Architecture,
+Session 12 finished **Math** (31 / 31 concepts, a deep article for every one, 9 of them must-know;
+135 questions; every numeric answer exact and confirmed by one of 31 C++ programs that print the
+same output with GCC and clang) and let content link to quant puzzles (`#/problems/q-…`).
+**Puzzles** is in progress in session 12.
+**Next up:** Phase 5 continues with Puzzles, Markets, Architecture,
 Aptitude, Engineering essentials, Career (section 5.3 order), one or two subjects per session,
 never two content sessions at once. Follow `content/README.md` → "Writing conventions", run `npm run check:content-code -- <subject>`, and add each finished subject
 to `FINISHED` in `tests/syllabus/content.test.ts`. Never change concept metadata (ids, names,
@@ -117,7 +121,7 @@ deep for every must-know concept; signals and template for every pattern.
 | sql | 34 / 34 | 20 / 20 | – |
 | sysd | 79 / 79 | 34 / 34 | – |
 | prob | 62 / 62 | 30 / 30 | – |
-| math | 0 / 31 | 0 / 9 | – |
+| math | 31 / 31 | 9 / 9 | – |
 | puzzles | 0 / 21 | 0 / 8 | – |
 | markets | 0 / 28 | 0 / 11 | – |
 | apt | 0 / 16 | 0 / 5 | – |
