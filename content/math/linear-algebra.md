@@ -261,7 +261,11 @@ $A = \begin{pmatrix}4&1\\2&3\end{pmatrix}$ has trace 7 and determinant 10, so $\
 - $\lambda = 5$: $(A - 5I)v = 0$ reads $-v_1 + v_2 = 0$, so $v = (1, 1)$. Check: $A(1, 1) = (5, 5)$.
 - $\lambda = 2$: $2v_1 + v_2 = 0$, so $v = (1, -2)$. Check: $A(1, -2) = (2, -4)$.
 
-With $P = \begin{pmatrix}1&1\\1&-2\end{pmatrix}$, $A^n = P\begin{pmatrix}5^n&0\\0&2^n\end{pmatrix}P^{-1}$, which works out to
+Put the eigenvectors in the columns of $P$; then $A^n = PD^nP^{-1}$ with $D$ holding the eigenvalues:
+
+$$P = \begin{pmatrix}1&1\\1&-2\end{pmatrix}, \qquad D^n = \begin{pmatrix}5^n&0\\0&2^n\end{pmatrix},$$
+
+which works out to
 
 $$A^n = \frac{1}{3}\begin{pmatrix}2 \cdot 5^n + 2^n & 5^n - 2^n\\ 2 \cdot 5^n - 2 \cdot 2^n & 5^n + 2 \cdot 2^n\end{pmatrix}.$$
 

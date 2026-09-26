@@ -66,8 +66,8 @@ Call `out.reserve(n)` when you know the final size to avoid reallocations; `ostr
 | `s[i]` | $O(1)$ (bytes or code units) |
 | `s == t`, `hash<string>{}(s)` | $O(L)$ |
 | `s.substr(i, k)` | $O(k)$: it copies |
-| `s + t` | $O(|s| + |t|)$ |
-| `s.find(t)` | typically $O(|s| \cdot |t|)$ worst case |
+| `s + t` | $O(\lvert s \rvert + \lvert t \rvert)$ |
+| `s.find(t)` | typically $O(\lvert s \rvert \cdot \lvert t \rvert)$ worst case |
 | sorting $n$ strings | $O(n \log n)$ comparisons, each up to $O(L)$ |
 
 A hash map keyed by strings of length $L$ therefore costs $O(L)$ per operation, not $O(1)$; say so when the strings are long.

@@ -40,7 +40,7 @@ Every trick is the distributive law or $(a + b)(a - b) = a^2 - b^2$ in disguise.
 | square by splitting | $63^2$ | $3600 + 2 \cdot 180 + 9 = 3969$ |
 | $\times 125$ | $48 \times 125$ | $48000 \div 8 = 6000$ |
 | double and halve | $14 \times 45$ | $7 \times 90 = 630$ |
-| $\times 11$ | $85 \times 11$ | $8\,|\,8{+}5\,|\,5 = 8\,|\,13\,|\,5 = 935$ |
+| $\times 11$ | $85 \times 11$ | write $8 + 5 = 13$ between 8 and 5, carry the 1: $935$ |
 | units add to 10 | $63 \times 67$ | $6 \times 7 = 42$, $3 \times 7 = 21$: $4221$ |
 | left-to-right sum | $367 + 485$ | $700 + 140 + 12 = 852$ |
 | complement | $1000 - 386$ | each digit to 9, the last to 10: $614$ |
