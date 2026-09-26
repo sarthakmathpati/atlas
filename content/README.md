@@ -131,6 +131,11 @@ article), and headings inside code fences are ignored.
   first line is `// Build with: g++ ...` with its flags; take the best of several batches where the
   machine is noisy, label the output as one run (the lead-in says "one run") and give the range
   over five runs in the text. Run benchmarks once under ASan and UBSan too.
+- **Aptitude**: write every question, passage and puzzle yourself. Solve quantitative items in
+  exact fractions and confirm them with a C++ program, say when each shortcut applies and when it
+  breaks, and end each quantitative concept with timed practice lines whose key the program
+  prints. Check logical puzzles by brute force over every model and make sure each has exactly one
+  answer (or say it is not determined). In verbal content, separate grammatical rules from style.
 - When a subject is complete, add it to `FINISHED` in `tests/syllabus/content.test.ts`.
 
 Never change a concept id once people have progress on it. To rename a concept, change its

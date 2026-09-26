@@ -417,3 +417,13 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     functions behind a `__builtin_cpu_supports` check. The cloud VM exposes no hardware counters:
     `perf` (from `linux-tools-generic`, run as `/usr/lib/linux-tools-*/perf`) samples the software
     `cpu-clock` event.
+71. **Aptitude content** (session 14): every question, passage, table and puzzle is original.
+    Quantitative answers are exact first (a small `Frac` type) and confirmed by a C++ program;
+    each shortcut says when it applies and when it breaks; every quantitative concept ends with
+    timed practice lines whose key the program prints. Logical items are checked by brute force
+    over every model, and the programs show that each puzzle has exactly one answer (or report
+    "not determined"). Stated conventions: distinct names are distinct people, siblings share
+    parents and a parent's spouse is the other parent (blood relations); "all A are B" implies A
+    exist (syllogisms, unlike modern formal logic). Verbal content separates grammatical rules
+    from style and usage points and says which is which. A linked quant puzzle's numbers never
+    appear in a worked example next to the link.

@@ -12,7 +12,7 @@ import { DESIGN_PROBLEMS } from "@/data/designs.seed";
 import { conceptById, concepts } from "@/data/syllabus";
 import { buildSyllabus } from "../../scripts/build-syllabus.mjs";
 
-const FINISHED = ["dsa", "oop", "os", "cn", "dbms", "sql", "sysd", "lang", "conc", "lld", "prob", "math", "puzzles", "markets", "arch"];
+const FINISHED = ["dsa", "oop", "os", "cn", "dbms", "sql", "sysd", "lang", "conc", "lld", "prob", "math", "puzzles", "markets", "arch", "apt"];
 
 const { syllabus, report } = buildSyllabus();
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
