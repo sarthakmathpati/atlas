@@ -41,6 +41,9 @@ same output with GCC and clang) and **Puzzles** (21 / 21 concepts, a deep articl
 8 of them must-know; 85 questions; each classic family worked on an original instance, proved,
 and checked by one of 21 brute-force searches or seeded simulations), and let content link to
 quant puzzles (`#/problems/q-…`, CLAUDE.md decision 67).
+Session 13 (in progress): **Markets** basics, market making and betting are written (14 / 28
+concepts, every number checked by a C++ program under GCC and clang); options, pricing and game
+theory are next, then Architecture.
 **Next up:** Phase 5 continues with Markets, Architecture,
 Aptitude, Engineering essentials, Career (section 5.3 order), one or two subjects per session,
 never two content sessions at once. Follow `content/README.md` → "Writing conventions", run `npm run check:content-code -- <subject>`, and add each finished subject
