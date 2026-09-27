@@ -339,8 +339,16 @@ export function recordChecks(
     reviews: reviewed.length,
     conceptsTouched: touched,
   });
-  for (const id of ids) {
-    void markPlanItemDone(repo, today, id, ["review-concept", "learn-concept"]);
-  }
+  // A learn item is done with any check on its concept; a flashcard bundle once every concept in
+  // it has a check today.
+  const touchedIds = new Set(ids);
+  const checkedToday = (id: string) =>
+    (nextChecks[id] ?? []).some((c) => localDate(new Date(c.createdAt)) === today);
+  void markPlanItemDone(repo, today, null, ["review-concept", "learn-concept"], {
+    isComplete: (item) => {
+      const refs = item.refIds?.length ? item.refIds : item.refId ? [item.refId] : [];
+      return refs.some((r) => touchedIds.has(r)) && refs.every(checkedToday);
+    },
+  });
   return { checks: created, reviewed };
 }

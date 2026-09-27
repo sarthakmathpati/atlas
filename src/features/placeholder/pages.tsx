@@ -2,15 +2,12 @@
 import {
   Calculator,
   Compass,
-  CalendarRange,
   DraftingCompass,
   Dumbbell,
-  Gauge,
   Layers,
   MessageSquareQuote,
   MessagesSquare,
   Puzzle,
-  ScrollText,
 } from "lucide-react";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
@@ -24,10 +21,7 @@ import { QUANT_PUZZLES } from "@/data/quant.seed";
 import { syllabus } from "@/data/syllabus";
 import { ComingSoon } from "./ComingSoon";
 
-const PLANNING = "Planning and insight";
 const PRACTICE = "Practice extensions";
-
-const MAP_LINK = { label: "Browse the syllabus", href: "#/map" };
 
 export function PracticePage() {
   const tiles = [
@@ -162,60 +156,6 @@ export function StoriesPage() {
         "Write stories in the situation, task, action, result format.",
         `Link them to the ${BEHAVIORAL_QUESTIONS.length} common questions and see which have no story yet.`,
         "Timed practice answers, and a builder for “Tell me about yourself”.",
-      ]}
-    />
-  );
-}
-
-export function DashboardPage() {
-  return (
-    <ComingSoon
-      title="Dashboard"
-      description="Am I ready, and where am I weak? Every number explained."
-      icon={Gauge}
-      phase={7}
-      phaseName={PLANNING}
-      features={[
-        "An overall readiness score for your track, with the math behind it.",
-        "Subjects weakest first, a grid of every DSA pattern, and problems solved over time.",
-        "Memory health, a weakness report, and a projection to your interview date.",
-        "A year of activity as a heatmap.",
-      ]}
-      links={[{ label: "Weekly review", href: "#/weekly" }, MAP_LINK]}
-    />
-  );
-}
-
-export function WeeklyPage() {
-  return (
-    <ComingSoon
-      title="Weekly review"
-      description="Step back once a week, without guilt."
-      icon={CalendarRange}
-      phase={7}
-      phaseName={PLANNING}
-      features={[
-        "The past seven days: minutes, problems solved, concepts that turned strong.",
-        "Top mistakes, drills and mocks done.",
-        "Suggested focus subjects for next week, accepted in one click.",
-      ]}
-      links={[{ label: "Dashboard", href: "#/dashboard" }]}
-    />
-  );
-}
-
-export function RevisionPage() {
-  return (
-    <ComingSoon
-      title="Revision"
-      description="Everything that matters before an interview, from your own data, in one place."
-      icon={ScrollText}
-      phase={7}
-      phaseName={PLANNING}
-      features={[
-        "A one-day sheet (about two printed pages) and a one-week sheet grouped by subject.",
-        "Your mistake checklist, insights from tricky problems, and patterns with templates.",
-        "Print it, or export it as Markdown or HTML.",
       ]}
     />
   );

@@ -1,50 +1,43 @@
-// Today (home, F16). The daily plan arrives with the planner in phase 7; until then this page greets
-// the owner, counts down to the interview, and offers a short setup checklist that reads real data.
+// Today (home, F16): a greeting with the interview countdown, the day's plan (PlanSection), then
+// "Ready to learn next" (section 11.5), the fading count, the streak with a small heatmap, and a
+// setup checklist while it isn't finished.
 import {
   ArrowRight,
-  BookOpen,
+  CalendarRange,
   Check,
   Circle,
-  Code2,
-  Layers,
+  Flame,
   RotateCcw,
   Search,
   Sparkles,
-  X,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { routeHref } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
-import { Kbd, Skeleton } from "@/components/ui/Misc";
+import { Callout, Kbd, Skeleton } from "@/components/ui/Misc";
 import { MOD_KEY } from "@/components/ui/platform";
-import { ProgressBar } from "@/components/ui/Progress";
+import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { DESIGN_PROBLEMS } from "@/data/designs.seed";
 import { LEETCODE_PROBLEMS } from "@/data/problems.seed";
 import { QUANT_PUZZLES } from "@/data/quant.seed";
-import { syllabus } from "@/data/syllabus";
+import { syllabus, topicById } from "@/data/syllabus";
+import { weeklyReviewDue } from "@/lib/insight/weekly";
 import { daysBetween, localDate } from "@/lib/time";
-import { problemLabel } from "@/lib/problems/catalog";
-import { dueReason } from "@/lib/review/queue";
-import { useMinutesOn } from "@/stores/activityStore";
 import { useToday } from "@/stores/clockStore";
+import { useConceptStatus } from "@/stores/conceptStateStore";
+import { usePlanStore } from "@/stores/planStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
-import { IconButton } from "@/components/ui/Button";
-import { Callout } from "@/components/ui/Misc";
-import { StatusGlyph } from "@/components/ui/StatusGlyph";
-import { topicById } from "@/data/syllabus";
-import type { PlanItem } from "@/lib/types";
-import { openConceptReview } from "@/stores/conceptDialogStore";
-import { useConceptStatus } from "@/stores/conceptStateStore";
-import { removePlanItem, restorePlan, setPlanItemDone, usePlanStore } from "@/stores/planStore";
-import { toast } from "@/stores/toastStore";
-import { useReadyToLearn } from "./useReadyToLearn";
+import { Heatmap } from "../insight/Heatmap";
+import { useActivityInsight } from "../insight/useInsight";
 import { useReviewQueue } from "../review/useReviewQueue";
+import { PlanSection } from "./PlanSection";
 import { setupStepDone } from "./setupSteps";
+import { useReadyToLearn } from "./useReadyToLearn";
 
 function greeting(hour: number): string {
   if (hour < 5) return "Working late";
@@ -73,75 +66,6 @@ function Countdown({ date }: { date: string }) {
     >
       {text}
     </a>
-  );
-}
-
-const PLAN_ICON: Partial<Record<PlanItem["kind"], typeof BookOpen>> = {
-  "learn-concept": BookOpen,
-  "review-concept": Layers,
-  resolve: RotateCcw,
-  "new-problem": Code2,
-};
-
-function PlanRow({ item, date }: { item: PlanItem; date: string }) {
-  const Icon = PLAN_ICON[item.kind] ?? Sparkles;
-  const start =
-    item.kind === "learn-concept" && item.refId ? (
-      <Button size="sm" href={routeHref("/map", undefined, { focus: item.refId })}>
-        Start
-      </Button>
-    ) : item.kind === "review-concept" && item.refId ? (
-      <Button size="sm" onClick={() => openConceptReview(item.refId!)}>
-        Start
-      </Button>
-    ) : (item.kind === "resolve" || item.kind === "new-problem") && item.refId ? (
-      <Button
-        size="sm"
-        href={routeHref(
-          "/problems",
-          item.refId,
-          item.kind === "resolve" ? { mode: "resolve" } : undefined,
-        )}
-      >
-        Start
-      </Button>
-    ) : null;
-  return (
-    <li className="flex items-center gap-3 px-3 py-2">
-      <input
-        type="checkbox"
-        aria-label={`Done: ${item.title}`}
-        checked={item.done}
-        onChange={(e) => setPlanItemDone(date, item.id, e.target.checked)}
-        className="size-4 shrink-0 accent-[var(--accent)]"
-      />
-      <Icon size={16} aria-hidden="true" className="shrink-0 text-muted" />
-      <span className="min-w-0 flex-1">
-        <span
-          className={cx(
-            "block truncate font-medium",
-            item.done ? "text-muted line-through" : "text-text",
-          )}
-        >
-          {item.title}
-        </span>
-        <span className="block truncate text-sm text-muted">{item.reason}</span>
-      </span>
-      <span className="shrink-0 text-sm text-muted tabular-nums">{item.estMinutes} min</span>
-      {!item.done && start}
-      <IconButton
-        icon={X}
-        size="sm"
-        label={`Remove ${item.title}`}
-        onClick={() => {
-          const before = removePlanItem(date, item.id);
-          if (before)
-            toast("Removed from today's plan.", {
-              action: { label: "Undo", onClick: () => restorePlan(before) },
-            });
-        }}
-      />
-    </li>
   );
 }
 
@@ -175,6 +99,56 @@ function ReadyRow({
   );
 }
 
+/** The streak, this week's freeze, and the last 16 weeks of activity (F16, F29). */
+function StreakCard() {
+  const { lookup, streak, frozen, loaded } = useActivityInsight();
+  const today = useToday();
+  const freezeOn = useProfileStore((s) => s.profile?.prefs.streakFreeze ?? true);
+  if (!loaded) return <Skeleton className="h-40 w-full" />;
+  const days = streak.current;
+  return (
+    <section
+      aria-labelledby="streak-heading"
+      className="rounded-panel border border-rule bg-surface"
+    >
+      <div className="flex items-baseline justify-between gap-2 border-b border-rule px-4 py-3">
+        <h2 id="streak-heading" className="text-md font-semibold text-text">
+          Streak
+        </h2>
+        <a href="#/dashboard" className="text-sm text-accent hover:underline">
+          Dashboard
+        </a>
+      </div>
+      <div className="space-y-3 px-4 py-3">
+        <p className="flex items-center gap-2 text-base text-text">
+          <Flame
+            size={18}
+            aria-hidden="true"
+            className={days > 0 ? "text-warning" : "text-faint"}
+          />
+          <span>
+            <span className="text-lg font-semibold tabular-nums">{days}</span>{" "}
+            {days === 1 ? "day" : "days"}
+            {!streak.activeToday && days > 0 && (
+              <span className="text-sm text-muted"> (today still counts once you start)</span>
+            )}
+          </span>
+        </p>
+        {freezeOn && streak.frozenDays.length > 0 && (
+          <p className="text-sm text-muted">
+            The weekly freeze covered{" "}
+            {streak.frozenDays.length === 1
+              ? "a missed day"
+              : `${streak.frozenDays.length} missed days`}
+            .
+          </p>
+        )}
+        <Heatmap lookup={lookup} today={today} weeks={16} frozen={frozen} compact />
+      </div>
+    </section>
+  );
+}
+
 interface Step {
   id: string;
   done: boolean;
@@ -187,13 +161,19 @@ export default function TodayPage() {
   const profile = useProfileStore((s) => s.profile);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const today = useToday();
-  const minutes = useMinutesOn(today);
   const queue = useReviewQueue();
   const hasAttempt = useProblemStore((s) =>
     Object.values(s.states).some((p) => p.attempts.length > 0),
   );
-  const plan = usePlanStore((s) => s.plans[today]);
-  const { ready, fading } = useReadyToLearn(5);
+  const { ready: readyAll, fading } = useReadyToLearn(10);
+  // Concepts already on today's plan aren't repeated here.
+  const planned = usePlanStore((s) => s.plans[today]);
+  const ready = useMemo(() => {
+    const onPlan = new Set(
+      (planned?.items ?? []).filter((i) => i.kind === "learn-concept").map((i) => i.refId),
+    );
+    return readyAll.filter((c) => !onPlan.has(c.id)).slice(0, 5);
+  }, [readyAll, planned]);
   const now = new Date();
   const name = profile?.name.trim();
   const dateLine = now.toLocaleDateString(undefined, {
@@ -308,82 +288,23 @@ export default function TodayPage() {
           are.
         </Callout>
       )}
+      {profile?.onboardingDone && weeklyReviewDue(new Date(), profile) && (
+        <Callout
+          className="mb-6"
+          icon={CalendarRange}
+          title="Your weekly review is ready"
+          actions={
+            <Button variant="primary" href="#/weekly">
+              Open the weekly review
+            </Button>
+          }
+        >
+          A short look back at the week, and a focus for the next one.
+        </Callout>
+      )}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
         <div className="space-y-6">
-          <section
-            aria-labelledby="plan-heading"
-            className="rounded-panel border border-rule bg-surface"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule px-4 py-3 sm:px-5">
-              <h2 id="plan-heading" className="text-md font-semibold text-text">
-                Today's plan
-              </h2>
-              <span className="text-sm text-muted tabular-nums">
-                {Math.round(minutes)} of {profile?.dailyMinutes ?? 90} min
-              </span>
-            </div>
-            <div className="px-4 py-4 sm:px-5">
-              <ProgressBar
-                value={minutes / (profile?.dailyMinutes ?? 90)}
-                label="Minutes today against your daily time"
-              />
-              {plan && plan.items.length > 0 && (
-                <ul className="mt-4 divide-y divide-rule rounded-control border border-rule">
-                  {plan.items.map((item) => (
-                    <PlanRow key={item.id} item={item} date={today} />
-                  ))}
-                </ul>
-              )}
-              {queue.problems.length > 0 ? (
-                <div className="mt-4">
-                  <p className="text-base text-text">
-                    {queue.problems.length === 1
-                      ? "1 problem is due for a re-solve."
-                      : `${queue.problems.length} problems are due for a re-solve.`}
-                  </p>
-                  <ul className="mt-2 divide-y divide-rule rounded-control border border-rule">
-                    {queue.problems.slice(0, 3).map((p) => (
-                      <li key={p.info.id} className="flex items-center gap-3 px-3 py-2">
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium text-text">
-                            {problemLabel(p.info)}
-                          </span>
-                          <span className="block truncate text-sm text-muted">
-                            {dueReason(p, today)}
-                          </span>
-                        </span>
-                        <Button
-                          size="sm"
-                          icon={RotateCcw}
-                          href={routeHref("/problems", p.info.id, { mode: "resolve" })}
-                        >
-                          Re-solve
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                  {queue.problems.length > 3 && (
-                    <a
-                      href="#/review"
-                      className="mt-2 inline-block text-sm text-accent hover:underline"
-                    >
-                      See all {queue.problems.length} in Review
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <p className="mt-4 text-base text-muted">
-                  Nothing is due for a re-solve today. Solve a problem and save your attempt: it
-                  comes back here just before you'd forget it.
-                </p>
-              )}
-              <p className="mt-3 text-sm text-muted">
-                Add concepts from the map (right-click, long-press or the panel's menu) or a path to
-                a concept. The full daily plan, sized to your time with a reason for each item,
-                arrives in phase 7.
-              </p>
-            </div>
-          </section>
+          <PlanSection />
 
           <section
             aria-labelledby="ready-heading"
@@ -420,106 +341,128 @@ export default function TodayPage() {
             )}
             {fading > 0 && (
               <a
-                href={routeHref("/map", undefined, { status: "fading" })}
+                href="#/review"
                 className="flex items-center gap-3 border-t border-rule px-4 py-2.5 text-base hover:bg-surface-sunken sm:px-5"
               >
                 <StatusGlyph status="fading" size={14} />
                 <span className="flex-1 text-text">
-                  {fading} {fading === 1 ? "concept is" : "concepts are"} fading
+                  {fading} {fading === 1 ? "concept is" : "concepts are"} fading. Review them to
+                  bring them back.
                 </span>
                 <ArrowRight size={15} aria-hidden="true" className="text-faint" />
               </a>
             )}
           </section>
 
-          <section
-            aria-labelledby="setup-heading"
-            className="rounded-panel border border-rule bg-surface"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule px-4 py-3 sm:px-5">
-              <h2 id="setup-heading" className="text-md font-semibold text-text">
-                Get set up
-              </h2>
-              {profile && (
-                <span className="text-sm text-muted">
-                  {doneCount} of {steps.length} done
-                </span>
-              )}
-            </div>
-            {!profile ? (
-              <div className="space-y-3 p-5" role="status" aria-label="Loading">
-                <Skeleton className="h-5 w-2/3" />
-                <Skeleton className="h-5 w-1/2" />
-                <Skeleton className="h-5 w-3/5" />
+          {(!profile || doneCount < steps.length) && (
+            <section
+              aria-labelledby="setup-heading"
+              className="rounded-panel border border-rule bg-surface"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule px-4 py-3 sm:px-5">
+                <h2 id="setup-heading" className="text-md font-semibold text-text">
+                  Get set up
+                </h2>
+                {profile && (
+                  <span className="text-sm text-muted">
+                    {doneCount} of {steps.length} done
+                  </span>
+                )}
               </div>
-            ) : (
-              <ol>
-                {steps.map((step) => (
-                  <li
-                    key={step.id}
-                    className="flex flex-col gap-3 border-b border-rule px-4 py-3.5 last:border-b-0 sm:flex-row sm:items-center sm:px-5"
-                  >
-                    <div className="flex min-w-0 flex-1 gap-3">
-                      {step.done ? (
-                        <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-strong text-canvas">
-                          <Check size={13} strokeWidth={3} aria-hidden="true" />
-                        </span>
-                      ) : (
-                        <Circle
-                          size={20}
-                          strokeWidth={1.5}
-                          aria-hidden="true"
-                          className="mt-0.5 shrink-0 text-faint"
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p className={cx("font-medium", step.done ? "text-muted" : "text-text")}>
-                          {step.title}
-                          <span className="sr-only">{step.done ? " (done)" : ""}</span>
-                        </p>
-                        <p className="text-sm text-muted">{step.detail}</p>
+              {!profile ? (
+                <div className="space-y-3 p-5" role="status" aria-label="Loading">
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-5 w-3/5" />
+                </div>
+              ) : (
+                <ol>
+                  {steps.map((step) => (
+                    <li
+                      key={step.id}
+                      className="flex flex-col gap-3 border-b border-rule px-4 py-3.5 last:border-b-0 sm:flex-row sm:items-center sm:px-5"
+                    >
+                      <div className="flex min-w-0 flex-1 gap-3">
+                        {step.done ? (
+                          <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-strong text-canvas">
+                            <Check size={13} strokeWidth={3} aria-hidden="true" />
+                          </span>
+                        ) : (
+                          <Circle
+                            size={20}
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                            className="mt-0.5 shrink-0 text-faint"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p className={cx("font-medium", step.done ? "text-muted" : "text-text")}>
+                            {step.title}
+                            <span className="sr-only">{step.done ? " (done)" : ""}</span>
+                          </p>
+                          <p className="text-sm text-muted">{step.detail}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="shrink-0 pl-8 sm:pl-0">{step.action}</div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
+                      <div className="shrink-0 pl-8 sm:pl-0">{step.action}</div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          )}
         </div>
 
-        <aside
-          aria-labelledby="atlas-heading"
-          className="self-start rounded-panel border border-rule bg-surface"
-        >
-          <h2
-            id="atlas-heading"
-            className="border-b border-rule px-4 py-3 text-md font-semibold text-text"
+        <div className="space-y-6 self-start">
+          <StreakCard />
+          {queue.count > 0 && (
+            <a
+              href="#/review"
+              className="flex items-center gap-3 rounded-panel border border-rule bg-surface px-4 py-3 text-base hover:bg-surface-sunken"
+            >
+              <RotateCcw size={16} aria-hidden="true" className="shrink-0 text-muted" />
+              <span className="flex-1 text-text">
+                {queue.count} due for review in all
+                <span className="block text-sm text-muted">
+                  {queue.problems.length} {queue.problems.length === 1 ? "problem" : "problems"},{" "}
+                  {queue.concepts.length} {queue.concepts.length === 1 ? "concept" : "concepts"}
+                </span>
+              </span>
+              <ArrowRight size={15} aria-hidden="true" className="shrink-0 text-faint" />
+            </a>
+          )}
+          <aside
+            aria-labelledby="atlas-heading"
+            className="rounded-panel border border-rule bg-surface"
           >
-            Your atlas
-          </h2>
-          <ul className="divide-y divide-rule text-base">
-            {[
-              ["Subjects", syllabus.counts.subjects, "#/map"],
-              ["Concepts", syllabus.counts.concepts, "#/map"],
-              ["Must-know concepts", syllabus.counts.must, "#/map"],
-              ["DSA patterns", syllabus.counts.patterns, "#/map?subject=dsa"],
-              ["LeetCode problems", LEETCODE_PROBLEMS.length, "#/problems"],
-              ["Quant puzzles", QUANT_PUZZLES.length, "#/puzzles"],
-              ["Design prompts", DESIGN_PROBLEMS.length, "#/designs"],
-            ].map(([label, value, href]) => (
-              <li key={label as string}>
-                <a
-                  href={href as string}
-                  className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-surface-sunken"
-                >
-                  <span className="text-muted">{label}</span>
-                  <span className="font-medium text-text tabular-nums">{value}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </aside>
+            <h2
+              id="atlas-heading"
+              className="border-b border-rule px-4 py-3 text-md font-semibold text-text"
+            >
+              Your atlas
+            </h2>
+            <ul className="divide-y divide-rule text-base">
+              {[
+                ["Subjects", syllabus.counts.subjects, "#/map"],
+                ["Concepts", syllabus.counts.concepts, "#/map"],
+                ["Must-know concepts", syllabus.counts.must, "#/map"],
+                ["DSA patterns", syllabus.counts.patterns, "#/map?subject=dsa"],
+                ["LeetCode problems", LEETCODE_PROBLEMS.length, "#/problems"],
+                ["Quant puzzles", QUANT_PUZZLES.length, "#/puzzles"],
+                ["Design prompts", DESIGN_PROBLEMS.length, "#/designs"],
+              ].map(([label, value, href]) => (
+                <li key={label as string}>
+                  <a
+                    href={href as string}
+                    className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-surface-sunken"
+                  >
+                    <span className="text-muted">{label}</span>
+                    <span className="font-medium text-text tabular-nums">{value}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        </div>
       </div>
     </PageFrame>
   );

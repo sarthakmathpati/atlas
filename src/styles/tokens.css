@@ -66,6 +66,14 @@
   --chart-grid: #e2e9f0;
   --chart-axis: #4e6477;
 
+  /* Activity heatmap (F29): empty, then one blue step per level (1-29, 30-59, 60-119, 120+
+     minutes). Validated as an ordinal ramp: the lightest step clears 2:1 on the surface. */
+  --heat-0: #e9eef3;
+  --heat-1: #86b6ef;
+  --heat-2: #3987e5;
+  --heat-3: #1c5cab;
+  --heat-4: #0d366b;
+
   /* Status glyphs (section 12.3): fill and stroke per status */
   --status-not-started-fill: transparent;
   --status-not-started-stroke: #7c90a2;
@@ -172,6 +180,13 @@
     --chart-grid: #1e3a52;
     --chart-axis: #93a9bd;
 
+    /* Heatmap: in the dark, more activity is lighter (validated against the dark surface). */
+    --heat-0: #0b1c2a;
+    --heat-1: #1c5cab;
+    --heat-2: #3987e5;
+    --heat-3: #86b6ef;
+    --heat-4: #cde2fb;
+
     --status-not-started-fill: transparent;
     --status-not-started-stroke: #93a9bd;
     --status-learning-fill: #f0b442;
@@ -251,6 +266,12 @@
   --chart-series: #5598e7;
   --chart-grid: #1e3a52;
   --chart-axis: #93a9bd;
+
+  --heat-0: #0b1c2a;
+  --heat-1: #1c5cab;
+  --heat-2: #3987e5;
+  --heat-3: #86b6ef;
+  --heat-4: #cde2fb;
 
   --status-not-started-fill: transparent;
   --status-not-started-stroke: #93a9bd;

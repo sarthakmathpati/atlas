@@ -191,6 +191,8 @@ export interface Profile {
   lastBackupAt?: string;
   /** When the owner last dismissed the backup banner (it stays hidden for 3 days). */
   backupReminderDismissedAt?: string;
+  /** When the weekly review (F18) was last opened; it opens once after Sunday 18:00. */
+  weeklyReviewSeenAt?: string;
   createdAt: string;
   updatedAt: string;
   schemaVersion: number;
@@ -370,6 +372,12 @@ export interface PlanItem {
   estMinutes: number;
   done: boolean;
   skipped: boolean;
+  /**
+   * Who put it on the plan: the daily planner, or the owner (from the map, a path or the
+   * dashboard). Items stored before the planner existed have none and count as the owner's.
+   * Replanning (a new budget, minimum day) keeps the owner's items and every done item.
+   */
+  origin?: "planner" | "owner";
 }
 
 export interface DayPlan {
@@ -378,6 +386,8 @@ export interface DayPlan {
   minimumDay: boolean;
   items: PlanItem[];
   generatedAt: string;
+  /** When the planner last filled the plan (unset while it only holds the owner's items). */
+  plannedAt?: string;
   updatedAt: string;
 }
 
@@ -393,6 +403,31 @@ export interface ActivityDay {
   /** Concepts whose status changed to strong or fading that day (F4 "status changes are logged"). */
   turnedStrong?: number;
   turnedFading?: number;
+  /**
+   * Solved attempts by difficulty (they add up to problemsSolved), so the weekly review (F18)
+   * rebuilds "problems solved by difficulty" from activity alone. Days recorded before these
+   * counters existed read the split from the attempts instead.
+   */
+  solvedEasy?: number;
+  solvedMedium?: number;
+  solvedHard?: number;
+  /** Pattern drill sessions finished and prompts answered (F10). */
+  drillSessions?: number;
+  drillAnswers?: number;
+  /** Mock interviews finished (F15, phase 8). */
+  mocks?: number;
+}
+
+/** What the owner kept from a weekly review (F18): Claude's reflection and the focus accepted. */
+export interface WeeklyNote {
+  /** Monday of the week reviewed (yyyy-mm-dd). */
+  week: string;
+  reflection?: string;
+  /** Subjects Claude suggested for the next week. */
+  suggested?: string[];
+  /** When the owner accepted the suggested focus subjects. */
+  acceptedAt?: string;
+  updatedAt: string;
 }
 
 export interface ActivityMonth {
@@ -400,6 +435,8 @@ export interface ActivityMonth {
   month: string; // yyyy-mm
   days: Record<string, ActivityDay>; // key: yyyy-mm-dd
   streakFreezeUsed?: string[];
+  /** Weekly review notes, filed under the month of the week's Monday (key: that Monday). */
+  weeks?: Record<string, WeeklyNote>;
   updatedAt: string;
 }
 

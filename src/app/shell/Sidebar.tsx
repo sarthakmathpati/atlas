@@ -103,7 +103,7 @@ export function Sidebar({ route, collapsed, badges = {} }: SidebarProps) {
     <nav
       aria-label="Main"
       className={cx(
-        "hidden h-full shrink-0 flex-col border-r border-rule bg-surface md:flex",
+        "hidden h-full shrink-0 flex-col border-r border-rule bg-surface md:flex print:hidden",
         collapsed ? "w-16 items-center" : "w-58",
       )}
     >

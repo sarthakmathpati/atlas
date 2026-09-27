@@ -4,8 +4,10 @@
 import { nanoid } from "nanoid";
 import { create } from "zustand";
 import type { Repository } from "@/lib/storage/Repository";
-import { nowIso } from "@/lib/time";
+import { localDate, nowIso } from "@/lib/time";
 import type { DrillPrompt, GeneratedDrill } from "@/lib/types";
+import { recordActivity } from "./activityStore";
+import { markPlanItemDone } from "./planEffects";
 import { toast } from "./toastStore";
 
 interface DrillState {
@@ -72,4 +74,16 @@ export function deleteGeneratedDrill(id: string): GeneratedDrill | null {
 export function restoreGeneratedDrill(record: GeneratedDrill): void {
   useDrillStore.setState((s) => ({ generated: { ...s.generated, [record.id]: record } }));
   repo?.generatedDrills.put(record).catch(saveFailed);
+}
+
+/** One drill prompt answered (the weekly review counts them, F18). */
+export function noteDrillAnswer(now: Date = new Date()): void {
+  recordActivity(localDate(now), { drillAnswers: 1 });
+}
+
+/** A drill session reached its results: counts it and ticks off today's drill item (F16). */
+export function finishDrillSession(now: Date = new Date()): void {
+  const today = localDate(now);
+  recordActivity(today, { drillSessions: 1 });
+  void markPlanItemDone(repo, today, null, ["drill"]);
 }

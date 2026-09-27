@@ -65,6 +65,7 @@ export const profileSchema: z.ZodType<Profile> = z.object({
   }),
   lastBackupAt: isoTime.optional(),
   backupReminderDismissedAt: isoTime.optional(),
+  weeklyReviewSeenAt: isoTime.optional(),
   createdAt: isoTime,
   updatedAt: isoTime,
   schemaVersion: z.number().int().min(1),
@@ -244,9 +245,11 @@ export const dayPlanSchema: z.ZodType<DayPlan> = z.object({
       estMinutes: z.number().min(0),
       done: z.boolean(),
       skipped: z.boolean(),
+      origin: z.enum(["planner", "owner"]).optional(),
     }),
   ),
   generatedAt: isoTime,
+  plannedAt: isoTime.optional(),
   updatedAt: isoTime,
 });
 
@@ -264,9 +267,27 @@ export const activityMonthSchema: z.ZodType<ActivityMonth> = z.object({
       planItemsDone: z.number().int().min(0).optional(),
       turnedStrong: z.number().int().min(0).optional(),
       turnedFading: z.number().int().min(0).optional(),
+      solvedEasy: z.number().int().min(0).optional(),
+      solvedMedium: z.number().int().min(0).optional(),
+      solvedHard: z.number().int().min(0).optional(),
+      drillSessions: z.number().int().min(0).optional(),
+      drillAnswers: z.number().int().min(0).optional(),
+      mocks: z.number().int().min(0).optional(),
     }),
   ),
   streakFreezeUsed: z.array(localDay).optional(),
+  weeks: z
+    .record(
+      localDay,
+      z.object({
+        week: localDay,
+        reflection: z.string().optional(),
+        suggested: z.array(z.string()).optional(),
+        acceptedAt: isoTime.optional(),
+        updatedAt: isoTime,
+      }),
+    )
+    .optional(),
   updatedAt: isoTime,
 });
 
