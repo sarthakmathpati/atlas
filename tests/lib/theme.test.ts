@@ -66,7 +66,10 @@ describe("by time of day", () => {
 
   it("replaces a missing or broken start time with its default", () => {
     expect(normalizeSchedule({ day: "7:00", dusk: "25:00" })).toEqual(DEFAULT_THEME_SCHEDULE);
-    expect(normalizeSchedule({ day: "05:45" })).toEqual({ ...DEFAULT_THEME_SCHEDULE, day: "05:45" });
+    expect(normalizeSchedule({ day: "05:45" })).toEqual({
+      ...DEFAULT_THEME_SCHEDULE,
+      day: "05:45",
+    });
   });
 
   it("knows when it switches next, today or tomorrow", () => {
@@ -103,7 +106,12 @@ describe("the pre-paint script in index.html", () => {
     };
     const win = { matchMedia: () => ({ matches: options.prefersDark }) };
     const doc = { documentElement: { setAttribute: (_: string, v: string) => (applied = v) } };
-    new Function("window", "document", "localStorage", "Date", source)(win, doc, storage, FixedDate);
+    new Function("window", "document", "localStorage", "Date", source)(
+      win,
+      doc,
+      storage,
+      FixedDate,
+    );
     return applied;
   }
 
@@ -120,7 +128,18 @@ describe("the pre-paint script in index.html", () => {
       "not json",
     ];
     const choices = ["system", "day", "dusk", "night", "schedule", "light", "dark", "sepia"];
-    const times = ["00:00", "00:29", "00:30", "05:15", "06:29", "06:30", "12:00", "19:00", "22:30", "23:59"];
+    const times = [
+      "00:00",
+      "00:29",
+      "00:30",
+      "05:15",
+      "06:29",
+      "06:30",
+      "12:00",
+      "19:00",
+      "22:30",
+      "23:59",
+    ];
     let checked = 0;
     for (const choice of choices) {
       for (const schedule of schedules) {
@@ -131,8 +150,7 @@ describe("the pre-paint script in index.html", () => {
               stored["atlas.themeSchedule"] =
                 typeof schedule === "string" ? schedule : JSON.stringify(schedule);
             const now = at(time);
-            const parsed =
-              typeof schedule === "object" && schedule !== null ? schedule : null;
+            const parsed = typeof schedule === "object" && schedule !== null ? schedule : null;
             const expected = resolveTheme(normalizeThemeChoice(choice) as ThemeChoice, {
               schedule: normalizeSchedule(parsed),
               now,

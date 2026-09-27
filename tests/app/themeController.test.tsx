@@ -50,7 +50,9 @@ describe("theme controller", () => {
     act(() => vi.advanceTimersByTime(8 * 60 * 60_000));
     expect(shown()).toBe("day");
     expect(localStorage.getItem("atlas.theme")).toBe("schedule");
-    expect(JSON.parse(localStorage.getItem("atlas.themeSchedule")!)).toEqual(DEFAULT_THEME_SCHEDULE);
+    expect(JSON.parse(localStorage.getItem("atlas.themeSchedule")!)).toEqual(
+      DEFAULT_THEME_SCHEDULE,
+    );
   });
 
   it("catches up when the tab comes back after the laptop slept", () => {

@@ -36,7 +36,10 @@ export function useShownTheme(): ShownTheme {
     (onChange) => {
       if (typeof MutationObserver === "undefined") return () => undefined;
       const observer = new MutationObserver(onChange);
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
+      });
       return () => observer.disconnect();
     },
     shownTheme,

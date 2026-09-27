@@ -45,6 +45,7 @@
   --color-warning-soft: var(--warning-soft);
   --color-info-soft: var(--info-soft);
   --color-code: var(--code-bg);
+  --color-layer-edge: var(--layer-edge);
   --color-subject: var(--subject-mark);
   --color-subject-tint: var(--subject-tint);
 

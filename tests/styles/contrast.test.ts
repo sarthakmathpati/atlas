@@ -86,10 +86,20 @@ describe.each(THEMES)("%s theme", (theme) => {
 
   it("keeps labels on filled buttons readable, hovered or not", () => {
     for (const fill of ["--accent", "--accent-hover"]) {
-      expectContrast(`${theme} --on-accent on ${fill}`, color(theme, "--on-accent"), color(theme, fill), 4.5);
+      expectContrast(
+        `${theme} --on-accent on ${fill}`,
+        color(theme, "--on-accent"),
+        color(theme, fill),
+        4.5,
+      );
     }
     for (const fill of ["--danger", "--danger-hover"]) {
-      expectContrast(`${theme} --on-danger on ${fill}`, color(theme, "--on-danger"), color(theme, fill), 4.5);
+      expectContrast(
+        `${theme} --on-danger on ${fill}`,
+        color(theme, "--on-danger"),
+        color(theme, fill),
+        4.5,
+      );
     }
   });
 
@@ -102,7 +112,8 @@ describe.each(THEMES)("%s theme", (theme) => {
     ];
     for (const [name, bg] of backgrounds) {
       expectContrast(`${theme} --text on ${name}`, color(theme, "--text"), bg, 7);
-      for (const fg of CODE_TEXT) expectContrast(`${theme} ${fg} on ${name}`, color(theme, fg), bg, 4.5);
+      for (const fg of CODE_TEXT)
+        expectContrast(`${theme} ${fg} on ${name}`, color(theme, fg), bg, 4.5);
     }
   });
 
@@ -116,7 +127,8 @@ describe.each(THEMES)("%s theme", (theme) => {
       "--accent",
     ];
     for (const bg of ["--canvas", "--surface", "--surface-raised"]) {
-      for (const fg of marks) expectContrast(`${theme} ${fg} on ${bg}`, color(theme, fg), color(theme, bg), 3);
+      for (const fg of marks)
+        expectContrast(`${theme} ${fg} on ${bg}`, color(theme, fg), color(theme, bg), 3);
     }
   });
 
@@ -131,11 +143,22 @@ describe.each(THEMES)("%s theme", (theme) => {
       const direction = theme === "day" ? -1 : 1;
       for (let i = 1; i < steps.length; i++) {
         const delta = (steps[i]![0] - steps[i - 1]![0]) * direction;
-        expect(delta, `${theme} ${ramp[i - 1]} to ${ramp[i]}: lightness step`).toBeGreaterThanOrEqual(0.06);
+        expect(
+          delta,
+          `${theme} ${ramp[i - 1]} to ${ramp[i]}: lightness step`,
+        ).toBeGreaterThanOrEqual(0.06);
       }
       const hues = steps.map((s) => s[2]);
-      expect(Math.max(...hues) - Math.min(...hues), `${theme} ${ramp.join(" ")} hue spread`).toBeLessThan(6);
-      expectContrast(`${theme} ${ramp[0]} (the faintest step) on --surface`, color(theme, ramp[0]!), surface, 2);
+      expect(
+        Math.max(...hues) - Math.min(...hues),
+        `${theme} ${ramp.join(" ")} hue spread`,
+      ).toBeLessThan(6);
+      expectContrast(
+        `${theme} ${ramp[0]} (the faintest step) on --surface`,
+        color(theme, ramp[0]!),
+        surface,
+        2,
+      );
     }
     expect(tokens[theme]["--chart-series"]).toBe(tokens[theme]["--chart-2"]);
   });
@@ -189,7 +212,9 @@ describe("theme blocks", () => {
         if (status) {
           const [fill, stroke] = cell.split("/").map((c) => c.trim());
           expect(tokens[theme][`--status-${status}-fill`], `${theme} ${status} fill`).toBe(fill);
-          expect(tokens[theme][`--status-${status}-stroke`], `${theme} ${status} stroke`).toBe(stroke);
+          expect(tokens[theme][`--status-${status}-stroke`], `${theme} ${status} stroke`).toBe(
+            stroke,
+          );
           return;
         }
         const expected = adjusted[name]?.[theme];

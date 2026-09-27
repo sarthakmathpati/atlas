@@ -32,7 +32,8 @@ export const MIGRATIONS: Migration[] = [
     migrate(data) {
       const profile = data.profile;
       if (!isRecord(profile)) return data;
-      const theme = profile.theme === "light" ? "day" : profile.theme === "dark" ? "night" : profile.theme;
+      const theme =
+        profile.theme === "light" ? "day" : profile.theme === "dark" ? "night" : profile.theme;
       const prefs = isRecord(profile.prefs) ? profile.prefs : {};
       return {
         ...data,

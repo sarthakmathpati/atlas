@@ -156,7 +156,15 @@ const CASES: readonly (readonly [number, number][])[] = [
 
 function trace(grid: Float64Array, nx: number, ny: number, cell: number, t: number): Float32Array {
   const out: number[] = [];
-  const point = (edge: number, x0: number, y0: number, a: number, b: number, c: number, d: number) => {
+  const point = (
+    edge: number,
+    x0: number,
+    y0: number,
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+  ) => {
     if (edge === 0) return [x0 + (cell * (t - a)) / (b - a), y0];
     if (edge === 1) return [x0 + cell, y0 + (cell * (t - b)) / (c - b)];
     if (edge === 2) return [x0 + (cell * (t - d)) / (c - d), y0 + cell];
@@ -264,12 +272,59 @@ export function contours(input: ContourInput): ContourResult {
   return { width, height, levels: out, labels };
 }
 
-/** Joins a level's segments into one SVG path ("M x y L x y" per segment), rounded to 0.1 px. */
+/**
+ * Joins a level's segments into polylines and returns them as one SVG path, rounded to 0.1 px.
+ * Segments meet end to end (marching squares shares edge points between cells), so chaining them
+ * keeps paths short.
+ */
 export function segmentsToPath(segments: Float32Array): string {
   const r = (n: number) => Math.round(n * 10) / 10;
+  const key = (x: number, y: number) => `${r(x)},${r(y)}`;
+  const count = segments.length / 4;
+  const used = new Uint8Array(count);
+  const byPoint = new Map<string, number[]>();
+  for (let i = 0; i < count; i++) {
+    for (const k of [
+      key(segments[i * 4]!, segments[i * 4 + 1]!),
+      key(segments[i * 4 + 2]!, segments[i * 4 + 3]!),
+    ]) {
+      const list = byPoint.get(k);
+      if (list) list.push(i);
+      else byPoint.set(k, [i]);
+    }
+  }
+  const nextFrom = (point: string): [number, boolean] | null => {
+    for (const i of byPoint.get(point) ?? []) {
+      if (used[i]) continue;
+      const start = key(segments[i * 4]!, segments[i * 4 + 1]!);
+      return [i, start === point];
+    }
+    return null;
+  };
   let d = "";
-  for (let i = 0; i + 3 < segments.length; i += 4) {
-    d += `M${r(segments[i]!)} ${r(segments[i + 1]!)}L${r(segments[i + 2]!)} ${r(segments[i + 3]!)}`;
+  for (let first = 0; first < count; first++) {
+    if (used[first]) continue;
+    used[first] = 1;
+    const line: [number, number][] = [
+      [segments[first * 4]!, segments[first * 4 + 1]!],
+      [segments[first * 4 + 2]!, segments[first * 4 + 3]!],
+    ];
+    // Extend forward from the end, then backward from the start.
+    for (const forward of [true, false]) {
+      for (;;) {
+        const end = forward ? line[line.length - 1]! : line[0]!;
+        const found = nextFrom(key(end[0], end[1]));
+        if (!found) break;
+        const [i, fromStart] = found;
+        used[i] = 1;
+        const far: [number, number] = fromStart
+          ? [segments[i * 4 + 2]!, segments[i * 4 + 3]!]
+          : [segments[i * 4]!, segments[i * 4 + 1]!];
+        if (forward) line.push(far);
+        else line.unshift(far);
+      }
+    }
+    d += line.map(([x, y], j) => `${j ? "L" : "M"}${r(x)} ${r(y)}`).join("");
   }
   return d;
 }
@@ -283,20 +338,36 @@ export interface QuietZone {
   h: number;
 }
 
-function inZones(px: number, py: number, width: number, height: number, zones: QuietZone[]) {
-  return zones.some(
-    (z) =>
-      px >= z.x * width &&
-      px <= (z.x + z.w) * width &&
-      py >= z.y * height &&
-      py <= (z.y + z.h) * height,
-  );
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Whether a box in px overlaps any quiet zone (zones are fractions of the picture). */
+function overlapsZones(box: Box, width: number, height: number, zones: QuietZone[]): boolean {
+  return zones.some((z) => {
+    const zx = z.x * width;
+    const zy = z.y * height;
+    return (
+      box.x < zx + z.w * width &&
+      box.x + box.w > zx &&
+      box.y < zy + z.h * height &&
+      box.y + box.h > zy
+    );
+  });
+}
+
+/** About how wide a spot height's label is ("▲ DSA 57" at 11 px semibold). */
+export function spotLabelBox(label: ContourLabel): Box {
+  return { x: label.x - 6, y: label.y - 6, w: 12 + label.text.length * 6.6, h: 13 };
 }
 
 /**
- * Night's soundings (12.10.2): at most `count` faint depth numbers at seeded places, never inside
- * a quiet zone (where text sits). Each number's box (about 18 by 12 px from its baseline start)
- * stays clear of the zones and the edges.
+ * Night's soundings (12.10.2): at most `count` faint depth numbers at seeded places, never on a
+ * quiet zone (where text sits). Each number's box (about 18 by 12 px above its baseline start)
+ * stays clear of the zones, the edges and the other numbers.
  */
 export function soundings(
   width: number,
@@ -305,9 +376,7 @@ export function soundings(
   zones: QuietZone[] = [],
   count = 16,
 ): ContourLabel[] {
-  const rand = mulberry32(
-    (typeof seed === "string" ? hashSeed(seed) : seed >>> 0) ^ 0x9e3779b9,
-  );
+  const rand = mulberry32((typeof seed === "string" ? hashSeed(seed) : seed >>> 0) ^ 0x9e3779b9);
   const out: ContourLabel[] = [];
   const boxW = 18;
   const boxH = 12;
@@ -315,24 +384,23 @@ export function soundings(
     const x = 4 + rand() * Math.max(0, width - boxW - 8);
     const y = boxH + 4 + rand() * Math.max(0, height - boxH - 8);
     const depth = String(Math.round(8 + rand() * 70));
-    const corners: [number, number][] = [
-      [x, y - boxH],
-      [x + boxW, y - boxH],
-      [x, y],
-      [x + boxW, y],
-    ];
-    if (corners.some(([cx, cy]) => inZones(cx, cy, width, height, zones))) continue;
+    if (overlapsZones({ x, y: y - boxH, w: boxW, h: boxH }, width, height, zones)) continue;
     if (out.some((o) => Math.abs(o.x - x) < boxW + 6 && Math.abs(o.y - y) < boxH + 6)) continue;
     out.push({ x, y, text: depth });
   }
   return out;
 }
 
-/** Spot heights that may show: labelled peaks outside the quiet zones, on pictures 480 px or wider. */
-export function visibleSpotHeights(
-  result: ContourResult,
-  zones: QuietZone[] = [],
-): ContourLabel[] {
+/**
+ * Spot heights that may show: labelled peaks whose label clears the quiet zones and the edges,
+ * on pictures 480 px or wider.
+ */
+export function visibleSpotHeights(result: ContourResult, zones: QuietZone[] = []): ContourLabel[] {
   if (result.width < 480) return [];
-  return result.labels.filter((l) => !inZones(l.x, l.y, result.width, result.height, zones));
+  return result.labels.filter((l) => {
+    const box = spotLabelBox(l);
+    const inside =
+      box.x >= 0 && box.y >= 0 && box.x + box.w <= result.width && box.y + box.h <= result.height;
+    return inside && !overlapsZones(box, result.width, result.height, zones);
+  });
 }

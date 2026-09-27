@@ -12,7 +12,10 @@ export interface CssRule {
   declarations: Record<string, string>;
 }
 
-export const TOKEN_FILES = ["../../src/styles/tokens.css", "../../src/styles/subjects.generated.css"];
+export const TOKEN_FILES = [
+  "../../src/styles/tokens.css",
+  "../../src/styles/subjects.generated.css",
+];
 
 /** A small CSS reader: enough for flat token files (rules, nested at-rules, no strings with braces). */
 export function parseRules(css: string): CssRule[] {

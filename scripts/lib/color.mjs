@@ -54,7 +54,8 @@ export function parseColor(text) {
     .split(/[\s,]+/)
     .filter(Boolean)
     .map(Number);
-  if (parts.length < 3 || parts.some((n) => Number.isNaN(n))) throw new Error(`Not a color: ${text}`);
+  if (parts.length < 3 || parts.some((n) => Number.isNaN(n)))
+    throw new Error(`Not a color: ${text}`);
   return [parts[0], parts[1], parts[2], parts[3] ?? 1];
 }
 

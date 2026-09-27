@@ -120,7 +120,7 @@ export function FloatingPanel({
     >
       <div
         className={cx(
-          "atlas-float-panel overflow-auto rounded-panel border border-rule bg-surface-raised text-text shadow-float",
+          "atlas-float-panel overflow-auto rounded-panel border border-layer-edge bg-surface-raised text-text shadow-float",
           className,
         )}
         style={{ maxHeight: "inherit", ...style }}

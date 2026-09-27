@@ -10,6 +10,8 @@ import {
   type ContourInput,
   type ContourResult,
 } from "@/lib/art/contours";
+import { emblemHills, emblemLines } from "@/lib/art/emblem";
+import { syllabus } from "@/data/syllabus";
 
 const HILLS: ContourHill[] = [
   { x: 0.6, y: 0.66, r: 0.17, height: 1.09, label: "DSA 57" },
@@ -17,7 +19,14 @@ const HILLS: ContourHill[] = [
   { x: 0.88, y: 0.78, r: 0.09, height: 0.92, label: "OS 44" },
 ];
 
-const HEAD: ContourInput = { width: 1200, height: 240, seed: 20260927, levels: 12, cell: 6, hills: HILLS };
+const HEAD: ContourInput = {
+  width: 1200,
+  height: 240,
+  seed: 20260927,
+  levels: 12,
+  cell: 6,
+  hills: HILLS,
+};
 
 /** Every segment of a result as "level:x1,y1,x2,y2" (rounded to 1/1000 px). */
 function segmentKeys(result: ContourResult): Map<string, [number, number, number, number]> {
@@ -95,7 +104,14 @@ describe("contours", () => {
   });
 
   it("keeps segments inside the picture", () => {
-    const result = contours({ width: 64, height: 64, seed: "os", levels: 7, cell: 2, hills: HILLS });
+    const result = contours({
+      width: 64,
+      height: 64,
+      seed: "os",
+      levels: 7,
+      cell: 2,
+      hills: HILLS,
+    });
     for (const level of result.levels) {
       for (const v of level.segments) {
         expect(v).toBeGreaterThanOrEqual(0);
@@ -136,12 +152,54 @@ describe("texture extras", () => {
 
   it("shows spot heights only from 480 px wide and never in a quiet zone", () => {
     const wide = contours(HEAD);
-    expect(visibleSpotHeights(wide, zones).map((l) => l.text)).toEqual(["DSA 57", "CN 59", "OS 44"]);
+    expect(visibleSpotHeights(wide, zones).map((l) => l.text)).toEqual([
+      "DSA 57",
+      "CN 59",
+      "OS 44",
+    ]);
     expect(visibleSpotHeights(wide, [{ x: 0.55, y: 0, w: 0.1, h: 1 }]).map((l) => l.text)).toEqual([
       "CN 59",
       "OS 44",
     ]);
+    // A zone that misses the peak but covers its label hides the label too.
+    expect(
+      visibleSpotHeights(wide, [{ x: 0.62, y: 0.6, w: 0.02, h: 0.1 }]).map((l) => l.text),
+    ).toEqual(["CN 59", "OS 44"]);
     const narrow = contours({ ...HEAD, width: 390 });
     expect(visibleSpotHeights(narrow)).toEqual([]);
+  });
+});
+
+describe("subject emblems", () => {
+  const ids = syllabus.subjects.map((s) => s.id);
+
+  it("draw every subject the same way every time, and each one differently", () => {
+    const paths = new Set<string>();
+    for (const id of ids) {
+      const lines = emblemLines(id);
+      expect(lines.length, id).toBeGreaterThanOrEqual(3);
+      expect(emblemLines(id)).toBe(lines); // memoized
+      paths.add(lines.map((l) => l.d).join(""));
+    }
+    expect(paths.size).toBe(ids.length);
+    expect(emblemHills("dsa")).toEqual(emblemHills("dsa"));
+    for (const hill of emblemHills("career")) {
+      expect(hill.x).toBeGreaterThanOrEqual(0.28);
+      expect(hill.x).toBeLessThanOrEqual(0.72);
+    }
+  });
+
+  it("chain segments into polylines, keeping every point", () => {
+    const result = contours({ width: 64, height: 64, seed: 7, levels: 7, cell: 2, hills: HILLS });
+    for (const level of result.levels) {
+      const d = segmentsToPath(level.segments);
+      const moves = (d.match(/M/g) ?? []).length;
+      expect(moves).toBeLessThan(level.segments.length / 4 / 3);
+      const points = new Set(d.match(/-?[\d.]+ -?[\d.]+/g));
+      const s = level.segments;
+      const r = (n: number) => Math.round(n * 10) / 10;
+      for (let i = 0; i < s.length; i += 2)
+        expect(points.has(`${r(s[i]!)} ${r(s[i + 1]!)}`)).toBe(true);
+    }
   });
 });

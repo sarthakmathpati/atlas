@@ -37,6 +37,9 @@
   --shadow-float: 0 1px 2px rgb(31 36 29 / 0.07), 0 10px 28px rgb(31 36 29 / 0.12);
   --shadow-focal: 0 1px 2px rgb(31 36 29 / 0.06), 0 10px 26px rgb(31 36 29 / 0.09);
   --shadow-pill: 0 1px 2px rgb(31 36 29 / 0.08), 0 2px 8px rgb(31 36 29 / 0.06);
+  /* The edge of a floating layer: none by day; in the dark, where shadows barely show, a faint
+     light rim. */
+  --layer-edge: transparent;
 
   /* Feedback and overlays (same hue families in every theme; danger is crimson, apart from the
      coral of "fading") */
@@ -132,6 +135,7 @@
     --shadow-float: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 28px rgb(0 0 0 / 0.38);
     --shadow-focal: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 26px rgb(0 0 0 / 0.3);
     --shadow-pill: 0 1px 2px rgb(0 0 0 / 0.35), 0 2px 8px rgb(0 0 0 / 0.2);
+    --layer-edge: rgb(221 210 191 / 0.09);
 
     --overlay: rgb(10 8 5 / 0.62);
     --danger: #df929d;
@@ -186,8 +190,8 @@
     --status-fading-fill: #e08d7a;
     --status-fading-stroke: #e08d7a;
 
-    --region-opacity: 0.65;
-    --region-opacity-far: 1;
+    --region-opacity: 0.5;
+    --region-opacity-far: 0.75;
     --region-stroke-opacity: 0.3;
   }
 
@@ -216,6 +220,7 @@
     --shadow-float: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 28px rgb(0 0 0 / 0.38);
     --shadow-focal: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 26px rgb(0 0 0 / 0.3);
     --shadow-pill: 0 1px 2px rgb(0 0 0 / 0.35), 0 2px 8px rgb(0 0 0 / 0.2);
+    --layer-edge: rgb(228 233 223 / 0.08);
 
     --overlay: rgb(5 8 6 / 0.6);
     --danger: #f091a0;
@@ -269,8 +274,8 @@
     --status-fading-fill: #ee8a76;
     --status-fading-stroke: #ee8a76;
 
-    --region-opacity: 0.65;
-    --region-opacity-far: 1;
+    --region-opacity: 0.5;
+    --region-opacity-far: 0.75;
     --region-stroke-opacity: 0.3;
   }
 }

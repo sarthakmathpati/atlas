@@ -1,6 +1,7 @@
 // Kbd, CodeSpans, EmptyState, Skeleton and Callout (section 12.7).
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { ContourCanvas } from "./ContourCanvas";
 import { cx } from "./cx";
 
 /** A keyboard key, for shortcut hints. Uses the interface font (never monospace for labels). */
@@ -52,7 +53,10 @@ interface EmptyStateProps {
   compact?: boolean;
 }
 
-/** Empty states invite action (section 12.8). */
+/**
+ * Empty states invite action (section 12.8). They sit on sunken paper with the theme's contour
+ * texture (12.10.6), seeded by the title so each one keeps its own picture.
+ */
 export function EmptyState({
   icon: Icon,
   title,
@@ -64,18 +68,26 @@ export function EmptyState({
   return (
     <div
       className={cx(
-        "flex flex-col items-start rounded-panel border border-dashed border-rule-strong",
+        "relative isolate flex flex-col items-start overflow-hidden rounded-panel bg-surface-sunken",
         compact ? "gap-2 p-4" : "gap-3 p-6 sm:p-8",
         className,
       )}
     >
+      <ContourCanvas
+        seed={typeof title === "string" ? title : "empty"}
+        levels={compact ? 8 : 10}
+        texture="lines"
+        className="-z-10 opacity-80"
+      />
       {Icon && (
-        <span className="grid size-10 place-items-center rounded-full bg-accent-soft text-accent">
+        <span className="grid size-10 place-items-center rounded-full bg-surface-raised text-accent shadow-pill">
           <Icon size={20} aria-hidden="true" />
         </span>
       )}
       <div className="max-w-[60ch]">
-        <p className={cx("font-semibold text-text", compact ? "text-base" : "text-md")}>{title}</p>
+        <p className={cx("font-display font-semibold text-text", compact ? "text-md" : "text-lg")}>
+          {title}
+        </p>
         {children && <div className="mt-1 text-base text-muted">{children}</div>}
       </div>
       {actions && <div className="mt-1 flex flex-wrap gap-2">{actions}</div>}
@@ -96,7 +108,7 @@ export function PageSkeleton() {
         <Skeleton className="h-7 w-56" />
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
-      <div className="overflow-hidden rounded-panel border border-rule bg-surface">
+      <div className="overflow-hidden rounded-panel bg-surface">
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
@@ -133,10 +145,10 @@ export function Callout({
   return (
     <div
       className={cx(
-        "flex flex-col gap-3 rounded-panel border px-4 py-3 sm:flex-row sm:items-center",
-        tone === "info" && "border-rule bg-info-soft",
-        tone === "warning" && "border-rule bg-warning-soft",
-        tone === "danger" && "border-danger/40 bg-danger-soft",
+        "flex flex-col gap-3 rounded-panel px-4 py-3 sm:flex-row sm:items-center",
+        tone === "info" && "bg-info-soft",
+        tone === "warning" && "bg-warning-soft",
+        tone === "danger" && "bg-danger-soft",
         className,
       )}
     >

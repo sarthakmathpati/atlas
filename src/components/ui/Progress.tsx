@@ -61,7 +61,7 @@ export function ProgressRing({
       {children !== undefined && (
         <span
           aria-hidden="true"
-          className="absolute inset-0 grid place-items-center text-sm font-semibold text-text tabular-nums"
+          className="absolute inset-0 grid place-items-center font-display text-sm font-semibold text-text tabular-nums"
         >
           {children}
         </span>
@@ -160,12 +160,12 @@ interface TileProps {
   footer?: ReactNode;
 }
 
-/** A compact bordered tile for grids (pattern grid, practice hub). */
+/** A compact tile for grids (pattern grid, practice hub): a soft field, set apart by tone. */
 export function Tile({ title, children, href, onClick, emphasis, className, footer }: TileProps) {
   const classes = cx(
-    "flex flex-col gap-1 rounded-panel border bg-surface p-3 text-left",
-    emphasis ? "border-dashed border-rule-strong" : "border-rule",
-    (href || onClick) && "transition-colors hover:border-rule-strong hover:bg-surface-sunken",
+    "flex flex-col gap-1 rounded-panel border bg-surface-sunken p-3 text-left",
+    emphasis ? "border-dashed border-rule-strong" : "border-transparent",
+    (href || onClick) && "transition-colors hover:bg-rule",
     className,
   );
   const body = (

@@ -136,10 +136,11 @@ export function TopBar() {
       <ActivityChip />
       <FocusTimerButton />
       <Button
+        variant="ghost"
         size="sm"
         icon={Sparkles}
         onClick={() => setAskOpen(true)}
-        className="h-9 bg-accent-soft font-semibold text-accent hover:bg-accent-soft hover:brightness-110 max-md:hidden"
+        className="h-9 bg-accent-soft text-accent hover:bg-accent/20 max-md:hidden"
         aria-keyshortcuts="a"
       >
         Ask Claude

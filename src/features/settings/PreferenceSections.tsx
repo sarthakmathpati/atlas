@@ -27,8 +27,8 @@ function ThemeSetting({ profile }: { profile: Profile }) {
       stacked
       description={
         <>
-          {THEME_DESCRIPTION[profile.theme]} Showing {THEME_LABEL[shown]} now. Printing always
-          uses Day.
+          {THEME_DESCRIPTION[profile.theme]} Showing {THEME_LABEL[shown]} now. Printing always uses
+          Day.
         </>
       }
     >
@@ -40,7 +40,7 @@ function ThemeSetting({ profile }: { profile: Profile }) {
         options={THEME_OPTIONS.map((o) => ({ ...o, ariaLabel: o.label }))}
       />
       {profile.theme === "schedule" && (
-        <div className="mt-4 grid max-w-md grid-cols-3 gap-3">
+        <div className="mt-4 grid max-w-lg grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-3">
           {THEME_NAMES.map((name) => (
             <Field key={name} label={`${THEME_LABEL[name]} from`}>
               <Input
