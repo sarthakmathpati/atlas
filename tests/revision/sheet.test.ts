@@ -16,6 +16,7 @@ import {
   subjectsNeeded,
   tightenInput,
   tightenTarget,
+  withoutTitle,
   type RevisionSheet,
   type SheetSources,
 } from "@/lib/revision/sheet";
@@ -226,6 +227,11 @@ describe("exports and tightening", () => {
     expect(all.left).toEqual([]);
     expect(new TextEncoder().encode(all.markdown).length).toBeLessThan(40 * 1024);
     expect(all.markdown).toContain("## Before you walk in");
+  });
+
+  it("drops Claude's repeated title when showing its version", () => {
+    expect(withoutTitle("# 1-day revision sheet\n\n_Sunday_\n\n## Before\n- a")).toBe("## Before\n- a");
+    expect(withoutTitle("## Before\n- a")).toBe("## Before\n- a");
   });
 
   it("aims for about half the words", () => {

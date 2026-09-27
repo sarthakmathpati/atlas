@@ -480,3 +480,8 @@ export function tightenInput(
   const markdown = parts.join("\n\n");
   return { markdown, included, left, words: countWords(markdown) };
 }
+
+/** Claude's tightened sheet without its leading "# title" and date lines (the page shows them). */
+export function withoutTitle(markdown: string): string {
+  return markdown.replace(/^\s*# [^\n]*\n+(?:_[^\n]*_\s*\n+)?/, "");
+}

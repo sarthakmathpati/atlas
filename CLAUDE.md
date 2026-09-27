@@ -597,7 +597,8 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     concepts, Quant and Both tracks). 1-week: the checklist, then a page per subject with its
     learning and fading must-know concepts (every point), every pattern with signals and template,
     and solved problems' insights grouped by their first pattern. Custom picks subjects, topics
-    and patterns (in the URL). Printing hides the shell (`print:` classes), forces the light tokens
+    and patterns (in the URL). Printing hides the shell (`print:` classes; the page frame drops its padding, which had
+    spilled onto a blank page), forces the light tokens
     (`:root:root:root` in `@media print`) and breaks pages per subject; when `beforeprint` doesn't
     fire within a second (the claude.ai frame), a note offers Export as HTML. The HTML export is the
     rendered sheet, cleaned, in a standalone page with light styles, MathML for math and code

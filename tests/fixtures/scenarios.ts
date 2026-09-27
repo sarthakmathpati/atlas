@@ -51,6 +51,8 @@ function baseProfile(overrides: Partial<Profile>, createdDay: string): Profile {
     name: "Sam",
     track: "sde",
     onboardingDone: true,
+    // Last week's review was seen on Monday, so this week's opens after Sunday 18:00.
+    weeklyReviewSeenAt: iso(addDaysToDate(DAY, -6), 9),
     ...overrides,
     updatedAt: iso(DAY, 8),
   };

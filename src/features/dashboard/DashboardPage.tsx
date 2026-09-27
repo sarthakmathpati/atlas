@@ -213,7 +213,7 @@ export default function DashboardPage() {
           <StatusMix subjects={dash.subjects} />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
           <MemoryHealthCard memory={dash.memory} />
           <WeaknessCard
             weakness={dash.weakness}

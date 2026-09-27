@@ -11,7 +11,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { routeHref } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
@@ -28,6 +28,7 @@ import { weeklyReviewDue } from "@/lib/insight/weekly";
 import { daysBetween, localDate } from "@/lib/time";
 import { useToday } from "@/stores/clockStore";
 import { useConceptStatus } from "@/stores/conceptStateStore";
+import { usePlanStore } from "@/stores/planStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -159,11 +160,20 @@ interface Step {
 export default function TodayPage() {
   const profile = useProfileStore((s) => s.profile);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
+  const today = useToday();
   const queue = useReviewQueue();
   const hasAttempt = useProblemStore((s) =>
     Object.values(s.states).some((p) => p.attempts.length > 0),
   );
-  const { ready, fading } = useReadyToLearn(5);
+  const { ready: readyAll, fading } = useReadyToLearn(10);
+  // Concepts already on today's plan aren't repeated here.
+  const planned = usePlanStore((s) => s.plans[today]);
+  const ready = useMemo(() => {
+    const onPlan = new Set(
+      (planned?.items ?? []).filter((i) => i.kind === "learn-concept").map((i) => i.refId),
+    );
+    return readyAll.filter((c) => !onPlan.has(c.id)).slice(0, 5);
+  }, [readyAll, planned]);
   const now = new Date();
   const name = profile?.name.trim();
   const dateLine = now.toLocaleDateString(undefined, {

@@ -289,9 +289,13 @@ function BudgetPicker({ plan, onPick }: { plan: DayPlan; onPick: (budget: number
           {...props}
           size="sm"
           trailingIcon={ChevronDown}
-          aria-label={`Time for today: ${value} minutes. Change it`}
+          aria-label={
+            plan.minimumDay
+              ? "Time for today: a minimum day. Change it"
+              : `Time for today: ${value} minutes. Change it`
+          }
         >
-          {formatMinutes(value)}
+          {plan.minimumDay ? "Minimum day" : formatMinutes(value)}
         </Button>
       )}
     >

@@ -28,6 +28,7 @@ import {
   subjectsNeeded,
   tightenInput,
   tightenTarget,
+  withoutTitle,
   type SheetChoice,
   type SheetScope,
 } from "@/lib/revision/sheet";
@@ -467,7 +468,7 @@ export default function RevisionPage() {
               <Suspense fallback={<Skeleton className="h-64 w-full" />}>
                 {showing === "tightened" && tightened ? (
                   <section className="sheet-section">
-                    <MarkdownView>{tightened.markdown}</MarkdownView>
+                    <MarkdownView>{withoutTitle(tightened.markdown)}</MarkdownView>
                   </section>
                 ) : (
                   sheet.sections.map((s) => (
@@ -481,7 +482,7 @@ export default function RevisionPage() {
                 )}
               </Suspense>
             </div>
-            <div ref={endRef} aria-hidden="true" className="h-px" />
+            <div ref={endRef} aria-hidden="true" className="h-px print:hidden" />
           </article>
         )}
       </div>
