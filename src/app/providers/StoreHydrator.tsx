@@ -52,14 +52,19 @@ export function StoreHydrator() {
       });
     });
     const unwatch = repository.watch("profile", "profile");
-    const unwatchPlan = repository.watch("dayPlans", useClockStore.getState().today);
     return () => {
       unsubscribe();
       unwatch();
-      unwatchPlan();
       detachAll();
     };
   }, [repository]);
+
+  // Today's plan syncs live across devices; after midnight the new day's plan is watched.
+  const today = useClockStore((s) => s.today);
+  useEffect(() => {
+    if (!repository) return;
+    return repository.watch("dayPlans", today);
+  }, [repository, today]);
 
   // A new day: statuses can turn fading and new problems become due.
   useEffect(() => {

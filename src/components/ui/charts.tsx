@@ -34,6 +34,47 @@ const AXIS_TICK = {
 
 const numberFormat = new Intl.NumberFormat();
 
+/**
+ * Axis labels drawn as plain SVG text. Recharts' own tick labels measure every string with a
+ * hidden element and getBoundingClientRect, which forces a layout of the whole page per label the
+ * first time a chart renders (about a second on the dashboard). With our tick and a fixed
+ * interval (below), nothing is measured.
+ */
+function AxisTick(props: {
+  x?: number | string;
+  y?: number | string;
+  payload?: { value?: unknown };
+  textAnchor?: string;
+  orientation?: string;
+  format?: (v: number) => string;
+}) {
+  const { x = 0, y = 0, payload, orientation, format } = props;
+  const vertical = orientation === "left" || orientation === "right";
+  const raw = payload?.value;
+  const label = format && typeof raw === "number" ? format(raw) : String(raw ?? "");
+  return (
+    <text
+      x={Number(x)}
+      y={Number(y)}
+      dy={vertical ? "0.32em" : "0.9em"}
+      dx={vertical ? -4 : 0}
+      textAnchor={vertical ? "end" : "middle"}
+      fill={AXIS_TICK.fill}
+      fontSize={AXIS_TICK.fontSize}
+      fontFamily={AXIS_TICK.fontFamily}
+    >
+      {label}
+    </text>
+  );
+}
+
+const NO_LINES = () => [];
+
+/** Show every label up to 8, then every 2nd, 3rd…, so labels never need measuring to fit. */
+function xInterval(count: number): number {
+  return count <= 8 ? 0 : Math.ceil(count / 8) - 1;
+}
+
 function ChartTooltip({
   active,
   payload,
@@ -218,19 +259,26 @@ export function BarsChart({
     >
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -12 }} barGap={2}>
-          <CartesianGrid vertical={false} stroke="var(--chart-grid)" strokeWidth={1} />
+          <CartesianGrid
+            vertical={false}
+            // Recharts computes vertical lines even when they are off, measuring every x label.
+            verticalCoordinatesGenerator={NO_LINES}
+            stroke="var(--chart-grid)"
+            strokeWidth={1}
+          />
           <XAxis
             dataKey={xKey}
-            tick={AXIS_TICK}
+            tick={<AxisTick />}
+            interval={xInterval(data.length)}
             tickLine={false}
             axisLine={{ stroke: "var(--rule-strong)" }}
           />
           <YAxis
-            tick={AXIS_TICK}
+            tick={<AxisTick format={format} />}
+            interval={0}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
-            tickFormatter={(v: number) => format(v)}
           />
           <Tooltip
             cursor={{ fill: "var(--accent-soft)" }}
@@ -304,19 +352,26 @@ export function LinesChart({
     >
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
-          <CartesianGrid vertical={false} stroke="var(--chart-grid)" strokeWidth={1} />
+          <CartesianGrid
+            vertical={false}
+            // Recharts computes vertical lines even when they are off, measuring every x label.
+            verticalCoordinatesGenerator={NO_LINES}
+            stroke="var(--chart-grid)"
+            strokeWidth={1}
+          />
           <XAxis
             dataKey={xKey}
-            tick={AXIS_TICK}
+            tick={<AxisTick />}
+            interval={xInterval(data.length)}
             tickLine={false}
             axisLine={{ stroke: "var(--rule-strong)" }}
           />
           <YAxis
-            tick={AXIS_TICK}
+            tick={<AxisTick format={format} />}
+            interval={0}
             tickLine={false}
             axisLine={false}
             domain={yDomain ?? ["auto", "auto"]}
-            tickFormatter={(v: number) => format(v)}
           />
           <Tooltip
             cursor={{ stroke: "var(--rule-strong)", strokeWidth: 1 }}

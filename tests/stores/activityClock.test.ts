@@ -1,6 +1,7 @@
 // F29: focus and attempt timers add minutes to today's activity, without double counting.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  detachActivity,
   recordActivity,
   startActivitySource,
   stopActivitySource,
@@ -14,6 +15,7 @@ describe("activity clock", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-24T10:00:00"));
+    detachActivity(); // also clears the part-minute carried between sessions
     useActivityStore.setState({ months: {}, loaded: true });
   });
   afterEach(() => {
@@ -50,13 +52,25 @@ describe("activity clock", () => {
     expect(minutesOn("2026-09-24")).toBe(1);
   });
 
-  it("puts minutes on the local day they happen", () => {
+  it("puts minutes on the local day they complete, losing none at midnight", () => {
     vi.setSystemTime(new Date("2026-09-24T23:58:30"));
     startActivitySource("a");
     vi.advanceTimersByTime(3 * 60_000);
     stopActivitySource("a");
+    // Minutes complete at 23:59:30, 00:00:30 and 00:01:30.
     expect(minutesOn("2026-09-24")).toBe(1);
-    expect(minutesOn("2026-09-25")).toBe(1);
+    expect(minutesOn("2026-09-25")).toBe(2);
+  });
+
+  it("carries part of a minute over to the next session", () => {
+    startActivitySource("a");
+    vi.advanceTimersByTime(90_000);
+    stopActivitySource("a");
+    expect(minutesOn("2026-09-24")).toBe(1);
+    startActivitySource("a");
+    vi.advanceTimersByTime(30_000);
+    stopActivitySource("a");
+    expect(minutesOn("2026-09-24")).toBe(2);
   });
 
   it("adds counters to a day", () => {

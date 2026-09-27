@@ -13,7 +13,7 @@ import {
   Timer as TimerIcon,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { conceptHref, useRoute } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
@@ -52,6 +52,8 @@ import { recordChecks, useConceptStateStore } from "@/stores/conceptStateStore";
 import {
   addGeneratedDrills,
   deleteGeneratedDrill,
+  finishDrillSession,
+  noteDrillAnswer,
   restoreGeneratedDrill,
   useDrillStore,
 } from "@/stores/drillStore";
@@ -145,6 +147,7 @@ function PromptCard({
     };
     if (approach.trim()) detail.approach = approach.trim();
     recordChecks([{ conceptId: main, kind: "drill", score: DRILL_SCORE[result], detail }]);
+    noteDrillAnswer();
     const a: Answer = { item, picked, approach: approach.trim(), result };
     setAnswer(a);
     onAnswered(a);
@@ -317,6 +320,13 @@ function Session({ items, onEnd }: { items: DrillItem[]; onEnd: () => void }) {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, Answer>>({});
   const done = index >= items.length;
+  const answered = Object.keys(answers).length;
+  const finished = useRef(false);
+  useEffect(() => {
+    if (!done || answered === 0 || finished.current) return;
+    finished.current = true;
+    finishDrillSession();
+  }, [done, answered]);
 
   if (done) {
     const list = items.map((_, i) => answers[i]).filter((a): a is Answer => Boolean(a));

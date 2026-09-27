@@ -5,7 +5,6 @@ import {
   CalendarRange,
   DraftingCompass,
   Dumbbell,
-  Gauge,
   Layers,
   MessageSquareQuote,
   MessagesSquare,
@@ -26,8 +25,6 @@ import { ComingSoon } from "./ComingSoon";
 
 const PLANNING = "Planning and insight";
 const PRACTICE = "Practice extensions";
-
-const MAP_LINK = { label: "Browse the syllabus", href: "#/map" };
 
 export function PracticePage() {
   const tiles = [
@@ -163,25 +160,6 @@ export function StoriesPage() {
         `Link them to the ${BEHAVIORAL_QUESTIONS.length} common questions and see which have no story yet.`,
         "Timed practice answers, and a builder for “Tell me about yourself”.",
       ]}
-    />
-  );
-}
-
-export function DashboardPage() {
-  return (
-    <ComingSoon
-      title="Dashboard"
-      description="Am I ready, and where am I weak? Every number explained."
-      icon={Gauge}
-      phase={7}
-      phaseName={PLANNING}
-      features={[
-        "An overall readiness score for your track, with the math behind it.",
-        "Subjects weakest first, a grid of every DSA pattern, and problems solved over time.",
-        "Memory health, a weakness report, and a projection to your interview date.",
-        "A year of activity as a heatmap.",
-      ]}
-      links={[{ label: "Weekly review", href: "#/weekly" }, MAP_LINK]}
     />
   );
 }

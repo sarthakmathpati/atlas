@@ -4,6 +4,7 @@
 // concept statuses are computed by the real status engine, so the cached statuses are the ones
 // the app would store.
 import { conceptById, conceptsByTopic, topicsBySubject } from "@/data/syllabus";
+import { LEETCODE_PROBLEMS } from "@/data/problems.seed";
 import { seedProblemsByConcept } from "@/data/seed";
 import { MISTAKE_TAG_SEED } from "@/data/mistakeTags.seed";
 import { evaluateConcept } from "@/lib/readiness/evaluate";
@@ -305,8 +306,8 @@ export function scenario(name: ScenarioName, day = DAY): ExportData {
 
 /**
  * A year of steady use for the dashboard's one-second budget: 365 days of activity, most of the
- * DSA syllabus and several other subjects under way, about 400 problems with 1,200 attempts
- * (with code), 3,000 checks, drill answers and weekly notes.
+ * DSA syllabus and several other subjects under way, about 350 problems with 1,300 attempts
+ * (with code), 3,000 checks and drill answers.
  */
 export function yearOfData(day = DAY): ExportData {
   const b = builder("year");
@@ -318,10 +319,35 @@ export function yearOfData(day = DAY): ExportData {
   progress(b, topicIds("dsa", 40), day, { problems: true });
   for (const s of ["os", "oop", "cn", "dbms", "sysd", "lld", "sql", "conc"])
     progress(b, topicIds(s, 6), day, { problems: false });
-  // More history: every solved problem gets re-solves spread over the year.
+  // Most of the LeetCode bank tried at some point in the year (about 350 problems).
   const rand = b.rand;
+  const code = (n: number) =>
+    Array.from(
+      { length: 40 },
+      (_, i) => `  // step ${i}: keep the invariant for index ${n + i}\n  int v${i} = a[${i}] + ${n};`,
+    ).join("\n");
+  for (const p of LEETCODE_PROBLEMS) {
+    if (b.problems[p.id] || rand() < 0.2) continue;
+    const d = addDaysToDate(start, Math.floor(rand() * 350));
+    const solved = rand() < 0.85;
+    const first = attempt(p.id, d, solved ? "solved_alone" : "not_solved", 20 + Math.floor(rand() * 30));
+    first.code = `class Solution {\npublic:\n  int solve(vector<int>& a) {\n${code(first.id.length)}\n    return 0;\n  }\n};\n`;
+    b.problems[p.id] = {
+      problemId: p.id,
+      status: solved ? "solved" : "attempted",
+      starred: rand() < 0.08,
+      tags: [],
+      srs: srs(Math.floor(rand() * 5), addDaysToDate(day, Math.floor(rand() * 60) - 10), {
+        lastReviewedAt: iso(d),
+      }),
+      inReview: true,
+      attempts: [first],
+      updatedAt: iso(d, 20),
+    };
+  }
+  // More history: every problem gets re-solves spread over the year.
   for (const state of Object.values(b.problems)) {
-    const extra = 1 + Math.floor(rand() * 3);
+    const extra = 1 + Math.floor(rand() * 5);
     for (let k = 0; k < extra; k++) {
       const d = addDaysToDate(start, Math.floor(rand() * 330));
       const r: AttemptResult = rand() < 0.7 ? "solved_alone" : rand() < 0.5 ? "solved_with_hints" : "not_solved";

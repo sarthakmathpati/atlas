@@ -231,7 +231,9 @@ function PlanRow({ item, plan }: { item: PlanItem; plan: DayPlan }) {
         {!item.done && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <StartButton item={item} />
-            <SwapButton item={item} plan={plan} />
+            {item.kind !== "drill" && item.kind !== "mental-math" && (
+              <SwapButton item={item} plan={plan} />
+            )}
             {owner ? (
               <Button
                 size="sm"
