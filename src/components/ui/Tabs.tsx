@@ -1,5 +1,5 @@
 // Tabs (section 12.7): an underlined tab list with arrow-key navigation (automatic activation).
-import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { cx } from "./cx";
 
 export interface TabItem<T extends string> {
@@ -29,6 +29,20 @@ export function Tabs<T extends string>({
 }: TabsProps<T>) {
   const base = useId();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const listRef = useRef<HTMLDivElement>(null);
+  const activeIndex = items.findIndex((t) => t.value === value);
+
+  // On narrow screens the tab list scrolls sideways: keep the active tab in view.
+  useEffect(() => {
+    const list = listRef.current;
+    const tab = refs.current[activeIndex];
+    if (!list || !tab || list.scrollWidth <= list.clientWidth) return;
+    // The list is positioned, so offsetLeft is measured from its own left edge.
+    const left = tab.offsetLeft;
+    if (left < list.scrollLeft) list.scrollLeft = left;
+    else if (left + tab.offsetWidth > list.scrollLeft + list.clientWidth)
+      list.scrollLeft = left + tab.offsetWidth - list.clientWidth;
+  }, [activeIndex]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const index = items.findIndex((t) => t.value === value);
@@ -48,10 +62,11 @@ export function Tabs<T extends string>({
   return (
     <div className={className}>
       <div
+        ref={listRef}
         role="tablist"
         aria-label={label}
         onKeyDown={onKeyDown}
-        className="flex gap-1 overflow-x-auto border-b border-rule [scrollbar-width:none]"
+        className="relative flex gap-1 overflow-x-auto border-b border-rule [scrollbar-width:none]"
       >
         {items.map((item, i) => {
           const active = item.value === value;

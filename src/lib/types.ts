@@ -496,13 +496,24 @@ export interface DesignAttempt {
 export interface StoryPractice {
   questionId: string;
   answer: string;
+  /** Claude's critique (prompt 13, StoryCritique), when asked for. */
   critique?: unknown;
   createdAt: string;
+  /** Typed in the practice box, or a story from the bank delivered as it is. */
+  mode?: "typed" | "story";
+  /** Time on the 2-minute practice timer. */
+  seconds?: number;
+  /** The check recorded for it (0 to 1): the critique's mean, or the self-check. */
+  score?: number;
+  /** The self-check lines ticked (F27 offline check). */
+  selfCheck?: string[];
 }
 
 export interface Story {
   // behavioral STAR story bank (F27)
   id: string;
+  /** "intro" is the "Tell me about yourself" script (present, past, why this role). */
+  kind?: "star" | "intro";
   title: string;
   situation: string;
   task: string;
@@ -510,8 +521,10 @@ export interface Story {
   result: string;
   tags: string[];
   questionIds: string[];
+  /** Claude's critique of the story itself (prompt 13, StoryCritique). */
   review?: unknown;
   practice?: StoryPractice[];
+  createdAt?: string;
   updatedAt: string;
 }
 

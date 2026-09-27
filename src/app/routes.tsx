@@ -25,7 +25,7 @@ export const PAGES: Record<RouteName, Page> = {
   "mock-session": placeholder("MockPage"),
   designs: placeholder("DesignsPage"),
   design: lazy(() => import("@/features/designs/DesignPage")),
-  stories: placeholder("StoriesPage"),
+  stories: lazy(() => import("@/features/stories/StoriesPage")),
   mistakes: lazy(() => import("@/features/mistakes/MistakesPage")),
   dashboard: lazy(() => import("@/features/dashboard/DashboardPage")),
   weekly: lazy(() => import("@/features/weekly/WeeklyPage")),

@@ -3,12 +3,14 @@
 // key through a mocked, streamed Messages API, and copy prompt through the modal): grading an
 // open-ended puzzle (prompt 16). No network, no real key.
 import "fake-indexeddb/auto";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { clearAICache } from "@/lib/ai/run";
 import type { AIMode } from "@/lib/types";
+import { useConceptStateStore } from "@/stores/conceptStateStore";
 import { useProblemStore } from "@/stores/problemStore";
+import { addStory, updateStory, useStoryStore } from "@/stores/storyStore";
 import { answerCopy, go, resetClaude, setupMode } from "./claudeHarness";
 
 describe.each(["sample", "api", "copy"] as AIMode[])(
@@ -55,6 +57,44 @@ describe.each(["sample", "api", "copy"] as AIMode[])(
           grade: { by: "claude", correct: true, score: 0.9 },
         }),
       );
+    }, 20_000);
+
+    it("critiques a practice answer with a tighter version and saves it with the practice", async () => {
+      const user = userEvent.setup();
+      await setupMode(mode);
+      let id = "";
+      act(() => {
+        id = addStory({
+          title: `Outage (${mode})`,
+          questionIds: ["bq-your-most-challenging-project"],
+        });
+        updateStory(id, {
+          situation: "Our checkout failed for one order in fifty.",
+          task: "I owned the fix.",
+          action: "I added logging, found a double retry and fixed it with a test.",
+          result: "Failures dropped to zero within a week.",
+        });
+      });
+      await go(`#/stories?tab=practice&question=bq-your-most-challenging-project&story=${id}`);
+      await user.click(await screen.findByRole("button", { name: "I'm done" }, { timeout: 4000 }));
+      await user.click(screen.getByRole("button", { name: "Critique it with Claude" }));
+      await answerCopy(mode, user);
+      const round = screen.getByRole("region", { name: "Practice question" });
+      expect(
+        await within(round).findByText(/A tighter version/, {}, { timeout: 4000 }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Counts as 70% (Claude's four scores).", { exact: false }),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Save practice" }));
+      await waitFor(() => {
+        const practice = useStoryStore.getState().stories[id]?.practice?.at(-1);
+        expect(practice).toMatchObject({ mode: "story", score: 0.7 });
+        expect(practice?.critique).toMatchObject({ clarity: 4, specificity: 3 });
+      });
+      const checks =
+        useConceptStateStore.getState().checks["career.behavioral.building-a-story-bank"];
+      expect(checks?.at(-1)?.score).toBeCloseTo(0.7);
     }, 20_000);
   },
 );

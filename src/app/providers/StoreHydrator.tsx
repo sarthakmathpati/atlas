@@ -10,6 +10,7 @@ import { hydrateCustomConcepts } from "@/stores/customConceptStore";
 import { hydrateGeneratedDrills } from "@/stores/drillStore";
 import { hydrateMapOverrides } from "@/stores/mapStore";
 import { hydrateMentalMath } from "@/stores/mentalMathStore";
+import { hydrateStories } from "@/stores/storyStore";
 import { hydratePlan } from "@/stores/planStore";
 import { detachAll, hydrateAll } from "@/stores/hydrate";
 import { hydrateProfile, useProfileStore } from "@/stores/profileStore";
@@ -46,6 +47,7 @@ export function StoreHydrator() {
         else if (event.table === "dayPlans") void hydratePlan(repository);
         else if (event.table === "generatedDrills") void hydrateGeneratedDrills(repository);
         else if (event.table === "mentalMath") void hydrateMentalMath(repository);
+        else if (event.table === "stories") void hydrateStories(repository);
         return;
       }
       toast(event.message, {

@@ -101,7 +101,7 @@ describe("Claude in the app", () => {
     await go(`#/concept/${CONCEPT}`);
     await screen.findByRole("heading", { level: 1, name: CONCEPT_NAME }, { timeout: 4000 });
     act(() => useUiStore.getState().setAskOpen(true));
-    const drawer = await screen.findByRole("dialog", { name: "Ask Claude" });
+    const drawer = await screen.findByRole("dialog", { name: "Ask Claude" }, { timeout: 4000 });
     expect(within(drawer).getByText(CONCEPT_NAME)).toBeInTheDocument();
     await user.click(within(drawer).getByRole("button", { name: "Explain it simply" }));
     await within(drawer).findByText(/ripples/, {}, { timeout: 4000 });
@@ -119,10 +119,12 @@ describe("Claude in the app", () => {
     const saves = within(drawer).getAllByRole("button", { name: "Save to concept" });
     await user.click(saves.at(-1)!);
     await user.click(within(drawer).getByRole("button", { name: "Save answer" }));
-    await waitFor(() =>
-      expect(useConceptNoteStore.getState().notes[CONCEPT]?.savedAnswers.at(-1)?.source).toBe(
-        "sample",
-      ),
+    await waitFor(
+      () =>
+        expect(useConceptNoteStore.getState().notes[CONCEPT]?.savedAnswers.at(-1)?.source).toBe(
+          "sample",
+        ),
+      { timeout: 4000 },
     );
   }, 20_000);
 

@@ -217,6 +217,24 @@ export function demoSampleResponder(input: SampleInput): string {
     );
   }
 
+  if (text.includes("Critique this STAR story for a behavioral interview")) {
+    const question = field(text, /Interview question: (.+)/) ?? "the question";
+    return json({
+      clarity: 4,
+      specificity: 3,
+      impact: 3,
+      structure: 4,
+      lengthNote:
+        "About 1 minute 20 seconds when spoken at 140 words a minute, which fits. Spend fewer words on the situation and more on what you did.",
+      tighterVersion: `In my second internship, our checkout page failed for about one order in fifty, and nobody owned the bug. I took it on: I added logging, traced it to a retry that charged twice, and wrote a fix with a test. Failures dropped to zero in a week, and I now add a retry test to every payment change. That is my answer to "${question}".`,
+      tips: [
+        "Open with one sentence of context, then go straight to your action.",
+        "Put a number on the result: how many users, how much faster, how much less.",
+        "End with what you learned or changed afterwards.",
+      ],
+    });
+  }
+
   if (text.includes("Grade the learner's answer to this puzzle")) {
     // A longer answer with reasons reads as right; a one-liner as partly right.
     const answer = text.split("Learner's answer and reasoning:")[1]?.trim() ?? "";

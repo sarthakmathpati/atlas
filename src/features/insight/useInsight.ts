@@ -4,7 +4,8 @@
 import { useMemo } from "react";
 import { computeStreak, dayLookup, type DayLookup, type StreakInfo } from "@/lib/activity/streak";
 import { buildPlannerInput } from "@/lib/planner/input";
-import type { PlannerInput } from "@/lib/planner/planner";
+import type { PlannerHistory, PlannerInput } from "@/lib/planner/planner";
+import { practiceDates } from "@/lib/stories/stories";
 import { evaluateReadiness, type EvaluationSources } from "@/lib/readiness/evaluate";
 import type { ReadinessModel } from "@/lib/readiness/model";
 import { localDate } from "@/lib/time";
@@ -15,6 +16,7 @@ import { useConceptStateStore } from "@/stores/conceptStateStore";
 import { useCustomConceptStore } from "@/stores/customConceptStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { useStoryStore } from "@/stores/storyStore";
 
 /** Everything the status engine and the planner read, from the stores as they are now. */
 export function evaluationSourcesNow(now: Date = new Date()): EvaluationSources | null {
@@ -33,6 +35,18 @@ export function evaluationSourcesNow(now: Date = new Date()): EvaluationSources 
   };
 }
 
+const toLocalDate = (iso: string) => localDate(new Date(iso));
+
+/**
+ * Dates of finished mocks, design practice and story practice (the planner's weekly extras read
+ * them: a mock a week, design practice once a week, stories twice a week; decision 85).
+ */
+export function plannerHistoryNow(): PlannerHistory {
+  return {
+    stories: practiceDates(Object.values(useStoryStore.getState().stories), toLocalDate),
+  };
+}
+
 /** The planner's input for today, from the stores (budget and minimum day as given). */
 export function plannerInputNow(options: {
   budget: number;
@@ -47,6 +61,7 @@ export function plannerInputNow(options: {
     budget: options.budget,
     minimumDay: options.minimumDay,
     model: options.model,
+    history: plannerHistoryNow(),
   }).input;
 }
 

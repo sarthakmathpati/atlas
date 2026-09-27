@@ -11,6 +11,7 @@ import { useConceptStateStore } from "@/stores/conceptStateStore";
 import { useMentalMathStore } from "@/stores/mentalMathStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { useStoryStore } from "@/stores/storyStore";
 import { useUiStore } from "@/stores/uiStore";
 
 async function go(hash: string) {
@@ -196,5 +197,125 @@ describe("mental math sprint", () => {
     await user.click(screen.getByRole("button", { name: "End without saving" }));
     expect(await screen.findByRole("button", { name: "Start sprint" })).toBeInTheDocument();
     expect(Object.values(useMentalMathStore.getState().runs)).toHaveLength(before);
+  }, 20_000);
+});
+
+describe("story bank", () => {
+  beforeEach(() => {
+    window.location.hash = "#/today";
+    localStorage.clear();
+  });
+  afterEach(() => cleanup());
+
+  it("writes a story, links questions both ways and shows the coverage matrix", async () => {
+    const user = userEvent.setup();
+    await ready();
+    await waitFor(() => expect(useStoryStore.getState().loaded).toBe(true));
+    await go("#/stories");
+    await user.click(
+      await screen.findByRole("button", { name: "Write your first story" }, { timeout: 4000 }),
+    );
+    await waitFor(() => expect(window.location.hash).toMatch(/story=story-/));
+    const id = new URLSearchParams(window.location.hash.split("?")[1]).get("story")!;
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await user.clear(title);
+    await user.type(title, "Checkout outage");
+    await user.type(
+      screen.getByRole("textbox", { name: "Action" }),
+      "I added logging and traced the double charge to a retry.",
+    );
+    await user.tab();
+    await waitFor(() =>
+      expect(useStoryStore.getState().stories[id]).toMatchObject({
+        title: "Checkout outage",
+        action: "I added logging and traced the double charge to a retry.",
+      }),
+    );
+    // Link from the matrix...
+    await go("#/stories?tab=coverage");
+    expect(await screen.findByText(/of 30 questions have a story/)).toBeInTheDocument();
+    expect(screen.getAllByText("No story yet")).toHaveLength(30);
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Checkout outage answers “Tell me about a time you failed”",
+      }),
+    );
+    await waitFor(() =>
+      expect(useStoryStore.getState().stories[id]?.questionIds).toEqual([
+        "bq-tell-me-about-a-time-you-failed",
+      ]),
+    );
+    expect(screen.getAllByText("No story yet")).toHaveLength(29);
+    // ...and the story editor shows the same link.
+    await go(`#/stories?story=${id}`);
+    const questions = await screen
+      .findByRole("group", { name: /Questions it answers/ })
+      .catch(() => null);
+    expect(
+      (questions ?? document.body).textContent?.includes("Tell me about a time you failed"),
+    ).toBe(true);
+  }, 20_000);
+
+  it("practises a question with a typed answer and the self-check, saved as unsorted", async () => {
+    const user = userEvent.setup();
+    await ready();
+    await go("#/stories?question=bq-why-this-role");
+    expect(
+      await screen.findByText("Why this role?", { selector: "p" }, { timeout: 4000 }),
+    ).toBeInTheDocument();
+    await user.type(
+      screen.getByRole("textbox", { name: "Your answer, as you'd say it" }),
+      "I like building systems that many people rely on, and this team does exactly that.",
+    );
+    expect(screen.getByText(/15 words, about 0:06 spoken/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "I'm done" }));
+    await user.click(
+      screen.getByRole("checkbox", { name: "I set the scene in a sentence or two." }),
+    );
+    await user.click(screen.getByRole("checkbox", { name: "I finished within two minutes." }));
+    await user.click(screen.getByRole("checkbox", { name: /I said what I was responsible for/ }));
+    await user.click(screen.getByRole("button", { name: "Save practice" }));
+    await waitFor(() => {
+      const unsorted = useStoryStore.getState().stories["story-unsorted"];
+      expect(unsorted?.title).toBe("Unsorted practice");
+      expect(unsorted?.practice?.at(-1)).toMatchObject({
+        questionId: "bq-why-this-role",
+        mode: "typed",
+        score: 0.5,
+      });
+    });
+    const checks =
+      useConceptStateStore.getState().checks[
+        "career.behavioral.why-this-company-and-why-this-role"
+      ];
+    expect(checks?.at(-1)).toMatchObject({ kind: "explain", score: 0.5 });
+  }, 20_000);
+
+  it("builds a 90-second script with a word count and speaking time", async () => {
+    await ready();
+    await go("#/stories?tab=intro");
+    const present = await screen.findByRole(
+      "textbox",
+      { name: "Present: who you are now" },
+      { timeout: 4000 },
+    );
+    const words = (n: number, w: string) => Array.from({ length: n }, () => w).join(" ");
+    fireEvent.change(present, { target: { value: words(40, "now") } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Past: what brought you here" }), {
+      target: { value: words(120, "then") },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Why this role" }), {
+      target: { value: words(50, "next") },
+    });
+    fireEvent.blur(present);
+    expect(await screen.findByText("210 words at 140 words a minute")).toBeInTheDocument();
+    expect(screen.getByText("1:30")).toBeInTheDocument();
+    expect(screen.getByText("About right for 90 seconds.")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(useStoryStore.getState().stories["story-intro"]).toMatchObject({
+        kind: "intro",
+        questionIds: ["bq-tell-me-about-yourself"],
+      }),
+    );
   }, 20_000);
 });

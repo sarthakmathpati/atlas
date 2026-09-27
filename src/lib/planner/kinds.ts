@@ -29,6 +29,7 @@ export const AVAILABLE_PLAN_KINDS: ReadonlySet<PlanKind> = new Set<PlanKind>([
   "new-problem",
   "drill",
   "mental-math",
+  "story",
 ]);
 
 /** Display order in the plan: revision first near the interview, reviews, learning, practice. */

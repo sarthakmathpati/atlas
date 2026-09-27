@@ -339,6 +339,7 @@ export const designAttemptSchema: z.ZodType<DesignAttempt> = z.object({
 
 export const storySchema: z.ZodType<Story> = z.object({
   id: z.string().min(1),
+  kind: z.enum(["star", "intro"]).optional(),
   title: z.string(),
   situation: z.string(),
   task: z.string(),
@@ -354,9 +355,14 @@ export const storySchema: z.ZodType<Story> = z.object({
         answer: z.string(),
         critique: z.unknown().optional(),
         createdAt: isoTime,
+        mode: z.enum(["typed", "story"]).optional(),
+        seconds: z.number().min(0).optional(),
+        score: z.number().min(0).max(1).optional(),
+        selfCheck: z.array(z.string()).optional(),
       }),
     )
     .optional(),
+  createdAt: isoTime.optional(),
   updatedAt: isoTime,
 });
 

@@ -437,11 +437,29 @@ export function designReviewPrompt(
 
 // ----- 13. story critique ------------------------------------------------------------------------
 
+export type StoryCritiqueInput =
+  | { title: string; situation: string; task: string; action: string; result: string }
+  /** A practice answer typed as it would be spoken (no STAR fields). */
+  | { answer: string; title?: string };
+
 export function storyCritiquePrompt(
   env: PromptEnv,
-  story: { title: string; situation: string; task: string; action: string; result: string },
+  story: StoryCritiqueInput,
   question?: string,
 ): PromptSpec<StoryCritique> {
+  const body =
+    "answer" in story
+      ? [
+          story.title ? `Story: ${story.title}` : "",
+          `The learner's spoken answer, as typed:\n${story.answer.trim()}`,
+        ]
+      : [
+          `Story: ${story.title}`,
+          `Situation: ${story.situation}`,
+          `Task: ${story.task}`,
+          `Action: ${story.action}`,
+          `Result: ${story.result}`,
+        ];
   return {
     task: "story-critique",
     tier: "default",
@@ -453,16 +471,7 @@ export function storyCritiquePrompt(
         '{ "clarity": 1-5, "specificity": 1-5, "impact": 1-5, "structure": 1-5, "lengthNote": "string", "tighterVersion": "string", "tips": ["string"] }',
       ),
     ),
-    input: [
-      question ? `Interview question: ${question}` : "",
-      `Story: ${story.title}`,
-      `Situation: ${story.situation}`,
-      `Task: ${story.task}`,
-      `Action: ${story.action}`,
-      `Result: ${story.result}`,
-    ]
-      .filter(Boolean)
-      .join("\n"),
+    input: [question ? `Interview question: ${question}` : "", ...body].filter(Boolean).join("\n"),
   };
 }
 
