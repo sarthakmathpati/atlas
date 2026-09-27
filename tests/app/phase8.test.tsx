@@ -8,11 +8,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { App } from "@/app/App";
 import { sequencePredictions } from "@/lib/quant/mentalMath";
 import { useConceptStateStore } from "@/stores/conceptStateStore";
-import { useMentalMathStore } from "@/stores/mentalMathStore";
+import { saveSprint, useMentalMathStore } from "@/stores/mentalMathStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { useStoryStore } from "@/stores/storyStore";
-import { useDesignStore } from "@/stores/designStore";
+import { savePractice, useStoryStore } from "@/stores/storyStore";
+import { finishDesign, startDesign, useDesignStore } from "@/stores/designStore";
+import { completeMock, createMock, useMockStore } from "@/stores/mockStore";
+import { addPlanItems, usePlanStore } from "@/stores/planStore";
+import { localDate } from "@/lib/time";
 import { useUiStore } from "@/stores/uiStore";
 
 async function go(hash: string) {
@@ -399,4 +402,133 @@ describe("design practice", () => {
       "not_started",
     );
   }, 30_000);
+});
+
+describe("practice hub", () => {
+  beforeEach(() => {
+    window.location.hash = "#/today";
+    localStorage.clear();
+  });
+  afterEach(() => {
+    cleanup();
+    useUiStore.setState({ paletteOpen: false });
+  });
+
+  it("links every kind of practice with where the owner stands", async () => {
+    await ready();
+    await go("#/practice");
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Practice" }, { timeout: 4000 }),
+    ).toBeInTheDocument();
+    const main = within(screen.getByRole("main"));
+    const links = [
+      ["Pattern drill", "#/drill"],
+      ["Flashcards and quizzes", "#/quiz"],
+      ["Mental math", "#/mental-math"],
+      ["Quant puzzles", "#/puzzles"],
+      ["Mock interviews", "#/mock"],
+      ["Design practice", "#/designs"],
+      ["Stories", "#/stories"],
+    ] as const;
+    for (const [name, href] of links)
+      expect(main.getByRole("link", { name: new RegExp(`^${name}`) })).toHaveAttribute(
+        "href",
+        href,
+      );
+    // Earlier tests in this file solved a puzzle and ran a sprint.
+    expect(main.getByRole("link", { name: /^Quant puzzles/ })).toHaveTextContent(
+      /\d+ of \d+ solved/,
+    );
+    expect(main.getByRole("link", { name: /^Mental math/ })).toHaveTextContent(/Last sprint:/);
+    expect(screen.queryByText(/Arrives in/)).toBeNull();
+  });
+
+  it("offers mock interviews in the command palette", async () => {
+    const user = userEvent.setup();
+    await ready();
+    await user.keyboard("{Control>}k{/Control}");
+    const input = await screen.findByPlaceholderText("Search concepts, problems and pages");
+    await user.type(input, "mock interview");
+    await user.click(await screen.findByText("Start a mock interview"));
+    await waitFor(() => expect(window.location.hash).toBe("#/mock"));
+  });
+
+  it("puts the new plan kinds on Today with the right Start, and ticks them off when done", async () => {
+    await ready();
+    await waitFor(() => expect(useMockStore.getState().loaded).toBe(true));
+    act(() => {
+      addPlanItems([
+        { kind: "mental-math", title: "Mental math sprint", reason: "Daily.", estMinutes: 8 },
+        {
+          kind: "story",
+          refId: "bq-a-time-you-had-a-conflict-and-how-you-resolved-it",
+          title: "Story practice: one behavioral answer",
+          reason: "Twice a week.",
+          estMinutes: 10,
+        },
+        {
+          kind: "design",
+          refId: "hld-rate-limiter-service",
+          title: "Design practice: Rate limiter",
+          reason: "Once a week.",
+          estMinutes: 45,
+        },
+        { kind: "mock", title: "Mock interview: coding", reason: "Weekly.", estMinutes: 45 },
+      ]);
+    });
+    await go("#/today");
+    const list = await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    const startOf = (title: string) =>
+      within(
+        within(list)
+          .getByRole("checkbox", { name: `Done: ${title}` })
+          .closest("li")!,
+      ).getByRole("link", { name: "Start" });
+    expect(startOf("Mental math sprint")).toHaveAttribute("href", "#/mental-math?mode=speed");
+    expect(startOf("Story practice: one behavioral answer")).toHaveAttribute(
+      "href",
+      "#/stories?question=bq-a-time-you-had-a-conflict-and-how-you-resolved-it",
+    );
+    expect(startOf("Design practice: Rate limiter")).toHaveAttribute(
+      "href",
+      "#/designs/hld-rate-limiter-service",
+    );
+    expect(startOf("Mock interview: coding")).toHaveAttribute("href", "#/mock?type=dsa");
+
+    const plan = () => usePlanStore.getState().plans[localDate()]!;
+    const done = (kind: string) => plan().items.find((i) => i.kind === kind)?.done;
+    act(() => {
+      saveSprint({ mode: "speed", tier: "easy", correct: 30, answered: 40, seconds: 480 });
+      savePractice({
+        questionId: "bq-a-time-you-had-a-conflict-and-how-you-resolved-it",
+        answer: "A disagreement about a design, settled with a small experiment.",
+        mode: "typed",
+        score: 0.5,
+      });
+    });
+    await waitFor(() => {
+      expect(done("mental-math")).toBe(true);
+      expect(done("story")).toBe(true);
+    });
+    act(() => {
+      const d = startDesign("hld-rate-limiter-service");
+      finishDesign(d.id, new Date(), { overall: 3 });
+      const m = createMock({
+        kind: "behavioral",
+        delivery: "live",
+        questionIds: ["bq-tell-me-about-yourself"],
+      });
+      completeMock(m.id, {
+        scores: { structure: 3, specificity: 3, impact: 3, reflection: 3, communication: 3 },
+        strengths: [],
+        improvements: [],
+        hireSignal: "lean no",
+        summary: "Fine.",
+      });
+    });
+    await waitFor(() => {
+      expect(done("design")).toBe(true);
+      expect(done("mock")).toBe(true);
+    });
+  });
 });

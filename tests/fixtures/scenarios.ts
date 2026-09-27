@@ -4,6 +4,7 @@
 // concept statuses are computed by the real status engine, so the cached statuses are the ones
 // the app would store.
 import { conceptById, conceptsByTopic, topicsBySubject } from "@/data/syllabus";
+import { DRILL_PROMPTS } from "@/data/drills.seed";
 import { LEETCODE_PROBLEMS } from "@/data/problems.seed";
 import { seedProblemsByConcept } from "@/data/seed";
 import { MISTAKE_TAG_SEED } from "@/data/mistakeTags.seed";
@@ -322,7 +323,7 @@ function feedbackOf(keys: readonly string[], scores: number[], hire: MockFeedbac
 /**
  * Phase 8 practice for the mid-way owner: coding mocks 17, 10 and 3 days ago (improving), a
  * behavioral mock 8 days ago, finished designs 9 and 2 days ago, a STAR story practiced
- * yesterday, and mental math sprints.
+ * yesterday, 15 pattern drill answers (three wrong), and mental math sprints.
  */
 function practiceHistory(b: Builder, day: string) {
   const mock = (
@@ -360,19 +361,7 @@ function practiceHistory(b: Builder, day: string) {
     }),
     mock("mock-fixture-4", "dsa", 3, [4, 4, 4, 3, 4], "yes", { topicOrProblemId: "lc-3" }),
   ];
-  // Each finished mock counts on its day (the weekly review shows mocks).
-  for (const m of b.data.mocks) {
-    const d = localDate(new Date(m.endedAt!));
-    const month = b.data.activity.find((a) => a.month === d.slice(0, 7));
-    if (!month) continue;
-    const entry = (month.days[d] ??= {
-      minutes: 45,
-      problemsSolved: 0,
-      reviews: 0,
-      conceptsTouched: 0,
-    });
-    entry.mocks = (entry.mocks ?? 0) + 1;
-  }
+
   const design = (id: string, problemId: string, daysAgo: number): DesignAttempt => {
     const d = addDaysToDate(day, -daysAgo);
     return {
@@ -421,6 +410,47 @@ function practiceHistory(b: Builder, day: string) {
       updatedAt: iso(yesterday, 21),
     },
   ];
+  // Pattern drill: 15 answers over three weeks on patterns under way; one pattern is mistaken
+  // for a sibling in its topic twice (a confusion pair), and one other answer is wrong.
+  const started = new Set(Object.keys(b.states));
+  const siblingOf = (main: string) =>
+    [...started].find(
+      (id) =>
+        id !== main &&
+        conceptById.get(id)?.isPattern &&
+        conceptById.get(id)?.topicId === conceptById.get(main)?.topicId,
+    );
+  const pool = DRILL_PROMPTS.filter((p) => started.has(p.answerConceptIds[0]!));
+  const pairMain = pool
+    .map((p) => p.answerConceptIds[0]!)
+    .find((m) => siblingOf(m) && pool.filter((p) => p.answerConceptIds[0] === m).length >= 2)!;
+  const chosen = [
+    ...pool.filter((p) => p.answerConceptIds[0] === pairMain).slice(0, 2),
+    ...pool.filter((p) => p.answerConceptIds[0] !== pairMain).slice(0, 13),
+  ];
+  chosen.forEach((p, i) => {
+    const main = p.answerConceptIds[0]!;
+    const wrong = i < 2 || i === 7;
+    const picked = wrong ? (siblingOf(main) ?? main) : main;
+    const d = addDaysToDate(day, -(20 - i));
+    const stamp = iso(d, 7, i);
+    b.checks.push({
+      id: `drill-fixture-${i}`,
+      conceptId: main,
+      kind: "drill",
+      score: picked === main ? 1 : 0.5,
+      detail: {
+        promptId: p.id,
+        correctConceptIds: p.answerConceptIds,
+        pickedConceptIds: [picked],
+        correct: picked === main,
+        result: picked === main ? "correct" : "partial",
+        source: "bank",
+      },
+      createdAt: stamp,
+      updatedAt: stamp,
+    });
+  });
   b.data.mentalMath = [12, 6, 1].map((daysAgo, i) => {
     const d = addDaysToDate(day, -daysAgo);
     return {
@@ -435,6 +465,22 @@ function practiceHistory(b: Builder, day: string) {
       updatedAt: iso(d, 8),
     };
   });
+}
+
+/** Each finished mock counts on its day in the activity (the weekly review shows mocks). */
+function countMocks(b: Builder) {
+  for (const m of b.data.mocks) {
+    const d = localDate(new Date(m.endedAt!));
+    const month = b.data.activity.find((a) => a.month === d.slice(0, 7));
+    if (!month) continue;
+    const entry = (month.days[d] ??= {
+      minutes: 45,
+      problemsSolved: 0,
+      reviews: 0,
+      conceptsTouched: 0,
+    });
+    entry.mocks = (entry.mocks ?? 0) + 1;
+  }
 }
 
 /**
@@ -460,9 +506,10 @@ export function scenario(name: ScenarioName, day = DAY): ExportData {
   progress(b, topicIds("os", 3), day, { problems: false });
   progress(b, topicIds("oop", 2), day, { problems: false });
   progress(b, ["lang.cpp-core"], day, { problems: false });
+  practiceHistory(b, day);
   settleStatuses(b, day, profile);
   b.data.activity = activity(start, day, `activity-${name}`);
-  practiceHistory(b, day);
+  countMocks(b);
   return finish(b, profile);
 }
 

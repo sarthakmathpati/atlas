@@ -8,6 +8,7 @@ import { cx } from "@/components/ui/cx";
 import { ProgressRing, SegmentedBar } from "@/components/ui/Progress";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { STATUS_LABEL } from "@/components/ui/labels";
+import { conceptById } from "@/data/syllabus";
 import type { StreakInfo } from "@/lib/activity/streak";
 import {
   practiceLevel,
@@ -18,6 +19,7 @@ import {
   type MemoryHealth,
   type PatternTile,
   type Projection,
+  type Recognition,
   type SubjectRow,
   type WeaknessReport,
 } from "@/lib/insight/dashboard";
@@ -321,6 +323,11 @@ function PatternTileView({ t }: { t: PatternTile }) {
         practice = min(1, {r1(t.sum)} ÷ 3) = {Math.round(t.practice * 100)}%
       </Formula>
       {t.noHard && <p>No hard problem solved alone yet (the dashed outline).</p>}
+      <p>
+        {t.drill
+          ? `Pattern drill, last 60 days: recognized ${t.drill.correct} of ${t.drill.total} ${t.drill.total === 1 ? "prompt" : "prompts"}.`
+          : "No pattern drill answers on it in the last 60 days."}
+      </p>
       <div className="flex flex-wrap gap-2 pt-1">
         <Button size="sm" href={conceptHref(t.conceptId)}>
           Open the pattern
@@ -358,7 +365,93 @@ function PatternTileView({ t }: { t: PatternTile }) {
   );
 }
 
-export function PatternGrid({ tiles }: { tiles: PatternTile[] }) {
+const conceptName = (id: string) => conceptById.get(id)?.name ?? id;
+
+/** Pattern drill results (F10): accuracy over 60 days, the weakest patterns, confusion pairs. */
+function RecognitionSummary({ r }: { r: Recognition }) {
+  if (r.accuracy === null)
+    return (
+      <p className="text-sm text-muted">
+        No pattern drill answers in the last {r.days} days.{" "}
+        <a href="#/drill" className="text-accent hover:underline">
+          Start a drill
+        </a>{" "}
+        to see how quickly you recognize each pattern.
+      </p>
+    );
+  return (
+    <div className="space-y-2 text-sm">
+      <p className="text-text">
+        <ExplainNumber
+          label="Pattern recognition"
+          valueText={`${Math.round(r.accuracy * 100)}%`}
+          className="font-semibold tabular-nums"
+          explain={
+            <>
+              <p>
+                Pattern drill answers in the last {r.days} days that named the prompt's main
+                pattern. A pattern from the same topic counts as partly right, not as right.
+              </p>
+              <Formula>
+                {r.correct} right ÷ {r.answered} answered = {Math.round(r.accuracy * 100)}%
+              </Formula>
+            </>
+          }
+        >
+          {Math.round(r.accuracy * 100)}%
+        </ExplainNumber>{" "}
+        <span className="text-muted">
+          of {plural(r.answered, "drill prompt")} recognized in the last {r.days} days.
+        </span>{" "}
+        <a href="#/drill" className="text-accent hover:underline">
+          Open the drill
+        </a>
+      </p>
+      {r.weakest.length > 0 && (
+        <p className="text-muted">
+          Recognized least often:{" "}
+          {r.weakest.map((w, i) => (
+            <span key={w.conceptId}>
+              {i > 0 && ", "}
+              <a
+                href={routeHref("/drill", undefined, { pattern: w.conceptId })}
+                className="text-accent hover:underline"
+              >
+                {conceptName(w.conceptId)}
+              </a>{" "}
+              ({w.correct} of {w.total})
+            </span>
+          ))}
+          .
+        </p>
+      )}
+      {r.confusion.length > 0 && (
+        <ul className="space-y-0.5 text-muted" aria-label="Patterns you mix up">
+          {r.confusion.map((c) => (
+            <li key={`${c.picked}>${c.correct}`}>
+              You picked {conceptName(c.picked)} when it was{" "}
+              <a
+                href={routeHref("/drill", undefined, { pattern: c.correct })}
+                className="text-accent hover:underline"
+              >
+                {conceptName(c.correct)}
+              </a>{" "}
+              ({plural(c.count, "time")}).
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function PatternGrid({
+  tiles,
+  recognition,
+}: {
+  tiles: PatternTile[];
+  recognition: Recognition;
+}) {
   return (
     <Card
       title="DSA patterns"
@@ -409,6 +502,9 @@ export function PatternGrid({ tiles }: { tiles: PatternTile[] }) {
               />
               no hard solved alone
             </span>
+          </div>
+          <div className="mt-4 border-t border-rule pt-3">
+            <RecognitionSummary r={recognition} />
           </div>
         </>
       )}

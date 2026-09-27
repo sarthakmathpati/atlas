@@ -263,7 +263,7 @@ function CodePane({ session, disabled }: { session: MockSession; disabled: boole
             language={normalizeLanguage(session.language ?? "cpp")}
             label="Your code for the interview"
             readOnly={disabled}
-            placeholder="Write your solution here when you reach the Code phase."
+            placeholder="Your code goes here."
             height="100%"
             minHeight="100%"
             className="h-full rounded-none border-0"
@@ -300,6 +300,7 @@ function Workspace({
         onSaved={() => undefined}
         hideReview
         stage="write"
+        clock={false}
       />
     ) : null;
   if (!second) return <div className="max-w-3xl">{chat}</div>;

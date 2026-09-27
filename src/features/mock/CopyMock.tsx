@@ -116,8 +116,8 @@ export function CopyMock({ session }: { session: MockSession }) {
         <Step n={2} title="Do the interview in a new Claude chat">
           <p className="text-base text-muted">
             Paste the script and answer as you would in a real interview. Start each message with
-            the time left, such as “[Phase: Code | 18 min left]”, and keep to {info.minutes}{" "}
-            minutes. When you're done, write END.
+            the time left, such as “[Phase: {info.phases[1]} | {info.minutes - 5} min left]”, and
+            keep to {info.minutes} minutes. When you're done, write END.
             {session.kind === "dsa" &&
               ` Write your code in ${languageLabel(session.language)}, and paste it into the chat when you share it.`}
           </p>

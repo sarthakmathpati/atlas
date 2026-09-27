@@ -259,8 +259,8 @@ function Round({
         <div className="space-y-4">
           <div>
             <p className="text-sm font-medium text-muted">
-              Your answer{story ? ` (${story.title})` : ""}, {formatClock(elapsed * 1000)} on the
-              timer
+              Your answer{story ? ` (${story.title})` : ""}
+              {elapsed >= 1 ? `, in ${formatClock(elapsed * 1000)} of the two minutes` : ""}
             </p>
             <p className="mt-1 max-w-[70ch] text-base whitespace-pre-wrap text-text">{answer}</p>
             <SpokenLength text={answer} className="mt-1" />

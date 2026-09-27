@@ -91,6 +91,7 @@ export function DesignWorkspace({
   hideReview,
   saveLabel,
   autoStart,
+  clock = true,
 }: {
   problem: SeedProblem;
   attempt: DesignAttempt;
@@ -102,6 +103,8 @@ export function DesignWorkspace({
   saveLabel?: string;
   /** Start the timer at once (a new attempt); a resumed one waits for Resume or typing. */
   autoStart?: boolean;
+  /** Its own 45-minute clock; a mock interview keeps time itself, so it turns this off. */
+  clock?: boolean;
 }) {
   const kind = designKind(problem);
   const sections = sectionsFor(kind);
@@ -139,7 +142,7 @@ export function DesignWorkspace({
   }, [attempt.id]);
 
   const begin = () => {
-    if (!timer.running && !timeUp) timer.start();
+    if (clock && !timer.running && !timeUp) timer.start();
   };
   const [autoStarted, setAutoStarted] = useState(false);
   if (autoStart && !autoStarted) {
@@ -151,54 +154,56 @@ export function DesignWorkspace({
   const words = wordsWritten(attempt.sections);
   return (
     <div className="space-y-6">
-      <div className="sticky top-2 z-20 flex items-center gap-3 rounded-panel border border-rule bg-surface/95 px-3 py-2 backdrop-blur max-sm:gap-1.5">
-        <span
-          role="timer"
-          aria-label="Time left"
-          className={cx(
-            "text-lg font-semibold tabular-nums",
-            timeUp ? "text-warning" : remaining < 5 * 60_000 ? "text-warning" : "text-text",
+      {clock && (
+        <div className="sticky top-2 z-20 flex items-center gap-3 rounded-panel border border-rule bg-surface/95 px-3 py-2 backdrop-blur max-sm:gap-1.5">
+          <span
+            role="timer"
+            aria-label="Time left"
+            className={cx(
+              "text-lg font-semibold tabular-nums",
+              timeUp ? "text-warning" : remaining < 5 * 60_000 ? "text-warning" : "text-text",
+            )}
+          >
+            {formatClock(remaining)}
+          </span>
+          {stage === "write" && !timeUp && (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={timer.running ? Pause : Play}
+              onClick={() => {
+                timer.toggle();
+                setDesignElapsed(attempt.id, timer.elapsedMs);
+              }}
+            >
+              {timer.running ? "Pause" : timer.elapsedMs > 0 ? "Resume" : "Start the timer"}
+            </Button>
           )}
-        >
-          {formatClock(remaining)}
-        </span>
-        {stage === "write" && !timeUp && (
-          <Button
-            size="sm"
-            variant="ghost"
-            icon={timer.running ? Pause : Play}
-            onClick={() => {
-              timer.toggle();
-              setDesignElapsed(attempt.id, timer.elapsedMs);
-            }}
-          >
-            {timer.running ? "Pause" : timer.elapsedMs > 0 ? "Resume" : "Start the timer"}
-          </Button>
-        )}
-        <ProgressBar
-          value={remaining / LIMIT_MS}
-          label="Time left for the design"
-          className="h-1 min-w-24 flex-1 max-sm:hidden"
-        />
-        <span className="text-sm text-muted tabular-nums max-sm:hidden">{words} words</span>
-        {stage === "write" && !hideReview && (
-          <Button
-            size="sm"
-            variant="primary"
-            icon={CheckCircle2}
-            onClick={() => {
-              timer.pause();
-              setDesignElapsed(attempt.id, timer.elapsedMs);
-              setStage("review");
-            }}
-            disabled={words === 0}
-            className="max-sm:ml-auto"
-          >
-            Finish and review
-          </Button>
-        )}
-      </div>
-      {timeUp && stage === "write" && (
+          <ProgressBar
+            value={remaining / LIMIT_MS}
+            label="Time left for the design"
+            className="h-1 min-w-24 flex-1 max-sm:hidden"
+          />
+          <span className="text-sm text-muted tabular-nums max-sm:hidden">{words} words</span>
+          {stage === "write" && !hideReview && (
+            <Button
+              size="sm"
+              variant="primary"
+              icon={CheckCircle2}
+              onClick={() => {
+                timer.pause();
+                setDesignElapsed(attempt.id, timer.elapsedMs);
+                setStage("review");
+              }}
+              disabled={words === 0}
+              className="max-sm:ml-auto"
+            >
+              Finish and review
+            </Button>
+          )}
+        </div>
+      )}
+      {clock && timeUp && stage === "write" && (
         <p role="status" className="rounded-control bg-warning-soft px-3 py-2 text-base text-text">
           45 minutes are up. Wrap up the section you're on, then finish and review.
         </p>

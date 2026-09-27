@@ -1,7 +1,8 @@
 // The readiness dashboard's numbers (F17), as one pure model over the owner's records, so every
 // figure on the page can show the data and the formula behind it:
 //   - overall and subject readiness (section 11.3, from the shared readiness model);
-//   - the pattern grid: practice per DSA pattern and problems solved alone by difficulty;
+//   - the pattern grid: practice per DSA pattern and problems solved alone by difficulty, with
+//     pattern drill accuracy and confusion pairs over 60 days (F10);
 //   - status mix per subject;
 //   - problems solved per week by difficulty (solved attempts, re-solves included);
 //   - memory health: reviews due today, overdue, and retention (re-solves solved alone, 30 days);
@@ -9,6 +10,13 @@
 //     untouched for 14 days;
 //   - the projection to the interview date (pace over 14 days, shown as a ±20% range).
 import { conceptById, subjectById, topicById } from "@/data/syllabus";
+import {
+  confusionPairs,
+  patternAccuracy,
+  STATS_DAYS,
+  type ConfusionPair,
+  type PatternAccuracy,
+} from "@/lib/drill/drill";
 import { computePractice, practiceBreakdown } from "@/lib/mastery/status";
 import { allProblems, problemInfo, type ProblemInfo } from "@/lib/problems/catalog";
 import { attemptDate, attemptsInOrder, reviewInfo } from "@/lib/problems/progress";
@@ -76,9 +84,15 @@ export interface PatternTile {
   withHints: Record<Difficulty, number>;
   linked: Record<Difficulty, number>;
   noHard: boolean;
+  /** Pattern drill answers on this pattern in the last 60 days (F10), or null if none. */
+  drill: { correct: number; total: number } | null;
 }
 
-export function patternTiles(src: DashboardSources): PatternTile[] {
+export function patternTiles(
+  src: DashboardSources,
+  accuracy: readonly PatternAccuracy[] = patternAccuracy(allChecks(src), src.today),
+): PatternTile[] {
+  const byPattern = new Map(accuracy.map((a) => [a.conceptId, a]));
   const out: PatternTile[] = [];
   for (const e of src.model.byId.values()) {
     const c = e.concept;
@@ -97,6 +111,9 @@ export function patternTiles(src: DashboardSources): PatternTile[] {
       withHints: b.withHints,
       linked: b.total,
       noHard: b.alone.hard === 0,
+      drill: byPattern.has(c.id)
+        ? { correct: byPattern.get(c.id)!.correct, total: byPattern.get(c.id)!.total }
+        : null,
     });
   }
   const topicOrder = (id: string) => topicById.get(conceptById.get(id)?.topicId ?? "")?.order ?? 0;
@@ -114,6 +131,41 @@ export function practiceLevel(practice: number): 0 | 1 | 2 | 3 | 4 {
   if (practice < 1 / 3) return 1;
   if (practice < 2 / 3) return 2;
   return 3;
+}
+
+// ----- pattern recognition (the drill, F10) ------------------------------------------------------
+
+function allChecks(src: DashboardSources): Check[] {
+  return Object.values(src.checks).flat();
+}
+
+export interface Recognition {
+  /** Drill answers in the last 60 days, and how many named the main pattern. */
+  answered: number;
+  correct: number;
+  /** correct ÷ answered, or null with no answers. */
+  accuracy: number | null;
+  days: number;
+  /** Up to 3 patterns recognized least often (at least 2 answers, under 100%). */
+  weakest: PatternAccuracy[];
+  /** "You often pick X when it's Y" (twice or more), the top 3. */
+  confusion: ConfusionPair[];
+}
+
+export function recognition(
+  src: DashboardSources,
+  accuracy: readonly PatternAccuracy[] = patternAccuracy(allChecks(src), src.today),
+): Recognition {
+  const answered = accuracy.reduce((n, a) => n + a.total, 0);
+  const correct = accuracy.reduce((n, a) => n + a.correct, 0);
+  return {
+    answered,
+    correct,
+    accuracy: answered ? correct / answered : null,
+    days: STATS_DAYS,
+    weakest: accuracy.filter((a) => a.total >= 2 && a.accuracy < 1).slice(0, 3),
+    confusion: confusionPairs(allChecks(src), src.today, STATS_DAYS, 3),
+  };
 }
 
 // ----- problems over time ------------------------------------------------------------------------
@@ -350,6 +402,7 @@ export function projection(src: DashboardSources): Projection | null {
 export interface DashboardModel {
   subjects: SubjectRow[];
   patterns: PatternTile[];
+  recognition: Recognition;
   weeks: WeekSolved[];
   memory: MemoryHealth;
   weakness: WeaknessReport;
@@ -357,10 +410,12 @@ export interface DashboardModel {
 }
 
 export function dashboardModel(src: DashboardSources): DashboardModel {
-  const patterns = patternTiles(src);
+  const accuracy = patternAccuracy(allChecks(src), src.today);
+  const patterns = patternTiles(src, accuracy);
   return {
     subjects: subjectRows(src.model),
     patterns,
+    recognition: recognition(src, accuracy),
     weeks: solvedByWeek(src.problemStates, src.today),
     memory: memoryHealth(src),
     weakness: weaknessReport(src, patterns),

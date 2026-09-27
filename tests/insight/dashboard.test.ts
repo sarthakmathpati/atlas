@@ -9,6 +9,7 @@ import {
   patternTiles,
   practiceLevel,
   projection,
+  recognition,
   solvedByWeek,
   subjectRows,
   weaknessReport,
@@ -21,7 +22,7 @@ import { evaluateReadiness, linkedProblems } from "@/lib/readiness/evaluate";
 import { subjectWeight } from "@/lib/readiness/score";
 import { buildReviewQueue } from "@/lib/review/queue";
 import { addDaysToDate } from "@/lib/time";
-import type { Attempt, ProblemState } from "@/lib/types";
+import type { Attempt, Check, ProblemState } from "@/lib/types";
 import { DAY, noonOf, records, scenario, yearOfData } from "../fixtures/scenarios";
 
 function sources(name: "new" | "mid" | "week" | "year"): DashboardSources {
@@ -91,6 +92,67 @@ describe("pattern grid", () => {
 
   it("tints by practice in five steps", () => {
     expect([0, 0.1, 0.4, 0.7, 1].map(practiceLevel)).toEqual([0, 1, 2, 3, 4]);
+  });
+});
+
+describe("pattern recognition (the drill feeds the dashboard)", () => {
+  const SW = "dsa.sliding-window.variable-size-window";
+  const TP = "dsa.two-pointers.opposite-ends-pointers";
+  const HM = "dsa.hashing.frequency-counting";
+  let n = 0;
+  const drill = (main: string, picked: string, daysAgo: number): Check => ({
+    id: `drill-${n++}`,
+    conceptId: main,
+    kind: "drill",
+    score: picked === main ? 1 : 0,
+    createdAt: noonOf(addDaysToDate(DAY, -daysAgo)).toISOString(),
+    updatedAt: noonOf(addDaysToDate(DAY, -daysAgo)).toISOString(),
+    detail: {
+      promptId: `p${n}`,
+      correctConceptIds: [main],
+      pickedConceptIds: [picked],
+      correct: picked === main,
+      result: picked === main ? "correct" : "wrong",
+      source: "bank",
+    },
+  });
+  const base = sources("mid");
+  const checks = [
+    drill(SW, TP, 1),
+    drill(SW, TP, 3),
+    drill(SW, SW, 5),
+    drill(TP, TP, 2),
+    drill(TP, TP, 4),
+    drill(HM, HM, 6),
+    drill(SW, TP, 90), // older than 60 days: left out
+  ];
+  // Only these drill answers (the mid-way owner's own are checked below).
+  const src = { ...base, checks: { drill: checks } };
+
+  it("counts answers over 60 days, the weakest patterns and confusion pairs", () => {
+    const r = recognition(src);
+    expect(r).toMatchObject({ answered: 6, correct: 4, days: 60 });
+    expect(r.accuracy).toBeCloseTo(4 / 6);
+    expect(r.weakest.map((w) => [w.conceptId, w.correct, w.total])).toEqual([[SW, 1, 3]]);
+    expect(r.confusion).toEqual([{ picked: TP, correct: SW, count: 2 }]);
+    expect(recognition(sources("new")).accuracy).toBeNull();
+  });
+
+  it("puts each pattern's drill results on its tile", () => {
+    const tiles = patternTiles(src);
+    expect(tiles.find((t) => t.conceptId === SW)?.drill).toEqual({ correct: 1, total: 3 });
+    expect(tiles.find((t) => t.conceptId === TP)?.drill).toEqual({ correct: 2, total: 2 });
+    const untouched = tiles.find((t) => ![SW, TP, HM].includes(t.conceptId));
+    expect(untouched?.drill).toBeNull();
+    expect(dashboardModel(src).recognition.answered).toBe(6);
+  });
+
+  it("reads the mid-way owner's own drill answers, with the pair mixed up twice", () => {
+    const r = recognition(base);
+    expect(r.answered).toBe(15);
+    expect(r.correct).toBe(12);
+    expect(r.confusion.length).toBeGreaterThan(0);
+    for (const c of r.confusion) expect(c.count).toBeGreaterThanOrEqual(2);
   });
 });
 

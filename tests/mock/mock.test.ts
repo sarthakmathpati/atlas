@@ -242,9 +242,14 @@ describe("picking what the round is about", () => {
         practice: 0.2,
         order: 1,
       },
-      { id: "dsa.hashing.hash-map-counting", status: "learning" as const, practice: 0.8, order: 0 },
       {
-        id: "dsa.two-pointers.opposite-ends",
+        id: "dsa.hashing.frequency-counting",
+        status: "learning" as const,
+        practice: 0.8,
+        order: 0,
+      },
+      {
+        id: "dsa.two-pointers.opposite-ends-pointers",
         status: "not_started" as const,
         practice: 0,
         order: 2,

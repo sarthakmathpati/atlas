@@ -16,7 +16,7 @@ export const PAGES: Record<RouteName, Page> = {
   problems: lazy(() => import("@/features/problems/ProblemsPage")),
   problem: lazy(() => import("@/features/problems/ProblemPage")),
   review: lazy(() => import("@/features/review/ReviewPage")),
-  practice: placeholder("PracticePage"),
+  practice: lazy(() => import("@/features/practice/PracticePage")),
   drill: lazy(() => import("@/features/drill/DrillPage")),
   quiz: lazy(() => import("@/features/review/QuizPage")),
   "mental-math": lazy(() => import("@/features/mentalmath/MentalMathPage")),
