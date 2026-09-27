@@ -30,7 +30,9 @@ import type {
 export const DAY = "2026-09-27";
 export const noonOf = (day: string) => new Date(`${day}T12:00:00`);
 const iso = (day: string, hour = 10, minute = 0) =>
-  new Date(`${day}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`).toISOString();
+  new Date(
+    `${day}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`,
+  ).toISOString();
 
 export type ScenarioName = "new" | "mid" | "week";
 
@@ -170,17 +172,36 @@ function progress(b: Builder, topics: string[], day: string, opts: { problems: b
         const attempts = [attempt(p.id, solvedDay, "solved_alone", 18 + (n % 20), tags)];
         let state: SrsState;
         if (tricky) {
-          attempts.push(attempt(p.id, addDaysToDate(day, -6), "not_solved", 35, ["mt-wrong-pattern"], "resolve"));
-          attempts.push(attempt(p.id, addDaysToDate(day, -3), "saw_solution", 30, ["mt-off-by-one"], "resolve"));
+          attempts.push(
+            attempt(
+              p.id,
+              addDaysToDate(day, -6),
+              "not_solved",
+              35,
+              ["mt-wrong-pattern"],
+              "resolve",
+            ),
+          );
+          attempts.push(
+            attempt(p.id, addDaysToDate(day, -3), "saw_solution", 30, ["mt-off-by-one"], "resolve"),
+          );
           state = srs(0, addDaysToDate(day, -2), { lapses: 2 });
         } else {
-          const due = n % 5 === 0 ? day : n % 5 === 1 ? addDaysToDate(day, -3) : addDaysToDate(day, 2 + (n % 9));
+          const due =
+            n % 5 === 0
+              ? day
+              : n % 5 === 1
+                ? addDaysToDate(day, -3)
+                : addDaysToDate(day, 2 + (n % 9));
           state = srs(2, due, { soloStreak: 1, lastReviewedAt: iso(solvedDay) });
         }
         b.problems[p.id] = {
           problemId: p.id,
           status: "solved",
-          insight: n % 3 === 0 ? `Keep a running ${n % 2 ? "window" : "map"}; each element moves once.` : undefined,
+          insight:
+            n % 3 === 0
+              ? `Keep a running ${n % 2 ? "window" : "map"}; each element moves once.`
+              : undefined,
           starred: n % 7 === 0,
           tags: [],
           srs: state,
@@ -324,13 +345,19 @@ export function yearOfData(day = DAY): ExportData {
   const code = (n: number) =>
     Array.from(
       { length: 40 },
-      (_, i) => `  // step ${i}: keep the invariant for index ${n + i}\n  int v${i} = a[${i}] + ${n};`,
+      (_, i) =>
+        `  // step ${i}: keep the invariant for index ${n + i}\n  int v${i} = a[${i}] + ${n};`,
     ).join("\n");
   for (const p of LEETCODE_PROBLEMS) {
     if (b.problems[p.id] || rand() < 0.2) continue;
     const d = addDaysToDate(start, Math.floor(rand() * 350));
     const solved = rand() < 0.85;
-    const first = attempt(p.id, d, solved ? "solved_alone" : "not_solved", 20 + Math.floor(rand() * 30));
+    const first = attempt(
+      p.id,
+      d,
+      solved ? "solved_alone" : "not_solved",
+      20 + Math.floor(rand() * 30),
+    );
     first.code = `class Solution {\npublic:\n  int solve(vector<int>& a) {\n${code(first.id.length)}\n    return 0;\n  }\n};\n`;
     b.problems[p.id] = {
       problemId: p.id,
@@ -350,8 +377,11 @@ export function yearOfData(day = DAY): ExportData {
     const extra = 1 + Math.floor(rand() * 5);
     for (let k = 0; k < extra; k++) {
       const d = addDaysToDate(start, Math.floor(rand() * 330));
-      const r: AttemptResult = rand() < 0.7 ? "solved_alone" : rand() < 0.5 ? "solved_with_hints" : "not_solved";
-      state.attempts.push(attempt(state.problemId, d, r, 15 + Math.floor(rand() * 30), [], "resolve"));
+      const r: AttemptResult =
+        rand() < 0.7 ? "solved_alone" : rand() < 0.5 ? "solved_with_hints" : "not_solved";
+      state.attempts.push(
+        attempt(state.problemId, d, r, 15 + Math.floor(rand() * 30), [], "resolve"),
+      );
     }
     state.attempts.sort((a, x) => (a.finishedAt! < x.finishedAt! ? -1 : 1));
   }

@@ -278,6 +278,36 @@ export function demoSampleResponder(input: SampleInput): string {
     return `### Intuition\n\n${level[1]} works outward in layers.\n\n### Example\n\n| Step | Queue | Visited |\n|---|---|---|\n| 1 | A | A |\n| 2 | B, C | A, B, C |\n\n### Code\n\n\`\`\`cpp\n// sketch\nstd::queue<int> q;\n\`\`\`\n\n### Complexity\n\nO(V + E) time and O(V) space.`;
   }
 
+  if (text.includes("Write a short, kind, specific reflection on the learner's week")) {
+    const weakest = /Subject readiness, weakest first: (.+)\./.exec(text)?.[1] ?? "";
+    const ids = [...weakest.matchAll(/\(([a-z]+)\)/g)].map((m) => m[1]!).slice(0, 2);
+    const minutes = /Minutes studied: (\d+)/.exec(text)?.[1] ?? "some";
+    return [
+      `**What went well:** you put in ${minutes} minutes and kept showing up, which is what makes reviews stick.`,
+      "",
+      "**What to watch:** a few concepts started to fade. A short flashcard round early in the week brings them back before they slip further.",
+      "",
+      "**One suggestion:** start each session with the oldest due re-solve, then one new problem on your weakest pattern.",
+      "",
+      JSON.stringify({ focusSubjects: ids }),
+    ].join("\n");
+  }
+
+  if (text.includes("Compress this revision sheet to about")) {
+    // Keep the structure: headings, every list item (shortened), and code blocks as they are.
+    const sheet = lastUserTurn(input);
+    const out: string[] = [];
+    let inCode = false;
+    for (const line of sheet.split("\n")) {
+      if (line.startsWith("```")) inCode = !inCode;
+      if (inCode || line.startsWith("```") || line.startsWith("#")) out.push(line);
+      else if (/^\s*[-*] /.test(line))
+        out.push(line.length > 110 ? `${line.slice(0, 107).trimEnd()}…` : line);
+      else if (!line.trim() && out.at(-1)?.trim()) out.push("");
+    }
+    return out.join("\n").trim();
+  }
+
   if (text.includes("The learner is chatting with you")) {
     const last = lastUserTurn(input).toLowerCase();
     if (last.includes("quiz me"))

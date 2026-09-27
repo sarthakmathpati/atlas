@@ -4,12 +4,7 @@
 // Items complete themselves when the owner does the thing anywhere in the app (planEffects).
 import { nanoid } from "nanoid";
 import { create } from "zustand";
-import {
-  applySwap,
-  keptOnReplan,
-  planDay,
-  type PlannerInput,
-} from "@/lib/planner/planner";
+import { applySwap, keptOnReplan, planDay, type PlannerInput } from "@/lib/planner/planner";
 import type { Repository } from "@/lib/storage/Repository";
 import { localDate, nowIso } from "@/lib/time";
 import type { DayPlan, PlanItem } from "@/lib/types";

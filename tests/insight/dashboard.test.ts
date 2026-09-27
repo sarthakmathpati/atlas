@@ -198,7 +198,8 @@ describe("weakness report", () => {
     // Move every activity in OS back 20 days.
     const shifted = structuredClone(src2);
     for (const s of Object.values(shifted.conceptStates))
-      if (s.conceptId.startsWith("os.")) s.lastActivityAt = `${addDaysToDate(DAY, -20)}T10:00:00.000Z`;
+      if (s.conceptId.startsWith("os."))
+        s.lastActivityAt = `${addDaysToDate(DAY, -20)}T10:00:00.000Z`;
     const checks = Object.fromEntries(
       Object.entries(shifted.checks).map(([id, list]) => [
         id,
@@ -226,7 +227,10 @@ describe("projection", () => {
     expect(p.projected).toBeCloseTo(Math.min(p.totalMust, p.strongMust + p.pace * 7), 9);
     expect(p.low).toBeLessThanOrEqual(p.projected);
     expect(p.high).toBeGreaterThanOrEqual(p.projected);
-    expect(p.high - p.strongMust).toBeCloseTo(Math.min(p.totalMust - p.strongMust, 1.2 * p.pace * 7), 9);
+    expect(p.high - p.strongMust).toBeCloseTo(
+      Math.min(p.totalMust - p.strongMust, 1.2 * p.pace * 7),
+      9,
+    );
   });
 
   it("needs an interview date in the future", () => {
@@ -237,7 +241,8 @@ describe("projection", () => {
 describe("a year of data", () => {
   it("builds the whole dashboard model quickly", () => {
     const r = records(yearOfData());
-    const attempts = r.problemStates && Object.values(r.problemStates).reduce((n, s) => n + s.attempts.length, 0);
+    const attempts =
+      r.problemStates && Object.values(r.problemStates).reduce((n, s) => n + s.attempts.length, 0);
     expect(Object.keys(r.problemStates).length).toBeGreaterThan(300);
     expect(attempts).toBeGreaterThan(1000);
     const times: number[] = [];

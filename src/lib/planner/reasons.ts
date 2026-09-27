@@ -4,8 +4,7 @@ import type { Attempt, Concept, ConceptState } from "@/lib/types";
 import { attemptDate } from "../problems/progress";
 import { daysBetween } from "../time";
 
-export const plural = (n: number, one: string, many = `${one}s`) =>
-  `${n} ${n === 1 ? one : many}`;
+export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** "A", "A and B", "A, B and C". */
 export function joinNames(names: readonly string[]): string {
@@ -65,7 +64,9 @@ export function bundleReason(
     const last = first.state?.srs.lastReviewedAt;
     const when = last ? daysAgo(last.slice(0, 10), today) : null;
     const rest =
-      fading.length > 1 ? ` ${plural(fading.length - 1, "other is", "others are")} fading too.` : "";
+      fading.length > 1
+        ? ` ${plural(fading.length - 1, "other is", "others are")} fading too.`
+        : "";
     return when && when !== "today"
       ? `Fading: you last reviewed ${first.concept.name} ${when}. A quick round brings it back.${rest}`
       : `Fading: ${first.concept.name} is past its review date. A quick round brings it back.${rest}`;

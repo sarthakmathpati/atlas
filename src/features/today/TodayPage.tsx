@@ -1,7 +1,16 @@
 // Today (home, F16): a greeting with the interview countdown, the day's plan (PlanSection), then
 // "Ready to learn next" (section 11.5), the fading count, the streak with a small heatmap, and a
 // setup checklist while it isn't finished.
-import { ArrowRight, Check, Circle, Flame, RotateCcw, Search, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarRange,
+  Check,
+  Circle,
+  Flame,
+  RotateCcw,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { routeHref } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
@@ -15,6 +24,7 @@ import { DESIGN_PROBLEMS } from "@/data/designs.seed";
 import { LEETCODE_PROBLEMS } from "@/data/problems.seed";
 import { QUANT_PUZZLES } from "@/data/quant.seed";
 import { syllabus, topicById } from "@/data/syllabus";
+import { weeklyReviewDue } from "@/lib/insight/weekly";
 import { daysBetween, localDate } from "@/lib/time";
 import { useToday } from "@/stores/clockStore";
 import { useConceptStatus } from "@/stores/conceptStateStore";
@@ -96,7 +106,10 @@ function StreakCard() {
   if (!loaded) return <Skeleton className="h-40 w-full" />;
   const days = streak.current;
   return (
-    <section aria-labelledby="streak-heading" className="rounded-panel border border-rule bg-surface">
+    <section
+      aria-labelledby="streak-heading"
+      className="rounded-panel border border-rule bg-surface"
+    >
       <div className="flex items-baseline justify-between gap-2 border-b border-rule px-4 py-3">
         <h2 id="streak-heading" className="text-md font-semibold text-text">
           Streak
@@ -122,7 +135,11 @@ function StreakCard() {
         </p>
         {freezeOn && streak.frozenDays.length > 0 && (
           <p className="text-sm text-muted">
-            The weekly freeze covered {streak.frozenDays.length === 1 ? "a missed day" : `${streak.frozenDays.length} missed days`}.
+            The weekly freeze covered{" "}
+            {streak.frozenDays.length === 1
+              ? "a missed day"
+              : `${streak.frozenDays.length} missed days`}
+            .
           </p>
         )}
         <Heatmap lookup={lookup} today={today} weeks={16} frozen={frozen} compact />
@@ -261,6 +278,20 @@ export default function TodayPage() {
           are.
         </Callout>
       )}
+      {profile?.onboardingDone && weeklyReviewDue(new Date(), profile) && (
+        <Callout
+          className="mb-6"
+          icon={CalendarRange}
+          title="Your weekly review is ready"
+          actions={
+            <Button variant="primary" href="#/weekly">
+              Open the weekly review
+            </Button>
+          }
+        >
+          A short look back at the week, and a focus for the next one.
+        </Callout>
+      )}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
         <div className="space-y-6">
           <PlanSection />
@@ -314,60 +345,60 @@ export default function TodayPage() {
           </section>
 
           {(!profile || doneCount < steps.length) && (
-          <section
-            aria-labelledby="setup-heading"
-            className="rounded-panel border border-rule bg-surface"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule px-4 py-3 sm:px-5">
-              <h2 id="setup-heading" className="text-md font-semibold text-text">
-                Get set up
-              </h2>
-              {profile && (
-                <span className="text-sm text-muted">
-                  {doneCount} of {steps.length} done
-                </span>
-              )}
-            </div>
-            {!profile ? (
-              <div className="space-y-3 p-5" role="status" aria-label="Loading">
-                <Skeleton className="h-5 w-2/3" />
-                <Skeleton className="h-5 w-1/2" />
-                <Skeleton className="h-5 w-3/5" />
+            <section
+              aria-labelledby="setup-heading"
+              className="rounded-panel border border-rule bg-surface"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule px-4 py-3 sm:px-5">
+                <h2 id="setup-heading" className="text-md font-semibold text-text">
+                  Get set up
+                </h2>
+                {profile && (
+                  <span className="text-sm text-muted">
+                    {doneCount} of {steps.length} done
+                  </span>
+                )}
               </div>
-            ) : (
-              <ol>
-                {steps.map((step) => (
-                  <li
-                    key={step.id}
-                    className="flex flex-col gap-3 border-b border-rule px-4 py-3.5 last:border-b-0 sm:flex-row sm:items-center sm:px-5"
-                  >
-                    <div className="flex min-w-0 flex-1 gap-3">
-                      {step.done ? (
-                        <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-strong text-canvas">
-                          <Check size={13} strokeWidth={3} aria-hidden="true" />
-                        </span>
-                      ) : (
-                        <Circle
-                          size={20}
-                          strokeWidth={1.5}
-                          aria-hidden="true"
-                          className="mt-0.5 shrink-0 text-faint"
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p className={cx("font-medium", step.done ? "text-muted" : "text-text")}>
-                          {step.title}
-                          <span className="sr-only">{step.done ? " (done)" : ""}</span>
-                        </p>
-                        <p className="text-sm text-muted">{step.detail}</p>
+              {!profile ? (
+                <div className="space-y-3 p-5" role="status" aria-label="Loading">
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-5 w-3/5" />
+                </div>
+              ) : (
+                <ol>
+                  {steps.map((step) => (
+                    <li
+                      key={step.id}
+                      className="flex flex-col gap-3 border-b border-rule px-4 py-3.5 last:border-b-0 sm:flex-row sm:items-center sm:px-5"
+                    >
+                      <div className="flex min-w-0 flex-1 gap-3">
+                        {step.done ? (
+                          <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-strong text-canvas">
+                            <Check size={13} strokeWidth={3} aria-hidden="true" />
+                          </span>
+                        ) : (
+                          <Circle
+                            size={20}
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                            className="mt-0.5 shrink-0 text-faint"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p className={cx("font-medium", step.done ? "text-muted" : "text-text")}>
+                            {step.title}
+                            <span className="sr-only">{step.done ? " (done)" : ""}</span>
+                          </p>
+                          <p className="text-sm text-muted">{step.detail}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="shrink-0 pl-8 sm:pl-0">{step.action}</div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
+                      <div className="shrink-0 pl-8 sm:pl-0">{step.action}</div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
           )}
         </div>
 

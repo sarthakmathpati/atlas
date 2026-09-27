@@ -7,7 +7,7 @@
 import { create } from "zustand";
 import type { Repository } from "@/lib/storage/Repository";
 import { localDate, nowIso } from "@/lib/time";
-import type { ActivityDay, ActivityMonth } from "@/lib/types";
+import type { ActivityDay, ActivityMonth, WeeklyNote } from "@/lib/types";
 
 interface ActivityState {
   months: Record<string, ActivityMonth>;
@@ -54,6 +54,32 @@ export function recordActivity(
     ...month,
     days: { ...month.days, [date]: day },
     updatedAt: nowIso(),
+  };
+  useActivityStore.setState({ months: { ...months, [monthKey]: next } });
+  repo?.activity.put(next).catch(() => undefined);
+}
+
+// ----- weekly review notes (F18) ----------------------------------------------------------------
+
+/** The note kept for a week's review (filed under the month of the week's Monday). */
+export function useWeeklyNote(week: string): WeeklyNote | undefined {
+  return useActivityStore((s) => s.months[week.slice(0, 7)]?.weeks?.[week]);
+}
+
+/** Saves Claude's reflection or the accepted focus for a week. */
+export function saveWeeklyNote(
+  week: string,
+  changes: Partial<Omit<WeeklyNote, "week" | "updatedAt">>,
+): void {
+  const monthKey = week.slice(0, 7);
+  const { months } = useActivityStore.getState();
+  const stamp = nowIso();
+  const month: ActivityMonth = months[monthKey] ?? { month: monthKey, days: {}, updatedAt: stamp };
+  const note: WeeklyNote = { ...month.weeks?.[week], ...changes, week, updatedAt: stamp };
+  const next: ActivityMonth = {
+    ...month,
+    weeks: { ...month.weeks, [week]: note },
+    updatedAt: stamp,
   };
   useActivityStore.setState({ months: { ...months, [monthKey]: next } });
   repo?.activity.put(next).catch(() => undefined);

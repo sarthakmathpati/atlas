@@ -242,11 +242,13 @@ export function lastActivityBySubject(src: DashboardSources): Map<string, string
   return last;
 }
 
-export function weaknessReport(src: DashboardSources, tiles: readonly PatternTile[]): WeaknessReport {
+export function weaknessReport(
+  src: DashboardSources,
+  tiles: readonly PatternTile[],
+): WeaknessReport {
   const concepts = [...src.model.byId.values()]
     .filter(
-      (e) =>
-        e.concept.importance === "must" && (e.status === "learning" || e.status === "fading"),
+      (e) => e.concept.importance === "must" && (e.status === "learning" || e.status === "fading"),
     )
     .sort(
       (a, b) =>
@@ -258,7 +260,9 @@ export function weaknessReport(src: DashboardSources, tiles: readonly PatternTil
 
   const problems = allProblems(src.problemStates);
   const patterns: WeaknessReport["patterns"] = [];
-  for (const t of [...tiles].filter((x) => x.noHard && x.sum > 0).sort((a, b) => b.practice - a.practice)) {
+  for (const t of [...tiles]
+    .filter((x) => x.noHard && x.sum > 0)
+    .sort((a, b) => b.practice - a.practice)) {
     if (patterns.length >= 3) break;
     const hard = problems.find(
       (p) =>
@@ -322,7 +326,8 @@ export function projection(src: DashboardSources): Projection | null {
     totalMust++;
     if (e.status === "strong") strongMust++;
     const at = src.conceptStates[e.concept.id]?.strongSince;
-    if (at && localDate(new Date(at)) >= since && localDate(new Date(at)) <= src.today) recentStrong++;
+    if (at && localDate(new Date(at)) >= since && localDate(new Date(at)) <= src.today)
+      recentStrong++;
   }
   const pace = recentStrong / PACE_DAYS;
   const cap = (n: number) => Math.min(totalMust, n);

@@ -26,7 +26,10 @@ export function BottomTabs({
       active ? "font-medium text-accent" : "text-muted",
     );
   return (
-    <nav aria-label="Main" className="flex shrink-0 border-t border-rule bg-surface md:hidden">
+    <nav
+      aria-label="Main"
+      className="flex shrink-0 border-t border-rule bg-surface md:hidden print:hidden"
+    >
       {TABS.map((item) => {
         const active = item.routes.includes(route.name);
         const Icon = item.icon;

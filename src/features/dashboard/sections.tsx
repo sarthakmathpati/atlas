@@ -69,7 +69,9 @@ function conceptScoreText(e: ConceptEval): ReactNode {
   const r = e.result;
   if (!r) return <p>Not started, so it scores 0.</p>;
   const base = r.hasLinkedProblems ? 0.5 * r.knowledge + 0.5 * r.practice : r.knowledge;
-  const recency = r.overdue ? Math.max(0.5, 1 - r.overdueDays / (2 * Math.max(1, r.overdueInterval))) : 1;
+  const recency = r.overdue
+    ? Math.max(0.5, 1 - r.overdueDays / (2 * Math.max(1, r.overdueInterval)))
+    : 1;
   return (
     <>
       <Formula>
@@ -105,8 +107,8 @@ export function ReadinessCard({
     <>
       <p>
         The weighted mean of subject readiness, with the {TRACK_NAME[model.track]} weights
-        {model.track === "both" ? " (the average of the SDE and Quant columns)" : ""}. Subjects
-        with weight 0 don't count for this track.
+        {model.track === "both" ? " (the average of the SDE and Quant columns)" : ""}. Subjects with
+        weight 0 don't count for this track.
       </p>
       <MathTable
         head={["Subject", "Weight", "Ready", "Adds"]}
@@ -142,8 +144,8 @@ export function ReadinessCard({
             for the {TRACK_NAME[model.track]} track
           </p>
           <p className="text-sm text-muted">
-            {model.counts.strong} strong, {model.counts.learning} learning,{" "}
-            {model.counts.fading} fading of {model.byId.size} concepts in your track.
+            {model.counts.strong} strong, {model.counts.learning} learning, {model.counts.fading}{" "}
+            fading of {model.byId.size} concepts in your track.
           </p>
         </div>
       </div>
@@ -186,8 +188,8 @@ function ProjectionLine({ p }: { p: Projection }) {
       of {p.totalMust} must-know concepts {when}.
       {p.recentStrong === 0 && (
         <span className="block text-sm text-muted">
-          None turned strong in the last {PACE_DAYS} days, so this assumes no new ones. A quick
-          quiz on a learning concept is the fastest way to move it.
+          None turned strong in the last {PACE_DAYS} days, so this assumes no new ones. A quick quiz
+          on a learning concept is the fastest way to move it.
         </span>
       )}
     </p>
@@ -260,9 +262,10 @@ export function SubjectBars({ subjects }: { subjects: SubjectRow[] }) {
                   </Formula>
                   <MathTable
                     head={["Status", "Concepts"]}
-                    rows={(["strong", "learning", "fading", "not_started"] as Status[]).map(
-                      (k) => [STATUS_LABEL[k], s.counts[k]],
-                    )}
+                    rows={(["strong", "learning", "fading", "not_started"] as Status[]).map((k) => [
+                      STATUS_LABEL[k],
+                      s.counts[k],
+                    ])}
                   />
                   <p>
                     Must-know: {s.must.strong} strong of {s.must.total}.{" "}
@@ -284,7 +287,9 @@ export function SubjectBars({ subjects }: { subjects: SubjectRow[] }) {
           onClick={() => setAll((v) => !v)}
           className="mt-3 text-sm text-accent hover:underline"
         >
-          {all ? "Hide subjects outside the track's weights" : `Show ${rest.length} more that don't count for this track`}
+          {all
+            ? "Hide subjects outside the track's weights"
+            : `Show ${rest.length} more that don't count for this track`}
         </button>
       )}
     </Card>
@@ -301,8 +306,8 @@ function PatternTileView({ t }: { t: PatternTile }) {
   const explain = (
     <>
       <p>
-        {STATUS_LABEL[t.status]}. Each linked problem counts by its latest attempt: solved alone
-        in full, with hints half; easy 0.5, medium 1, hard 1.5.
+        {STATUS_LABEL[t.status]}. Each linked problem counts by its latest attempt: solved alone in
+        full, with hints half; easy 0.5, medium 1, hard 1.5.
       </p>
       <MathTable
         head={["", "Easy", "Medium", "Hard"]}
@@ -320,7 +325,11 @@ function PatternTileView({ t }: { t: PatternTile }) {
         <Button size="sm" href={conceptHref(t.conceptId)}>
           Open the pattern
         </Button>
-        <Button size="sm" variant="ghost" href={routeHref("/drill", undefined, { pattern: t.conceptId })}>
+        <Button
+          size="sm"
+          variant="ghost"
+          href={routeHref("/drill", undefined, { pattern: t.conceptId })}
+        >
           Drill it
         </Button>
       </div>
@@ -580,8 +589,8 @@ export function WeaknessCard({
     <Card title="Weakness report" id="weakness-heading">
       {empty ? (
         <p className="text-base text-muted">
-          Nothing to flag yet. As you study, the weakest must-know concepts, patterns without a
-          hard problem, and subjects left alone for {UNTOUCHED_DAYS} days show here.
+          Nothing to flag yet. As you study, the weakest must-know concepts, patterns without a hard
+          problem, and subjects left alone for {UNTOUCHED_DAYS} days show here.
         </p>
       ) : (
         <div className="space-y-5">
@@ -590,9 +599,15 @@ export function WeaknessCard({
               <h3 className="mb-1.5 text-sm font-semibold text-text">Weakest must-know concepts</h3>
               <ul className="divide-y divide-rule rounded-control border border-rule">
                 {weakness.concepts.map((e) => (
-                  <li key={e.concept.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                  <li
+                    key={e.concept.id}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2"
+                  >
                     <StatusGlyph status={e.status} size={14} />
-                    <a href={conceptHref(e.concept.id)} className="min-w-0 flex-1 text-base text-text hover:underline">
+                    <a
+                      href={conceptHref(e.concept.id)}
+                      className="min-w-0 flex-1 text-base text-text hover:underline"
+                    >
                       {e.concept.name}
                     </a>
                     <ExplainNumber
@@ -611,16 +626,25 @@ export function WeaknessCard({
           )}
           {weakness.patterns.length > 0 && (
             <div>
-              <h3 className="mb-1.5 text-sm font-semibold text-text">Patterns with no hard problem solved</h3>
+              <h3 className="mb-1.5 text-sm font-semibold text-text">
+                Patterns with no hard problem solved
+              </h3>
               <ul className="divide-y divide-rule rounded-control border border-rule">
                 {weakness.patterns.map((t) => (
-                  <li key={t.conceptId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                  <li
+                    key={t.conceptId}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2"
+                  >
                     <span className="min-w-0 flex-1">
-                      <a href={conceptHref(t.conceptId)} className="text-base text-text hover:underline">
+                      <a
+                        href={conceptHref(t.conceptId)}
+                        className="text-base text-text hover:underline"
+                      >
                         {t.name}
                       </a>
                       <span className="block text-sm text-muted">
-                        Solved alone: {t.alone.easy} easy, {t.alone.medium} medium. Next: {problemLabel(t.hardProblem)}.
+                        Solved alone: {t.alone.easy} easy, {t.alone.medium} medium. Next:{" "}
+                        {problemLabel(t.hardProblem)}.
                       </span>
                     </span>
                     {add(`Add a hard ${t.name} problem to today`, () => onAddPattern(t))}
@@ -636,7 +660,10 @@ export function WeaknessCard({
               </h3>
               <ul className="divide-y divide-rule rounded-control border border-rule">
                 {weakness.subjects.map((s) => (
-                  <li key={s.subjectId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                  <li
+                    key={s.subjectId}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2"
+                  >
                     <span className="min-w-0 flex-1">
                       <span className="text-base text-text">{s.name}</span>
                       <span className="block text-sm text-muted">
@@ -660,7 +687,11 @@ export function WeaknessCard({
 export function StreakFacts({ streak, freezeOn }: { streak: StreakInfo; freezeOn: boolean }) {
   return (
     <p className="flex flex-wrap items-center gap-x-2 text-base text-text">
-      <Flame size={18} aria-hidden="true" className={streak.current ? "text-warning" : "text-faint"} />
+      <Flame
+        size={18}
+        aria-hidden="true"
+        className={streak.current ? "text-warning" : "text-faint"}
+      />
       <ExplainNumber
         label="Streak"
         valueText={`${streak.current} days`}
@@ -668,8 +699,8 @@ export function StreakFacts({ streak, freezeOn }: { streak: StreakInfo; freezeOn
           <>
             <p>
               A day is active with at least 10 minutes of activity, or any attempt, check or
-              finished plan item. The streak counts active days in a row ending today (or
-              yesterday, until today is active).
+              finished plan item. The streak counts active days in a row ending today (or yesterday,
+              until today is active).
             </p>
             <p>
               {freezeOn

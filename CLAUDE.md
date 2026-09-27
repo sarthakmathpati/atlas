@@ -79,6 +79,15 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   `lib/concepts/` (scope: track, hidden, other languages; custom concepts),
   `lib/mistakes/stats.ts`. Problem helpers in `lib/problems/` (catalog of seed plus custom
   problems, filters, quick add, CSV, offline hints, progress labels, suggested next problem).
+- **Planning and insight** (Phase 7): `lib/readiness/model.ts` and `evaluate.ts` evaluate every
+  concept in scope once (the shared readiness model); `lib/planner/` (the daily planner 11.4,
+  its input from the records, plan kinds and reasons); `lib/insight/dashboard.ts` and
+  `weekly.ts` (F17, F18 numbers); `lib/revision/` (F19 sheet builder and HTML export);
+  `lib/activity/heatmap.ts` (F29). Screens in `features/today/PlanSection.tsx`,
+  `features/dashboard/`, `features/weekly/`, `features/revision/`; `features/insight/` holds the
+  store hooks (`useReadiness`, `plannerInputNow`, `useActivityInsight`), the heatmap and the
+  `ExplainNumber` popover. `stores/hydrate.ts` exposes `useDataReady` (all stores loaded).
+  Fixture owners for tests and screenshots: `tests/fixtures/scenarios.ts`.
 - **Map** (`features/map/`): React Flow canvas (`canvas/MapCanvas.tsx`) with memoized bubbles
   (`canvas/nodes.tsx`), everything under the bubbles in one SVG viewport portal
   (`canvas/layers.tsx`), a custom minimap, the model hook (`canvas/useMapModel.ts`) and a small
@@ -523,4 +532,80 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     (selected with a "Press Ctrl+C" hint when the clipboard is blocked), Open Claude
     (`claude.ai/new`) only outside the claude.ai frame, and a paste box. Cancel ends the request
     quietly. Every feature is tested in all three modes (`tests/app/claudeModes.test.tsx`).
-
+85. **Plan kinds whose screens come in Phase 8** (mock interviews, design practice, story
+    practice, mental math): the planner builds and tests them (tests pass every kind as
+    available), but `AVAILABLE_PLAN_KINDS` in `lib/planner/kinds.ts` leaves them out, so Today
+    never shows an item whose Start leads nowhere. Phase 8 adds each kind there once its screen
+    works, and passes the dates of finished mocks, designs and stories as `PlannerInput.history`.
+    The weekly review shows mock counts only then too.
+86. **Planner readings of 11.4**: the minimum day takes the most overdue easy re-solve (it fits the
+    15 minutes), else a medium one, else up to 3 due or fading concepts, else a drill. The most
+    urgent re-solve and the first flashcard bundle always get a place when they fit the day; the
+    rest of the reviews fit the 45% (60%) share, and a bundle of 4 shrinks to 3 to fit. Slots stay
+    free for a bundle and one learning item, so short re-solves can't fill all 8. Weekly extras
+    are placed before the reviews. New learning alternates problems and theory by the balance
+    until the budget. Fit: at most B + min(15, 10% of B), filled toward 90% of B, then at least 3
+    items from the smallest; no item longer than B; at big budgets the 8-item cap wins over 90%.
+    A gentle start: while no pattern is learning or ready (the first days), easy problems on the
+    earliest patterns whose own prerequisites are met. Near the interview, re-solves due within a
+    week (and before it) are pulled forward after the due ones, and new problems are medium ones
+    from started patterns. A mock prefers weekends (on a weekday only 10 days after the last);
+    story practice never on two days running. Ties use `seededRank(date)`; item ids are
+    `kind:refs`, so two devices planning the same day agree.
+87. **The day's plan**: `PlanItem.origin` (planner or owner; stored items without it are the
+    owner's) and `DayPlan.plannedAt` (the planner ran). A new time or the minimum day plans again
+    and keeps done, skipped and the owner's items (they count toward the budget and are never
+    planned twice); skipped items don't count. The bar shows the minutes of done items against the
+    budget, with activity minutes beside it. Drills and mental math have no Swap (one a day).
+    Items complete themselves: attempts (re-solves, new problems), a check or "Mark as studied"
+    (learning), a flashcard bundle once each of its concepts has a check that day, a finished
+    drill session, and printing, exporting or reading a sheet to the end (after 15 s) for a
+    revision item. Store updates happen before the storage write, so marks never race.
+88. **Dashboard numbers**: each one is an `ExplainNumber` popover with its data and formula. Due
+    today = review date today, overdue = earlier (together the Review count); retention =
+    re-solves (any attempt after a problem's first) solved alone over all re-solves in 30 days;
+    the weakness report lists must-know learning or fading concepts with the lowest scores,
+    patterns with solves but no hard one solved alone (offering an unsolved hard problem), and
+    subjects with progress but nothing for 14 days, each with "Add to today" (an owner item). The
+    projection's pace counts must-know `strongSince` in 14 days; the range is ±20% of the growth.
+    Pattern tiles are tinted by practice in 5 steps (`--heat-2` mixed into the surface, at most
+    50%), dashed when no hard problem is solved alone. A year of data (358 problems, 1,433
+    attempts, 3,000 checks) renders in about 150 ms on navigation and 400 to 550 ms cold.
+89. **Chart axis labels** are drawn by our own `AxisTick` with fixed label intervals, and the grid
+    gets an empty vertical generator: Recharts measured every label with a hidden span and
+    `getBoundingClientRect`, forcing a whole-page layout per label (one second on the dashboard).
+90. **Heatmap**: `--heat-0` to `--heat-4` (one blue, validated as ordinal ramps on both surfaces;
+    in the dark more activity is lighter), ISO weeks Monday first, days the weekly freeze covered
+    (from `computeStreak`) outlined, a hover tooltip and "Show as table" by week.
+91. **Activity clock**: part-minutes carry across midnight and between sessions, and each minute
+    goes to the local date of the instant just before it completes, so days add up to the time
+    spent. Tested in six time zones (including +05:30, +12:45 and −02:30) and on DST days.
+92. **Activity counters** added: `solvedEasy/Medium/Hard` (they add up to `problemsSolved`; older
+    days fall back to the attempts), `drillSessions`, `drillAnswers`, `mocks` (Phase 8). Weekly
+    notes live in `ActivityMonth.weeks` keyed by the week's Monday (reflection, suggested focus,
+    acceptedAt), merged newer-wins on import.
+93. **Weekly review**: opens once on the first visit to Today after Sunday 18:00 local
+    (`Profile.weeklyReviewSeenAt`), only for an owner who had Atlas before then; it covers that
+    Monday to Sunday; Today shows a note when the owner arrived elsewhere; `?week=` shows past
+    weeks. Without Claude: a summary from the numbers and a focus suggestion (subjects with fading
+    concepts first, then weight × distance from ready). Claude's reflection (prompt 14) reads the
+    week's numbers and subject readiness; the reply is split by `parseWeeklyReflection` and kept in
+    the week's note; "Use as my focus" sets `focusSubjects`, with Undo.
+94. **Revision sheets**: Markdown sections are the one source for the screen, printing and both
+    exports. 1-day limits: checklist 5, insights 10, weak concepts 6 with 3 points each, formulas
+    10 (the first interview point with math and "=" of started must-know prob, math and markets
+    concepts, Quant and Both tracks). 1-week: the checklist, then a page per subject with its
+    learning and fading must-know concepts (every point), every pattern with signals and template,
+    and solved problems' insights grouped by their first pattern. Custom picks subjects, topics
+    and patterns (in the URL). Printing hides the shell (`print:` classes), forces the light tokens
+    (`:root:root:root` in `@media print`) and breaks pages per subject; when `beforeprint` doesn't
+    fire within a second (the claude.ai frame), a note offers Export as HTML. The HTML export is the
+    rendered sheet, cleaned, in a standalone page with light styles, MathML for math and code
+    colors, and no URLs or scripts. "Tighten with Claude" (prompt 15, complex tier) sends whole
+    sections up to 42 KiB (naming any left out) for about half the words; the result is kept for
+    the visit, marked "Edited by Claude", with the original one tap away; exports take the version
+    shown.
+95. **Fixture owners** (`tests/fixtures/scenarios.ts`): a new owner, one mid-way, one a week
+    before interviews, and a year of data, generated from fixed seeds with statuses from the real
+    engine. `ATLAS_FIXTURES_DIR=<dir> TZ=Asia/Kolkata npx vitest run tests/fixtures/write.test.ts`
+    writes them as backup data for screenshots and timing runs.

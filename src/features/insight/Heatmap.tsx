@@ -87,8 +87,8 @@ export function Heatmap({ lookup, today, weeks, frozen, compact, className }: He
       {!compact && (
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted">
-            {summary.activeDays} active days of {summary.days}, {formatMinutes(summary.minutes)}{" "}
-            in all
+            {summary.activeDays} active days of {summary.days}, {formatMinutes(summary.minutes)} in
+            all
           </p>
           <button
             type="button"
@@ -193,11 +193,7 @@ export function Heatmap({ lookup, today, weeks, frozen, compact, className }: He
                     rx={2.5}
                     fill={`var(--heat-${c.level})`}
                     stroke={
-                      c.frozen
-                        ? "var(--text-muted)"
-                        : c.date === today
-                          ? "var(--text)"
-                          : "none"
+                      c.frozen ? "var(--text-muted)" : c.date === today ? "var(--text)" : "none"
                     }
                     strokeWidth={c.frozen || c.date === today ? 1.5 : 0}
                     strokeDasharray={c.frozen ? "2 1.5" : undefined}

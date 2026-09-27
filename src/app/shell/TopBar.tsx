@@ -97,7 +97,7 @@ export function TopBar() {
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const setAskOpen = useUiStore((s) => s.setAskOpen);
   return (
-    <header className="flex h-14 shrink-0 items-center gap-1 border-b border-rule bg-canvas px-2 sm:gap-2 sm:px-4">
+    <header className="flex h-14 shrink-0 items-center gap-1 border-b border-rule bg-canvas px-2 sm:gap-2 sm:px-4 print:hidden">
       <a
         href="#/today"
         className="flex h-11 items-center gap-2 rounded-control px-2 text-text md:hidden"

@@ -237,7 +237,8 @@ function resolveCandidates(ctx: Ctx): Candidate[] {
           rank: 0,
           difficulty: info.difficulty,
           tricky,
-          score: (review.daysLate / Math.max(1, review.intervalDays)) * problemImportance(ctx, info),
+          score:
+            (review.daysLate / Math.max(1, review.intervalDays)) * problemImportance(ctx, info),
         });
       } else if (
         ctx.near &&
@@ -321,7 +322,9 @@ function reviewConcepts(ctx: Ctx): ReviewConcept[] {
 
 function shortNames(list: readonly ReviewConcept[]): string {
   const names = list.map((r) => r.concept.name);
-  return names.length <= 3 ? joinNames(names) : `${names.slice(0, 2).join(", ")} and ${names.length - 2} more`;
+  return names.length <= 3
+    ? joinNames(names)
+    : `${names.slice(0, 2).join(", ")} and ${names.length - 2} more`;
 }
 
 function bundleCandidate(list: ReviewConcept[], date: string, rank: number): Candidate {
@@ -544,7 +547,8 @@ function revisionCandidates(ctx: Ctx): Candidate[] {
   return [main, other].map((scope, i) => ({
     kind: "revision" as const,
     refId: `revision-${scope}`,
-    title: scope === "week" ? "Revision sheet: the 1-week sheet" : "Revision sheet: the 1-day sheet",
+    title:
+      scope === "week" ? "Revision sheet: the 1-week sheet" : "Revision sheet: the 1-day sheet",
     reason: revisionReason(days, scope),
     estMinutes: ESTIMATES.revision,
     rank: i,

@@ -179,7 +179,8 @@ describe("an owner mid-way", () => {
     for (const budget of [60, 90, 120, 180]) {
       const items = planDay(inputFor("mid", { budget }));
       const due = new Set(items.filter((i) => i.kind === "resolve").map((i) => i.refId));
-      for (const i of items.filter((x) => x.kind === "new-problem")) expect(due.has(i.refId)).toBe(false);
+      for (const i of items.filter((x) => x.kind === "new-problem"))
+        expect(due.has(i.refId)).toBe(false);
     }
   });
 
@@ -223,9 +224,7 @@ describe("an owner a week before interviews", () => {
   });
 
   it("switches to the 1-day sheet in the last 3 days", () => {
-    const close = planDay(
-      inputFor("week", { profile: { interviewDate: addDaysToDate(DAY, 2) } }),
-    );
+    const close = planDay(inputFor("week", { profile: { interviewDate: addDaysToDate(DAY, 2) } }));
     expect(close.find((i) => i.kind === "revision")?.refId).toBe("revision-day");
   });
 
@@ -358,7 +357,9 @@ describe("replanning", () => {
       origin: "owner",
     };
     const marked = [
-      ...first.map((i, n) => (n === 0 ? { ...i, done: true } : n === 1 ? { ...i, skipped: true } : i)),
+      ...first.map((i, n) =>
+        n === 0 ? { ...i, done: true } : n === 1 ? { ...i, skipped: true } : i,
+      ),
       owner,
     ];
     const kept = keptOnReplan(marked);
@@ -409,7 +410,9 @@ describe("kinds whose screens arrive in phase 8", () => {
     expect(kinds(quant)).toContain("mental-math");
     const sde = planDay(inputFor("mid", { available: all }));
     expect(kinds(sde)).not.toContain("mental-math");
-    const small = planDay(inputFor("mid", { available: all, budget: 30, profile: { track: "both" } }));
+    const small = planDay(
+      inputFor("mid", { available: all, budget: 30, profile: { track: "both" } }),
+    );
     expect(kinds(small)).not.toContain("mental-math");
   });
 
@@ -418,10 +421,16 @@ describe("kinds whose screens arrive in phase 8", () => {
     const design = plan.find((i) => i.kind === "design");
     expect(design?.refId).toMatch(/^hld-/);
     const recent = planDay(
-      inputFor("mid", { available: all, budget: 120, history: { designs: [addDaysToDate(DAY, -3)] } }),
+      inputFor("mid", {
+        available: all,
+        budget: 120,
+        history: { designs: [addDaysToDate(DAY, -3)] },
+      }),
     );
     expect(kinds(recent)).not.toContain("design");
-    const quant = planDay(inputFor("mid", { available: all, budget: 120, profile: { track: "quant" } }));
+    const quant = planDay(
+      inputFor("mid", { available: all, budget: 120, profile: { track: "quant" } }),
+    );
     expect(kinds(quant)).not.toContain("design");
     const small = planDay(inputFor("mid", { available: all, budget: 60 }));
     expect(kinds(small)).not.toContain("design");
@@ -434,13 +443,15 @@ describe("kinds whose screens arrive in phase 8", () => {
     expect(kinds(planDay({ ...base, overallReadiness: 20 }))).not.toContain("mock");
     expect(kinds(planDay({ ...base, overallReadiness: 35, budget: 60 }))).not.toContain("mock");
     const lastWeek = { mocks: [addDaysToDate(DAY, -4)] };
-    expect(kinds(planDay({ ...base, overallReadiness: 35, history: lastWeek }))).not.toContain("mock");
+    expect(kinds(planDay({ ...base, overallReadiness: 35, history: lastWeek }))).not.toContain(
+      "mock",
+    );
     // A Wednesday: only when the last mock was more than 10 days ago.
     const wed = addDaysToDate(DAY, 3);
     const weekday = { ...base, date: wed, overallReadiness: 35 };
-    expect(kinds(planDay({ ...weekday, history: { mocks: [addDaysToDate(wed, -8)] } }))).not.toContain(
-      "mock",
-    );
+    expect(
+      kinds(planDay({ ...weekday, history: { mocks: [addDaysToDate(wed, -8)] } })),
+    ).not.toContain("mock");
     expect(kinds(planDay({ ...weekday, history: { mocks: [addDaysToDate(wed, -12)] } }))).toContain(
       "mock",
     );

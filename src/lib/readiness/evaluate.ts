@@ -22,7 +22,9 @@ export interface EvaluationSources {
 }
 
 /** Seed and own concepts in the owner's scope (track, not hidden, not another language). */
-export function conceptsInScope(src: Pick<EvaluationSources, "profile" | "conceptStates" | "customConcepts">): Concept[] {
+export function conceptsInScope(
+  src: Pick<EvaluationSources, "profile" | "conceptStates" | "customConcepts">,
+): Concept[] {
   const ctx = {
     track: src.profile.track,
     profile: src.profile,
@@ -61,9 +63,5 @@ export function evaluateConcept(concept: Concept, src: EvaluationSources): Statu
 }
 
 export function evaluateReadiness(src: EvaluationSources): ReadinessModel {
-  return readinessModel(
-    conceptsInScope(src),
-    (c) => evaluateConcept(c, src),
-    src.profile.track,
-  );
+  return readinessModel(conceptsInScope(src), (c) => evaluateConcept(c, src), src.profile.track);
 }

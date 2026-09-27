@@ -9,6 +9,7 @@ import { getSearchIndex } from "@/features/palette/docs";
 import { CsvImportDialog } from "@/features/problems/CsvImportDialog";
 import { QuickAddDialog } from "@/features/problems/QuickAddDialog";
 import { useReviewQueue } from "@/features/review/useReviewQueue";
+import { weeklyReviewDue } from "@/lib/insight/weekly";
 import { useConceptDialogs } from "@/stores/conceptDialogStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -57,6 +58,21 @@ function useFirstRunWelcome() {
   }, [loaded, done]);
 }
 
+/**
+ * After Sunday 18:00, the first visit to Today hands over to the weekly review once (F18). A
+ * deep link elsewhere isn't interrupted; Today then shows a note instead.
+ */
+function useWeeklyReviewPrompt() {
+  const profile = useProfileStore((s) => s.profile);
+  const checked = useRef(false);
+  useEffect(() => {
+    if (!profile || checked.current) return;
+    checked.current = true;
+    if (!profile.onboardingDone || parseHash(window.location.hash).name !== "today") return;
+    if (weeklyReviewDue(new Date(), profile)) navigate("/weekly", { replace: true });
+  }, [profile]);
+}
+
 type IdleWindow = Window & {
   requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
   cancelIdleCallback?: (id: number) => void;
@@ -88,6 +104,7 @@ export function AppShell() {
   useGlobalShortcuts();
   usePrebuiltSearchIndex();
   useFirstRunWelcome();
+  useWeeklyReviewPrompt();
 
   // A new page starts at the top.
   useEffect(() => {
@@ -95,7 +112,7 @@ export function AppShell() {
   }, [route.path]);
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full print:block print:h-auto">
       <button
         type="button"
         onClick={() => mainRef.current?.focus()}
@@ -104,13 +121,13 @@ export function AppShell() {
         Skip to content
       </button>
       <Sidebar route={route} collapsed={collapsed} badges={badges} />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col print:block">
         <TopBar />
         <main
           ref={mainRef}
           id="main"
           tabIndex={-1}
-          className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
+          className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto outline-none print:overflow-visible"
         >
           <ShellNotices />
           <ErrorBoundary key={route.path} inline>

@@ -28,7 +28,7 @@ const ROUTES: [string, string | RegExp][] = [
   ["#/mistakes", "Mistakes"],
   ["#/dashboard", "Dashboard"],
   ["#/weekly", "Weekly review"],
-  ["#/revision", "Revision"],
+  ["#/revision", "Revision sheets"],
   ["#/settings", "Settings"],
   ["#/somewhere-else", "Page not found"],
 ];

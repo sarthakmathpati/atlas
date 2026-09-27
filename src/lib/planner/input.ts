@@ -25,7 +25,10 @@ export interface PlannerSources extends EvaluationSources {
   model?: ReadinessModel;
 }
 
-export function buildPlannerInput(src: PlannerSources): { input: PlannerInput; model: ReadinessModel } {
+export function buildPlannerInput(src: PlannerSources): {
+  input: PlannerInput;
+  model: ReadinessModel;
+} {
   const model = src.model ?? evaluateReadiness(src);
   const drillChecks = Object.values(src.checks)
     .flat()

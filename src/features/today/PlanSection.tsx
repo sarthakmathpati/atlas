@@ -98,7 +98,9 @@ function startTarget(item: PlanItem): { href: string } | { run: () => void } | n
     case "drill":
       return { href: "#/drill" };
     case "revision":
-      return { href: routeHref("/revision", undefined, { scope: ref === "revision-day" ? "day" : "week" }) };
+      return {
+        href: routeHref("/revision", undefined, { scope: ref === "revision-day" ? "day" : "week" }),
+      };
     case "mental-math":
       return { href: "#/mental-math" };
     case "mock":
@@ -274,13 +276,7 @@ function PlanRow({ item, plan }: { item: PlanItem; plan: DayPlan }) {
   );
 }
 
-function BudgetPicker({
-  plan,
-  onPick,
-}: {
-  plan: DayPlan;
-  onPick: (budget: number) => void;
-}) {
+function BudgetPicker({ plan, onPick }: { plan: DayPlan; onPick: (budget: number) => void }) {
   const [custom, setCustom] = useState("");
   const value = plan.budgetMinutes;
   return (
@@ -433,7 +429,10 @@ export function PlanSection() {
             {planned} min planned, {Math.round(activity)} min of activity today
           </span>
         </div>
-        <ProgressBar value={budget > 0 ? done / budget : 0} label="Minutes done against today's time" />
+        <ProgressBar
+          value={budget > 0 ? done / budget : 0}
+          label="Minutes done against today's time"
+        />
         <Switch
           checked={plan.minimumDay}
           onChange={(on) =>
