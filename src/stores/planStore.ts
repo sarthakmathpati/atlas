@@ -1,8 +1,15 @@
-// Today's plan (F16). The planner that fills it arrives in phase 7; until then the owner adds
-// items from the map ("Add to today's plan", "Show my path here") and ticks them off, and items
-// complete themselves when the owner does the thing anywhere in the app (planEffects).
+// Today's plan (F16). The planner (lib/planner) fills it on the first open of each day; the owner
+// changes the budget or switches to a minimum day (which plans again, keeping what is done),
+// marks items done, skips or swaps them, and adds more from the map, a path or the dashboard.
+// Items complete themselves when the owner does the thing anywhere in the app (planEffects).
 import { nanoid } from "nanoid";
 import { create } from "zustand";
+import {
+  applySwap,
+  keptOnReplan,
+  planDay,
+  type PlannerInput,
+} from "@/lib/planner/planner";
 import type { Repository } from "@/lib/storage/Repository";
 import { localDate, nowIso } from "@/lib/time";
 import type { DayPlan, PlanItem } from "@/lib/types";
@@ -81,7 +88,13 @@ export function addPlanItems(
     ...current,
     items: [
       ...current.items,
-      ...fresh.map((item) => ({ ...item, id: nanoid(10), done: false, skipped: false })),
+      ...fresh.map((item) => ({
+        ...item,
+        id: nanoid(10),
+        done: false,
+        skipped: false,
+        origin: "owner" as const,
+      })),
     ],
     updatedAt: nowIso(),
   });
@@ -110,4 +123,69 @@ export function removePlanItem(date: string, itemId: string): DayPlan | null {
 
 export function restorePlan(plan: DayPlan): void {
   write({ ...plan, updatedAt: nowIso() });
+}
+
+// ----- the planner -------------------------------------------------------------------------------
+
+/**
+ * Plans the day when it hasn't been planned yet (the first open each day). Items the owner
+ * already added (from the map or a path) stay, and the planner fills around them.
+ */
+export function ensurePlanned(input: PlannerInput): DayPlan | null {
+  const current = usePlanStore.getState().plans[input.date];
+  if (current?.plannedAt) return null;
+  const base = current ?? emptyPlan(input.date, input.budget);
+  const kept = base.items;
+  const stamp = nowIso();
+  const plan: DayPlan = {
+    ...base,
+    budgetMinutes: input.budget,
+    minimumDay: input.minimumDay,
+    items: [...kept, ...planDay(input, kept)],
+    plannedAt: stamp,
+    updatedAt: stamp,
+  };
+  write(plan);
+  return plan;
+}
+
+/**
+ * Plans again with a new budget or the minimum day switch. Done and skipped items and the
+ * owner's own stay; everything else the planner added is planned afresh. Returns the plan
+ * before, for Undo.
+ */
+export function replan(input: PlannerInput): DayPlan | null {
+  const current = usePlanStore.getState().plans[input.date];
+  const base = current ?? emptyPlan(input.date, input.budget);
+  const kept = keptOnReplan(base.items);
+  const stamp = nowIso();
+  write({
+    ...base,
+    budgetMinutes: input.minimumDay ? base.budgetMinutes : input.budget,
+    minimumDay: input.minimumDay,
+    items: [...kept, ...planDay(input, kept)],
+    plannedAt: stamp,
+    updatedAt: stamp,
+  });
+  return current ?? null;
+}
+
+/** Skips an item (or brings it back). Skipped items don't count toward the day's minutes. */
+export function setPlanItemSkipped(date: string, itemId: string, skipped: boolean): void {
+  const plan = usePlanStore.getState().plans[date];
+  const item = plan?.items.find((i) => i.id === itemId);
+  if (!plan || !item || item.skipped === skipped) return;
+  write({
+    ...plan,
+    items: plan.items.map((i) => (i.id === itemId ? { ...i, skipped, done: false } : i)),
+    updatedAt: nowIso(),
+  });
+}
+
+/** Swaps an item for an alternative of the same kind (from swapOptions). Returns the plan before. */
+export function swapPlanItem(date: string, itemId: string, replacement: PlanItem): DayPlan | null {
+  const plan = usePlanStore.getState().plans[date];
+  if (!plan || !plan.items.some((i) => i.id === itemId)) return null;
+  write({ ...plan, items: applySwap(plan.items, itemId, replacement), updatedAt: nowIso() });
+  return plan;
 }

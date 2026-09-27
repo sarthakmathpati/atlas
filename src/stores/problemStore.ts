@@ -12,7 +12,15 @@ import { replaySchedule, scheduleProblem, type ProblemScheduleResult } from "@/l
 import { createProblemState } from "@/lib/storage/defaults";
 import type { Repository } from "@/lib/storage/Repository";
 import { localDate, nowIso } from "@/lib/time";
-import type { Attempt, CustomProblem, ProblemDraft, ProblemState, Profile } from "@/lib/types";
+import type {
+  ActivityDay,
+  Attempt,
+  CustomProblem,
+  Difficulty,
+  ProblemDraft,
+  ProblemState,
+  Profile,
+} from "@/lib/types";
 import { recordActivity } from "./activityStore";
 import { refreshConcepts } from "./conceptStateStore";
 import { markPlanItemDone } from "./planEffects";
@@ -197,6 +205,13 @@ function nextReviewMessage(schedule: ProblemScheduleResult, inReview: boolean): 
   return `Attempt saved. Next review ${d === 1 ? "tomorrow" : `in ${d} days`}.`;
 }
 
+/** The activity counter for a solve of each difficulty (the weekly review reads them). */
+const SOLVED_KEY = {
+  easy: "solvedEasy",
+  medium: "solvedMedium",
+  hard: "solvedHard",
+} as const satisfies Record<Difficulty, keyof ActivityDay>;
+
 /** Saves an attempt and everything that follows from it (F7 "On save"). */
 export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAttempt {
   const previous = getProblemState(input.problemId) ?? null;
@@ -254,9 +269,11 @@ export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAtt
   const solved = input.result === "solved_alone" || input.result === "solved_with_hints";
   const conceptIds = conceptsOfProblem(input.problemId, next);
   const touched = refreshConcepts(conceptIds, { activityAt: stamp, now });
+  const difficulty = info?.difficulty ?? "medium";
   recordActivity(today, {
     attempts: 1,
     problemsSolved: solved ? 1 : 0,
+    ...(solved ? { [SOLVED_KEY[difficulty]]: 1 } : {}),
     reviews: schedule.case === "due" ? 1 : 0,
     conceptsTouched: touched,
   });

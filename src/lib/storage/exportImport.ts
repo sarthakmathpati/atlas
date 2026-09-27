@@ -232,6 +232,14 @@ function makeMergers(counter: { attemptsTrimmed: number }) {
     ].sort();
     const merged: ActivityMonth = { ...newer, days: sortedDays };
     if (freezes.length) merged.streakFreezeUsed = freezes;
+    // Weekly review notes: the newer note for each week wins.
+    const weeks = { ...older.weeks };
+    for (const [key, note] of Object.entries(newer.weeks ?? {})) {
+      const other = weeks[key];
+      weeks[key] = !other || note.updatedAt >= other.updatedAt ? note : other;
+    }
+    if (Object.keys(weeks).length) merged.weeks = weeks;
+    else delete merged.weeks;
     return merged;
   };
   return { mergeProblem, mergeNote, mergeStory, mergeActivity };
