@@ -10,7 +10,7 @@ import { normalizeLanguage } from "@/components/ui/code/languages";
 import { useLatest } from "@/components/ui/hooks";
 import { useTimer, type TimerControls } from "@/components/ui/timer";
 import { nowIso } from "@/lib/time";
-import type { CodeReview, ProblemDraft } from "@/lib/types";
+import type { CodeReview, ProblemDraft, PuzzleProgress } from "@/lib/types";
 import { startActivitySource, stopActivitySource } from "@/stores/activityStore";
 import { getProblemState, saveDraft } from "@/stores/problemStore";
 import { isBlankCode, starterTemplate } from "./templates";
@@ -30,6 +30,8 @@ export interface Session {
   dryRuns: DryRun[];
   /** Mistake tags taken from the review, preselected when saving. */
   pendingTagIds: string[];
+  /** Quant puzzles: the answer checked or graded so far (F28). */
+  puzzle?: PuzzleProgress;
 }
 
 export type DryRun = { input: string; output: string; createdAt: string };
@@ -80,6 +82,7 @@ function fromDraft(d: ProblemDraft): Session {
     reviewedCode: d.reviewedCode,
     dryRuns: d.dryRuns ?? [],
     pendingTagIds: d.pendingTagIds ?? [],
+    puzzle: d.puzzle,
   };
 }
 
@@ -148,6 +151,8 @@ export function useAttemptSession(
       !s.revealed &&
       !s.review &&
       s.dryRuns.length === 0 &&
+      !s.puzzle?.answer.trim() &&
+      !s.puzzle?.tries &&
       elapsed < 60_000;
     if (blank) {
       saveDraft(problemId, null);
@@ -171,6 +176,7 @@ export function useAttemptSession(
     }
     if (s.dryRuns.length) draft.dryRuns = s.dryRuns;
     if (s.pendingTagIds.length) draft.pendingTagIds = s.pendingTagIds;
+    if (s.puzzle) draft.puzzle = s.puzzle;
     saveDraft(problemId, draft);
     setDraftState("saved");
   };
@@ -274,6 +280,7 @@ export function useAttemptSession(
       reviewedCode: undefined,
       dryRuns: [],
       pendingTagIds: [],
+      puzzle: undefined,
     }));
     timer.set(0);
     setDraftState("none");

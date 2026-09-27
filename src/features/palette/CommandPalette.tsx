@@ -3,6 +3,7 @@
 // when the search is empty. Built on cmdk for keyboard handling; results come from MiniSearch.
 import { Command } from "cmdk";
 import {
+  Calculator,
   Dumbbell,
   ArrowRight,
   CirclePlus,
@@ -273,6 +274,22 @@ export function CommandPalette() {
         keywords: "drill pattern recognition practice prompts",
         group: "Commands",
         run: () => navigate("/drill"),
+      },
+      {
+        id: "cmd:mental-math",
+        label: "Start a mental math sprint",
+        icon: Calculator,
+        keywords: "mental math speed arithmetic sprint fractions percentages sequences estimation quant",
+        group: "Commands",
+        run: () => navigate(routeHref("/mental-math", undefined, { mode: "speed" })),
+      },
+      {
+        id: "cmd:puzzles",
+        label: "Solve a quant puzzle",
+        icon: Puzzle,
+        keywords: "quant puzzles brainteaser probability answer check",
+        group: "Commands",
+        run: () => navigate("/puzzles"),
       },
       {
         id: "cmd:revision-day",

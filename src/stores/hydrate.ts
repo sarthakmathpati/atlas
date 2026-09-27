@@ -10,6 +10,7 @@ import { detachCustomConcepts, hydrateCustomConcepts } from "./customConceptStor
 import { detachGeneratedDrills, hydrateGeneratedDrills } from "./drillStore";
 import { clearInk } from "./inkStore";
 import { detachMapOverrides, hydrateMapOverrides } from "./mapStore";
+import { detachMentalMath, hydrateMentalMath } from "./mentalMathStore";
 import { detachMistakeTags, hydrateMistakeTags } from "./mistakeTagStore";
 import { setPlanEffectsRepository } from "./planEffects";
 import { detachPlan, hydratePlan } from "./planStore";
@@ -33,6 +34,7 @@ export async function hydrateAll(repository: Repository): Promise<void> {
     hydrateMapOverrides(repository),
     hydratePlan(repository),
     hydrateGeneratedDrills(repository),
+    hydrateMentalMath(repository),
   ]);
   refreshAllConcepts();
   // Loading isn't a change the owner made: no ink for statuses that were already strong.
@@ -53,4 +55,5 @@ export function detachAll(): void {
   detachMapOverrides();
   detachPlan();
   detachGeneratedDrills();
+  detachMentalMath();
 }

@@ -217,6 +217,21 @@ export function demoSampleResponder(input: SampleInput): string {
     );
   }
 
+  if (text.includes("Grade the learner's answer to this puzzle")) {
+    // A longer answer with reasons reads as right; a one-liner as partly right.
+    const answer = text.split("Learner's answer and reasoning:")[1]?.trim() ?? "";
+    const full = answer.split(/\s+/).length >= 12;
+    return json({
+      correct: full,
+      score: full ? 0.9 : 0.5,
+      feedback: full
+        ? "Right answer, and you said why it works. Name the key step in one sentence first next time."
+        : "The idea is there, but say why it works and check the edge case.",
+      idealReasoning:
+        "State the key observation, show it holds whatever the unknowns are, then give the method step by step and check it on a small case.",
+    });
+  }
+
   if (text.includes("Write study material for the concept")) {
     return json({
       simple: `${concept} is like keeping a running tally instead of recounting from scratch every time something changes.`,

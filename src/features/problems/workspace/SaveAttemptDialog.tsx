@@ -11,6 +11,7 @@ import { MultiCombobox, type ComboOption } from "@/components/ui/MultiCombobox";
 import { matchTags } from "@/lib/mistakes/match";
 import { CATEGORY_LABEL } from "@/lib/mistakes/stats";
 import { problemLabel, type ProblemInfo } from "@/lib/problems/catalog";
+import { puzzleOutcome } from "@/lib/quant/puzzles";
 import { RESULT_LABEL, RESULT_ORDER } from "@/lib/problems/progress";
 import type { AttemptResult, ProblemState } from "@/lib/types";
 import { addMistakeTag, useMistakeTagStore } from "@/stores/mistakeTagStore";
@@ -45,6 +46,11 @@ function defaultResult(session: Session): AttemptResult | null {
   return null;
 }
 
+/** Quant puzzles: the checked or graded answer decides which results are honest (F28). */
+function outcomeFor(info: ProblemInfo, session: Session) {
+  return info.source === "quant" ? puzzleOutcome(info, session.puzzle, session) : null;
+}
+
 export function SaveAttemptDialog(props: SaveAttemptDialogProps) {
   // The body mounts fresh each time the dialog opens, so its fields start from the attempt.
   const { open, onClose } = props;
@@ -73,7 +79,10 @@ function SaveAttemptForm({
   onSaved,
 }: SaveAttemptDialogProps) {
   const tags = useMistakeTagStore((s) => s.tags);
-  const [result, setResult] = useState<AttemptResult | null>(() => defaultResult(session));
+  const outcome = outcomeFor(info, session);
+  const [result, setResult] = useState<AttemptResult | null>(() =>
+    outcome ? outcome.suggested : defaultResult(session),
+  );
   const [minutes, setMinutes] = useState(() =>
     elapsedMs > 0 ? String(Math.max(1, Math.round(elapsedMs / 60_000))) : "",
   );
@@ -113,8 +122,10 @@ function SaveAttemptForm({
   const successful = result === "solved_alone" || result === "solved_with_hints";
   const wantInsight = successful && !alreadySolved && !state?.insight && insight.trim() === "";
   const locked = (r: AttemptResult): string | null => {
-    if (session.sawSolution && (r === "solved_alone" || r === "solved_with_hints"))
-      return "You saw the solution during this attempt.";
+    const solvedResult = r === "solved_alone" || r === "solved_with_hints";
+    if (outcome?.solvedLock && solvedResult) return outcome.solvedLock;
+    if (outcome?.aloneLock && r === "solved_alone") return outcome.aloneLock;
+    if (session.sawSolution && solvedResult) return "You saw the solution during this attempt.";
     if (session.hintsUsed > 0 && r === "solved_alone") return "You used hints during this attempt.";
     return null;
   };
@@ -151,6 +162,9 @@ function SaveAttemptForm({
         insight: insightVisible || insight.trim() ? insight : undefined,
         review: session.review,
         dryRuns: session.dryRuns,
+        answer: session.puzzle?.answer,
+        answerTries: session.puzzle?.tries,
+        grade: session.puzzle?.grade,
       });
       toast(saved.message, { tone: "success" });
       onSaved(saved);

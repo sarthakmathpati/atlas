@@ -19,6 +19,8 @@ import type {
   MockSession,
   ProblemState,
   Profile,
+  PuzzleAttemptGrade,
+  PuzzleProgress,
   SrsState,
   Story,
 } from "@/lib/types";
@@ -123,6 +125,22 @@ export const conceptNoteSchema: z.ZodType<ConceptNote> = z.object({
   updatedAt: isoTime,
 });
 
+const puzzleAttemptGradeSchema: z.ZodType<PuzzleAttemptGrade> = z.object({
+  by: z.enum(["claude", "self"]),
+  correct: z.boolean(),
+  score: z.number().min(0).max(1),
+  feedback: z.string().optional(),
+  idealReasoning: z.string().optional(),
+});
+
+const puzzleProgressSchema: z.ZodType<PuzzleProgress> = z.object({
+  answer: z.string(),
+  tries: z.number().int().min(0),
+  verdict: z.enum(["correct", "incorrect"]).optional(),
+  firstCorrectTry: z.number().int().min(1).optional(),
+  grade: puzzleAttemptGradeSchema.optional(),
+});
+
 export const attemptSchema: z.ZodType<Attempt> = z.object({
   id: z.string().min(1),
   problemId: z.string().min(1),
@@ -142,6 +160,9 @@ export const attemptSchema: z.ZodType<Attempt> = z.object({
   dryRuns: z
     .array(z.object({ input: z.string(), output: z.string(), createdAt: isoTime }))
     .optional(),
+  answer: z.string().optional(),
+  answerTries: z.number().int().min(0).optional(),
+  grade: puzzleAttemptGradeSchema.optional(),
 });
 
 export const problemStateSchema: z.ZodType<ProblemState> = z.object({
@@ -184,6 +205,7 @@ export const problemStateSchema: z.ZodType<ProblemState> = z.object({
         .array(z.object({ input: z.string(), output: z.string(), createdAt: isoTime }))
         .optional(),
       pendingTagIds: z.array(z.string()).optional(),
+      puzzle: puzzleProgressSchema.optional(),
     })
     .optional(),
   hints: z
@@ -341,8 +363,10 @@ export const storySchema: z.ZodType<Story> = z.object({
 export const mentalMathRunSchema: z.ZodType<MentalMathRun> = z.object({
   id: z.string().min(1),
   mode: z.string(),
+  tier: z.enum(["easy", "medium", "hard"]).optional(),
   correct: z.number().int().min(0),
   total: z.number().int().min(0),
+  answered: z.number().int().min(0).optional(),
   seconds: z.number().min(0),
   createdAt: isoTime,
   updatedAt: isoTime,

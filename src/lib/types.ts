@@ -4,9 +4,9 @@
 // Rule for user data: every stored entity has an `updatedAt` timestamp (ISO string). Import merge
 // and multi-device sync rely on it ("newer updatedAt wins").
 
-import type { CodeReview, MockFeedback } from "./ai/schemas";
+import type { CodeReview, MockFeedback, PuzzleGrade } from "./ai/schemas";
 
-export type { CodeReview, MockFeedback };
+export type { CodeReview, MockFeedback, PuzzleGrade };
 
 // ---------------------------------------------------------------------------------------------
 // 4.1 Static seed types
@@ -266,6 +266,34 @@ export interface Attempt {
   mode: "normal" | "resolve" | "mock";
   review?: CodeReview; // AI code review result (F12)
   dryRuns?: { input: string; output: string; createdAt: string }[];
+  /** Quant puzzles (F28): the final answer typed, and how it was checked or graded. */
+  answer?: string;
+  answerTries?: number;
+  grade?: PuzzleAttemptGrade;
+}
+
+/** How an open-ended puzzle answer was graded: by Claude (prompt 16) or against the note. */
+export interface PuzzleAttemptGrade {
+  by: "claude" | "self";
+  correct: boolean;
+  /** 0 to 1. */
+  score: number;
+  feedback?: string;
+  idealReasoning?: string;
+}
+
+/** A quant puzzle's answer during an attempt (F28), kept in the draft so a reload keeps it. */
+export interface PuzzleProgress {
+  /** The answer as typed: a value for checkable puzzles, the reasoning for open-ended ones. */
+  answer: string;
+  /** Answers checked so far (checkable puzzles; unreadable ones don't count). */
+  tries: number;
+  /** The last check's verdict. */
+  verdict?: "correct" | "incorrect";
+  /** The try on which the answer first checked out. */
+  firstCorrectTry?: number;
+  /** Open-ended puzzles: the grade. */
+  grade?: PuzzleAttemptGrade;
 }
 
 export interface CustomProblem {
@@ -307,6 +335,8 @@ export interface ProblemDraft {
   dryRuns?: { input: string; output: string; createdAt: string }[];
   /** Mistake tags the owner took from the review; the save dialog starts with them selected. */
   pendingTagIds?: string[];
+  /** Quant puzzles: the answer checked or graded so far (F28). */
+  puzzle?: PuzzleProgress;
 }
 
 export interface ProblemState {
@@ -498,9 +528,15 @@ export interface CustomConcept {
 
 export interface MentalMathRun {
   id: string;
+  /** "speed", "fractions", "sequences" or "estimation" (F28). */
   mode: string;
+  /** The difficulty tier the sprint ran at. */
+  tier?: "easy" | "medium" | "hard";
   correct: number;
+  /** Questions in the full sprint (the score is correct / total). */
   total: number;
+  /** Questions answered, right or wrong (skips not counted). */
+  answered?: number;
   seconds: number;
   createdAt: string;
   updatedAt: string;

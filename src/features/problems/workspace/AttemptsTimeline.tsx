@@ -139,6 +139,28 @@ export function AttemptDetails({ attempt, state }: { attempt: Attempt; state?: P
           ))}
         </div>
       )}
+      {attempt.answer && (
+        <div>
+          <p className="mb-1 text-sm font-medium text-muted">
+            Answer
+            {attempt.answerTries
+              ? ` (${attempt.answerTries} ${attempt.answerTries === 1 ? "check" : "checks"})`
+              : ""}
+          </p>
+          <p className="text-base whitespace-pre-wrap text-text">{attempt.answer}</p>
+        </div>
+      )}
+      {attempt.grade && (
+        <div className="rounded-control border border-rule px-3 py-2">
+          <p className="flex items-center gap-2 text-sm font-medium text-muted">
+            {attempt.grade.by === "claude" ? "Graded by Claude" : "Graded by you against the note"}:{" "}
+            {Math.round(attempt.grade.score * 100)}%{attempt.grade.by === "claude" && <ClaudeTag />}
+          </p>
+          {attempt.grade.feedback && (
+            <p className="mt-1 text-base text-text">{attempt.grade.feedback}</p>
+          )}
+        </div>
+      )}
       {attempt.approach && (
         <div>
           <p className="mb-1 text-sm font-medium text-muted">Approach</p>

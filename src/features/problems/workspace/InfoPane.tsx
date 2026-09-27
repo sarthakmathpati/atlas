@@ -272,6 +272,8 @@ interface InfoPaneProps {
   onOpenAttempt: (id: string) => void;
   /** The page title is rendered above the tabs (narrow screens). */
   titleOutside?: boolean;
+  /** Quant puzzles: the answer box under the puzzle (F28). */
+  answerBox?: React.ReactNode;
 }
 
 /** The problem's name as the page heading, with its topic above it. */
@@ -305,6 +307,7 @@ export function InfoPane({
   onReveal,
   onOpenAttempt,
   titleOutside,
+  answerBox,
 }: InfoPaneProps) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -410,9 +413,9 @@ export function InfoPane({
         <Section title="The puzzle">
           <p className="max-w-[70ch] text-md text-text">{info.prompt}</p>
           <p className="text-sm text-muted">
-            Work it out in the editor, then save your attempt. Answer checking arrives with quant
-            practice in phase 8.
+            Work it out on paper or in the editor, then give your answer below.
           </p>
+          {answerBox && <div className="pt-2">{answerBox}</div>}
         </Section>
       )}
 

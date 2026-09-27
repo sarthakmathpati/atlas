@@ -388,11 +388,10 @@ describe("replanning", () => {
   });
 });
 
-describe("kinds whose screens arrive in phase 8", () => {
-  const LATER: PlanKind[] = ["mock", "design", "story", "mental-math"];
+describe("phase 8 kinds", () => {
+  const LATER: PlanKind[] = ALL_PLAN_KINDS.filter((k) => !AVAILABLE_PLAN_KINDS.has(k));
 
   it("are never planned while their screens don't exist", () => {
-    for (const k of LATER) expect(AVAILABLE_PLAN_KINDS.has(k)).toBe(false);
     for (const name of ["new", "mid", "week"] as const) {
       for (const budget of [60, 90, 120, 240]) {
         for (const track of ["sde", "quant", "both"] as const) {

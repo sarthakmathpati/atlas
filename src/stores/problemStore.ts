@@ -178,6 +178,10 @@ export interface NewAttempt {
   /** Claude's review and dry runs made during the attempt (F12). */
   review?: Attempt["review"];
   dryRuns?: Attempt["dryRuns"];
+  /** Quant puzzles (F28): the final answer, tries and grade. */
+  answer?: string;
+  answerTries?: number;
+  grade?: Attempt["grade"];
 }
 
 export interface SavedAttempt {
@@ -234,6 +238,9 @@ export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAtt
   if (input.minutes !== undefined) attempt.minutes = input.minutes;
   if (input.review) attempt.review = input.review;
   if (input.dryRuns?.length) attempt.dryRuns = input.dryRuns;
+  if (input.answer?.trim()) attempt.answer = input.answer.trim();
+  if (input.answerTries) attempt.answerTries = input.answerTries;
+  if (input.grade) attempt.grade = input.grade;
   for (const key of ["approach", "timeComplexity", "spaceComplexity"] as const) {
     const v = input[key]?.trim();
     if (v) attempt[key] = v;

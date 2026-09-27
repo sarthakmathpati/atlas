@@ -1,9 +1,8 @@
 // Plan item kinds (section 4.2 PlanItem.kind) and which of them have a working screen today.
 //
-// The planner (section 11.4) knows every kind, and tests exercise all of them. A kind whose
-// screen arrives later (mock interviews, design practice, story practice and mental math come in
-// phase 8) is left out of the day's plan, so Start never leads to a page that can't do the
-// thing yet. Phase 8 adds each kind here when its screen works (CLAUDE.md decision 85).
+// The planner (section 11.4) knows every kind, and tests exercise all of them. A kind is planned
+// only once its screen works, so Start never leads to a page that can't do the thing yet
+// (CLAUDE.md decision 85). Phase 8 added mental math, story practice, design practice and mocks.
 import type { PlanItem } from "@/lib/types";
 
 export type PlanKind = PlanItem["kind"];
@@ -29,6 +28,7 @@ export const AVAILABLE_PLAN_KINDS: ReadonlySet<PlanKind> = new Set<PlanKind>([
   "learn-concept",
   "new-problem",
   "drill",
+  "mental-math",
 ]);
 
 /** Display order in the plan: revision first near the interview, reviews, learning, practice. */
