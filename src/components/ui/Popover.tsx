@@ -130,6 +130,7 @@ export type MenuItem =
       icon?: LucideIcon;
       checked: boolean;
       onSelect: () => void;
+      hint?: string;
     }
   | { kind: "separator"; id: string }
   | { kind: "label"; id: string; label: string };
@@ -229,10 +230,14 @@ function MenuList({ items, label, id, onClose, listRef }: MenuListProps) {
           >
             {Icon && <Icon size={16} aria-hidden="true" className="shrink-0 text-muted" />}
             <span className="flex-1">{item.label}</span>
-            {isRadio && item.checked && (
-              <Check size={15} aria-hidden="true" className="shrink-0 text-accent" />
+            {item.hint && <span className="text-xs text-faint">{item.hint}</span>}
+            {isRadio && (
+              <Check
+                size={15}
+                aria-hidden="true"
+                className={cx("shrink-0 text-accent", !item.checked && "invisible")}
+              />
             )}
-            {!isRadio && item.hint && <span className="text-xs text-faint">{item.hint}</span>}
           </div>
         );
       })}

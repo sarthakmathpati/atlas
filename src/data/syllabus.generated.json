@@ -26,7 +26,7 @@
    ],
    "order": 1,
    "icon": "code",
-   "regionHue": 250,
+   "regionHue": 232,
    "description": "The C++, Java and Python details interviewers expect you to know cold."
   },
   {
@@ -43,7 +43,7 @@
    ],
    "order": 2,
    "icon": "git-branch",
-   "regionHue": 210,
+   "regionHue": 255,
    "description": "The patterns and data structures behind every coding round."
   },
   {
@@ -60,7 +60,7 @@
    ],
    "order": 3,
    "icon": "boxes",
-   "regionHue": 180,
+   "regionHue": 284,
    "description": "Classes, the four pillars, SOLID and the classic design patterns."
   },
   {
@@ -75,7 +75,7 @@
    ],
    "order": 4,
    "icon": "layout-grid",
-   "regionHue": 270,
+   "regionHue": 148,
    "description": "Turning a feature request into clean classes and working code."
   },
   {
@@ -92,7 +92,7 @@
    ],
    "order": 5,
    "icon": "cpu",
-   "regionHue": 228,
+   "regionHue": 196,
    "description": "How processes, threads, memory and files are managed underneath your code."
   },
   {
@@ -109,7 +109,7 @@
    ],
    "order": 6,
    "icon": "git-merge",
-   "regionHue": 176,
+   "regionHue": 166,
    "description": "Writing code that runs safely and quickly on many threads at once."
   },
   {
@@ -126,7 +126,7 @@
    ],
    "order": 7,
    "icon": "microchip",
-   "regionHue": 262,
+   "regionHue": 212,
    "description": "How the hardware runs your code, and how to make it fast."
   },
   {
@@ -141,7 +141,7 @@
    ],
    "order": 8,
    "icon": "network",
-   "regionHue": 194,
+   "regionHue": 180,
    "description": "How data travels from one machine to another, layer by layer."
   },
   {
@@ -156,7 +156,7 @@
    ],
    "order": 9,
    "icon": "database",
-   "regionHue": 268,
+   "regionHue": 304,
    "description": "How databases model, index and protect data under concurrent use."
   },
   {
@@ -171,7 +171,7 @@
    ],
    "order": 10,
    "icon": "table",
-   "regionHue": 204,
+   "regionHue": 324,
    "description": "Writing correct, readable queries, from joins to window functions."
   },
   {
@@ -187,7 +187,7 @@
    ],
    "order": 11,
    "icon": "server",
-   "regionHue": 242,
+   "regionHue": 130,
    "description": "Designing large systems that scale, stay up and stay consistent."
   },
   {
@@ -202,7 +202,7 @@
    ],
    "order": 12,
    "icon": "dice-5",
-   "regionHue": 186,
+   "regionHue": 90,
    "description": "Reasoning about chance and data: the heart of quant interviews."
   },
   {
@@ -217,7 +217,7 @@
    ],
    "order": 13,
    "icon": "sigma",
-   "regionHue": 236,
+   "regionHue": 70,
    "description": "Counting, algebra, calculus and fast mental arithmetic for quant rounds."
   },
   {
@@ -234,7 +234,7 @@
    ],
    "order": 14,
    "icon": "puzzle",
-   "regionHue": 264,
+   "regionHue": 52,
    "description": "Classic logic and probability puzzles, and a method for new ones."
   },
   {
@@ -249,7 +249,7 @@
    ],
    "order": 15,
    "icon": "candlestick-chart",
-   "regionHue": 218,
+   "regionHue": 34,
    "description": "Order books, market making, bet sizing and options intuition."
   },
   {
@@ -266,7 +266,7 @@
    ],
    "order": 16,
    "icon": "brain",
-   "regionHue": 198,
+   "regionHue": 14,
    "description": "The quick math and reasoning questions in online assessments."
   },
   {
@@ -281,7 +281,7 @@
    ],
    "order": 17,
    "icon": "wrench",
-   "regionHue": 190,
+   "regionHue": 112,
    "description": "Git, Linux, testing, APIs and the cloud: everyday engineering skills."
   },
   {
@@ -298,7 +298,7 @@
    ],
    "order": 18,
    "icon": "user-round",
-   "regionHue": 254,
+   "regionHue": 352,
    "description": "Stories, resume and strategy that turn skills into offers."
   }
  ],

@@ -1,7 +1,7 @@
 // A static, whole-map preview drawn from the precomputed layout (the real zoomable map arrives in
 // Phase 4). Regions are tinted by subject, every concept is a small dot, and faint lines show
 // prerequisites inside each subject. Hover or click a region to highlight a subject.
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { layout } from "@/data/layout";
 import { concepts, subjects } from "@/data/syllabus";
 import type { Importance } from "@/lib/types";
@@ -103,10 +103,10 @@ export function MapPreview({ selected, onSelect }: MapPreviewProps) {
             key={subject.id}
             d={region.path}
             className="cursor-pointer transition-[fill-opacity,stroke-opacity] duration-150"
-            style={{ "--h": subject.regionHue } as CSSProperties}
-            fill="hsl(var(--h) var(--region-saturation) var(--region-lightness))"
+            data-subject={subject.id}
+            fill="var(--subject-mark)"
             fillOpacity={active ? 0.2 : hot ? 0.14 : 0.08}
-            stroke="hsl(var(--h) var(--region-saturation) var(--region-lightness))"
+            stroke="var(--subject-mark)"
             strokeOpacity={active ? 0.9 : hot ? 0.6 : 0.3}
             strokeWidth={(active ? 2 : 1.25) * hairline}
             onMouseEnter={() => setHovered(subject.id)}

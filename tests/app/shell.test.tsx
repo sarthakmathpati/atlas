@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // F1 "done when": every route renders inside the shell, and navigation works from the keyboard.
 import "fake-indexeddb/auto";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { App } from "@/app/App";
@@ -111,8 +111,31 @@ describe("app shell", () => {
     });
     await user.click(screen.getByRole("radio", { name: "Quant" }));
     expect(useProfileStore.getState().profile?.track).toBe("quant");
-    await user.click(screen.getByRole("radio", { name: "Dark" }));
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(localStorage.getItem("atlas.theme")).toBe("dark");
+    await user.click(screen.getByRole("radio", { name: "Dusk" }));
+    expect(document.documentElement.dataset.theme).toBe("dusk");
+    expect(localStorage.getItem("atlas.theme")).toBe("dusk");
+    expect(useProfileStore.getState().profile?.theme).toBe("dusk");
+    // By time of day: the start times appear, and changing one is saved and applied.
+    await user.click(screen.getByRole("radio", { name: "By time of day" }));
+    expect(useProfileStore.getState().profile?.theme).toBe("schedule");
+    fireEvent.change(screen.getByLabelText("Dusk from"), { target: { value: "18:15" } });
+    await waitFor(() =>
+      expect(useProfileStore.getState().profile?.prefs.themeSchedule.dusk).toBe("18:15"),
+    );
+    expect(JSON.parse(localStorage.getItem("atlas.themeSchedule") ?? "{}")).toMatchObject({
+      dusk: "18:15",
+    });
+    expect(["day", "dusk", "night"]).toContain(document.documentElement.dataset.theme);
+  });
+
+  it("switches themes from the top bar menu", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await go("#/today");
+    await user.click(await screen.findByRole("button", { name: /^Theme, / }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /Night/ }));
+    expect(document.documentElement.dataset.theme).toBe("night");
+    await waitFor(() => expect(useProfileStore.getState().profile?.theme).toBe("night"));
+    expect(screen.getByRole("button", { name: "Theme, Night showing" })).toBeInTheDocument();
   });
 });

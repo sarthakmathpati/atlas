@@ -5,7 +5,7 @@
 //   Migrations run on load (both repositories) and on import, before validation.
 // - If the seed syllabus ever renames an id, add `oldId: newId` to ID_ALIASES so the owner's
 //   progress follows the concept, topic or subject. Aliases are applied on load and on import.
-import { SCHEMA_VERSION } from "@/lib/constants";
+import { DEFAULT_THEME_SCHEDULE, SCHEMA_VERSION } from "@/lib/constants";
 import type { ExportData } from "./schemas";
 
 export const CURRENT_SCHEMA_VERSION = SCHEMA_VERSION;
@@ -19,8 +19,32 @@ export interface Migration {
   migrate(data: RawData): RawData;
 }
 
-/** Ordered list of migrations. Empty while the schema is at version 1. */
-export const MIGRATIONS: Migration[] = [];
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** Ordered list of migrations. */
+export const MIGRATIONS: Migration[] = [
+  {
+    from: 1,
+    to: 2,
+    description:
+      "Phase 9 themes: light becomes Day and dark becomes Night; the profile gains the By time of day schedule.",
+    migrate(data) {
+      const profile = data.profile;
+      if (!isRecord(profile)) return data;
+      const theme = profile.theme === "light" ? "day" : profile.theme === "dark" ? "night" : profile.theme;
+      const prefs = isRecord(profile.prefs) ? profile.prefs : {};
+      return {
+        ...data,
+        profile: {
+          ...profile,
+          theme,
+          prefs: { ...prefs, themeSchedule: prefs.themeSchedule ?? { ...DEFAULT_THEME_SCHEDULE } },
+        },
+      };
+    },
+  },
+];
 
 /** Renamed seed ids: old id -> new id (concepts, topics or subjects). */
 export const ID_ALIASES: Readonly<Record<string, string>> = {};

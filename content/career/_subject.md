@@ -5,6 +5,6 @@ shortName: "Career"
 order: 18
 tracks: [sde, quant]
 icon: user-round
-regionHue: 254
+regionHue: 352
 description: "Stories, resume and strategy that turn skills into offers."
 ---

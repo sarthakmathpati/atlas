@@ -12,6 +12,7 @@ import {
 import { MemoryRepository } from "@/lib/storage/MemoryRepository";
 import {
   applyIdAliases,
+  CURRENT_SCHEMA_VERSION,
   migrateRawData,
   MigrationError,
   resolveAlias,
@@ -151,16 +152,19 @@ describe("merge", () => {
 
 describe("migrations and id aliases", () => {
   it("runs migrations in order and refuses newer data", () => {
+    const current = CURRENT_SCHEMA_VERSION;
     const steps = [
       {
-        from: 1,
-        to: 2,
+        from: current - 1,
+        to: current,
         description: "add x",
         migrate: (d: Record<string, unknown>) => ({ ...d, x: 1 }),
       },
     ];
-    expect(migrateRawData({}, 1, steps)).toEqual({}); // already current (version 1)
-    expect(() => migrateRawData({}, 2, steps)).toThrow(MigrationError);
+    expect(migrateRawData({}, current - 1, steps)).toEqual({ x: 1 });
+    expect(migrateRawData({}, current, steps)).toEqual({}); // already current
+    expect(() => migrateRawData({}, current + 1, steps)).toThrow(MigrationError);
+    expect(() => migrateRawData({}, current - 2, steps)).toThrow(/No migration/);
   });
 
   it("rewrites renamed ids everywhere so progress follows the concept", () => {

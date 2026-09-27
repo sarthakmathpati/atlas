@@ -5,6 +5,6 @@ shortName: "Markets"
 order: 15
 tracks: [quant]
 icon: candlestick-chart
-regionHue: 218
+regionHue: 34
 description: "Order books, market making, bet sizing and options intuition."
 ---

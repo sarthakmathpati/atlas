@@ -29,20 +29,21 @@
 
   /* ----- Regions ------------------------------------------------------------------------------ */
 
+  /* Subject tints (12.10.3): the path carries data-subject, which sets --subject-tint and
+     --subject-mark (subjects.generated.css). Tints stay faint; status colors stay the only
+     strong colors on the map. */
   .map-region {
-    fill: hsl(var(--h) var(--region-saturation) var(--region-lightness) / var(--region-alpha));
-    stroke: hsl(
-      var(--h) var(--region-saturation) var(--region-lightness) / var(--region-stroke-alpha)
-    );
+    fill: var(--subject-tint);
+    fill-opacity: var(--region-opacity);
+    stroke: var(--subject-mark);
+    stroke-opacity: var(--region-stroke-opacity);
     stroke-width: 1.25;
     vector-effect: non-scaling-stroke;
     transition: opacity 150ms var(--ease-out);
   }
 
   .map-region[data-level="far"] {
-    fill: hsl(
-      var(--h) var(--region-saturation) var(--region-lightness) / calc(var(--region-alpha) * 1.7)
-    );
+    fill-opacity: var(--region-opacity-far);
   }
 
   .map-region[data-off] {
@@ -50,7 +51,7 @@
   }
 
   .map-region[data-hot] {
-    stroke: hsl(var(--h) var(--region-saturation) var(--region-lightness) / 0.8);
+    stroke-opacity: 0.85;
     stroke-width: 2;
   }
 

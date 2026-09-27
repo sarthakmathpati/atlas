@@ -8,6 +8,7 @@ import { MemoryRepository } from "@/lib/storage/MemoryRepository";
 import type { Repository } from "@/lib/storage/Repository";
 import type { ExportData } from "@/lib/storage/schemas";
 import { keyOf, TABLE_NAMES } from "@/lib/storage/tables";
+import { SCHEMA_VERSION } from "@/lib/constants";
 import { FakeClaudeDb } from "@/lib/runtime/fakeClaude";
 import { asBackup, fullFixture } from "../fixtures/userData";
 
@@ -45,7 +46,7 @@ async function roundTrip(
   const second = await target.exportAll();
   same(second.data, first.data);
   expect(second.app).toBe("Atlas");
-  expect(second.schemaVersion).toBe(1);
+  expect(second.schemaVersion).toBe(SCHEMA_VERSION);
   source.close();
   target.close();
 }

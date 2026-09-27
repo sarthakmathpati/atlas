@@ -1,19 +1,21 @@
 @import "tailwindcss";
 @import "./fonts.css";
 @import "./tokens.css";
+@import "./subjects.generated.css";
 @import "./components.css";
 @import "./map.css";
 
 /*
  * Tailwind utilities read the design tokens, so `bg-surface`, `text-muted`, `border-rule` etc.
  * follow the active theme automatically. We never use Tailwind's `dark:` variant: the tokens
- * already switch with the theme (see tokens.css), which keeps light and dark in one place.
+ * already switch with the theme (see tokens.css), which keeps Day, Dusk and Night in one place.
  */
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
+  --color-sidebar: var(--sidebar);
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);
   --color-text: var(--text);
@@ -43,15 +45,21 @@
   --color-warning-soft: var(--warning-soft);
   --color-info-soft: var(--info-soft);
   --color-code: var(--code-bg);
+  --color-subject: var(--subject-mark);
+  --color-subject-tint: var(--subject-tint);
 
+  --font-display: var(--font-display);
   --font-sans: var(--font-sans);
   --font-condensed: var(--font-condensed);
   --font-mono: var(--font-mono);
 
   --radius-control: var(--radius-control);
   --radius-panel: var(--radius-panel);
+  --radius-focal: var(--radius-focal);
 
   --shadow-float: var(--shadow-float);
+  --shadow-focal: var(--shadow-focal);
+  --shadow-pill: var(--shadow-pill);
 
   --text-xs: 12px;
   --text-xs--line-height: 1.45;
@@ -67,8 +75,12 @@
   --text-xl--line-height: 1.25;
   --text-2xl: 28px;
   --text-2xl--line-height: 1.2;
+  --text-page: 30px;
+  --text-page--line-height: 1.15;
   --text-3xl: 36px;
   --text-3xl--line-height: 1.15;
+  --text-4xl: 40px;
+  --text-4xl--line-height: 1.1;
 }
 
 @layer base {
@@ -114,6 +126,13 @@
   ::selection {
     background: var(--accent-soft);
   }
+}
+
+/* 12.10.9: themes cross-fade in 200 ms (app/theme.ts switches instantly when motion is reduced). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-theme);
+  animation-timing-function: var(--ease-out);
 }
 
 /*

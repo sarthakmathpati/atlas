@@ -4,7 +4,7 @@
 // lines (solid, small arrowhead) and cross-subject connections (dashed). Lines touching what is
 // emphasised (hover, focus mode, a path) are drawn in the accent ink; the rest step back.
 import { ViewportPortal } from "@xyflow/react";
-import { memo, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { layout } from "@/data/layout";
 import { concepts as seedConcepts, dependentsOf, subjects, topicById } from "@/data/syllabus";
 import type { Status } from "@/lib/types";
@@ -106,7 +106,7 @@ export const MapLayers = memo(function MapLayers({ model, dragged, pathIds }: La
           <path
             key={s.id}
             d={region.path}
-            style={{ "--h": s.regionHue } as CSSProperties}
+            data-subject={s.id}
             className="map-region"
             data-off={!on || undefined}
             data-level={level}
