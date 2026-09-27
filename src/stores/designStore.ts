@@ -129,15 +129,22 @@ export function restoreDesignAttempt(a: DesignAttempt): void {
  * from the review (Claude's overall, else the owner's review of the rubric points), so it counts
  * as practice for the linked classic concept. Returns the saved problem attempt.
  */
-export function finishDesign(id: string, now: Date = new Date()): SavedAttempt | null {
+export function finishDesign(
+  id: string,
+  now: Date = new Date(),
+  /** A mock interview's design round scores it with the mock's average instead (F15). */
+  options: { overall?: number } = {},
+): SavedAttempt | null {
   const current = getDesignAttempt(id);
-  if (!current) return null;
+  if (!current || current.finishedAt) return null;
   const review = readReview(current.review);
-  const overall = review
-    ? review.overall
-    : current.selfReview?.length
-      ? overallFromPoints(current.selfReview)
-      : null;
+  const overall =
+    options.overall ??
+    (review
+      ? review.overall
+      : current.selfReview?.length
+        ? overallFromPoints(current.selfReview)
+        : null);
   if (overall === null) return null;
   const stamp = nowIso(now);
   commit({ ...current, finishedAt: stamp, updatedAt: stamp });

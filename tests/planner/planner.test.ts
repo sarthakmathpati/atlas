@@ -19,7 +19,14 @@ import {
 import { mulberry32, seededRank } from "@/lib/random";
 import { addDaysToDate } from "@/lib/time";
 import type { PlanItem, Profile } from "@/lib/types";
-import { DAY, noonOf, records, scenario, type ScenarioName } from "../fixtures/scenarios";
+import {
+  DAY,
+  noonOf,
+  practiceDatesOf,
+  records,
+  scenario,
+  type ScenarioName,
+} from "../fixtures/scenarios";
 
 function inputFor(
   name: ScenarioName,
@@ -398,16 +405,35 @@ describe("replanning", () => {
 });
 
 describe("phase 8 kinds", () => {
-  const LATER: PlanKind[] = ALL_PLAN_KINDS.filter((k) => !AVAILABLE_PLAN_KINDS.has(k));
+  it("all have a screen now, so the planner may plan every kind", () => {
+    expect([...AVAILABLE_PLAN_KINDS].sort()).toEqual([...ALL_PLAN_KINDS].sort());
+  });
 
-  it("are never planned while their screens don't exist", () => {
-    for (const name of ["new", "mid", "week"] as const) {
-      for (const budget of [60, 90, 120, 240]) {
-        for (const track of ["sde", "quant", "both"] as const) {
-          const items = planDay(inputFor(name, { budget, profile: { track } }));
-          for (const i of items) expect(LATER).not.toContain(i.kind);
-        }
-      }
+  it("follow the fixture owners' own practice history with the default kinds", () => {
+    const history = (name: ScenarioName) => practiceDatesOf(scenario(name));
+    expect(history("mid")).toEqual({
+      mocks: ["2026-09-10", "2026-09-17", "2026-09-19", "2026-09-24"],
+      designs: ["2026-09-18", "2026-09-25"],
+      stories: ["2026-09-26"],
+    });
+    expect(history("new")).toEqual({ mocks: [], designs: [], stories: [] });
+    // A new owner: design practice once a week (system design readiness is under 60), but no
+    // mock (readiness under 30) and no story practice (no interview date).
+    const fresh = planDay(inputFor("new", { budget: 90, history: history("new") }));
+    expect(kinds(fresh)).toContain("design");
+    expect(kinds(fresh)).not.toContain("mock");
+    expect(kinds(fresh)).not.toContain("story");
+    // Mid-way: the design two days ago means none this week; without it, one comes back.
+    const mid = planDay(inputFor("mid", { budget: 90, history: history("mid") }));
+    expect(kinds(mid)).not.toContain("design");
+    expect(kinds(planDay(inputFor("mid", { budget: 90 })))).toContain("design");
+    // A week before: story practice twice a week, but not the day after the last one.
+    const week = planDay(inputFor("week", { budget: 90, history: history("week") }));
+    expect(kinds(week)).not.toContain("story");
+    expect(kinds(planDay(inputFor("week", { budget: 90 })))).toContain("story");
+    for (const plan of [fresh, mid, week]) {
+      expectNoDuplicates(plan);
+      expectFitsBudget(plan, 90);
     }
   });
 

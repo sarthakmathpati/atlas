@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { computeStreak, dayLookup, type DayLookup, type StreakInfo } from "@/lib/activity/streak";
 import { buildPlannerInput } from "@/lib/planner/input";
 import type { PlannerHistory, PlannerInput } from "@/lib/planner/planner";
+import { mockDates } from "@/lib/mock/mock";
 import { practiceDates } from "@/lib/stories/stories";
 import { evaluateReadiness, type EvaluationSources } from "@/lib/readiness/evaluate";
 import type { ReadinessModel } from "@/lib/readiness/model";
@@ -17,6 +18,7 @@ import { useCustomConceptStore } from "@/stores/customConceptStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { designDates, useDesignStore } from "@/stores/designStore";
+import { useMockStore } from "@/stores/mockStore";
 import { useStoryStore } from "@/stores/storyStore";
 
 /** Everything the status engine and the planner read, from the stores as they are now. */
@@ -44,6 +46,7 @@ const toLocalDate = (iso: string) => localDate(new Date(iso));
  */
 export function plannerHistoryNow(): PlannerHistory {
   return {
+    mocks: mockDates(Object.values(useMockStore.getState().sessions), toLocalDate),
     designs: designDates(useDesignStore.getState().attempts, toLocalDate),
     stories: practiceDates(Object.values(useStoryStore.getState().stories), toLocalDate),
   };

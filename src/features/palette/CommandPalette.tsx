@@ -280,7 +280,8 @@ export function CommandPalette() {
         id: "cmd:mental-math",
         label: "Start a mental math sprint",
         icon: Calculator,
-        keywords: "mental math speed arithmetic sprint fractions percentages sequences estimation quant",
+        keywords:
+          "mental math speed arithmetic sprint fractions percentages sequences estimation quant",
         group: "Commands",
         run: () => navigate(routeHref("/mental-math", undefined, { mode: "speed" })),
       },
@@ -294,7 +295,7 @@ export function CommandPalette() {
       },
       {
         id: "cmd:design",
-        label: "Practise a design",
+        label: "Practice a design",
         icon: DraftingCompass,
         keywords: "design practice system design lld hld architecture sketch 45 minutes",
         group: "Commands",
@@ -302,7 +303,7 @@ export function CommandPalette() {
       },
       {
         id: "cmd:story-practice",
-        label: "Practise a behavioral question",
+        label: "Practice a behavioral question",
         icon: MessageSquareQuote,
         keywords: "behavioral story star practice interview hr question",
         group: "Commands",

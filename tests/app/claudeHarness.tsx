@@ -62,8 +62,15 @@ export async function setupMode(mode: AIMode, extra?: (repoReady: void) => void)
           messages: { role: string; content: string }[];
         };
         apiRequests.push(body);
+        // The instructions first, then the turns, so the stand-in sees who said what last.
         return sse(
-          demoSampleResponder([body.system, ...body.messages.map((m) => m.content)].join("\n\n")),
+          demoSampleResponder([
+            { role: "user", content: body.system },
+            ...body.messages.map((m) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+            })),
+          ]),
         );
       }),
     );

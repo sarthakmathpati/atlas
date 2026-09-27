@@ -257,7 +257,7 @@ describe("story bank", () => {
     ).toBe(true);
   }, 20_000);
 
-  it("practises a question with a typed answer and the self-check, saved as unsorted", async () => {
+  it("practices a question with a typed answer and the self-check, saved as unsorted", async () => {
     const user = userEvent.setup();
     await ready();
     await go("#/stories?question=bq-why-this-role");

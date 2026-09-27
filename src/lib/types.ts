@@ -475,11 +475,29 @@ export interface ActivityMonth {
 export interface MockSession {
   id: string;
   kind: "dsa" | "theory" | "design" | "behavioral";
+  /** DSA: the problem Claude states in its own words; design: the design prompt. */
   topicOrProblemId?: string;
+  /** Candidate turns start with a note such as "[Phase: Code | 18 min left]". */
   turns: { role: "user" | "assistant"; content: string }[];
   code?: string;
   feedback?: MockFeedback;
   phase?: string; // current phase, so a reload resumes correctly
+  /** Live with Claude in the app, or a script pasted into a claude.ai chat (copy prompt). */
+  delivery?: "live" | "copy";
+  /** Length of the interview (45 or 20 minutes). */
+  limitMinutes?: number;
+  /** Time on the interview clock so far (saved every exchange, so a reload resumes it). */
+  elapsedMs?: number;
+  /** DSA: the language the candidate codes in. */
+  language?: string;
+  /** Theory: the subjects asked about. */
+  subjects?: string[];
+  /** Behavioral: the questions from the bank. */
+  questionIds?: string[];
+  /** Design: the design workspace attempt used in the round. */
+  designAttemptId?: string;
+  /** DSA: the attempt the code was saved as (mode "mock"). */
+  attemptId?: string;
   startedAt: string;
   endedAt?: string;
   updatedAt: string;

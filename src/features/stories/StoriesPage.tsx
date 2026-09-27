@@ -59,7 +59,7 @@ function StoryList({
                   {isIntro(s)
                     ? "Your 90-second script"
                     : `${s.questionIds.length} ${s.questionIds.length === 1 ? "question" : "questions"}`}
-                  {s.practice?.length ? `, practised ${s.practice.length}×` : ""}
+                  {s.practice?.length ? `, practiced ${s.practice.length}×` : ""}
                   {s.tags.length > 0 && !isIntro(s) ? `, ${s.tags.slice(0, 3).join(", ")}` : ""}
                 </span>
               </a>
@@ -114,7 +114,7 @@ export default function StoriesPage() {
     <PageFrame>
       <PageHeader
         title="Stories"
-        description="Prepared, specific stories for behavioral rounds. Write each once in the STAR format, link the questions it answers, then practise saying it in two minutes."
+        description="Prepared, specific stories for behavioral rounds. Write each once in the STAR format, link the questions it answers, then practice saying it in two minutes."
       />
       {!loaded ? (
         <PageSkeleton />

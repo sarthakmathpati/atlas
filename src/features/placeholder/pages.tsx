@@ -96,7 +96,7 @@ export function MentalMathPage() {
   return (
     <ComingSoon
       title="Mental math"
-      description="Fast arithmetic for quant interviews, practised offline."
+      description="Fast arithmetic for quant interviews, practiced offline."
       icon={Calculator}
       phase={8}
       phaseName={PRACTICE}

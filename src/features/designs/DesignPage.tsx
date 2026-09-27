@@ -202,7 +202,7 @@ export default function DesignPage() {
           ) : (
             <EmptyState
               icon={DraftingCompass}
-              title={finished.length ? "Practise it again" : "Design it in 45 minutes"}
+              title={finished.length ? "Practice it again" : "Design it in 45 minutes"}
               actions={
                 <Button variant="primary" icon={Play} onClick={start}>
                   {finished.length ? "Start a new attempt" : "Start the design"}

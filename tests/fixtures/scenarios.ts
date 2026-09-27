@@ -12,7 +12,12 @@ import { hashSeed, mulberry32 } from "@/lib/random";
 import { createDefaultProfile, seedTagsToRecords } from "@/lib/storage/defaults";
 import { emptyExportData } from "@/lib/storage/exportImport";
 import type { ExportData } from "@/lib/storage/schemas";
-import { addDaysToDate } from "@/lib/time";
+import { MOCK_PHASES, MOCK_SCORE_KEYS } from "@/lib/ai/prompts";
+import { mockDates } from "@/lib/mock/mock";
+import type { PlannerInput } from "@/lib/planner/planner";
+import { practiceDates } from "@/lib/stories/stories";
+import { addDaysToDate, localDate } from "@/lib/time";
+import { designDates } from "@/stores/designStore";
 import type {
   ActivityDay,
   ActivityMonth,
@@ -20,7 +25,10 @@ import type {
   AttemptResult,
   Check,
   ConceptState,
+  DesignAttempt,
   Difficulty,
+  MockFeedback,
+  MockSession,
   ProblemState,
   Profile,
   SrsState,
@@ -300,10 +308,140 @@ function builder(seed: string): Builder {
   };
 }
 
+/** Scores for a finished mock's feedback (the type's rubric, in order). */
+function feedbackOf(keys: readonly string[], scores: number[], hire: MockFeedback["hireSignal"]) {
+  return {
+    scores: Object.fromEntries(keys.map((k, i) => [k, scores[i % scores.length]!])),
+    strengths: ["Asked clarifying questions before starting."],
+    improvements: ["Walk through a small test out loud before saying you're done."],
+    hireSignal: hire,
+    summary: "A steady interview with room to test earlier.",
+  } satisfies MockFeedback;
+}
+
+/**
+ * Phase 8 practice for the mid-way owner: coding mocks 17, 10 and 3 days ago (improving), a
+ * behavioral mock 8 days ago, finished designs 9 and 2 days ago, a STAR story practiced
+ * yesterday, and mental math sprints.
+ */
+function practiceHistory(b: Builder, day: string) {
+  const mock = (
+    id: string,
+    kind: MockSession["kind"],
+    daysAgo: number,
+    scores: number[],
+    hire: MockFeedback["hireSignal"],
+    extra: Partial<MockSession> = {},
+  ): MockSession => {
+    const d = addDaysToDate(day, -daysAgo);
+    return {
+      id,
+      kind,
+      turns: [
+        { role: "user", content: "[Phase: Clarify | 45 min left] Hello, I'm ready to begin." },
+        { role: "assistant", content: "Hi, thanks for joining. Here's the problem, in my words." },
+      ],
+      phase: MOCK_PHASES[kind].at(-1),
+      delivery: "live",
+      limitMinutes: kind === "dsa" || kind === "design" ? 45 : 20,
+      elapsedMs: 41 * 60_000,
+      feedback: feedbackOf(MOCK_SCORE_KEYS[kind], scores, hire),
+      startedAt: iso(d, 18),
+      endedAt: iso(d, 18, 45),
+      updatedAt: iso(d, 18, 46),
+      ...extra,
+    };
+  };
+  b.data.mocks = [
+    mock("mock-fixture-1", "dsa", 17, [2, 3, 3, 2, 2], "lean no", { topicOrProblemId: "lc-1" }),
+    mock("mock-fixture-2", "dsa", 10, [3, 3, 4, 3, 3], "lean no", { topicOrProblemId: "lc-49" }),
+    mock("mock-fixture-3", "behavioral", 8, [4, 3, 3, 4, 4], "yes", {
+      questionIds: ["bq-tell-me-about-yourself"],
+    }),
+    mock("mock-fixture-4", "dsa", 3, [4, 4, 4, 3, 4], "yes", { topicOrProblemId: "lc-3" }),
+  ];
+  // Each finished mock counts on its day (the weekly review shows mocks).
+  for (const m of b.data.mocks) {
+    const d = localDate(new Date(m.endedAt!));
+    const month = b.data.activity.find((a) => a.month === d.slice(0, 7));
+    if (!month) continue;
+    const entry = (month.days[d] ??= {
+      minutes: 45,
+      problemsSolved: 0,
+      reviews: 0,
+      conceptsTouched: 0,
+    });
+    entry.mocks = (entry.mocks ?? 0) + 1;
+  }
+  const design = (id: string, problemId: string, daysAgo: number): DesignAttempt => {
+    const d = addDaysToDate(day, -daysAgo);
+    return {
+      id,
+      problemId,
+      sections: {
+        requirements: "Functional and non-functional requirements, with rough numbers.",
+        api: "The main calls and what they return.",
+      },
+      selfReview: [2, 1, 1, 0, 2],
+      elapsedMs: 44 * 60_000,
+      finishedAt: iso(d, 20, 45),
+      mode: "practice",
+      createdAt: iso(d, 20),
+      updatedAt: iso(d, 20, 45),
+    };
+  };
+  b.data.designs = [
+    design("design-fixture-1", "lld-parking-lot", 9),
+    design("design-fixture-2", "hld-url-shortener", 2),
+  ];
+  const yesterday = addDaysToDate(day, -1);
+  b.data.stories = [
+    {
+      id: "story-fixture-1",
+      kind: "star",
+      title: "The checkout bug in my second internship",
+      situation: "Checkout failed for about one order in fifty, and nobody owned the bug.",
+      task: "I took it on alongside my intern project.",
+      action: "I added logging, traced it to a retry that charged twice, and fixed it with a test.",
+      result: "Failures dropped to zero within a week.",
+      tags: ["ownership", "debugging"],
+      questionIds: ["bq-your-most-challenging-project"],
+      practice: [
+        {
+          questionId: "bq-your-most-challenging-project",
+          answer: "Told the checkout story from the bank.",
+          mode: "story",
+          seconds: 104,
+          score: 0.67,
+          selfCheck: ["situation", "action", "result", "number"],
+          createdAt: iso(yesterday, 21),
+        },
+      ],
+      createdAt: iso(addDaysToDate(day, -12), 21),
+      updatedAt: iso(yesterday, 21),
+    },
+  ];
+  b.data.mentalMath = [12, 6, 1].map((daysAgo, i) => {
+    const d = addDaysToDate(day, -daysAgo);
+    return {
+      id: `mm-fixture-${i + 1}`,
+      mode: "speed",
+      tier: "medium" as const,
+      correct: [41, 48, 55][i]!,
+      total: 80,
+      answered: [52, 57, 61][i]!,
+      seconds: 480,
+      createdAt: iso(d, 8),
+      updatedAt: iso(d, 8),
+    };
+  });
+}
+
 /**
  * - new: finished the welcome questions today (SDE, 90 minutes a day), nothing studied yet.
  * - mid: two months in: the first dozen DSA topics, some OS, OOP and C++; problems solved on
- *   those patterns, some due, two tricky; concepts learning, strong, due and fading; focus OS.
+ *   those patterns, some due, two tricky; concepts learning, strong, due and fading; focus OS;
+ *   Phase 8 practice (mocks, designs, a story, mental math; see practiceHistory).
  * - week: the same owner a week before interviews (120 minutes a day).
  */
 export function scenario(name: ScenarioName, day = DAY): ExportData {
@@ -324,7 +462,18 @@ export function scenario(name: ScenarioName, day = DAY): ExportData {
   progress(b, ["lang.cpp-core"], day, { problems: false });
   settleStatuses(b, day, profile);
   b.data.activity = activity(start, day, `activity-${name}`);
+  practiceHistory(b, day);
   return finish(b, profile);
+}
+
+/** What the planner needs to know about recent weekly practice (decision 85). */
+export function practiceDatesOf(data: ExportData): PlannerInput["history"] {
+  const day = (iso: string) => localDate(new Date(iso));
+  return {
+    mocks: mockDates(data.mocks, day),
+    designs: designDates(Object.fromEntries(data.designs.map((d) => [d.id, d])), day),
+    stories: practiceDates(data.stories, day),
+  };
 }
 
 /**

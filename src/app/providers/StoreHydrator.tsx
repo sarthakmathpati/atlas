@@ -12,6 +12,7 @@ import { hydrateMapOverrides } from "@/stores/mapStore";
 import { hydrateMentalMath } from "@/stores/mentalMathStore";
 import { hydrateStories } from "@/stores/storyStore";
 import { hydrateDesigns } from "@/stores/designStore";
+import { hydrateMocks } from "@/stores/mockStore";
 import { hydratePlan } from "@/stores/planStore";
 import { detachAll, hydrateAll } from "@/stores/hydrate";
 import { hydrateProfile, useProfileStore } from "@/stores/profileStore";
@@ -50,6 +51,7 @@ export function StoreHydrator() {
         else if (event.table === "mentalMath") void hydrateMentalMath(repository);
         else if (event.table === "stories") void hydrateStories(repository);
         else if (event.table === "designs") void hydrateDesigns(repository);
+        else if (event.table === "mocks") void hydrateMocks(repository);
         return;
       }
       toast(event.message, {
@@ -76,11 +78,17 @@ export function StoreHydrator() {
   useEffect(() => {
     const check = () => tickClock();
     const id = setInterval(check, 60_000);
+    // Leaving or hiding the page writes what is still waiting (notes, then the storage debounce),
+    // so a reload right after an exchange keeps it.
+    const flushAll = () => {
+      flushNotes();
+      void repository?.flush();
+    };
     const onVisible = () => {
       if (document.visibilityState === "visible") check();
-      else flushNotes();
+      else flushAll();
     };
-    window.addEventListener("pagehide", flushNotes);
+    window.addEventListener("pagehide", flushAll);
     document.addEventListener("visibilitychange", onVisible);
     const unsubscribe = useClockStore.subscribe((state, prev) => {
       if (state.today === prev.today) return;
@@ -90,7 +98,7 @@ export function StoreHydrator() {
     return () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("pagehide", flushNotes);
+      window.removeEventListener("pagehide", flushAll);
       unsubscribe();
     };
   }, [repository]);

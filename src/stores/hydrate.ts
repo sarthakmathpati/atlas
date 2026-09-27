@@ -13,6 +13,7 @@ import { detachMapOverrides, hydrateMapOverrides } from "./mapStore";
 import { detachMentalMath, hydrateMentalMath } from "./mentalMathStore";
 import { detachStories, hydrateStories } from "./storyStore";
 import { detachDesigns, hydrateDesigns } from "./designStore";
+import { detachMocks, hydrateMocks } from "./mockStore";
 import { detachMistakeTags, hydrateMistakeTags } from "./mistakeTagStore";
 import { setPlanEffectsRepository } from "./planEffects";
 import { detachPlan, hydratePlan } from "./planStore";
@@ -39,6 +40,7 @@ export async function hydrateAll(repository: Repository): Promise<void> {
     hydrateMentalMath(repository),
     hydrateStories(repository),
     hydrateDesigns(repository),
+    hydrateMocks(repository),
   ]);
   refreshAllConcepts();
   // Loading isn't a change the owner made: no ink for statuses that were already strong.
@@ -62,4 +64,5 @@ export function detachAll(): void {
   detachMentalMath();
   detachStories();
   detachDesigns();
+  detachMocks();
 }
