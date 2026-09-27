@@ -563,6 +563,8 @@ export interface MentalMathRun { id: string; mode: string; correct: number; tota
 
 **Rule for all user data:** every stored user entity has an `updatedAt` timestamp (add it to any type above that lacks one, such as `ConceptNote`, `DesignAttempt`, `MistakeTag` lists and `ActivityMonth`). Import merge (F22) and multi-device sync rely on it.
 
+**Phase 9 additions** (F31, F32, 12.10.2): `ParkedThought`, the `paceStats` document, `PlanItem.steps`, `ActivityDay.focusBlocks`, `Profile.prefs.focus`, `Profile.prefs.adhd`, `Profile.prefs.themeSchedule`, `Profile.prefs.bedtime`, and `Profile.theme` values `"day" | "dusk" | "night" | "schedule"` (plus `"system"`). Each gets a zod schema, a migration where needed (`light` → `day`, `dark` → `night`) and a place in export/import merge, like every other entity.
+
 ### 4.3 Storage layout
 
 **Standalone (Dexie):** one table per entity: `profile`, `secrets`, `conceptStates` (key `conceptId`), `conceptNotes`, `problemStates` (key `problemId`), `mistakeTags`, `checks` (index `conceptId`, `createdAt`), `dayPlans` (key `date`), `activity` (key `month`), `mocks`, `designs`, `stories`, `mentalMath`, `mapOverrides` (dragged node positions), `customConcepts`, `generatedDrills`.
@@ -2941,10 +2943,50 @@ Practice answers and critiques are saved in the story's `practice` list (or, whe
 
 - **Keyboard:** everything reachable by keyboard with visible focus rings. Shortcuts (shown with `?`): `Ctrl/Cmd + K` palette, `g t` Today, `g m` Map, `g p` Problems, `g r` Review, `a` Ask Claude, `n` new attempt (in a problem), `Ctrl/Cmd + S` save attempt (prevent the browser's own save), `Esc` closes panels. Single-key shortcuts work only when the focus is not in a text field or the editor.
 - **Screen readers:** semantic landmarks, labeled controls, and a **list view of the map** (subjects → topics → concepts with statuses) as an accessible alternative to the canvas.
-- **Color independence:** status uses shape as well as color (section 12.3). Contrast meets WCAG AA in both themes.
+- **Color independence:** status uses shape as well as color (section 12.3). Contrast meets WCAG AA in every theme (Day, Dusk and Night from Phase 9).
 - **Reduced motion:** honor `prefers-reduced-motion` and the Settings override; replace motion with instant state changes.
 - **Mobile:** touch targets at least 44 px; bottom sheets instead of side drawers; the editor stays usable with the on-screen keyboard; no horizontal page scrolling.
 - **Performance budgets:** first render of the shell under 1.5 s on a mid-range phone; interactions respond within 100 ms; map pans at 60 fps; the artifact file stays under 15 MB.
+
+### F31. Focus layer (Phase 9)
+
+**Why:** long sessions are broken by interruptions, stray thoughts and losing track of time, and they wear the owner out without planned breaks. These supports help anyone who studies for hours, so they don't wait behind the ADHD switch. The evidence is in `docs/design/phase9-research.md`, section 2.
+
+**Behavior:**
+- **Focus blocks.** Starting the focus timer (top bar, `f` outside text fields, or "Start a focus block" on a plan item) asks for one line, "In this block I will…", filled in from the current plan item or page ("Re-solve 69. Sqrt(x)"); Enter starts. The line shows in the top bar while the block runs. At the end the owner taps "Done", "Partly" or "Moved on"; the day keeps a count per outcome (`ActivityDay.focusBlocks`, optional counters, no migration).
+- **Horizon line.** A 2 px accent line along the top edge of the window shrinks from full width to nothing over the block (updated every 5 s, no animation) and turns dotted in the last 2 minutes. It shows on every page, including the full-screen workspace and mock rounds.
+- **Focus lens.** While a block runs, the sidebar, top-bar extras, badges and page parts marked `data-peripheral` dim to 45% (never blurred) and come back on hover or keyboard focus. Setting `prefs.focus.dim` (default on).
+- **Held notices.** Toasts that aren't a direct answer to what the owner just did (backup reminder, weekly review prompt, sync notices) wait for the break; the top bar shows "2 notes held for your break". Errors that block work still show at once. Setting `prefs.focus.holdNotices` (default on).
+- **Park it.** `p` (outside text fields), a button in the timer popover, on break views and on the ADHD Now card opens a one-line capture with a when: "At the break" (default), "Tonight" (the Dusk start time, or 19:00) or "Tomorrow" (the next morning). A parked thought (`ParkedThought { id, text, when: "break" | "tonight" | "tomorrow", dueAt, createdAt, doneAt?, updatedAt }`, synced, with a zod schema and export/import merge newer-wins) comes back at its time in a small list: Done, Add to today (an owner plan item), Dismiss.
+- **Break views.** When a block ends, the break fills the screen until the owner presses "Back to work" or Esc: a landscape drawn by the contour engine in the theme's inks, one prompt from a rotating list (eye rest: "Look at something far away for 20 seconds"; movement: "Stand up and stretch your arms overhead"; water), the thoughts parked for the break, an optional "Breathe for a minute" (a ring that grows for 5 s and shrinks for 5 s, six times; with reduced motion, a text count instead), and the break's time left as a tide line along the bottom.
+- **Memory walk.** Flashcard sessions for one topic or subject order the cards by a walk through the concepts' map positions (a nearest-neighbour tour starting from the topic's first concept in topic order), with a strip of dots showing the route and the current stop. "Everything due" keeps its urgency order.
+- **Interview day.** On the interview date and the day before, Today opens a calm view instead of the plan list: the 1-day revision sheet, the mistake checklist, "Breathe for a minute", "Park a worry" (with a when), and nothing new to learn. A link shows the normal plan. No claim is made that writing about worries improves scores (it didn't replicate).
+- **Themes by the clock and wrap-up.** With the theme set to "By time of day" (12.10.2) Atlas switches at the set times. With `prefs.bedtime` set, a quiet note appears 30 minutes before it: "Wrap up soon", with "Park what's left" and "Plan tomorrow" (tonight's parked thoughts become owner items on tomorrow's plan). Without a bedtime there is no note.
+
+**Done when:** a focus block starts with its line and ends with an outcome; the horizon line, dimming and held notices work on every page and stop at the break; parked thoughts come back at their time and survive a reload and export/import; break views and breathing work, including with reduced motion; the memory walk orders cards by map place; interview day appears on the right two dates; everything works offline in both runtimes, with tests for each part.
+
+### F32. ADHD mode (Phase 9)
+
+**Why:** ADHD mainly affects self-regulation: judging time, holding steps in mind, starting, and staying with tasks whose reward is far away. Help works best at the "point of performance", on the screen where the work happens. ADHD mode supports study habits; it doesn't treat ADHD. The evidence is in `docs/design/phase9-research.md`, section 3.
+
+**The switch:** "ADHD mode" with a switch at the right of the top bar on every page (Today and Dashboard included), also in Settings → ADHD mode and the command palette. Stored in `Profile.prefs.adhd` (`on`, one flag per part below, `blockMinutes` 15, `breakMinutes` 5, `sound: "off" | "brown" | "pink" | "white"`, `volume`, `studyWithClaude`), synced. `<html data-adhd>` carries the calm styles. The first time it's turned on, a short card lists what changed and links to its settings.
+
+**What it changes** (each part can be turned off on its own):
+1. **Calm screen.** The sidebar shrinks to icons with no badges or counts; the heatmap, "Your atlas" numbers and secondary cards fold behind "Show more"; text one step larger (interface 16 px, reading 19 px); motion only as feedback; no red anywhere (errors use the warning color and plain words).
+2. **The Now card on Today.** The first plan item not done, alone and large (the focal card), with its steps: a re-solve is "Read the problem again", "Say your approach in one line", "Write the code", "Test with three inputs", "Save the attempt"; a new problem "Read it", "Name the pattern", "Plan", "Code", "Test", "Save"; learning "Read Simple", "Read Interview", "One quick check", "Mark as studied"; flashcards one card at a time; mocks, designs, stories, drills and mental math their own three or four steps. Ticks are kept on the plan item (`PlanItem.steps?: boolean[]`). "Start with 2 minutes" opens the task with a 2-minute timer, then offers "Keep going" or "Stop here" (both fine). "I'm stuck" opens the hint ladder or Ask Claude, whichever fits. "Swap this task" works as Swap does. The rest of the plan is folded: "Then: 3 more stops".
+3. **Time you can see.** A shrinking-disc timer on the Now card, the workspace, drills, flashcards, mocks and design rounds; an optional soft chime at half time and 2 minutes left. After each item, "Planned 15, took 22". A per-kind pace (the median ratio of actual to planned minutes over the last 20 items, kept in one synced `paceStats` document) scales future estimates in ADHD mode and is shown in Settings.
+4. **Keep your place.** A "Where you left off" card (last page, item and step) when the owner returns after 10 minutes or more away. Park it (F31) is on the Now card.
+5. **Rewards right away.** Each finished step drops ink into the day's route (a row of drops); a finished day adds a flag to the week's stamp strip; an optional small sound. Nothing is ever taken away.
+6. **Breaks that work.** Focus blocks default to 15 + 5 minutes in ADHD mode (editable); break views add a movement idea; after 90 minutes of activity without a break, a gentle check-in: "Time for water and a stretch?" with "Take 5" and "Not now" (at most once per 90 minutes).
+7. **Starting help.** An if-then line on Today: "When I ___, I'll start the first stop" (kept for the day, or as a default); if it names a clock time, Atlas shows it at that time while open.
+8. **Reading support.** Concept levels one section at a time ("Next part"), each followed by one quick check from the concept's questions (self-rated like a flashcard, recorded as a check); "Read aloud" with the browser's `speechSynthesis` (hidden where unavailable; works offline); an optional line focus that dims the text outside the current paragraph.
+9. **Focus sound.** Brown, pink or white noise made with Web Audio (no audio files), with volume, stopping at the block's end. Off by default, even in ADHD mode.
+10. **Study with Claude** (an experiment, off by default). At a block's start Claude sees the intention line and plan item and answers in a sentence; at the end it asks "How did it go?" and replies briefly (prompt 20, quick tier). Built-in Claude and API key mode only; hidden in copy-prompt mode.
+11. **Gentle language.** "Fresh start" on Review, offered when more than 30 items are overdue, spreads the overdue ones over the next 7 days (it moves only their due dates, keeps their order and intervals, and can be undone). "Welcome back" after a gap of 3 days or more, never a count of missed days. No red for wrong or late.
+
+**Left out on purpose:** bionic reading (no effect), colored overlays (weak evidence), red countdowns, penalties or lost progress, confetti and constant motion, sounds on by default.
+
+**Done when:** the switch works on every page, persists and syncs; each part can be turned off separately; steps, timers, pace, parking, rewards, breaks, the if-then line, reading support and focus sound work offline in both runtimes; Study with Claude works in built-in and API modes (tested with the fake sample and mocked fetch) and stays hidden in copy-prompt mode; reduced motion is respected; each part has tests.
 
 ---
 
@@ -3136,6 +3178,9 @@ For design and behavioral mocks, replace the score keys with the relevant rubric
 **19. Full solution** (tier: default; only after the owner confirms "Show full solution")
 > "Explain a complete, optimal solution to this problem: the key insight, the approach step by step, clean code in the learner's language with brief comments, time and space complexity, and the edge cases handled. Then give a one-line insight the learner should remember."
 
+**20. Study companion** (tier: quick; `cache: false`; Phase 9, F32 "Study with Claude", built-in and API modes only)
+> At the start of a focus block: "The learner is starting a {minutes}-minute focus block. Their intention: "{line}". The task: {plan item}. Reply in one or two short, warm sentences that name the first concrete step. No questions, no lists." At the end: "The block ended. The learner says it went: {Done | Partly | Moved on}. Their note: "{note}". Reply in one or two sentences: acknowledge it plainly and suggest what comes next (a break, the next step, or parking what's left). Never judge."
+
 ### 10.5 AI UX rules
 
 - Every AI button states what will happen ("Get hint 1", "Review my code"), never a vague "Generate".
@@ -3293,6 +3338,8 @@ A day is **active** if it has at least 10 minutes of activity or any attempt, ch
 
 ## 12. Visual design system
 
+> **Phase 9:** subsection 12.10 (the Survey look: Day, Dusk and Night themes, subject colors, the contour texture) replaces the palette, type, surfaces and layouts of 12.1, 12.2 and 12.5. Until Phase 9 session 9.1 lands, 12.1 to 12.9 describe the app as built.
+
 ### 12.1 Design brief
 
 - **Subject:** a personal study atlas for an engineering student preparing for demanding interviews.
@@ -3431,6 +3478,141 @@ Build a small component kit in `src/components/ui` on the tokens: Button (primar
 - Big-number hero stats with a gradient accent.
 - Fade-and-slide entrance animations on every section.
 
+### 12.10 Phase 9: the Survey look
+
+Phase 9 replaces the palette, type and surface treatment of 12.1 and 12.2 and the layouts of 12.5 with this subsection. Still in force: the status glyph shapes (12.3, with the colors below), motion (12.6, with the additions below), the component list (12.7), writing (12.8) and the list of generic defaults to avoid (12.9). Where 12.1 to 12.9 and this subsection conflict, this subsection wins.
+
+The research behind every choice (about 50 studies and guides, each rated by strength of evidence) is in `docs/design/phase9-research.md`. Working mockups of Today, the three themes, ADHD mode and the creative layer are in `docs/design/phase9-plan.html` (open it in a browser; it is a reference, and where it differs from this section, this section wins). The owner approved the direction and asked Claude to make the open decisions; they are listed in 12.10.10.
+
+#### 12.10.1 Brief and rules
+
+- **Concept: Survey.** Atlas is a survey of the owner's knowledge, and every screen belongs to one map. The map's materials (paper, contour lines, ink, spot heights) carry across the app. Lessons, code and drills stay plain.
+- **Why it changes:** before Phase 9 every block was the same bordered box, one blue was used for everything (all 18 regions sat between teal and violet), nothing showed where to start, text was small and dense, and the night theme was a bright saturated navy. The owner found it "bookish"; the map was the one part with character.
+- **Six rules:**
+  1. *Calm in the middle, warm at the edges.* Extras inside learning material lower learning, so lessons, code, drill prompts and flashcards carry no decoration. Warmth, texture and drawings live around them: page heads, Today, empty states, breaks, milestones.
+  2. *One thing leads each screen.* One focal card or number per screen; everything else steps back in size and tone.
+  3. *Color always means something.* Subject colors identify subjects. Amber, green and coral mean only learning, strong and fading. One accent (lake blue) marks actions. Semantic colors (danger, warning) stay separate from all three.
+  4. *Soft, never stark.* Off-white paper and near-black ink; never pure white on pure black or the reverse. Rounded shapes. Tone, not lines, separates surfaces.
+  5. *Match the room.* Day, Dusk and Night themes, by system setting or by the clock.
+  6. *Progress is a journey.* Routes that fill in, rings that close, landmarks on the map. Progress is always shown, never guilt.
+
+#### 12.10.2 Themes: three kinds of map
+
+Each theme is a different kind of map with the same layout: **Day** is a survey sheet (green-gray paper, brown contour lines, spot heights), **Dusk** is an old atlas (dim warm paper, gold contour lines, a dotted grid of latitude and longitude), **Night** is a sea chart (deep charcoal water, cool depth lines, faint soundings).
+
+| Token | Day | Dusk | Night |
+|---|---|---|---|
+| `--canvas` | `#F0F2EC` | `#1B1712` | `#151A16` |
+| `--surface` | `#FAFBF7` | `#221D17` | `#1C221D` |
+| `--surface-raised` | `#FFFFFF` | `#2B251E` | `#242B25` |
+| `--surface-sunken` | `#E4E8DE` | `#16120E` | `#101411` |
+| `--sidebar` (new) | `#E7EBE2` | `#17130F` | `#111512` |
+| `--rule` | `#D3D9CA` | `#3A3228` | `#313A32` |
+| `--text` | `#1F241D` | `#DDD2BF` | `#E4E9DF` |
+| `--text-muted` | `#4F584C` | `#A89B86` | `#A3AC9D` |
+| `--text-faint` | `#646D60` | `#948874` | `#8F9889` |
+| `--accent` | `#23669A` | `#A6C0D8` | `#86B9E4` |
+| `--on-accent` | `#FFFFFF` | `#1B1712` | `#151A16` |
+| `--contour` (new) | `rgb(140 110 70 / 0.30)` | `rgb(221 190 140 / 0.14)` | `rgb(150 190 215 / 0.14)` |
+| Learning fill / stroke | `#F1C75B` / `#8C6400` | `#D9AA4A` / `#D9AA4A` | `#E8B64A` / `#E8B64A` |
+| Strong fill / stroke | `#5DBB8A` / `#1E6B45` | `#6FB98E` / `#6FB98E` | `#5CC28E` / `#5CC28E` |
+| Fading fill / stroke | `#EE8F7C` / `#A8412F` | `#E08D7A` / `#E08D7A` | `#EE8A76` / `#EE8A76` |
+
+Measured WCAG contrast on `--surface`: text 15.2 / 11.2 / 13.1 : 1 (Day / Dusk / Night), muted 7.1 / 6.1 / 6.9, faint 5.2 / 4.8 / 5.4, accent 5.9 / 8.9 / 7.8, `--on-accent` on accent 6.1 / 9.5 / 8.5; Day status strokes 5.1 (learning), 6.2 (strong), 5.8 (fading). Every other token (danger, warning, success, overlay, shadows, code, diff, charts, heat) is re-derived for each theme on the same hue families, and the chart and heat ramps keep the validated-ramp rules of decisions 23 and 90. Dusk is dimmer and lower in contrast than Night on purpose (still above AA everywhere).
+
+**Theme setting.** `Profile.theme` becomes `"system" | "day" | "dusk" | "night" | "schedule"` (migration: `light` → `day`, `dark` → `night`). System follows the device (light → Day, dark → Night). "By time of day" (`schedule`) uses `Profile.prefs.themeSchedule` (`{ day: "06:30", dusk: "19:00", night: "22:30" }` by default, editable in Settings). `<html data-theme>` takes `day`, `dusk` or `night`; the pre-paint script in `index.html` resolves System and the schedule from `localStorage` (`atlas.theme`, plus `atlas.themeSchedule`) so there is no flash, and a timer switches themes at the set times while the app is open. Printing always uses Day (as today with light). Decision 6 still holds: no Tailwind `dark:` variant; tokens switch with the theme.
+
+**Map textures.** The page texture follows the theme's map kind: Day draws contours with spot heights; Dusk draws contours with a dotted graticule (every 72 px); Night draws depth contours with at most 16 faint sounding numbers, never under text.
+
+#### 12.10.3 Subject colors
+
+Each subject gets its own hue, spread around the color wheel in families (computer science in blues and teals, design and engineering in greens, quant subjects in golds and oranges, career in rose). All marks share one lightness so no subject shouts. Values are OKLCH: Day mark L 0.53 C 0.11, Day tint L 0.95 C 0.028, Night and Dusk mark L 0.76 C 0.10, Night and Dusk tint L 0.29 C 0.035. Every Day mark clears 4.69:1 on the Day surface; every Night mark clears 7.2:1 on the Night surface.
+
+| Subject | Hue | Day mark | Day tint | Night/Dusk mark | Night/Dusk tint |
+|---|---|---|---|---|---|
+| `dsa` | 255 | `#3D6DAA` | `#E2F0FF` | `#85B4F0` | `#1F2C3D` |
+| `lang` | 232 | `#0076A0` | `#DDF2FE` | `#6ABCE6` | `#182E3A` |
+| `arch` | 212 | `#007B91` | `#DAF4F9` | `#59C2D6` | `#143035` |
+| `os` | 196 | `#007E80` | `#DAF5F5` | `#57C5C6` | `#143131` |
+| `cn` | 180 | `#00806E` | `#DBF5EF` | `#5FC6B3` | `#16312C` |
+| `conc` | 166 | `#007F5D` | `#DEF5EA` | `#6EC6A2` | `#193127` |
+| `oop` | 284 | `#6562A9` | `#ECECFF` | `#A9A9EF` | `#29293C` |
+| `dbms` | 304 | `#7A5A9F` | `#F2EAFE` | `#BFA1E5` | `#2F273A` |
+| `sql` | 324 | `#8B5490` | `#F8E9F9` | `#D19BD5` | `#342535` |
+| `lld` | 148 | `#387D46` | `#E3F4E4` | `#84C38D` | `#1F3021` |
+| `sysd` | 130 | `#56782E` | `#E8F3DF` | `#9CBE7A` | `#262F1C` |
+| `eng` | 112 | `#6E7114` | `#EEF1DC` | `#B2B86B` | `#2C2D18` |
+| `prob` | 90 | `#846800` | `#F6EEDA` | `#CAAE63` | `#322B16` |
+| `math` | 70 | `#945F0E` | `#FBECDB` | `#DAA668` | `#372818` |
+| `puzzles` | 52 | `#9D5728` | `#FFEADE` | `#E49F75` | `#39261B` |
+| `markets` | 34 | `#A1513F` | `#FFE8E2` | `#E99A87` | `#3B2520` |
+| `apt` | 14 | `#A14E58` | `#FFE7E9` | `#E9979E` | `#3B2426` |
+| `career` | 352 | `#9B4F72` | `#FFE7F0` | `#E397B8` | `#39242D` |
+
+- The new hues replace `regionHue` in `content/<subject>/_subject.md` (the spec's 12.2 rule "cool hues only" is lifted). `regionHue` is not part of the layout's structure hash (`scripts/build-layout.mjs`), so recoloring never moves the map; keep it that way. Generate the token values from the hues with one script and commit them, so the table, the tokens and the map agree.
+- A subject color appears as a tint (map regions, the page-head wash of a subject, topic or concept page, icon tiles), as the stroke of the subject's emblem, or as a small square mark next to the subject's name. Never as a small round dot (round marks mean status), and never alone: the name or emblem is always there too.
+- Status colors stay the only strong colors on the map; region tints stay faint (as today).
+
+#### 12.10.4 Type
+
+- **Display:** Bricolage Grotesque (weights 600 and 700, Latin, woff2 only, bundled from `@fontsource/bricolage-grotesque` like decision 12) for page titles, card titles and big numbers. If the package or its size causes trouble in the artifact, IBM Plex Sans 600 stays and the reason is recorded.
+- **Text:** IBM Plex Sans. Interface text 14 to 15 px. Reading text (concept levels, notes, revision on screen) 17 px, 18 px from 1280 px wide, line height 1.6, 60 to 70 characters per line.
+- IBM Plex Mono only for code; IBM Plex Sans Condensed for map labels and dense tables.
+- Scale adds 30 and 40 px for page heads. Labels such as "Up next" are sentence case, 13 px, semibold, in the accent color; no all-caps labels or tracked-out eyebrows (12.9).
+
+#### 12.10.5 Surfaces and shapes
+
+- Separation by tone: canvas, then surface, then raised. No hairline borders around cards. Dense lists and tables keep bordered rows (12.7).
+- Radius: controls 10 px, buttons and chips fully round (pills), cards 16 px, page heads and the focal card 18 px.
+- Shadows for floating layers (popovers, menus, dialogs) and for exactly one focal card per screen (Today's "Up next", the ADHD Now card, the active flashcard). This amends 12.2's "no shadows on in-flow content".
+- The sidebar sits on `--sidebar` with no dividing line; the current page is a raised pill. Buttons: one primary per view (filled accent pill), secondary (sunken pill), ghost (icon and text).
+- Data-heavy screens (the problem table, the workspace, the sketch canvas) stay plain: no texture, no page-head art.
+
+#### 12.10.6 The contour engine
+
+- `src/lib/art/contours.ts`: a pure function from `{ width, height, seed, levels, cell, hills?: { x, y, r, height, label? }[] }` to line segments per level plus label anchors. The field is a sum of Gaussian hills plus a few low sine waves, seeded with `mulberry32` from `lib/random.ts`; lines come from marching squares with a fixed saddle rule. Deterministic: the same input gives the same output (tested), and changing one hill's height changes lines only near it (tested).
+- `src/components/ui/ContourCanvas.tsx` draws it on a canvas (device pixel ratio capped at 2), redraws on resize and theme change, is `aria-hidden`, and never animates. It adds the theme's texture extras (spot heights, graticule, soundings). Budget: under 8 ms for 1200 × 240 px at a 6 px cell.
+- Used in: page heads (Today; subject, topic and concept pages in the subject's tint), empty states, break views, subject emblems (2 px cell), and the map's paper at far zoom behind the regions. Never behind reading text, code, drill prompts or flashcards.
+
+#### 12.10.7 The creative layer on screens
+
+- **Living terrain (Today's page head):** the focus subjects (or, with none, the three with the largest weight in the track) are hills. A hill's height is the subject's readiness (`0.35 + readiness / 100 × 1.3` of the base height), its place comes from a seed of the subject id, and the background hills come from a seed of the ISO week. Spot heights ("▲ DSA 57", the readiness number) sit at the peaks when the head is at least 480 px wide, never under the greeting. The picture changes only when readiness or the week changes.
+- **Subject emblems:** a small contour emblem per subject (3 hills from a seed of the subject id, 7 levels, 2 px cell), stroked in the subject mark on its tint. Used in page heads, subject chips, weekly stamps and the map's far-zoom subject cards.
+- **Pencil and ink:** in lists (search results, ready to learn, paths, topic lists) and near-zoom map labels, not-started concept names use `--text-faint`; learning and fading use `--text`; strong uses `--text` at weight 600. Glyph shapes are unchanged.
+- **Today's route:** plan items are stops on a dashed line (done: a filled accent check; current: a ringed stop; the last stop is a flag). The first item not done is the "Up next" focal card with a big Start; the others stay compact. Finishing a stop draws a 250 ms ink stroke along the line. The countdown is drawn as a map scale bar ("70 days to interviews"); today's minutes as a ring.
+- **Summit profile (dashboard):** readiness per week as a hiking elevation profile from the first week with data, with the interview date as a summit flag and F17's projection as a dashed trail. A past week's readiness is found by evaluating the records as of that week's Sunday 23:59 (the readiness functions already take `today` and `now`); results are cached for the visit and computed after first paint, so the dashboard budget (a year of data under 1 s) still holds. Every point has an `ExplainNumber` like the rest of the dashboard.
+- **Weekly stamps:** each Monday-to-Sunday week with 5 or more active days earns a stamp: "Week NN" and the emblem of the subject with the most checks and attempts that week. Derived from records, never stored, never removed. Dashboard (last 12 weeks) and weekly review.
+- **Line drawings:** small SVG drawings in the contour style (compass, trail, flag, tent, telescope) for empty states and milestones. No images, no mascot.
+
+#### 12.10.8 Screen by screen
+
+- **App frame:** tinted sidebar, pill for the current page, focus subjects as links with their square marks; top bar with search, focus timer, streak, the ADHD mode switch (F32) at the right, and Ask Claude.
+- **Today:** page head (greeting, living terrain, scale bar, minutes ring), "Up next" focal card, "Today's route", a 7-day streak strip (the freeze shown as a hatched day), ready-to-learn cards with subject tiles, the review count as one big number. Minimum day, time budget, Swap and Skip keep working as now.
+- **Dashboard:** sections of different sizes; the readiness ring split into subject colors with the summit profile beside it; subject bars in subject colors with emblems; pattern tiles as a softer field; charts on the new palette; weekly stamps; every number still opens its explanation.
+- **Map:** layout, zoom levels and behavior unchanged. Regions take the subject colors; paper, grid and contours follow the theme.
+- **Problems:** stays a table: taller rows, filter pills, difficulty and status chips, the subject mark at the start of each row.
+- **Workspace:** quiet; the CodeMirror theme follows Day, Dusk or Night; a larger timer; hint, review and dry-run panels as soft trays.
+- **Concept panel and page:** the reading layout of 12.10.4; the page head in the subject's tint with its emblem; interview points in their own card; a short "Check yourself" block at the end of each level.
+- **Review, flashcards, drill:** bigger centered cards that turn to show the answer, keyboard hints, a calm finish screen that says what changed.
+- **Practice screens from Phase 8** (mock interviews, designs, stories, puzzles, mental math): the same treatment; timed rounds show the horizon line (F31); the sketch canvas uses the theme's paper and ink.
+- **Weekly review:** a logbook page with the week's stamp. **Revision sheets:** print styles unchanged (printing uses Day); the screen view takes the reading layout.
+- **Settings:** theme (System, Day, Dusk, Night, By time of day with the three start times, and an optional bedtime), focus sessions (F31), ADHD mode and each of its parts (F32).
+- **Welcome and empty states:** line drawings and a first living terrain.
+
+#### 12.10.9 Motion additions
+
+- The route's ink stroke (250 ms), a 200 ms cross-fade between themes, and the breathing ring of F31 (only when the owner starts it: 5 s growing, 5 s shrinking). The horizon line of F31 updates every 5 s without animating.
+- Everything is instant with reduced motion. The ink moment (12.6) stays the only decorative animation; these are feedback and tools.
+
+#### 12.10.10 Decisions taken for the owner
+
+1. **Survey, not Studio.** Studio (lavender-gray, white cards, an iris accent) was pleasant but generic, had no Dusk theme and didn't connect to the map. One idea from it stays: data-heavy screens are plain.
+2. **Dusk and "By time of day": yes.** The bedtime note stays off until a bedtime is set. Dusk promises comfort, not better sleep (a warm tint alone didn't improve sleep).
+3. **No mascot.** Friendly faces help younger learners most; subject emblems and line drawings give warmth and double as subject identity.
+4. **ADHD mode gets every part (F32),** with focus sound and Study with Claude starting off even in ADHD mode: they are the least proven, and noise hurt people without ADHD.
+5. **A focus layer for everyone (F31):** intentions, the horizon line, dimming, held notifications, Park it, break views, the memory walk and interview day help anyone who studies for hours.
+6. **Order inside Phase 9:** foundations, screens, focus layer, ADHD mode, then polish and ship, so the final audit and screenshots cover the finished look (section 13).
+
 ---
 
 ## 13. Build plan
@@ -3488,15 +3670,25 @@ Build in this order. The owner asked for the problem tracker first (it is useful
 - F15 mock interviews (all four types), F26 design practice with the sketch renderer, F27 story bank, F28 quant puzzles and mental math, full F10 drill with confusion pairs.
 - **Done when:** each feature runs end to end and saves its results.
 
-### Phase 9: polish and ship
-- F30 audit: keyboard paths, screen reader labels, contrast, reduced motion, mobile layouts, performance budgets.
-- Visual review of every screen in both themes and on mobile, with screenshots. Fix spacing, alignment and empty states.
-- Run `npm run build:syllabus -- --strict` and fix every missing content item.
-- Run `npm run release:artifact` and commit `release/atlas-artifact.zip`.
-- Write `DEPLOY.md` (section 14) and a short `README.md` for the owner.
-- **Done when:** the definition of done (section 15) is fully checked.
+### Phase 9: the Survey look, focus layer, ADHD mode, polish and ship
 
-Also run `npm run release:artifact` at the end of Phases 3, 4, 6, 7 and 8, so the owner can try the artifact version as it grows.
+Phase 9 spans five sessions, done in order and never in parallel. Each ends like a phase: all checks passing, screenshots of what changed in all three themes at 390 and 1280 px, a commit and push, `PROGRESS.md` updated, `npm run release:artifact`, and the handover; the next session starts after the owner merges the pull request. The first session reads `docs/design/phase9-research.md` and opens `docs/design/phase9-plan.html` (the mockups) before changing anything.
+
+- **Session 9.1, foundations** (12.10.1 to 12.10.6): Day, Dusk and Night tokens (plus code, diff, chart, heat and feedback tokens for each theme); the theme setting with System and By time of day (profile migration `light` → `day` and `dark` → `night`, the pre-paint script, the switch timer, the top-bar theme menu and Settings); subject colors (the hues in `_subject.md`, generated token values, map regions recolored without moving the map); Bricolage Grotesque bundled; radii, surfaces and shadows; the contour engine and `ContourCanvas` with tests; subject emblems; the component kit restyled and the design kit page (`#/kit`) showing each theme; a test that computes the WCAG contrast of every text and background token pair in every theme (AA everywhere, AAA for body text). **Done when:** the kit page and the app frame look right in all three themes at 390 and 1280 px, and the contrast test passes.
+- **Session 9.2, every screen** (12.10.7 and 12.10.8): the app frame; Today with living terrain, Up next, the route, the scale bar, the minutes ring, the week strip and ready cards; the Dashboard with the subject-colored ring, the summit profile, subject bars and weekly stamps; map colors and paper; Problems; the workspace; the concept panel and page with the reading layout; review, flashcards and drill; the Phase 8 practice screens; weekly review; revision; settings; welcome; the palette; pencil and ink; line drawings for empty states. **Done when:** before-and-after screenshots of every screen in all three themes at 390 and 1280 px, no feature lost, all tests pass (update only tests that check old styling, never behavior), and the performance budgets still hold (the dashboard with a year of data under 1 s cold).
+- **Session 9.3, focus layer (F31):** focus blocks with the one-line intention, the horizon line, the focus lens and held notices; Park it; break views with breathing; the memory walk; interview day; themes by the clock and the wrap-up note. **Done when:** F31's "done when" is met.
+- **Session 9.4, ADHD mode (F32):** the switch and all eleven parts, with prompt 20 for Study with Claude. **Done when:** F32's "done when" is met.
+- **Session 9.5, polish and ship:**
+  - F30 audit: keyboard paths, screen reader labels, contrast, reduced motion, mobile layouts, performance budgets, in all three themes.
+  - Visual review of every screen in Day, Dusk and Night at 390, 768 and 1440 px, with screenshots. Fix spacing, alignment and empty states.
+  - Run `npm run build:syllabus -- --strict` and fix every missing content item.
+  - Run `npm run release:artifact` and commit `release/atlas-artifact.zip`.
+  - Write `DEPLOY.md` (section 14) and a short `README.md` for the owner.
+  - **Done when:** the definition of done (section 15) is fully checked.
+
+If a session runs out of room, it finishes what it started completely, records exactly what's left in `PROGRESS.md`, and the next session continues from there. Nothing is stubbed.
+
+Also run `npm run release:artifact` at the end of Phases 3, 4, 6, 7 and 8 and of every Phase 9 session, so the owner can try the artifact version as it grows.
 
 ---
 
@@ -3527,14 +3719,14 @@ The owner creates a key at console.anthropic.com, pastes it into Settings → AI
 - [ ] All 18 subjects, every topic and every concept from section 6 are on the map, with content complete per Phase 5.
 - [ ] All cross-links in section 7 appear on both concepts and as dashed lines on the map.
 - [ ] All seed banks from section 8 are loaded and linked to concepts.
-- [ ] Features F1 to F30 are complete and marked done in `PROGRESS.md`, each with its "done when" satisfied.
+- [ ] Features F1 to F32 are complete and marked done in `PROGRESS.md`, each with its "done when" satisfied.
 - [ ] Every algorithm in section 11 has unit tests, including the planner scenarios and SRS tables.
 - [ ] Export then import round-trip reproduces identical state.
 - [ ] Both runtimes work: GitHub Pages build (IndexedDB, copy-prompt and API modes) and the single-file artifact build (db, sample, downloads), with graceful fallbacks when any capability is missing.
 - [ ] The artifact file passes `check-artifact.mjs` (size and URLs).
 - [ ] No secrets in the repository or in exports.
-- [ ] Visual review done in light and dark themes and at 390 px, 768 px and 1440 px widths.
-- [ ] Keyboard-only use works for every main flow; reduced motion is respected; contrast passes WCAG AA.
+- [ ] Visual review done in the Day, Dusk and Night themes and at 390 px, 768 px and 1440 px widths, following section 12.10.
+- [ ] Keyboard-only use works for every main flow; reduced motion is respected; contrast passes WCAG AA in every theme (checked by a test).
 - [ ] `README.md` and `DEPLOY.md` are written for a beginner.
 
 ---

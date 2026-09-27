@@ -18,7 +18,7 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 4. Before every commit: `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`,
    `npm run build:artifact` (or all at once: `npm run check`).
 5. Look at the UI: screenshots with Playwright (global install, Chromium at /opt/pw-browsers) in
-   both themes and at 390 px. Fix what looks off.
+   every theme (light and dark; Day, Dusk and Night from Phase 9) and at 390 px. Fix what looks off.
 6. Accuracy: interview content must be correct. When unsure, set `needsReview: true`.
 7. Never copy problem statements from LeetCode or elsewhere. Store titles, numbers, links,
    difficulty and patterns only. Drill prompts, puzzles and design prompts are original.
@@ -118,6 +118,11 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   `src/styles/components.css` (in `@layer components`) holds dialog motion, code token colors
   and reading text. Always join classes with `cx()` so overrides win.
 - **Dates**: local time; due dates stored as `yyyy-mm-dd` (`src/lib/time.ts`).
+- **Phase 9 design** (planned, not built yet): BUILD_SPEC.md 12.10 (the Survey look: Day, Dusk
+  and Night themes, subject colors, the contour engine in `lib/art/contours.ts`, living terrain,
+  emblems, pencil and ink, the route, the summit profile, stamps), F31 (focus layer) and F32 (ADHD
+  mode). Research with sources and evidence levels: `docs/design/phase9-research.md`. Mockups:
+  `docs/design/phase9-plan.html` (open in a browser; a reference, the spec wins).
 
 ## Commands
 
@@ -673,3 +678,14 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     delayMs: 40, chunks: 12 })` with `npx rolldown <entry> --format iife`, and inject it with
     Playwright's `addInitScript` into the dev server or `dist-artifact/index.html`. Fixture
     backups with `profile.ai.mode = "sample"` start in built-in mode.
+104. **Phase 9 plan** (planning session after Phase 8, 27 Sep 2026): the owner asked for research
+    on colors for long study, focus and ADHD, and asked Claude to take the open decisions. Taken:
+    the Survey look over Studio; three themes as three kinds of map (Day survey sheet, Dusk old
+    atlas, Night sea chart) with System and "By time of day"; one OKLCH color per subject
+    (replacing the cool-only `regionHue` rule; hues are outside the layout hash, so the map never
+    moves); Bricolage Grotesque for display; no mascot (emblems and line drawings instead); a
+    focus layer for everyone (F31); ADHD mode with every part, focus sound and Study with Claude
+    off by default (F32); five Phase 9 sessions ending with polish and ship. Ideas the research
+    didn't support stay out (bionic reading, colored overlays, "red lowers scores", worry-writing
+    before exams). All-caps labels stay banned (12.9), so the mockups use sentence case. Details:
+    BUILD_SPEC.md 12.10.10 and `docs/design/phase9-research.md`.
