@@ -111,18 +111,30 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   `src/app/routes.tsx` maps every route to a lazy page. Links are plain `<a href="#/…">`.
 - **Shell**: `src/app/shell/` (AppShell, Sidebar, TopBar, MobileNav, PageHeader, PageFrame,
   shortcuts, Ask Claude panel, focus timer). Every page starts with `<PageFrame><PageHeader/>`.
-- **Component kit**: `src/components/ui/` (section 12.7). Heavy parts are default exports loaded
-  with `lazy()`: `MarkdownView`, `code/CodeEditor`, `code/DiffView` (named), `charts`. The design
-  kit page `#/kit` (Settings → About) shows every component.
-- **Styling**: Tailwind v4 + CSS custom properties in `src/styles/tokens.css` (section 12);
+- **Component kit**: `src/components/ui/` (sections 12.7 and 12.10). Heavy parts are default
+  exports loaded with `lazy()`: `MarkdownView`, `code/CodeEditor`, `code/DiffView` (named),
+  `charts`. Survey parts: `Card`/`CardLabel` (surface card, the one focal card),
+  `ContourCanvas` (the contour texture), `SubjectEmblem`/`SubjectMark`. The design kit page
+  `#/kit` (Settings → About) shows Day, Dusk and Night side by side, the subject colors, the
+  texture and every component (`features/kit/KitThemes.tsx`).
+- **Styling**: Tailwind v4 + CSS custom properties in `src/styles/tokens.css` (Day, Dusk, Night;
+  section 12.10) and `src/styles/subjects.generated.css` (subject colors, generated);
   `src/styles/components.css` (in `@layer components`) holds dialog motion, code token colors
-  and reading text. Always join classes with `cx()` so overrides win.
+  and reading text. Always join classes with `cx()` so overrides win. Contrast of every text
+  and background pair is tested (`tests/styles/contrast.test.ts`).
+- **Themes** (12.10.2): `lib/theme.ts` (pure: choices, the schedule, the next switch),
+  `app/theme.ts` (applies it, mirrors it to localStorage, `useThemeController` follows the device
+  and the clock), `app/themeOptions.ts`; the pre-paint script in `index.html` mirrors
+  `lib/theme.ts` (tested). `useShownTheme()` (components/ui/hooks) reads `<html data-theme>`.
+- **Art**: `lib/art/contours.ts` (the contour engine: seeded hills and waves, marching squares,
+  soundings and spot heights) and `lib/art/emblem.ts` (a subject's emblem lines).
 - **Dates**: local time; due dates stored as `yyyy-mm-dd` (`src/lib/time.ts`).
-- **Phase 9 design** (planned, not built yet): BUILD_SPEC.md 12.10 (the Survey look: Day, Dusk
-  and Night themes, subject colors, the contour engine in `lib/art/contours.ts`, living terrain,
-  emblems, pencil and ink, the route, the summit profile, stamps), F31 (focus layer) and F32 (ADHD
-  mode). Research with sources and evidence levels: `docs/design/phase9-research.md`. Mockups:
-  `docs/design/phase9-plan.html` (open in a browser; a reference, the spec wins).
+- **Phase 9 design**: BUILD_SPEC.md 12.10 (the Survey look: Day, Dusk and Night themes, subject
+  colors, the contour engine, living terrain, emblems, pencil and ink, the route, the summit
+  profile, stamps), F31 (focus layer) and F32 (ADHD mode). Session 9.1 built the foundations
+  (12.10.1 to 12.10.6); screens follow in 9.2. Research with sources and evidence levels:
+  `docs/design/phase9-research.md`. Mockups: `docs/design/phase9-plan.html` (open in a browser;
+  a reference, the spec wins).
 
 ## Commands
 
@@ -131,6 +143,7 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 | `npm run dev` | Regenerate data, start the dev server |
 | `npm run build:syllabus [-- --strict]` | Parse and validate `content/` |
 | `npm run build:layout [-- --force]` | Recompute map positions (skipped if structure unchanged) |
+| `npm run build:colors` | Generate the subject colors from the hues in `content/*/_subject.md` |
 | `npm run check:content-code [-- <subject>]` | Compile every C++ block in `content/` (Python and Java blocks too, for the `lang` topics) |
 | `npm run typecheck` / `lint` / `test` | Checks |
 | `npm run build` / `build:artifact` | GitHub Pages build / single-file artifact + `check-artifact.mjs` |
@@ -160,8 +173,9 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
    field ("islands"), with a rounded-hull fallback. `layout.json` stores a structure hash, so content
    text edits never move the map.
 6. **Theme**: never use Tailwind's `dark:` variant; tokens switch with the theme. The theme choice
-   is mirrored to `localStorage["atlas.theme"]` so `index.html` can set `data-theme` before first
-   paint (no flash). "system" leaves `data-theme` unset.
+   is mirrored to `localStorage["atlas.theme"]` (and the schedule to `atlas.themeSchedule`) so
+   `index.html` can set `data-theme` before first paint (no flash). Since Phase 9, `data-theme` is
+   always `day`, `dusk` or `night` (decision 106).
 7. **Synced storage documents**: every body is `{ kind, key, v, updatedAt, data }`. Grouped
    documents (`concepts-<subject>`, `checks-<subject>`, `mistakeTags`, `mentalMath`, …) store
    records keyed by id (checks as a record, not an array). Keys with characters the store forbids
@@ -238,7 +252,7 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 27. **Later-phase routes** rendered "Arrives in phase N" pages until Phase 8 gave every route its
     real page; `features/placeholder/pages.tsx` now holds only the not-found page.
 28. **Per-browser conveniences in localStorage** (never synced, always in try/catch):
-    `atlas.theme`, `atlas.sidebar`, `atlas.recent` (palette), `atlas.setup.map|search` (Today
+    `atlas.theme`, `atlas.themeSchedule`, `atlas.sidebar`, `atlas.recent` (palette), `atlas.setup.map|search` (Today
     checklist), `atlas.askWidth` (drawer width), `atlas.split` (workspace split), `atlas.template`
     (start attempts from the starter template), `atlas.mapPanel` (map panel width).
 29. **Problem scheduling reading of 11.1**: "first ever attempt" means the problem has never been
@@ -689,3 +703,55 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     didn't support stay out (bionic reading, colored overlays, "red lowers scores", worry-writing
     before exams). All-caps labels stay banned (12.9), so the mockups use sentence case. Details:
     BUILD_SPEC.md 12.10.10 and `docs/design/phase9-research.md`.
+105. **Survey tokens** (session 19, 9.1): the 12.10.2 values are used as given, except
+    `--text-faint`, darkened in Day (`#616A5D`) and lightened in Dusk (`#978B77`) by the smallest
+    step that clears 4.5:1 on every plain background (the spec measured it on `--surface` only).
+    Every other token is re-derived per theme on the same hue families: danger is crimson (OKLCH
+    hue 12, apart from the coral of fading), Dusk's soft tints are 10% so muted text clears AA
+    on them, chart and heat ramps sit on the accent's hue (246) and pass the dataviz ordinal
+    checks (monotone lightness, steps of 0.06 or more, faintest step 2:1 on the surface; Dusk and
+    Night flip). The contrast test covers: every text token on every plain background (canvas,
+    surface, raised, sunken, sidebar) at AA, `--text` at AAA; text, muted and the matching color
+    on every tint; labels on filled buttons (hovered too); code on the code background, diff rows
+    and the active line; status strokes, focus ring and accent at 3:1; the ramps; the same token
+    names in every theme; and the 12.10.2 table itself. A subject mark on its own tint needs only
+    3:1 (emblems, icons): subject names on a tint are written in `--text`.
+106. **Theme mechanics** (9.1): data version 2 (`Profile.theme` system, day, dusk, night or
+    schedule; `prefs.themeSchedule`; migration light → day, dark → night). Dusk and Night sit in
+    `@media not print`, so printing always uses Day (the print block only whitens the paper).
+    `[data-theme-preview="…"]` draws a subtree in another theme (the kit's panels). The switch
+    cross-fades with the View Transitions API (200 ms; instant with reduced motion or a hidden
+    tab). By time of day re-arms a timer for the next start time and re-checks when the tab
+    comes back (timers pause in sleep). The pre-paint script is checked against `lib/theme.ts`
+    for 800 combinations of choice, schedule, time and device setting. The optional bedtime
+    (12.10.8) arrives with the wrap-up note in 9.3.
+107. **Subject colors** (9.1): `scripts/build-subject-colors.mjs` (part of `build:data`) turns
+    each `regionHue` into OKLCH marks and tints, clipping out-of-gamut channels, which reproduces
+    all 72 values of the 12.10.3 table (a test compares them). `[data-subject="<id>"]` sets
+    `--subject-mark` and `--subject-tint` (Tailwind `bg-subject`, `bg-subject-tint`). Map regions
+    fill with the tint (Day 0.55, far 0.9; Dusk and Night 0.5, far 0.75) and stroke with the mark;
+    the hues stay out of the layout hash, and a forced layout rebuild gave a byte-identical
+    `layout.json`.
+108. **Contour engine** (9.1): hill `x`, `y` are fractions of the size, `r` a fraction of the
+    span (the longer side, at least 320 px). Each hill is a Gaussian times a window that reaches
+    exactly zero at 3 radii, and the level spacing comes from the seeded background alone (plus
+    one unit when hills are given), so changing a hill moves lines only within its reach (tested).
+    Saddles use one fixed pairing; every fourth line is an index contour; at most 64 lines.
+    `ContourCanvas` keeps spot heights and soundings off the text beside it by measuring its
+    siblings' text line boxes (plus icons and controls), so callers rarely pass quiet zones;
+    soundings number about one per 9,000 px² (at most 16). Spot heights show in every theme when
+    the picture is 480 px or wider, since they carry numbers. Emblems are SVG, drawn once in a
+    64 px box (hills from `emblem:<id>`, background from the id) and scaled; memoized.
+109. **Kit restyle** (9.1, 12.10.5): buttons are semibold pills (primary filled accent, secondary
+    sunken, ghost bare); chips are sunken pills without borders, and a chip given `border-dashed`
+    outlines in its own text color; segmented controls are pill tracks; layers (dialogs, drawers,
+    sheets, popovers, toasts) drop their hairline for `--layer-edge` (none by day, a faint rim in
+    Dusk and Night) and dialogs take 18 px corners; tiles are a sunken field; empty states sit on
+    sunken paper with the contour texture; callouts are tints without borders; `Card` and
+    `CardLabel` give 9.2 the surface card and the focal card. Page titles are Bricolage Grotesque
+    600 at 30 px (28 on phones); reading text (MarkdownView) is 17 px, 18 px from 1280 px, with
+    Plex headings (lessons stay plain). `cx` knows the custom `text-page`, `rounded-focal` and
+    `shadow-focal`/`shadow-pill` tokens. The sidebar sits on `--sidebar` with a raised pill for
+    the current page; the top bar is pills on the canvas with the theme menu (five choices, "Dusk
+    now" for System and By time of day, and a link to the times in Settings). Screens keep their
+    own layouts until 9.2.
