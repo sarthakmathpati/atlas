@@ -32,6 +32,7 @@
   --danger-soft: rgb(178 58 44 / 0.1);
   --on-danger: #ffffff;
   --success: #1f7a4d;
+  --success-soft: rgb(31 122 77 / 0.1);
   --warning: #8a5d00;
   --warning-soft: rgb(240 180 66 / 0.18);
   --info-soft: rgb(31 111 178 / 0.08);
@@ -147,6 +148,7 @@
     --danger-soft: rgb(239 107 91 / 0.14);
     --on-danger: #0e2233;
     --success: #4cc38a;
+    --success-soft: rgb(76 195 138 / 0.14);
     --warning: #f0b442;
     --warning-soft: rgb(240 180 66 / 0.14);
     --info-soft: rgb(108 195 240 / 0.08);
@@ -234,6 +236,7 @@
   --danger-soft: rgb(239 107 91 / 0.14);
   --on-danger: #0e2233;
   --success: #4cc38a;
+  --success-soft: rgb(76 195 138 / 0.14);
   --warning: #f0b442;
   --warning-soft: rgb(240 180 66 / 0.14);
   --info-soft: rgb(108 195 240 / 0.08);

@@ -20,6 +20,7 @@ import { NotFoundPage } from "../placeholder/pages";
 import { AttemptDialog } from "./workspace/AttemptsTimeline";
 import { EditorPane, type WorkspacePanel } from "./workspace/EditorPane";
 import { InfoPane, ProblemTitle } from "./workspace/InfoPane";
+import { PuzzleAnswer } from "./workspace/PuzzleAnswer";
 import { SaveAttemptDialog } from "./workspace/SaveAttemptDialog";
 import { isBlankCode, readTemplatePref, writeTemplatePref } from "./workspace/templates";
 import { useAttemptSession, type SessionMode } from "./workspace/useAttemptSession";
@@ -177,6 +178,20 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
     </Callout>
   );
 
+  const answerBox =
+    info.source === "quant" ? (
+      <PuzzleAnswer
+        info={info}
+        progress={session.puzzle}
+        hintsUsed={session.hintsUsed}
+        sawSolution={session.sawSolution}
+        onChange={(puzzle) => attempt.update({ puzzle })}
+        onBegin={() => attempt.began(profile?.prefs.timerAutoStart ?? true)}
+        onSave={() => setSaveOpen(true)}
+        disabled={attempt.conflict}
+      />
+    ) : undefined;
+
   const info_ = (
     <InfoPane
       info={info}
@@ -186,6 +201,7 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
       onReveal={() => setRevealAsk(true)}
       onOpenAttempt={openAttempt}
       titleOutside={!wide}
+      answerBox={answerBox}
     />
   );
 

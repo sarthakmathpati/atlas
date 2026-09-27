@@ -202,7 +202,7 @@ export default function DashboardPage() {
           <SubjectBars subjects={dash.subjects} />
         </div>
 
-        <PatternGrid tiles={dash.patterns} />
+        <PatternGrid tiles={dash.patterns} recognition={dash.recognition} />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card id="solved-heading">

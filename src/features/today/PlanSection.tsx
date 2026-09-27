@@ -102,9 +102,9 @@ function startTarget(item: PlanItem): { href: string } | { run: () => void } | n
         href: routeHref("/revision", undefined, { scope: ref === "revision-day" ? "day" : "week" }),
       };
     case "mental-math":
-      return { href: "#/mental-math" };
+      return { href: routeHref("/mental-math", undefined, { mode: "speed" }) };
     case "mock":
-      return { href: "#/mock" };
+      return { href: routeHref("/mock", undefined, { type: "dsa" }) };
     case "design":
       return ref ? { href: routeHref("/designs", ref) } : null;
     case "story":

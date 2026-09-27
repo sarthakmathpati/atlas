@@ -65,7 +65,8 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 - **State**: Zustand, one store per domain in `src/stores/` (profile, activity, focus timer,
   concept statuses and checks, concept notes, custom concepts, map positions, today's plan,
   problems, mistake tags, today's date, toasts, shell UI, concept dialogs, Claude, the open
-  workspace, generated drill prompts), loaded by
+  workspace, generated drill prompts, mental math runs, stories, design attempts, mock
+  sessions), loaded by
   `stores/hydrate.ts` (via `app/providers/StoreHydrator.tsx`) once storage is ready, reloaded after
   import/reset and on remote changes. Stores write through the Repository. Saving an attempt
   (`problemStore.saveAttempt`) reschedules, refreshes linked concept statuses, logs activity and
@@ -88,6 +89,18 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   store hooks (`useReadiness`, `plannerInputNow`, `useActivityInsight`), the heatmap and the
   `ExplainNumber` popover. `stores/hydrate.ts` exposes `useDataReady` (all stores loaded).
   Fixture owners for tests and screenshots: `tests/fixtures/scenarios.ts`.
+- **Practice extensions** (Phase 8): pure logic in `lib/quant/mentalMath.ts` (sprint generators,
+  grading, check scores) and `lib/quant/puzzles.ts` (library filters, answer checks, the honest
+  result), `lib/stories/stories.ts` (coverage matrix, speaking time, practice concepts),
+  `lib/designs/sketch.ts` (sketch parser and dagre layout) and `designs.ts` (sections, review
+  results), `lib/mock/` (`mock.ts` types, phases, time notes, transcript, results; `brief.ts`
+  what the interviewer is told; `pick.ts` what a round is about). Stores `mentalMathStore`,
+  `storyStore`, `designStore`, `mockStore` save every change and do what a finished session
+  means (checks, attempts, activity, plan items). Screens in `features/mentalmath/`,
+  `features/puzzles/` (plus `problems/workspace/PuzzleAnswer.tsx`), `features/stories/`,
+  `features/designs/` (`SketchView` on React Flow, `DesignWorkspace`), `features/mock/`
+  (`MockPage` setup and history, `MockSessionPage` live, `CopyMock` for copy prompt mode,
+  `useMockInterview` the exchange loop) and the hub `features/practice/PracticePage.tsx`.
 - **Map** (`features/map/`): React Flow canvas (`canvas/MapCanvas.tsx`) with memoized bubbles
   (`canvas/nodes.tsx`), everything under the bubbles in one SVG viewport portal
   (`canvas/layers.tsx`), a custom minimap, the model hook (`canvas/useMapModel.ts`) and a small
@@ -217,8 +230,8 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 26. **Backups**: the reminder counts from `createdAt` when there has never been a backup; showing
     the file in the copy dialog counts as a backup. Replace-import and reset keep an in-memory
     snapshot so the toast can undo them during the visit.
-27. **Later-phase routes** render "Arrives in phase N" pages (what the page will do, plus links to
-    what works). Concept, problem and design pages already show everything the seed data knows.
+27. **Later-phase routes** rendered "Arrives in phase N" pages until Phase 8 gave every route its
+    real page; `features/placeholder/pages.tsx` now holds only the not-found page.
 28. **Per-browser conveniences in localStorage** (never synced, always in try/catch):
     `atlas.theme`, `atlas.sidebar`, `atlas.recent` (palette), `atlas.setup.map|search` (Today
     checklist), `atlas.askWidth` (drawer width), `atlas.split` (workspace split), `atlas.template`
@@ -532,12 +545,12 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     (selected with a "Press Ctrl+C" hint when the clipboard is blocked), Open Claude
     (`claude.ai/new`) only outside the claude.ai frame, and a paste box. Cancel ends the request
     quietly. Every feature is tested in all three modes (`tests/app/claudeModes.test.tsx`).
-85. **Plan kinds whose screens come in Phase 8** (mock interviews, design practice, story
-    practice, mental math): the planner builds and tests them (tests pass every kind as
-    available), but `AVAILABLE_PLAN_KINDS` in `lib/planner/kinds.ts` leaves them out, so Today
-    never shows an item whose Start leads nowhere. Phase 8 adds each kind there once its screen
-    works, and passes the dates of finished mocks, designs and stories as `PlannerInput.history`.
-    The weekly review shows mock counts only then too.
+85. **Plan kinds are planned only once their screen works** (`AVAILABLE_PLAN_KINDS` in
+    `lib/planner/kinds.ts`, so Start never leads nowhere). Since Phase 8 every kind is available:
+    mental math (`#/mental-math?mode=speed`), story practice (`#/stories?question=…`), design
+    practice (`#/designs/<id>`) and mocks (`#/mock?type=dsa`). `plannerHistoryNow()` passes the
+    local dates of finished mocks, designs and story practice as `PlannerInput.history`, and each
+    finished session ticks off its item. The weekly review always shows mock counts.
 86. **Planner readings of 11.4**: the minimum day takes the most overdue easy re-solve (it fits the
     15 minutes), else a medium one, else up to 3 due or fading concepts, else a drill. The most
     urgent re-solve and the first flashcard bundle always get a place when they fit the day; the
@@ -610,3 +623,53 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     before interviews, and a year of data, generated from fixed seeds with statuses from the real
     engine. `ATLAS_FIXTURES_DIR=<dir> TZ=Asia/Kolkata npx vitest run tests/fixtures/write.test.ts`
     writes them as backup data for screenshots and timing runs.
+96. **Puzzle answers** (F28): a checkable puzzle is "solved" only once its answer checks out with
+    `answerCheck` (equivalent forms, 0.5%); tries are counted, and hints limit it to "solved with
+    hints". An open-ended puzzle is graded by Claude (prompt 16) or by the owner against the
+    answer note ("I had it" 1, "Partly" 0.5, "I missed it" 0); a correct grade of 0.8 or more is
+    a solve, 0.4 or more a solve with help. "Show the answer" means "saw the solution". The
+    answer, tries and grade ride in the draft and are kept on the attempt.
+97. **Mental math sprints** (F28): generators are seeded; division is always clean; one-decimal
+    operands are never whole numbers; sequences are shown only when every simple rule the
+    checker knows predicts the same next term (`isUnambiguous`); estimation accepts 5%. Tiers run
+    from 2 × 1 to 3 × 2 digits. A finished sprint is a check on its mode's concepts with score
+    correct ÷ total × tier weight (easy 0.8), capped at 1; "End early" saves nothing.
+98. **Stories** (F27): one record of each question link (on the story), so the editor, the
+    coverage matrix and practice agree. Practice without a story is kept on a hidden story
+    `story-unsorted` ("Unsorted practice"); "Tell me about yourself" is the story `story-intro`
+    (`kind: "intro"`). A practice is an explain check on the concepts `practiceConcepts` names
+    (STAR, plus the story bank when a story was used), scored by the critique's four scores ÷ 20
+    or by the self-check lines ticked ÷ 6. Speaking time assumes 140 words a minute.
+99. **Design sketches** (F26): one edge per line, `A -> B : label`, chains, `<-`, `<->`, `-->`
+    (dashed), `--` (plain), a kind in brackets (`[db]`) or guessed from the name. Unreadable lines
+    are listed with their line number and what to write, and the good lines still draw. Layout
+    is dagre (layered); the direction that draws it largest is used until the owner picks one.
+    Rendered with React Flow custom nodes and edges from dagre's points, no library styles. A
+    review's overall score sets the saved attempt: 4 or 5 solved alone, 3 with hints, else not
+    solved; design attempts stay out of the re-solve queue (`keepOutOfReview`).
+100. **Mock interviews** (F15): every candidate turn starts with `[Phase: <phase> | N min left]`
+    (stripped for display) and is saved before Claude is asked; the reply is saved when it ends
+    (Stop keeps what arrived, ending in " …"); consecutive turns of one speaker are merged before
+    sending. The clock (`elapsedMs`) is saved every exchange, every 15 s and on leaving, so a
+    reload resumes it. The coding problem is never shown or stored as a statement: the brief
+    gives Claude its name, difficulty and patterns and asks it to describe the problem in its own
+    words without naming the pattern; its name appears after the feedback. Feedback (prompt 11)
+    turns the code into an attempt with mode "mock" (problem solving 4+ solved alone, 3 with
+    hints, else not solved); a design round writes in the design workspace (its own clock off)
+    and finishes that attempt with the mock's mean; a behavioral round is an explain check on the
+    STAR method (mean ÷ 5); every finished mock counts in the day's `mocks`. A session's delivery
+    is fixed when it starts: live (built-in Claude or an API key) or copy (a whole script for a
+    claude.ai chat and a form that validates the pasted feedback JSON).
+101. **Leaving the page flushes storage**: `pagehide` and a hidden tab call `repository.flush()`
+    (after the notes debounce), so a reload within the synced store's 800 ms write debounce keeps
+    the last exchange.
+102. **Pattern recognition on the dashboard** (F10 "results feed the dashboard"): the pattern grid
+    shows drill accuracy over 60 days, the patterns recognized least often (2+ answers, under
+    100%) and the top 3 confusion pairs, each linking to a drill on that pattern; every tile's
+    explanation gives its own drill results.
+103. **Simulated claude.ai runtime for screenshots**: bundle a scratch entry that builds
+    `createFakeClaude` with a `FakeClaudeDb` saved to `localStorage` on every write (so reloads
+    keep it), `FakeClaudeDownloads` and `createFakeSample({ responder: demoSampleResponder,
+    delayMs: 40, chunks: 12 })` with `npx rolldown <entry> --format iife`, and inject it with
+    Playwright's `addInitScript` into the dev server or `dist-artifact/index.html`. Fixture
+    backups with `profile.ai.mode = "sample"` start in built-in mode.

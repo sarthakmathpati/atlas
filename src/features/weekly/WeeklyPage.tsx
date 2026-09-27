@@ -24,7 +24,6 @@ import {
   weekSummaryText,
   type WeekSummary,
 } from "@/lib/insight/weekly";
-import { AVAILABLE_PLAN_KINDS } from "@/lib/planner/kinds";
 import { plural } from "@/lib/planner/reasons";
 import { addDaysToDate, formatMinutes, nowIso, parseLocalDate } from "@/lib/time";
 import { saveWeeklyNote, useWeeklyNote } from "@/stores/activityStore";
@@ -242,7 +241,6 @@ export default function WeeklyPage() {
         },
       },
     );
-  const showMocks = AVAILABLE_PLAN_KINDS.has("mock") || s.mocks > 0;
   const day = (i: number) => lookup(s.days[i]!.date);
 
   return (
@@ -310,7 +308,7 @@ export default function WeeklyPage() {
             label="Reviews and drills"
             value={s.reviews + s.drills.answers}
             valueText={`${s.reviews} reviews and ${s.drills.answers} drill prompts`}
-            sub={`${plural(s.reviews, "review")}, ${plural(s.drills.answers, "drill prompt")}${showMocks ? `, ${plural(s.mocks, "mock")}` : ""}`}
+            sub={`${plural(s.reviews, "review")}, ${plural(s.drills.answers, "drill prompt")}, ${plural(s.mocks, "mock")}`}
             explain={
               <>
                 <p>
@@ -320,9 +318,7 @@ export default function WeeklyPage() {
                 {daysTable(s, [
                   { label: "Reviews", value: (i) => day(i)?.reviews ?? 0 },
                   { label: "Drill prompts", value: (i) => day(i)?.drillAnswers ?? 0 },
-                  ...(showMocks
-                    ? [{ label: "Mocks", value: (i: number) => day(i)?.mocks ?? 0 }]
-                    : []),
+                  { label: "Mocks", value: (i) => day(i)?.mocks ?? 0 },
                 ])}
               </>
             }

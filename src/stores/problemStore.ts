@@ -178,6 +178,13 @@ export interface NewAttempt {
   /** Claude's review and dry runs made during the attempt (F12). */
   review?: Attempt["review"];
   dryRuns?: Attempt["dryRuns"];
+  /** Design practice (F26): its design attempt, and kept out of the re-solve queue. */
+  designAttemptId?: string;
+  keepOutOfReview?: boolean;
+  /** Quant puzzles (F28): the final answer, tries and grade. */
+  answer?: string;
+  answerTries?: number;
+  grade?: Attempt["grade"];
 }
 
 export interface SavedAttempt {
@@ -234,6 +241,10 @@ export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAtt
   if (input.minutes !== undefined) attempt.minutes = input.minutes;
   if (input.review) attempt.review = input.review;
   if (input.dryRuns?.length) attempt.dryRuns = input.dryRuns;
+  if (input.designAttemptId) attempt.designAttemptId = input.designAttemptId;
+  if (input.answer?.trim()) attempt.answer = input.answer.trim();
+  if (input.answerTries) attempt.answerTries = input.answerTries;
+  if (input.grade) attempt.grade = input.grade;
   for (const key of ["approach", "timeComplexity", "spaceComplexity"] as const) {
     const v = input[key]?.trim();
     if (v) attempt[key] = v;
@@ -254,7 +265,7 @@ export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAtt
     ...base,
     status: schedule.status,
     srs: schedule.srs,
-    inReview: firstAttempt ? true : base.inReview,
+    inReview: input.keepOutOfReview ? false : firstAttempt ? true : base.inReview,
     attempts,
     updatedAt: stamp,
   };
@@ -277,7 +288,8 @@ export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAtt
     reviews: schedule.case === "due" ? 1 : 0,
     conceptsTouched: touched,
   });
-  void markPlanItemDone(repo, today, input.problemId, ["resolve", "new-problem"]);
+  if (!input.keepOutOfReview)
+    void markPlanItemDone(repo, today, input.problemId, ["resolve", "new-problem"]);
 
   let message = nextReviewMessage(schedule, next.inReview);
   if (trimmed > 0) message += ` The oldest attempt was removed to stay within ${ATTEMPT_CAP}.`;

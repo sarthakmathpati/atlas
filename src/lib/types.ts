@@ -4,9 +4,9 @@
 // Rule for user data: every stored entity has an `updatedAt` timestamp (ISO string). Import merge
 // and multi-device sync rely on it ("newer updatedAt wins").
 
-import type { CodeReview, MockFeedback } from "./ai/schemas";
+import type { CodeReview, MockFeedback, PuzzleGrade } from "./ai/schemas";
 
-export type { CodeReview, MockFeedback };
+export type { CodeReview, MockFeedback, PuzzleGrade };
 
 // ---------------------------------------------------------------------------------------------
 // 4.1 Static seed types
@@ -266,6 +266,36 @@ export interface Attempt {
   mode: "normal" | "resolve" | "mock";
   review?: CodeReview; // AI code review result (F12)
   dryRuns?: { input: string; output: string; createdAt: string }[];
+  /** Design practice (F26): the design attempt this attempt records. */
+  designAttemptId?: string;
+  /** Quant puzzles (F28): the final answer typed, and how it was checked or graded. */
+  answer?: string;
+  answerTries?: number;
+  grade?: PuzzleAttemptGrade;
+}
+
+/** How an open-ended puzzle answer was graded: by Claude (prompt 16) or against the note. */
+export interface PuzzleAttemptGrade {
+  by: "claude" | "self";
+  correct: boolean;
+  /** 0 to 1. */
+  score: number;
+  feedback?: string;
+  idealReasoning?: string;
+}
+
+/** A quant puzzle's answer during an attempt (F28), kept in the draft so a reload keeps it. */
+export interface PuzzleProgress {
+  /** The answer as typed: a value for checkable puzzles, the reasoning for open-ended ones. */
+  answer: string;
+  /** Answers checked so far (checkable puzzles; unreadable ones don't count). */
+  tries: number;
+  /** The last check's verdict. */
+  verdict?: "correct" | "incorrect";
+  /** The try on which the answer first checked out. */
+  firstCorrectTry?: number;
+  /** Open-ended puzzles: the grade. */
+  grade?: PuzzleAttemptGrade;
 }
 
 export interface CustomProblem {
@@ -307,6 +337,8 @@ export interface ProblemDraft {
   dryRuns?: { input: string; output: string; createdAt: string }[];
   /** Mistake tags the owner took from the review; the save dialog starts with them selected. */
   pendingTagIds?: string[];
+  /** Quant puzzles: the answer checked or graded so far (F28). */
+  puzzle?: PuzzleProgress;
 }
 
 export interface ProblemState {
@@ -443,11 +475,29 @@ export interface ActivityMonth {
 export interface MockSession {
   id: string;
   kind: "dsa" | "theory" | "design" | "behavioral";
+  /** DSA: the problem Claude states in its own words; design: the design prompt. */
   topicOrProblemId?: string;
+  /** Candidate turns start with a note such as "[Phase: Code | 18 min left]". */
   turns: { role: "user" | "assistant"; content: string }[];
   code?: string;
   feedback?: MockFeedback;
   phase?: string; // current phase, so a reload resumes correctly
+  /** Live with Claude in the app, or a script pasted into a claude.ai chat (copy prompt). */
+  delivery?: "live" | "copy";
+  /** Length of the interview (45 or 20 minutes). */
+  limitMinutes?: number;
+  /** Time on the interview clock so far (saved every exchange, so a reload resumes it). */
+  elapsedMs?: number;
+  /** DSA: the language the candidate codes in. */
+  language?: string;
+  /** Theory: the subjects asked about. */
+  subjects?: string[];
+  /** Behavioral: the questions from the bank. */
+  questionIds?: string[];
+  /** Design: the design workspace attempt used in the round. */
+  designAttemptId?: string;
+  /** DSA: the attempt the code was saved as (mode "mock"). */
+  attemptId?: string;
   startedAt: string;
   endedAt?: string;
   updatedAt: string;
@@ -457,8 +507,18 @@ export interface DesignAttempt {
   // LLD and HLD practice (F26)
   id: string;
   problemId: string;
-  sections: Record<string, string>; // requirements, entities, api, dataModel, diagram, tradeoffs…
+  sections: Record<string, string>; // requirements, entities, api, dataModel, sketch, tradeoffs…
+  /** Claude's rubric review (prompt 12, DesignReview). */
   review?: unknown;
+  /** The owner's own review: 0, 1 or 2 per rubric point, in rubric order. */
+  selfReview?: number[];
+  /** Time on the 45-minute timer. */
+  elapsedMs?: number;
+  /** Set when the owner finishes the attempt (then it counts as practice). */
+  finishedAt?: string;
+  /** Practice on its own, or the design round of a mock interview (F15). */
+  mode?: "practice" | "mock";
+  mockId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -466,13 +526,24 @@ export interface DesignAttempt {
 export interface StoryPractice {
   questionId: string;
   answer: string;
+  /** Claude's critique (prompt 13, StoryCritique), when asked for. */
   critique?: unknown;
   createdAt: string;
+  /** Typed in the practice box, or a story from the bank delivered as it is. */
+  mode?: "typed" | "story";
+  /** Time on the 2-minute practice timer. */
+  seconds?: number;
+  /** The check recorded for it (0 to 1): the critique's mean, or the self-check. */
+  score?: number;
+  /** The self-check lines ticked (F27 offline check). */
+  selfCheck?: string[];
 }
 
 export interface Story {
   // behavioral STAR story bank (F27)
   id: string;
+  /** "intro" is the "Tell me about yourself" script (present, past, why this role). */
+  kind?: "star" | "intro";
   title: string;
   situation: string;
   task: string;
@@ -480,8 +551,10 @@ export interface Story {
   result: string;
   tags: string[];
   questionIds: string[];
+  /** Claude's critique of the story itself (prompt 13, StoryCritique). */
   review?: unknown;
   practice?: StoryPractice[];
+  createdAt?: string;
   updatedAt: string;
 }
 
@@ -498,9 +571,15 @@ export interface CustomConcept {
 
 export interface MentalMathRun {
   id: string;
+  /** "speed", "fractions", "sequences" or "estimation" (F28). */
   mode: string;
+  /** The difficulty tier the sprint ran at. */
+  tier?: "easy" | "medium" | "hard";
   correct: number;
+  /** Questions in the full sprint (the score is correct / total). */
   total: number;
+  /** Questions answered, right or wrong (skips not counted). */
+  answered?: number;
   seconds: number;
   createdAt: string;
   updatedAt: string;

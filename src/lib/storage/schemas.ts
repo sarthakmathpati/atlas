@@ -19,6 +19,8 @@ import type {
   MockSession,
   ProblemState,
   Profile,
+  PuzzleAttemptGrade,
+  PuzzleProgress,
   SrsState,
   Story,
 } from "@/lib/types";
@@ -123,6 +125,22 @@ export const conceptNoteSchema: z.ZodType<ConceptNote> = z.object({
   updatedAt: isoTime,
 });
 
+const puzzleAttemptGradeSchema: z.ZodType<PuzzleAttemptGrade> = z.object({
+  by: z.enum(["claude", "self"]),
+  correct: z.boolean(),
+  score: z.number().min(0).max(1),
+  feedback: z.string().optional(),
+  idealReasoning: z.string().optional(),
+});
+
+const puzzleProgressSchema: z.ZodType<PuzzleProgress> = z.object({
+  answer: z.string(),
+  tries: z.number().int().min(0),
+  verdict: z.enum(["correct", "incorrect"]).optional(),
+  firstCorrectTry: z.number().int().min(1).optional(),
+  grade: puzzleAttemptGradeSchema.optional(),
+});
+
 export const attemptSchema: z.ZodType<Attempt> = z.object({
   id: z.string().min(1),
   problemId: z.string().min(1),
@@ -142,6 +160,10 @@ export const attemptSchema: z.ZodType<Attempt> = z.object({
   dryRuns: z
     .array(z.object({ input: z.string(), output: z.string(), createdAt: isoTime }))
     .optional(),
+  designAttemptId: z.string().optional(),
+  answer: z.string().optional(),
+  answerTries: z.number().int().min(0).optional(),
+  grade: puzzleAttemptGradeSchema.optional(),
 });
 
 export const problemStateSchema: z.ZodType<ProblemState> = z.object({
@@ -184,6 +206,7 @@ export const problemStateSchema: z.ZodType<ProblemState> = z.object({
         .array(z.object({ input: z.string(), output: z.string(), createdAt: isoTime }))
         .optional(),
       pendingTagIds: z.array(z.string()).optional(),
+      puzzle: puzzleProgressSchema.optional(),
     })
     .optional(),
   hints: z
@@ -301,6 +324,14 @@ export const mockSessionSchema: z.ZodType<MockSession> = z.object({
   code: z.string().optional(),
   feedback: mockFeedbackSchema.optional(),
   phase: z.string().optional(),
+  delivery: z.enum(["live", "copy"]).optional(),
+  limitMinutes: z.number().min(1).max(240).optional(),
+  elapsedMs: z.number().min(0).optional(),
+  language: z.string().optional(),
+  subjects: z.array(z.string()).optional(),
+  questionIds: z.array(z.string()).optional(),
+  designAttemptId: z.string().optional(),
+  attemptId: z.string().optional(),
   startedAt: isoTime,
   endedAt: isoTime.optional(),
   updatedAt: isoTime,
@@ -311,12 +342,18 @@ export const designAttemptSchema: z.ZodType<DesignAttempt> = z.object({
   problemId: z.string().min(1),
   sections: z.record(z.string(), z.string()),
   review: z.unknown().optional(),
+  selfReview: z.array(z.number().int().min(0).max(2)).optional(),
+  elapsedMs: z.number().min(0).optional(),
+  finishedAt: isoTime.optional(),
+  mode: z.enum(["practice", "mock"]).optional(),
+  mockId: z.string().optional(),
   createdAt: isoTime,
   updatedAt: isoTime,
 });
 
 export const storySchema: z.ZodType<Story> = z.object({
   id: z.string().min(1),
+  kind: z.enum(["star", "intro"]).optional(),
   title: z.string(),
   situation: z.string(),
   task: z.string(),
@@ -332,17 +369,24 @@ export const storySchema: z.ZodType<Story> = z.object({
         answer: z.string(),
         critique: z.unknown().optional(),
         createdAt: isoTime,
+        mode: z.enum(["typed", "story"]).optional(),
+        seconds: z.number().min(0).optional(),
+        score: z.number().min(0).max(1).optional(),
+        selfCheck: z.array(z.string()).optional(),
       }),
     )
     .optional(),
+  createdAt: isoTime.optional(),
   updatedAt: isoTime,
 });
 
 export const mentalMathRunSchema: z.ZodType<MentalMathRun> = z.object({
   id: z.string().min(1),
   mode: z.string(),
+  tier: z.enum(["easy", "medium", "hard"]).optional(),
   correct: z.number().int().min(0),
   total: z.number().int().min(0),
+  answered: z.number().int().min(0).optional(),
   seconds: z.number().min(0),
   createdAt: isoTime,
   updatedAt: isoTime,

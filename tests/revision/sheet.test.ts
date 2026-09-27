@@ -230,7 +230,9 @@ describe("exports and tightening", () => {
   });
 
   it("drops Claude's repeated title when showing its version", () => {
-    expect(withoutTitle("# 1-day revision sheet\n\n_Sunday_\n\n## Before\n- a")).toBe("## Before\n- a");
+    expect(withoutTitle("# 1-day revision sheet\n\n_Sunday_\n\n## Before\n- a")).toBe(
+      "## Before\n- a",
+    );
     expect(withoutTitle("## Before\n- a")).toBe("## Before\n- a");
   });
 

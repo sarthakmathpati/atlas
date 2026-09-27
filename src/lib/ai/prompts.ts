@@ -410,6 +410,28 @@ export function mockFeedbackPrompt(
   };
 }
 
+/**
+ * Copy prompt mode (F15): the whole mock interview as one script to paste into a claude.ai chat.
+ * Claude runs the interview there and, when the candidate writes END, replies with the feedback
+ * JSON (prompt 11's shape) for the owner to paste back into Atlas.
+ */
+export function mockScriptPrompt(
+  env: PromptEnv,
+  kind: MockKind,
+  brief: string,
+  minutes: number,
+): string {
+  const keys = MOCK_SCORE_KEYS[kind].map((k) => `"${k}": 1-5`).join(", ");
+  return [
+    preamble(env),
+    `Act as a friendly but rigorous interviewer at a top tech company for a ${kind} interview. Run the phases in order: ${MOCK_PHASES[kind].join(", ")}. Ask one thing at a time. Don't give away the solution; if the candidate is stuck for a while, offer a small hint and note it. Ask realistic follow-ups. Keep replies short, like a real interviewer speaking. When the candidate says they're done or time is almost up, wrap up politely.`,
+    `The interview lasts ${minutes} minutes. I'll start my messages with the phase and the time left, such as [Phase: Code | 18 min left]; use it to pace the interview and wrap up near the end.`,
+    `When I write END, or the time is up, stop interviewing and reply with only JSON, no other text, in this shape: { "scores": { ${keys} }, "strengths": ["string"], "improvements": ["string"], "hireSignal": "strong yes" | "yes" | "lean no" | "no", "summary": "3 to 5 sentences" }. Write the feedback as an interviewer would for a hiring committee, but kindly and usefully for the candidate.`,
+    brief.trim(),
+    "Start now: greet me in one line and begin the first phase.",
+  ].join("\n\n");
+}
+
 // ----- 12. design review -------------------------------------------------------------------------
 
 export function designReviewPrompt(
@@ -437,11 +459,29 @@ export function designReviewPrompt(
 
 // ----- 13. story critique ------------------------------------------------------------------------
 
+export type StoryCritiqueInput =
+  | { title: string; situation: string; task: string; action: string; result: string }
+  /** A practice answer typed as it would be spoken (no STAR fields). */
+  | { answer: string; title?: string };
+
 export function storyCritiquePrompt(
   env: PromptEnv,
-  story: { title: string; situation: string; task: string; action: string; result: string },
+  story: StoryCritiqueInput,
   question?: string,
 ): PromptSpec<StoryCritique> {
+  const body =
+    "answer" in story
+      ? [
+          story.title ? `Story: ${story.title}` : "",
+          `The learner's spoken answer, as typed:\n${story.answer.trim()}`,
+        ]
+      : [
+          `Story: ${story.title}`,
+          `Situation: ${story.situation}`,
+          `Task: ${story.task}`,
+          `Action: ${story.action}`,
+          `Result: ${story.result}`,
+        ];
   return {
     task: "story-critique",
     tier: "default",
@@ -453,16 +493,7 @@ export function storyCritiquePrompt(
         '{ "clarity": 1-5, "specificity": 1-5, "impact": 1-5, "structure": 1-5, "lengthNote": "string", "tighterVersion": "string", "tips": ["string"] }',
       ),
     ),
-    input: [
-      question ? `Interview question: ${question}` : "",
-      `Story: ${story.title}`,
-      `Situation: ${story.situation}`,
-      `Task: ${story.task}`,
-      `Action: ${story.action}`,
-      `Result: ${story.result}`,
-    ]
-      .filter(Boolean)
-      .join("\n"),
+    input: [question ? `Interview question: ${question}` : "", ...body].filter(Boolean).join("\n"),
   };
 }
 

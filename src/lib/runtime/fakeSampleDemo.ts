@@ -217,6 +217,157 @@ export function demoSampleResponder(input: SampleInput): string {
     );
   }
 
+  if (text.includes("Give feedback on this mock interview")) {
+    const keys = [...text.matchAll(/"(\w+)": 1-5/g)].map((m) => m[1]!);
+    const scores = Object.fromEntries(keys.map((k, i) => [k, [4, 3, 4, 3, 4][i % 5]!]));
+    return json({
+      scores,
+      strengths: [
+        "You asked clarifying questions before starting.",
+        "You explained your approach before writing code.",
+      ],
+      improvements: [
+        "Test your code on a small example out loud before saying you're done.",
+        "State the time and space complexity without being asked.",
+      ],
+      hireSignal: "yes",
+      summary:
+        "A solid interview. You clarified the problem, found a workable approach and wrote mostly correct code. Walking through a test case earlier would have caught the edge case sooner. With cleaner testing this is a clear hire.",
+    });
+  }
+
+  if (text.includes("Act as a friendly but rigorous interviewer")) {
+    const last = lastUserTurn(input);
+    const phase = /\[Phase: ([^|\]]+)/.exec(last)?.[1]?.trim() ?? "";
+    const left = /(\d+) min left/.exec(last)?.[1];
+    const kind = /for a (dsa|theory|design|behavioral) interview/.exec(text)?.[1] ?? "dsa";
+    if (last.includes("time is up") || (left !== undefined && Number(left) <= 3))
+      return "We're almost out of time, so let's stop here. Thanks, that was a good discussion. Do you have any questions for me?";
+    if (/I'm ready to begin/.test(last)) {
+      if (kind === "dsa")
+        return "Hi, thanks for joining. Here's the problem, in my words: you get a list of daily temperatures, and for each day you want to know how many days you'd wait for a warmer one (0 if never). For example, 73, 74, 75 gives 1, 1, 0. What questions do you have before you start?";
+      if (kind === "theory")
+        return "Hi. Let's do some quick questions. First one: what happens, step by step, when a process calls fork()?";
+      if (kind === "design")
+        return "Hi, thanks for joining. Let's design this together. Before anything else, what requirements would you like to pin down?";
+      return "Hi, great to meet you. Let's start simple: tell me about yourself.";
+    }
+    // Answers so far (the candidate's turns after the opening each start with the time note).
+    const turn =
+      typeof input === "string"
+        ? 1
+        : Math.max(
+            1,
+            input.filter((m) => m.role === "user" && m.content.startsWith("[Phase:")).length - 1,
+          );
+    if (kind === "theory") {
+      const next = [
+        "Next: what's the difference between a process and a thread, and what do threads share?",
+        "Next: what happens in TCP's three-way handshake, and why three steps rather than two?",
+        "Next: what does an index on a column cost you when you write to the table?",
+        "Next: what's a deadlock, and which of its four conditions is easiest to break?",
+      ];
+      return `${turn % 3 === 0 ? "Close, but not quite: the key point is what each side knows afterwards." : "That's right."} ${next[(turn - 1) % next.length]}`;
+    }
+    if (kind === "design") {
+      if (phase === "Requirements")
+        return "Good. What scale should we design for? Give me rough numbers for reads and writes.";
+      if (phase === "High-level design")
+        return "Walk me through the main components and how one request flows through them.";
+      if (phase === "Deep dive")
+        return "Let's go deeper on storage. How would you split the data when one machine isn't enough?";
+      return "What would you change if writes grew ten times? What would you give up?";
+    }
+    if (kind === "behavioral") {
+      if (phase === "Introduction")
+        return "Thanks. Tell me about a time you had to fix a hard problem under time pressure.";
+      if (phase === "Questions")
+        return "What exactly did you do yourself, and what did the others on the team do?";
+      return "How did you know it worked? And what would you do differently next time?";
+    }
+    if (phase === "Clarify")
+      return "Good question. Yes, assume the input fits in memory and can be empty. What approach comes to mind?";
+    if (phase === "Approach")
+      return "That works. What's its time complexity, and can you do better than checking every later day?";
+    if (phase === "Code")
+      return "Go ahead and write it in the editor, and talk me through it as you go.";
+    if (phase === "Test")
+      return "Walk me through your code on 73, 74, 75. What does the stack hold after each step?";
+    if (phase === "Complexity") return "Right. And the space complexity in the worst case?";
+    return "Nice. A follow-up: what changes if the temperatures arrive as a stream, one day at a time?";
+  }
+
+  if (text.includes("Review the learner's design against the rubric")) {
+    // Score each rubric point by whether the design mentions its first long word.
+    const rubricBlock = text.split("## Rubric")[1]?.split("## Learner's design")[0] ?? "";
+    const design = (text.split("## Learner's design")[1] ?? "").toLowerCase();
+    const points = rubricBlock
+      .split("\n")
+      .map((l) => l.replace(/^- /, "").trim())
+      .filter(Boolean);
+    const rubric = points.map((point) => {
+      const key = point
+        .toLowerCase()
+        .split(/\W+/)
+        .find((w) => w.length > 5);
+      const hit = key ? design.includes(key) : false;
+      return {
+        point,
+        score: hit ? 2 : 0,
+        comment: hit
+          ? "Covered with a concrete choice and a reason."
+          : "Not discussed. Say what you'd do and why.",
+      };
+    });
+    const covered = rubric.filter((r) => r.score === 2).length;
+    const overall = Math.max(
+      1,
+      Math.min(5, Math.round(1 + (4 * covered) / Math.max(1, points.length))),
+    );
+    return json({
+      rubric,
+      missed: rubric.filter((r) => r.score === 0).map((r) => r.point),
+      suggestions: [
+        "Start from the requirements and state the numbers you design for.",
+        "Name the trade-off you are making at each choice.",
+      ],
+      overall,
+    });
+  }
+
+  if (text.includes("Critique this STAR story for a behavioral interview")) {
+    const question = field(text, /Interview question: (.+)/) ?? "the question";
+    return json({
+      clarity: 4,
+      specificity: 3,
+      impact: 3,
+      structure: 4,
+      lengthNote:
+        "About 1 minute 20 seconds when spoken at 140 words a minute, which fits. Spend fewer words on the situation and more on what you did.",
+      tighterVersion: `In my second internship, our checkout page failed for about one order in fifty, and nobody owned the bug. I took it on: I added logging, traced it to a retry that charged twice, and wrote a fix with a test. Failures dropped to zero in a week, and I now add a retry test to every payment change. That is my answer to "${question}".`,
+      tips: [
+        "Open with one sentence of context, then go straight to your action.",
+        "Put a number on the result: how many users, how much faster, how much less.",
+        "End with what you learned or changed afterwards.",
+      ],
+    });
+  }
+
+  if (text.includes("Grade the learner's answer to this puzzle")) {
+    // A longer answer with reasons reads as right; a one-liner as partly right.
+    const answer = text.split("Learner's answer and reasoning:")[1]?.trim() ?? "";
+    const full = answer.split(/\s+/).length >= 12;
+    return json({
+      correct: full,
+      score: full ? 0.9 : 0.5,
+      feedback: full
+        ? "Right answer, and you said why it works. Name the key step in one sentence first next time."
+        : "The idea is there, but say why it works and check the edge case.",
+      idealReasoning:
+        "State the key observation, show it holds whatever the unknowns are, then give the method step by step and check it on a small case.",
+    });
+  }
+
   if (text.includes("Write study material for the concept")) {
     return json({
       simple: `${concept} is like keeping a running tally instead of recounting from scratch every time something changes.`,

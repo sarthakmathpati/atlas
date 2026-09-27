@@ -1,0 +1,139 @@
+// @vitest-environment jsdom
+// Phase 8's Claude features in all three modes (built-in Claude through a fake `sample`, an API
+// key through a mocked, streamed Messages API, and copy prompt through the modal): grading an
+// open-ended puzzle (prompt 16). No network, no real key.
+import "fake-indexeddb/auto";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { clearAICache } from "@/lib/ai/run";
+import type { AIMode } from "@/lib/types";
+import { useConceptStateStore } from "@/stores/conceptStateStore";
+import { useProblemStore } from "@/stores/problemStore";
+import { addStory, updateStory, useStoryStore } from "@/stores/storyStore";
+import { startDesign, updateSection, useDesignStore } from "@/stores/designStore";
+import { answerCopy, go, resetClaude, setupMode } from "./claudeHarness";
+
+describe.each(["sample", "api", "copy"] as AIMode[])(
+  "Phase 8 Claude features in %s mode",
+  (mode) => {
+    beforeEach(() => {
+      window.location.hash = "#/today";
+      localStorage.clear();
+      clearAICache();
+    });
+    afterEach(() => {
+      cleanup();
+      resetClaude();
+    });
+
+    it("grades an open-ended puzzle and saves the attempt with the grade", async () => {
+      const user = userEvent.setup();
+      await setupMode(mode);
+      await go("#/problems/q-dice-market");
+      const box = await screen.findByRole(
+        "textbox",
+        { name: "Your answer and reasoning" },
+        { timeout: 4000 },
+      );
+      await user.type(
+        box,
+        "The sum is 7 on average, so quote 6.5 bid and 7.5 offer. If someone lifts my offer I raise both sides a little and widen, because they may know more.",
+      );
+      await user.click(screen.getByRole("button", { name: "Grade with Claude" }));
+      await answerCopy(mode, user);
+      expect(
+        await screen.findByText("Claude marked it right.", {}, { timeout: 4000 }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/Right answer, and you said why it works/)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Save attempt" }));
+      const dialog = await screen.findByRole("dialog", { name: "Save attempt" });
+      await user.click(within(dialog).getByRole("button", { name: "Save attempt" }));
+      // The first solve asks for an insight once (earlier modes in this file already solved it).
+      const skip = within(dialog).queryByRole("button", { name: "Save without insight" });
+      if (skip) await user.click(skip);
+      await waitFor(() =>
+        expect(useProblemStore.getState().states["q-dice-market"]?.attempts.at(-1)).toMatchObject({
+          result: "solved_alone",
+          grade: { by: "claude", correct: true, score: 0.9 },
+        }),
+      );
+    }, 20_000);
+
+    it("critiques a practice answer with a tighter version and saves it with the practice", async () => {
+      const user = userEvent.setup();
+      await setupMode(mode);
+      let id = "";
+      act(() => {
+        id = addStory({
+          title: `Outage (${mode})`,
+          questionIds: ["bq-your-most-challenging-project"],
+        });
+        updateStory(id, {
+          situation: "Our checkout failed for one order in fifty.",
+          task: "I owned the fix.",
+          action: "I added logging, found a double retry and fixed it with a test.",
+          result: "Failures dropped to zero within a week.",
+        });
+      });
+      await go(`#/stories?tab=practice&question=bq-your-most-challenging-project&story=${id}`);
+      await user.click(await screen.findByRole("button", { name: "I'm done" }, { timeout: 4000 }));
+      await user.click(screen.getByRole("button", { name: "Critique it with Claude" }));
+      await answerCopy(mode, user);
+      const round = screen.getByRole("region", { name: "Practice question" });
+      expect(
+        await within(round).findByText(/A tighter version/, {}, { timeout: 4000 }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Counts as 70% (Claude's four scores).", { exact: false }),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Save practice" }));
+      await waitFor(() => {
+        const practice = useStoryStore.getState().stories[id]?.practice?.at(-1);
+        expect(practice).toMatchObject({ mode: "story", score: 0.7 });
+        expect(practice?.critique).toMatchObject({ clarity: 4, specificity: 3 });
+      });
+      const checks =
+        useConceptStateStore.getState().checks["career.behavioral.building-a-story-bank"];
+      expect(checks?.at(-1)?.score).toBeCloseTo(0.7);
+    }, 20_000);
+
+    it("reviews a design against its rubric and keeps the review with the attempt", async () => {
+      const user = userEvent.setup();
+      await setupMode(mode);
+      await waitFor(() => expect(useDesignStore.getState().loaded).toBe(true));
+      let id = "";
+      act(() => {
+        const a = startDesign("lld-parking-lot");
+        id = a.id;
+        updateSection(
+          id,
+          "requirements",
+          "Spot types for bikes, cars and trucks. Pricing strategy.",
+        );
+        updateSection(id, "entities", "ParkingLot, Floor, Spot, Ticket, Payment.");
+      });
+      await go("#/designs/lld-parking-lot");
+      await user.click(
+        await screen.findByRole("button", { name: "Finish and review" }, { timeout: 4000 }),
+      );
+      await user.click(screen.getByRole("button", { name: "Review with Claude" }));
+      await answerCopy(mode, user);
+      const panel = screen.getByRole("region", { name: "Review" });
+      expect(
+        await within(panel).findByText(/Overall \d\/5/, {}, { timeout: 4000 }),
+      ).toBeInTheDocument();
+      expect(
+        within(panel).getAllByText(/Not discussed|Covered with a concrete choice/).length,
+      ).toBe(5);
+      await user.click(screen.getByRole("button", { name: "Save attempt" }));
+      await waitFor(() => {
+        const a = useDesignStore.getState().attempts[id];
+        expect(a?.finishedAt).toBeDefined();
+        expect(a?.review).toMatchObject({ rubric: expect.any(Array), overall: expect.any(Number) });
+      });
+      const attempt = useProblemStore.getState().states["lld-parking-lot"]?.attempts.at(-1);
+      expect(attempt?.designAttemptId).toBe(id);
+    }, 20_000);
+  },
+);
