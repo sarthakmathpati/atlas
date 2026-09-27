@@ -11,3 +11,4 @@ src/data/content/*.generated.json
 src/data/layout.json
 docs/claude-runtime-0.2.54
 /*.md
+docs/design/*.html
