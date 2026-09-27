@@ -14,10 +14,11 @@ import type { Attempt } from "@/lib/types";
 import { deleteAttempt, restoreProblem, useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { toast } from "@/stores/toastStore";
+import { clearWorkspace, setWorkspace } from "@/stores/workspaceStore";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { NotFoundPage } from "../placeholder/pages";
 import { AttemptDialog } from "./workspace/AttemptsTimeline";
-import { EditorPane } from "./workspace/EditorPane";
+import { EditorPane, type WorkspacePanel } from "./workspace/EditorPane";
 import { InfoPane, ProblemTitle } from "./workspace/InfoPane";
 import { SaveAttemptDialog } from "./workspace/SaveAttemptDialog";
 import { isBlankCode, readTemplatePref, writeTemplatePref } from "./workspace/templates";
@@ -57,7 +58,7 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
         : normalizeLanguage(profile?.primaryLanguage ?? "cpp");
   const attempt = useAttemptSession(info.id, mode, defaultLanguage, templateOn);
   const { session } = attempt;
-  const [hintsOpen, setHintsOpen] = useState(session.hintsUsed > 0);
+  const [panel, setPanel] = useState<WorkspacePanel>(session.hintsUsed > 0 ? "hints" : null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [revealAsk, setRevealAsk] = useState(false);
   const [tab, setTab] = useState<"problem" | "code">(
@@ -67,6 +68,17 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
   const splitRef = useRef<HTMLDivElement>(null);
 
   const revealed = mode === "normal" || session.revealed;
+
+  // Ask Claude's context chips read the editor from here (memory only).
+  useEffect(() => {
+    setWorkspace({
+      problemId: info.id,
+      language: session.language,
+      code: session.code,
+      hideOwnWork: !revealed,
+    });
+  }, [info.id, session.language, session.code, revealed]);
+  useEffect(() => () => clearWorkspace(info.id), [info.id]);
   const attemptParam = route.query.get("attempt");
   const openAttemptId = attemptParam && revealed ? attemptParam : null;
 
@@ -80,7 +92,7 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
 
   const discard = () => {
     const undo = attempt.discard(templateOn);
-    setHintsOpen(false);
+    setPanel(null);
     toast("Draft discarded.", { action: { label: "Undo", onClick: undo } });
   };
 
@@ -185,8 +197,9 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
       autoStart={profile?.prefs.timerAutoStart ?? true}
       templateOn={templateOn}
       onTemplateChange={setTemplate}
-      hintsOpen={hintsOpen}
-      onHintsOpen={setHintsOpen}
+      panel={panel}
+      onPanel={setPanel}
+      hideOwnWork={!revealed}
       onSave={() => setSaveOpen(true)}
       onDiscard={discard}
       fill={wide}
@@ -255,7 +268,7 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
         insightVisible={revealed}
         onSaved={() => {
           attempt.afterSave();
-          setHintsOpen(false);
+          setPanel(null);
           if (mode === "resolve") navigate(routeHref("/problems", info.id), { replace: true });
         }}
       />

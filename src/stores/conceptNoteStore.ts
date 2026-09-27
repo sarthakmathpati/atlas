@@ -1,9 +1,10 @@
 // Concept notes (F3 Notes tab): the owner's Markdown per concept plus saved Claude answers.
 // Typing autosaves after a short pause; leaving the page saves at once (flushNotes).
+import { nanoid } from "nanoid";
 import { create } from "zustand";
 import type { Repository } from "@/lib/storage/Repository";
 import { nowIso } from "@/lib/time";
-import type { ConceptNote, SavedAnswer } from "@/lib/types";
+import type { AIMode, ConceptNote, QA, SavedAnswer } from "@/lib/types";
 import { toast } from "./toastStore";
 
 interface NoteState {
@@ -132,4 +133,40 @@ export function moveAnswerIntoNote(conceptId: string, answerId: string): Concept
 /** Puts a whole note back as it was (Undo). */
 export function restoreNote(note: ConceptNote): void {
   update(note.conceptId, () => note, 0);
+}
+
+/** Keeps a Claude answer in the concept's notes (F20 "Save to concept"). Returns its id. */
+export function addSavedAnswer(
+  conceptId: string,
+  answer: { question: string; answer: string; source: AIMode },
+): string {
+  const id = nanoid(10);
+  const saved: SavedAnswer = {
+    id,
+    question: answer.question.trim() || "Answer from Claude",
+    answer: answer.answer.trim(),
+    source: answer.source,
+    createdAt: nowIso(),
+  };
+  update(conceptId, (n) => ({ ...n, savedAnswers: [...n.savedAnswers, saved] }), 0);
+  return id;
+}
+
+/** "Explain with Claude" for a concept without written text: kept in the note, never over it. */
+export function setGeneratedContent(
+  conceptId: string,
+  generated: { simple?: string; interview?: string[]; questions?: QA[] } | null,
+): void {
+  update(
+    conceptId,
+    (n) => {
+      if (!generated) {
+        const next = { ...n };
+        delete next.generated;
+        return next;
+      }
+      return { ...n, generated: { ...generated, createdAt: nowIso() } };
+    },
+    0,
+  );
 }

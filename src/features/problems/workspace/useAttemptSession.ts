@@ -10,7 +10,7 @@ import { normalizeLanguage } from "@/components/ui/code/languages";
 import { useLatest } from "@/components/ui/hooks";
 import { useTimer, type TimerControls } from "@/components/ui/timer";
 import { nowIso } from "@/lib/time";
-import type { ProblemDraft } from "@/lib/types";
+import type { CodeReview, ProblemDraft } from "@/lib/types";
 import { startActivitySource, stopActivitySource } from "@/stores/activityStore";
 import { getProblemState, saveDraft } from "@/stores/problemStore";
 import { isBlankCode, starterTemplate } from "./templates";
@@ -24,7 +24,15 @@ export interface Session {
   hintsUsed: 0 | 1 | 2 | 3;
   sawSolution: boolean;
   revealed: boolean;
+  /** Claude's latest review and the code it read (F12). */
+  review?: CodeReview;
+  reviewedCode?: string;
+  dryRuns: DryRun[];
+  /** Mistake tags taken from the review, preselected when saving. */
+  pendingTagIds: string[];
 }
+
+export type DryRun = { input: string; output: string; createdAt: string };
 
 export type DraftState = "none" | "saving" | "saved";
 
@@ -55,6 +63,8 @@ function freshSession(language: CodeLanguage, useTemplate: boolean): Session {
     hintsUsed: 0,
     sawSolution: false,
     revealed: false,
+    dryRuns: [],
+    pendingTagIds: [],
   };
 }
 
@@ -66,6 +76,10 @@ function fromDraft(d: ProblemDraft): Session {
     hintsUsed: d.hintsUsed ?? 0,
     sawSolution: d.sawSolution ?? false,
     revealed: d.revealed ?? false,
+    review: d.review,
+    reviewedCode: d.reviewedCode,
+    dryRuns: d.dryRuns ?? [],
+    pendingTagIds: d.pendingTagIds ?? [],
   };
 }
 
@@ -132,6 +146,8 @@ export function useAttemptSession(
       s.hintsUsed === 0 &&
       !s.sawSolution &&
       !s.revealed &&
+      !s.review &&
+      s.dryRuns.length === 0 &&
       elapsed < 60_000;
     if (blank) {
       saveDraft(problemId, null);
@@ -149,6 +165,12 @@ export function useAttemptSession(
     if (s.startedAt) draft.startedAt = s.startedAt;
     if (s.sawSolution) draft.sawSolution = true;
     if (s.revealed) draft.revealed = true;
+    if (s.review) {
+      draft.review = s.review;
+      if (s.reviewedCode !== undefined) draft.reviewedCode = s.reviewedCode;
+    }
+    if (s.dryRuns.length) draft.dryRuns = s.dryRuns;
+    if (s.pendingTagIds.length) draft.pendingTagIds = s.pendingTagIds;
     saveDraft(problemId, draft);
     setDraftState("saved");
   };
@@ -248,6 +270,10 @@ export function useAttemptSession(
       hintsUsed: 0,
       sawSolution: false,
       revealed: false,
+      review: undefined,
+      reviewedCode: undefined,
+      dryRuns: [],
+      pendingTagIds: [],
     }));
     timer.set(0);
     setDraftState("none");

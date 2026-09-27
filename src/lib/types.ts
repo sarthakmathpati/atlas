@@ -297,6 +297,14 @@ export interface ProblemDraft {
   sawSolution?: boolean;
   /** Re-solve mode: the owner revealed the hidden attempts, insight and notes. */
   revealed?: boolean;
+  /** Claude's latest review of this attempt's code (F12), saved onto the attempt with it. */
+  review?: CodeReview;
+  /** The code that review read, so the workspace can say when the code has changed since. */
+  reviewedCode?: string;
+  /** Dry runs made during this attempt (F12), saved onto the attempt with it. */
+  dryRuns?: { input: string; output: string; createdAt: string }[];
+  /** Mistake tags the owner took from the review; the save dialog starts with them selected. */
+  pendingTagIds?: string[];
 }
 
 export interface ProblemState {

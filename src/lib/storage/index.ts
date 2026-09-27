@@ -1,6 +1,7 @@
 // Picks and prepares the Repository for the detected runtime (BUILD_SPEC.md 2.3, 2.4, 4.4).
 import { MISTAKE_TAG_SEED } from "@/data/mistakeTags.seed";
 import type { RuntimeInfo } from "@/lib/runtime/detect";
+import type { AIMode } from "@/lib/types";
 import { ClaudeDbRepository } from "./ClaudeDbRepository";
 import { createDefaultProfile, seedTagsToRecords } from "./defaults";
 import { DexieRepository } from "./DexieRepository";
@@ -52,10 +53,16 @@ export async function openRepository(runtime: RuntimeInfo): Promise<OpenedStorag
  * - older schema: migrates all data to the current version;
  * - renamed seed ids: rewrites them using ID_ALIASES so progress follows the concept.
  */
-export async function prepareRepository(repo: Repository, now: Date = new Date()): Promise<void> {
+export async function prepareRepository(
+  repo: Repository,
+  now: Date = new Date(),
+  firstRun: { aiMode?: AIMode } = {},
+): Promise<void> {
   const profile = await repo.profile.get();
   if (!profile) {
-    await repo.profile.put(createDefaultProfile(now));
+    const fresh = createDefaultProfile(now);
+    if (firstRun.aiMode) fresh.ai = { ...fresh.ai, mode: firstRun.aiMode };
+    await repo.profile.put(fresh);
     if ((await repo.mistakeTags.list()).length === 0) {
       await repo.mistakeTags.bulkPut(seedTagsToRecords(MISTAKE_TAG_SEED, now));
     }

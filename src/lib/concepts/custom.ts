@@ -2,7 +2,7 @@
 // CustomConcept records and turned into full Concept objects here, so the map, the concept panel,
 // statuses and search treat them like any other bubble. Their text is the owner's own note.
 import { conceptsByTopic, topicById } from "@/data/syllabus";
-import type { Concept, CustomConcept } from "@/lib/types";
+import type { Concept, ConceptContent, ConceptNote, CustomConcept } from "@/lib/types";
 
 export const CUSTOM_CONCEPT_PREFIX = "custom.";
 export const CUSTOM_CONCEPT_MINUTES = 25;
@@ -48,4 +48,23 @@ export function customConceptMap(list: readonly CustomConcept[]): Record<string,
     out[c.id] = concept;
   }
   return out;
+}
+
+/**
+ * A concept's study text: its written content, or, when nothing is written (the owner's own
+ * concepts), what Claude wrote for it and the owner kept ("Explain with Claude"). Flashcards and
+ * explain it back use this, so Claude's questions and points work like written ones.
+ */
+export function studyContent(
+  content: ConceptContent,
+  generated: ConceptNote["generated"] | undefined,
+): ConceptContent {
+  if (!generated || content.simple.trim() || content.interview.length || content.questions.length)
+    return content;
+  return {
+    ...content,
+    simple: generated.simple ?? "",
+    interview: generated.interview ?? [],
+    questions: generated.questions ?? [],
+  };
 }

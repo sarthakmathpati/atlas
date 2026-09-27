@@ -1,67 +1,136 @@
 // Ask Claude (F20) opens from the top bar or the "a" key: a side drawer on desktop, a bottom sheet
-// on phones. It already knows what's on screen (the context chips); the chat itself arrives with
-// the Claude features (Phase 6), so for now the panel says so and shows which mode will be used.
-import { BookOpen, Globe, ListChecks, Sparkles } from "lucide-react";
-import type { ReactNode } from "react";
-import { useServicesState } from "@/app/providers/servicesContext";
+// on phones. Context chips come from the current screen (the concept on screen or open in the
+// map's panel, the problem with the owner's code); the owner can leave any of them out. One chat
+// thread runs for the whole visit.
+import { BookOpen, Code2, ListChecks } from "lucide-react";
+import { useMemo } from "react";
 import { BottomSheet, Drawer } from "@/components/ui/Dialog";
 import { useIsMobile } from "@/components/ui/hooks";
+import { ChatPanel, type ChatChip, type ChatStarter } from "@/features/ai/ChatPanel";
 import { problemInfo } from "@/lib/problems/catalog";
-import { findConcept } from "@/stores/customConceptStore";
+import { useConcept } from "@/stores/customConceptStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import type { Route } from "../router";
 
-interface ContextChip {
-  label: string;
-  icon: typeof Globe;
-}
+export const DRAWER_THREAD = "drawer";
 
-function contextFor(route: Route): ContextChip {
-  // A concept page, or a concept open in the map's panel.
+function useChips(route: Route): {
+  chips: ChatChip[];
+  starters: ChatStarter[];
+  conceptId?: string;
+} {
   const conceptId =
-    route.name === "concept" ? route.id : route.name === "map" ? route.query.get("focus") : null;
-  if (conceptId) {
-    const concept = findConcept(conceptId);
-    if (concept) return { label: concept.name, icon: BookOpen };
-  }
-  if ((route.name === "problem" || route.name === "design") && route.id) {
-    const problem = problemInfo(route.id, useProblemStore.getState().states[route.id]);
-    if (problem) return { label: problem.title, icon: ListChecks };
-  }
-  return { label: "General", icon: Globe };
+    route.name === "concept"
+      ? route.id
+      : route.name === "map"
+        ? (route.query.get("focus") ?? undefined)
+        : undefined;
+  const concept = useConcept(conceptId ?? undefined);
+  const problemId =
+    (route.name === "problem" || route.name === "design") && route.id ? route.id : undefined;
+  const problemState = useProblemStore((s) => (problemId ? s.states[problemId] : undefined));
+  const problem = problemId ? problemInfo(problemId, problemState) : undefined;
+  const hasCode = useWorkspaceStore(
+    (s) => Boolean(problemId) && s.problemId === problemId && s.code.trim() !== "",
+  );
+  const language = useWorkspaceStore((s) => s.language);
+  const hideOwnWork = useWorkspaceStore((s) => s.problemId === problemId && s.hideOwnWork);
+
+  return useMemo(() => {
+    const chips: ChatChip[] = [];
+    let starters: ChatStarter[];
+    if (concept) {
+      chips.push({
+        id: `concept:${concept.id}`,
+        label: concept.name,
+        icon: BookOpen,
+        context: { conceptId: concept.id },
+      });
+      starters = [
+        {
+          label: "Explain it simply",
+          text: `Explain ${concept.name} simply, with an everyday analogy.`,
+        },
+        {
+          label: "What do interviewers ask?",
+          text: `What do interviewers usually ask about ${concept.name}, and what makes a strong answer?`,
+        },
+        {
+          label: "Show a worked example",
+          text: `Walk me through a small worked example of ${concept.name}, step by step.`,
+        },
+      ];
+    } else if (problem) {
+      chips.push({
+        id: `problem:${problem.id}`,
+        label: problem.title,
+        icon: ListChecks,
+        context: { problemId: problem.id, hideOwnWork },
+      });
+      if (hasCode) {
+        chips.push({
+          id: `code:${problem.id}`,
+          label: "Your code",
+          icon: Code2,
+          context: {
+            code: {
+              language,
+              // Read at send time from the store, so the latest keystrokes are included.
+              get code() {
+                return useWorkspaceStore.getState().code;
+              },
+            },
+          },
+        });
+      }
+      starters = [
+        {
+          label: "A small hint",
+          text: "Give me a small hint for this problem, without the solution.",
+        },
+        {
+          label: "What edge cases matter?",
+          text: "Which edge cases should I test for this problem?",
+        },
+        ...(hasCode
+          ? [
+              {
+                label: "Why might my code fail?",
+                text: "Where might my code go wrong? Point me to it without rewriting it.",
+              },
+            ]
+          : []),
+      ];
+    } else {
+      starters = [
+        {
+          label: "Quiz me on a strong concept",
+          text: "Quiz me with one question on a concept I'm strong at.",
+        },
+        {
+          label: "Help me plan a session",
+          text: "Help me plan a focused 60-minute study session.",
+        },
+      ];
+    }
+    return { chips, starters, conceptId: concept?.id };
+  }, [concept, problem, hasCode, language, hideOwnWork]);
 }
 
 function Body({ route }: { route: Route }) {
-  const services = useServicesState();
-  const chip = contextFor(route);
-  const Icon = chip.icon;
-  const hasSample = services.status === "ready" && Boolean(services.services.runtime.sample);
+  const { chips, starters, conceptId } = useChips(route);
   return (
-    <div className="flex flex-col gap-5 px-4 py-4 sm:px-5">
-      <div>
-        <p className="mb-2 text-sm text-muted">Context Claude will see</p>
-        <span className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border border-rule bg-surface-sunken px-2.5 text-sm text-text">
-          <Icon size={14} aria-hidden="true" className="shrink-0 text-muted" />
-          <span className="truncate">{chip.label}</span>
-        </span>
-      </div>
-      <div className="rounded-panel border border-dashed border-rule-strong p-4">
-        <span className="mb-3 grid size-10 place-items-center rounded-full bg-accent-soft text-accent">
-          <Sparkles size={20} aria-hidden="true" />
-        </span>
-        <p className="font-semibold text-text">Chatting with Claude arrives in a later update</p>
-        <p className="mt-1 text-base text-muted">
-          You'll be able to ask about whatever is on screen: the concept you're reading, your code
-          for a problem, or anything else. Answers stream in, and you can save the useful ones to a
-          concept's notes.
-        </p>
-        <p className="mt-3 text-base text-muted">
-          {hasSample
-            ? "Claude is built into this view, so answers will use your own Claude plan."
-            : "In this view, Atlas will build a complete prompt for you to paste into claude.ai. You can also add your own API key in Settings once Claude features arrive."}
-        </p>
-      </div>
+    <div className="flex h-full min-h-0 flex-col px-4 py-4 sm:px-5">
+      <ChatPanel
+        threadKey={DRAWER_THREAD}
+        chips={chips}
+        starters={starters}
+        saveConceptId={conceptId}
+        fill
+        className="min-h-0 flex-1"
+      />
     </div>
   );
 }
@@ -71,10 +140,9 @@ export function AskClaudePanel({ route }: { route: Route }) {
   const setOpen = useUiStore((s) => s.setAskOpen);
   const isMobile = useIsMobile();
   const close = () => setOpen(false);
-  const content: ReactNode = <Body route={route} />;
   return isMobile ? (
     <BottomSheet open={open} onClose={close} title="Ask Claude">
-      {content}
+      <div className="h-[70vh]">{open && <Body route={route} />}</div>
     </BottomSheet>
   ) : (
     <Drawer
@@ -82,11 +150,11 @@ export function AskClaudePanel({ route }: { route: Route }) {
       onClose={close}
       title="Ask Claude"
       description="A tutor that knows what you're working on."
-      width={420}
+      width={440}
       resizable
       storageKey="atlas.askWidth"
     >
-      {content}
+      {open && <Body route={route} />}
     </Drawer>
   );
 }

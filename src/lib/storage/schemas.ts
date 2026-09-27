@@ -177,6 +177,12 @@ export const problemStateSchema: z.ZodType<ProblemState> = z.object({
       hintsUsed: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional(),
       sawSolution: z.boolean().optional(),
       revealed: z.boolean().optional(),
+      review: codeReviewSchema.optional(),
+      reviewedCode: z.string().optional(),
+      dryRuns: z
+        .array(z.object({ input: z.string(), output: z.string(), createdAt: isoTime }))
+        .optional(),
+      pendingTagIds: z.array(z.string()).optional(),
     })
     .optional(),
   hints: z

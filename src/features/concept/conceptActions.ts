@@ -7,6 +7,7 @@ import {
   EyeOff,
   Eye,
   Layers,
+  ListChecks,
   MessageSquareText,
   Route,
   Sparkles,
@@ -19,7 +20,12 @@ import { navigate, routeHref, conceptHref } from "@/app/router";
 import type { MenuItem } from "@/components/ui/Popover";
 import { isCustomConceptId } from "@/lib/concepts/custom";
 import type { Concept } from "@/lib/types";
-import { openExplainBack, openFlashcards, openStatusDialog } from "@/stores/conceptDialogStore";
+import {
+  openExplainBack,
+  openFlashcards,
+  openQuickQuiz,
+  openStatusDialog,
+} from "@/stores/conceptDialogStore";
 import {
   markStudied,
   restoreConceptState,
@@ -144,6 +150,17 @@ export function conceptMenuItems(concept: Concept, options: ConceptMenuOptions =
       icon: Layers,
       onSelect: () =>
         openFlashcards({ conceptIds: [concept.id], title: `Flashcards: ${concept.name}` }),
+    },
+    {
+      id: "quiz",
+      label: "Quick quiz",
+      icon: ListChecks,
+      onSelect: () =>
+        openQuickQuiz({
+          conceptIds: [concept.id],
+          title: `Quick quiz: ${concept.name}`,
+          scope: concept.name,
+        }),
     },
     {
       id: "explain",

@@ -1,10 +1,11 @@
 // The concept activities, rendered once in the shell (see stores/conceptDialogStore):
 //   - Flashcards (F14, offline): one concept, a topic, a subject or everything due.
-//   - Explain it back (F13, offline self-check): write it, then tick the points you covered.
+//   - Quick quiz (F14): five questions written and graded by Claude.
+//   - Explain it back (F13): write it, then tick the points you covered, or have Claude grade it.
 //   - Concept review (F9): the interview points, then flashcards or explain it back.
 //   - Set status (F4): automatic or a manual status, and "never fade".
 //   - Add a concept (F2): the owner's own bubble in a topic.
-import { BookOpenText, Layers, MessageSquareText } from "lucide-react";
+import { BookOpenText, Layers, MessageSquareText, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { navigate, routeHref } from "@/app/router";
 import { Button } from "@/components/ui/Button";
@@ -16,10 +17,12 @@ import { CodeSpans, Skeleton } from "@/components/ui/Misc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { subjects, topicById, topicsBySubject } from "@/data/syllabus";
+import { studyContent } from "@/lib/concepts/custom";
 import { deckSize } from "@/lib/review/flashcards";
 import {
   MIN_EXPLAIN_WORDS,
   plainText,
+  scopeParts,
   selfCheckItems,
   selfCheckScore,
   wordCount,
@@ -33,11 +36,15 @@ import {
   setNeverFade,
   useConceptState,
 } from "@/stores/conceptStateStore";
+import { useConceptNoteStore } from "@/stores/conceptNoteStore";
 import { useConceptContent } from "@/stores/contentStore";
 import { addCustomConcept, findConcept, useConcept } from "@/stores/customConceptStore";
 import { toast } from "@/stores/toastStore";
 import { ContentUnavailable } from "../../concept/ContentUnavailable";
+import { ClaudeExplainGrade } from "./ClaudeGrade";
 import { FlashcardIntro, FlashcardSession } from "./FlashcardSession";
+import { QuickQuizBody } from "./QuickQuiz";
+import { useExplainGrade } from "./useExplainGrade";
 
 // ----- flashcards ------------------------------------------------------------------------------
 
@@ -83,6 +90,30 @@ function FlashcardsDialog() {
   );
 }
 
+// ----- quick quiz ------------------------------------------------------------------------------
+
+function QuickQuizDialog() {
+  const request = useConceptDialogs((s) => s.quiz);
+  const close = () => useConceptDialogs.setState({ quiz: null });
+  return (
+    <Dialog
+      open={request !== null}
+      onClose={close}
+      title={request?.title ?? "Quick quiz"}
+      size="md"
+      closeOnBackdrop={false}
+    >
+      {request && (
+        <QuickQuizBody
+          key={`${request.title}|${request.conceptIds.join(",")}`}
+          request={request}
+          onDone={close}
+        />
+      )}
+    </Dialog>
+  );
+}
+
 // ----- explain it back -------------------------------------------------------------------------
 
 function ExplainBody({
@@ -96,19 +127,31 @@ function ExplainBody({
 }) {
   const concept = useConcept(conceptId);
   const [text, setText] = useState("");
-  const [step, setStep] = useState<"write" | "check" | "done">("write");
+  const [step, setStep] = useState<"write" | "check" | "claude" | "done">("write");
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   const [score, setScore] = useState(0);
   // The points to tick come from the interview level, which loads while the owner writes.
-  const { value: content, failed, retry } = useConceptContent(concept);
+  const { value: written, failed, retry } = useConceptContent(concept);
+  const generated = useConceptNoteStore((s) => s.notes[conceptId]?.generated);
+  const content = useMemo(
+    () => (written ? studyContent(written, generated) : undefined),
+    [written, generated],
+  );
   const items = useMemo(
     () => (concept && content ? selfCheckItems(concept, content) : []),
     [concept, content],
   );
+  const points = useMemo(
+    () =>
+      items.length ? items.map((i) => plainText(i.text)) : concept ? scopeParts(concept.scope) : [],
+    [items, concept],
+  );
+  const grading = useExplainGrade({ concept, text, points, session });
   if (!concept) return null;
   const words = wordCount(text);
   const enough = words >= MIN_EXPLAIN_WORDS;
   const fromScope = (content?.interview.length ?? 0) === 0;
+  const pointsReady = content !== undefined || failed;
 
   const save = () => {
     const s = selfCheckScore(ticked.size, items.length);
@@ -153,12 +196,38 @@ function ExplainBody({
             data-autofocus
           />
         </Field>
-        <div className="flex justify-end">
-          <Button variant="primary" disabled={!enough} onClick={() => setStep("check")}>
-            Check my explanation
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button disabled={!enough} onClick={() => setStep("check")}>
+            Check it myself
+          </Button>
+          <Button
+            variant="primary"
+            icon={Sparkles}
+            disabled={!enough || !pointsReady}
+            onClick={() => {
+              grading.run();
+              setStep("claude");
+            }}
+          >
+            Grade with Claude
           </Button>
         </div>
+        <p className="text-sm text-muted">
+          Check it yourself against the interview points, or have Claude grade it from 0 to 5 with
+          feedback and a follow-up question.
+        </p>
       </div>
+    );
+  }
+
+  if (step === "claude") {
+    return (
+      <ClaudeExplainGrade
+        grading={grading}
+        onEdit={() => setStep("write")}
+        onSelfCheck={() => setStep("check")}
+        onDone={onDone}
+      />
     );
   }
 
@@ -250,7 +319,6 @@ function ExplainBody({
             ))}
         </ul>
       )}
-      <p className="text-sm text-muted">Claude feedback on explanations arrives in phase 6.</p>
       <div className="flex justify-end">
         <Button variant="primary" onClick={onDone}>
           Done
@@ -569,6 +637,7 @@ export default function ConceptDialogs() {
   return (
     <>
       <FlashcardsDialog />
+      <QuickQuizDialog />
       <ExplainBackDialog />
       <ConceptReviewDialog />
       <StatusDialog />

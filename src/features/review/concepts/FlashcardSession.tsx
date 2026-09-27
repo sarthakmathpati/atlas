@@ -21,6 +21,8 @@ import {
 } from "@/lib/review/flashcards";
 import type { Concept, Status } from "@/lib/types";
 import { recordChecks, useConceptStateStore } from "@/stores/conceptStateStore";
+import { studyContent } from "@/lib/concepts/custom";
+import { useConceptNoteStore } from "@/stores/conceptNoteStore";
 import { useConceptContents } from "@/stores/contentStore";
 import { findConcept } from "@/stores/customConceptStore";
 
@@ -60,7 +62,16 @@ export function FlashcardSession(props: FlashcardSessionProps) {
   const deck = useMemo(
     () =>
       contents
-        ? buildDeck(concepts.map((concept, i) => ({ concept, content: contents[i]! })))
+        ? buildDeck(
+            concepts.map((concept, i) => ({
+              concept,
+              // The owner's own concepts use the questions Claude wrote for them, if kept.
+              content: studyContent(
+                contents[i]!,
+                useConceptNoteStore.getState().notes[concept.id]?.generated,
+              ),
+            })),
+          )
         : null,
     [concepts, contents],
   );

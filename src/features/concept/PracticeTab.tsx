@@ -3,15 +3,18 @@
 // signals that give them away and a code template, plus the pattern drill.
 import { ArrowRight, ArrowUpRight, Dumbbell, ListPlus } from "lucide-react";
 import { lazy, Suspense } from "react";
+import { routeHref } from "@/app/router";
 import { Button } from "@/components/ui/Button";
 import { Chip, DifficultyChip } from "@/components/ui/Chip";
-import { EmptyState, Skeleton } from "@/components/ui/Misc";
+import { Skeleton } from "@/components/ui/Misc";
 import { problemLabel, problemsForConcept, problemUrl } from "@/lib/problems/catalog";
 import { reviewInfo } from "@/lib/problems/progress";
 import { difficultyRamp, suggestNextProblem } from "@/lib/problems/suggest";
 import type { Concept } from "@/lib/types";
 import { useToday } from "@/stores/clockStore";
+import { DRILL_PROMPTS } from "@/data/drills.seed";
 import { useConceptContent } from "@/stores/contentStore";
+import { useDrillStore } from "@/stores/drillStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -36,6 +39,10 @@ export function PracticeTab({ concept }: { concept: Concept }) {
   const problems = problemsForConcept(concept.id, states);
   const suggested = suggestNextProblem(problems, states, { hidePremium });
   const ramp = difficultyRamp(problems, states);
+  const generated = useDrillStore((s) => s.generated);
+  const drillCount =
+    DRILL_PROMPTS.filter((p) => p.answerConceptIds.includes(concept.id)).length +
+    Object.values(generated).filter((p) => p.answerConceptIds.includes(concept.id)).length;
   const {
     value: content,
     failed,
@@ -171,19 +178,24 @@ export function PracticeTab({ concept }: { concept: Concept }) {
               </p>
             )}
           </section>
-          <EmptyState
-            icon={Dumbbell}
-            title="Drill this pattern"
-            compact
-            actions={
-              <Button size="sm" href="#/drill">
-                About pattern drills
-              </Button>
-            }
+          <section
+            aria-labelledby={`${concept.id}-drill`}
+            className="flex flex-wrap items-center gap-3 rounded-panel border border-rule bg-surface px-4 py-3"
           >
-            Short original prompts where you spot the technique in two minutes. Pattern drills
-            arrive in phase 8.
-          </EmptyState>
+            <Dumbbell size={18} aria-hidden="true" className="shrink-0 text-accent" />
+            <div className="min-w-0 flex-1">
+              <h3 id={`${concept.id}-drill`} className="text-base font-semibold text-text">
+                Drill this pattern
+              </h3>
+              <p className="text-sm text-muted">
+                {drillCount} short original {drillCount === 1 ? "prompt" : "prompts"} where you spot
+                the technique in two minutes.
+              </p>
+            </div>
+            <Button size="sm" href={routeHref("/drill", undefined, { pattern: concept.id })}>
+              Start a drill
+            </Button>
+          </section>
         </>
       )}
     </div>

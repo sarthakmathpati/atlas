@@ -35,13 +35,23 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   `user`, `downloads` capabilities). `npm run release:artifact` zips it to `release/atlas-artifact.zip`.
 - **Adapters** (section 2.4). Feature code never touches IndexedDB, `window.claude` or `fetch`:
   - `src/lib/storage/Repository.ts`: `DexieRepository`, `ClaudeDbRepository`, `MemoryRepository`.
-  - `src/lib/ai/AIProvider.ts`: `SampleAIProvider`, `AnthropicApiProvider`, `CopyPromptProvider` (Phase 6).
+  - `src/lib/ai/AIProvider.ts`: `SampleAIProvider`, `AnthropicApiProvider` (web app only),
+    `CopyPromptProvider`; `lib/ai/service.ts` says which ones the view offers.
   - `src/lib/files/FileSaver.ts`: `BrowserFileSaver`, `ClaudeDownloadsSaver`, `DialogFileSaver`.
   - Chosen once at startup in `src/app/providers/ServicesProvider.tsx` from `detectRuntime()`.
-    ESLint forbids importing `dexie` or reading `window.claude` outside `lib/storage|runtime|ai|files`.
+    ESLint forbids importing `dexie`, reading `window.claude` or calling `fetch` outside
+    `lib/storage|runtime|ai|files`.
 - **Runtime contract 0.2.54**: authoritative type files are copied in `docs/claude-runtime-0.2.54/`.
   `src/lib/runtime/claude.ts` mirrors the parts we use. `src/lib/runtime/fakeClaude.ts` is an
-  in-memory fake of `db`/`user`/`downloads` for tests.
+  in-memory fake of `db`/`user`/`downloads`/`sample` for tests; `fakeSampleDemo.ts` answers every
+  prompt in the right shape (tests and the simulated artifact run; the app never imports it).
+- **Claude** (Phase 6, section 10): `lib/ai/` holds the providers, tolerant JSON with zod
+  (`json.ts`), plain error copy (`errors.ts`), `runAI` (one retry for unreadable JSON, a visit
+  cache), mode resolution (`mode.ts`), the context builder (`context.ts`) and all 19 prompts
+  (`prompts.ts`). `stores/aiStore.ts` resolves the mode, keeps the API key presence and the copy
+  prompt modal, and exposes `askAI`. Features use `features/ai/` (`useAIRequest`, `AIRunView`,
+  `ClaudeTag`, `gather.ts` for context from the stores, `ChatPanel` and `chatStore` for Ask Claude,
+  `CopyPromptModal` in the shell).
 - **Content pipeline**: `content/<subject>/<topic>.md` (format in `content/README.md`) →
   `scripts/build-syllabus.mjs` → `src/data/syllabus.generated.json` (structure, with `written`
   flags) plus `src/data/content/<subject>.generated.json` (the text) → `scripts/build-layout.mjs`
@@ -54,7 +64,8 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   `src/lib/storage/schemas.ts`; AI JSON schemas in `src/lib/ai/schemas.ts`.
 - **State**: Zustand, one store per domain in `src/stores/` (profile, activity, focus timer,
   concept statuses and checks, concept notes, custom concepts, map positions, today's plan,
-  problems, mistake tags, today's date, toasts, shell UI, concept dialogs), loaded by
+  problems, mistake tags, today's date, toasts, shell UI, concept dialogs, Claude, the open
+  workspace, generated drill prompts), loaded by
   `stores/hydrate.ts` (via `app/providers/StoreHydrator.tsx`) once storage is ready, reloaded after
   import/reset and on remote changes. Stores write through the Repository. Saving an attempt
   (`problemStore.saveAttempt`) reschedules, refreshes linked concept statuses, logs activity and
@@ -139,8 +150,9 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     `www.w3.org` (XML namespaces), `react.dev` (React error links), `tailwindcss.com` (license
     comment), `json-schema.org/draft…` (zod identifiers), two exact Dexie doc links, and zod's local
     `http://[${…}]` IPv6 check. Any new URL fails the build. `date-fns`'s `format` is avoided
-    (it embeds a GitHub link; `lib/time.ts` formats dates itself). API-key mode is standalone-only,
-    so its code is excluded from the artifact via the `__ARTIFACT__` build constant (Phase 6).
+    (it embeds a GitHub link; `lib/time.ts` formats dates itself). API-key mode is standalone-only:
+    `AnthropicApiProvider` and `features/settings/ApiKeySettings.tsx` are imported only behind
+    `!__ARTIFACT__`, so the artifact has no API URL, key field or console link (checked by grep).
 11. **Type additions beyond section 4**: `Subject.mapTracks`, `SeedProblem.language` ("sql"),
     `ProblemState.urlOverride` (owner-corrected link), `Profile.backupReminderDismissedAt`,
     `MapOverride`, `GeneratedDrill`, `BehavioralQuestion`, `Syllabus`, `MapLayout`; `updatedAt` on
@@ -152,8 +164,8 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     `hld-<slug>` (one per concept in `lld.classics` / `sysd.classics`); behavioral questions
     `bq-<slug>`; mistake tags `mt-<slug>` (each with a default "how to avoid it" line).
 14. **Default AI models** come from the spec (quick `claude-haiku-4-5-20251001`, default
-    `claude-sonnet-5`, complex `claude-opus-5-5`); re-check the current list in Phase 6. They are
-    editable in Settings.
+    `claude-sonnet-5`, complex `claude-opus-5-5`), re-checked on 26 Sep 2026 against the current
+    model list (Haiku 4.5, Sonnet 5 and Opus 5.5 are current). They are editable in Settings.
 15. **Quant answers**: `src/lib/quant/answerCheck.ts` (built in Phase 1 so tests can verify every
     seed answer) evaluates answers with a small recursive-descent parser, never `eval`: numbers,
     fractions, `%`, `+ - * / ^`, `e`, `pi`, `sqrt`, implicit multiplication, variables such as `n`
@@ -228,7 +240,8 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     pattern's template, or the outline until templates are written (Phase 5). "Show full solution"
     opens the LeetCode editorial (quant puzzles show their answer).
 34. **Offline "Suggest patterns"** in quick add: patterns of the seed problems whose titles share
-    the most distinctive words (IDF-weighted). Claude suggestions arrive in Phase 6.
+    the most distinctive words (IDF-weighted). "Ask Claude" beside it uses prompt 17 (ids checked,
+    difficulty offered, never applied over the owner's choice).
 35. **Library filters live in the URL** (`#/problems?status=solved&difficulty=easy&topic=dsa`);
     a subject id works as a topic filter. Rows render progressively (150, then more on scroll).
 36. **CSV import**: header synonyms, `,` `;` or tab, dates day first by default (switchable),
@@ -239,8 +252,8 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 38. **Mistake numbers**: counts once per attempt; the trend compares the window with the one
     before it (all time: last 30 days against the 30 before); the checklist is the top 5 of the
     last 90 days, topped up from all time; archived tags stay on attempts but leave the pickers.
-39. **Claude buttons before Phase 6** ("Review my code", "Dry run", "Suggest with Claude") open a
-    short dialog saying what they will do (`LaterClaudeButton`); nothing pretends to work.
+39. **Claude buttons** were honest placeholders until Phase 6 (`LaterClaudeButton`, now removed);
+    every one is a real feature now.
 40. **Map rendering**: React Flow (`@xyflow/react` 12, attribution hidden for this personal
     project; its link strings are rewritten at build time like decision 22). Bubbles are React
     Flow nodes (fixed `width`/`height`, `nodeOrigin` centered, `onlyRenderVisibleElements`, node
@@ -448,3 +461,66 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     `BEHAVIORAL_QUESTIONS`. Tax uses India's new regime for FY 2025-26, stated in the text, with
     `needsReview`; so do OA formats, the quant firm process and campus routes. The Atlas project
     deep dive quotes numbers measured from the repository at the end of Phase 5 and says so.
+74. **AI modes** (Phase 6, F21): ServicesProvider creates the AI service from the runtime (which
+    providers exist); the profile keeps the owner's choice; `resolveMode` picks what runs now:
+    built-in Claude needs `sample` and no blocking error this visit, an API key needs the web app
+    and a saved key, otherwise copy prompt. A first run with `sample` starts in built-in mode.
+    `not_granted`, `sampling_disabled`, `not_declared`, `capability_disabled` and
+    `capability_removed` switch the visit to copy prompt (toast); "Try again" then opens the modal.
+    Switching modes in Settings needs no reload.
+75. **API key mode**: plain `fetch` to `/v1/messages` (the spec's contract; mocked in tests), the
+    instructions in `system`, `stream: true`, text from `text_delta` events; no `temperature` or
+    `thinking` fields. Output budgets are quick 4,096, default 16,000, complex 32,000 tokens (not
+    the spec's 1,024 / 4,096 / 8,192), because Sonnet 5 and Opus 5.5 think first and thinking
+    counts toward `max_tokens`. No headers in 60 s or no bytes for 90 s is a timeout. HTTP and
+    stream errors map to plain copy (401/403 key, 404 model name, 429, 529, too long). Test
+    connection sends a tiny request per tier and stops after a key or network failure.
+76. **JSON replies**: read tolerantly (whole text, a fence, first bracket to last) and validated
+    with zod; an object wrapping the one expected array is accepted. An unreadable reply is asked
+    for once more with a firmer reminder and no cache (built-in and API only; never a loop; never
+    in copy mode); then the raw reply shows with Try again. With a schema, built-in Claude uses
+    `sample.json` (a missing `json` falls back to text plus parsing).
+77. **Caching**: chat turns and every "Try again" or "Ask again" pass `cache: false`; other
+    built-in calls keep the runtime's 5-minute cache. Claude hints are kept per problem and level
+    in `ProblemState.hints`, reviews on the attempt, generated explanations in the note;
+    `cacheKey` keeps a full solution or an older attempt's review for the visit.
+78. **Context** (`features/ai/gather.ts`): the learner block always (track, language, countdown,
+    up to 15 strong concepts nearest the topic, top 5 mistakes); the concept with its written (or
+    kept Claude) text and the owner's notes; the problem with summary, insight and notes, except
+    that an unrevealed re-solve hides the insight and notes (patterns stay, hints need them); code
+    clipped to 12,000 characters keeping both ends. `fitPrompt` keeps every prompt under 48 KiB,
+    trimming older turns, then notes, then code, then other context, and says when it did.
+    Code Claude writes or reviews is in the profile's main language (preamble line).
+79. **Workspace AI**: one panel under the editor at a time (hints, review, dry run). Reviews and
+    dry runs belong to the attempt: the draft carries `review`, `reviewedCode`, `dryRuns` and
+    `pendingTagIds`, saved onto the attempt; tags taken from a review start selected in the save
+    dialog and its other suggestions are listed first; labels that match none of the owner's tags
+    show but can't be added. Older attempts can be reviewed from the attempt dialog. Claude hints
+    count as used only once shown; the hint source defaults to Claude except in copy prompt mode.
+    "Explain it with Claude" for the full solution marks the attempt "saw the solution".
+80. **Explain with Claude**: a concept with nothing written (the owner's own) gets a Claude draft
+    (prompt 2) that the owner keeps in `ConceptNote.generated`; flashcards and explain it back use
+    it through `studyContent`. Written concepts get "Explain it another way" (prompt 1) at a chosen
+    level, which can be saved as a saved answer. Nothing overwrites the owner's notes.
+81. **Grading and quizzes**: a Claude-graded explanation is saved at once (score / 5, detail mode
+    `claude`); answering the follow-up regrades and records a new check only if the score rises.
+    Quick quizzes drop unusable questions (bad answer index, duplicate options), map unknown
+    concept ids to the first concept, mark multiple choice at once, batch-grade short answers on
+    the quick tier (or "Mark them myself" when grading fails), and record one check per concept.
+82. **Pattern drill pulled forward from Phase 8**, because it hosts F10's grading and generation:
+    `#/drill` runs 3, 5, 8 or 10 prompts from the bank (seed plus kept Claude prompts) or from
+    solved problems; unseen prompts (14 days) first, weakest first on request, one per pattern
+    when possible, shuffled from a seed. A pick is correct, partial (same topic) or wrong (1, 0.5,
+    0), recorded as a drill check on the main pattern at reveal; accuracy over 60 days and
+    confusion pairs (twice or more, top 5) follow 11.6. Claude grades a typed approach on a button
+    and writes 5 prompts for the weakest patterns, kept only if every id is one of the 90
+    patterns. `?pattern=<id>` drills one pattern (the Practice tab links there).
+83. **Ask Claude chats** live in memory only (a drawer thread and one per concept Ask tab). Chips
+    come from the screen (concept, problem, the editor's code read at send time) and can be left
+    out; the learner block ("Your progress") always goes. Quick actions sit under the newest
+    answer; "Save to concept" under any answer. Enter sends, Shift+Enter adds a line.
+84. **Copy prompt modal**: one host in the shell (`aiStore.copy`): the prompt read-only with Copy
+    (selected with a "Press Ctrl+C" hint when the clipboard is blocked), Open Claude
+    (`claude.ai/new`) only outside the claude.ai frame, and a paste box. Cancel ends the request
+    quietly. Every feature is tested in all three modes (`tests/app/claudeModes.test.tsx`).
+

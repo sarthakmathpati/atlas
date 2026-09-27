@@ -3,6 +3,7 @@
 // when the search is empty. Built on cmdk for keyboard handling; results come from MiniSearch.
 import { Command } from "cmdk";
 import {
+  Dumbbell,
   ArrowRight,
   CirclePlus,
   Clock,
@@ -263,6 +264,14 @@ export function CommandPalette() {
           }
           openFlashcards({ conceptIds: due, title: "Flashcards: everything due", session: true });
         },
+      },
+      {
+        id: "cmd:drill",
+        label: "Start a pattern drill",
+        icon: Dumbbell,
+        keywords: "drill pattern recognition practice prompts",
+        group: "Commands",
+        run: () => navigate("/drill"),
       },
       {
         id: "cmd:path",

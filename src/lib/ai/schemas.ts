@@ -88,6 +88,7 @@ export const drillGenerationSchema = z.array(
     difficulty: z.enum(["easy", "medium", "hard"]),
   }),
 );
+export type DrillGeneration = z.infer<typeof drillGenerationSchema>;
 
 /** 11. Mock feedback. Score keys depend on the mock type (dsa, design, behavioral, theory). */
 export const mockFeedbackSchema = z.object({
@@ -137,6 +138,8 @@ export const conceptSuggestionSchema = z.object({
   conceptIds: z.array(text).min(1).max(3),
   difficulty: z.enum(["easy", "medium", "hard"]),
 });
+export type ConceptSuggestion = z.infer<typeof conceptSuggestionSchema>;
 
 /** 18. "How to avoid it" suggestions for mistake tags. */
 export const mistakeAdviceSchema = z.array(z.object({ tag: text, howToAvoid: text }));
+export type MistakeAdvice = z.infer<typeof mistakeAdviceSchema>;

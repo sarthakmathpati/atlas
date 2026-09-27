@@ -31,7 +31,8 @@ import { useToday } from "@/stores/clockStore";
 import { updateMistakeTag, useMistakeTagStore } from "@/stores/mistakeTagStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { AutoField } from "../problems/workspace/fields";
-import { LaterClaudeButton, ResultLabel } from "../problems/parts";
+import { ResultLabel } from "../problems/parts";
+import { MistakeAdviceButton } from "./MistakeAdvice";
 import { ManageTagsDialog } from "./ManageTagsDialog";
 
 const WINDOW_OPTIONS: { value: string; label: string }[] = [
@@ -347,19 +348,7 @@ export default function MistakesPage() {
               id="checklist"
               title="My pre-interview checklist"
               description="Your five most common mistakes in the last 90 days."
-              action={
-                <LaterClaudeButton
-                  size="sm"
-                  variant="ghost"
-                  label="Suggest with Claude"
-                  title="Suggest with Claude"
-                >
-                  <p>
-                    Claude will read the attempts behind each mistake and draft a one-line “how to
-                    avoid it” for you to edit.
-                  </p>
-                </LaterClaudeButton>
-              }
+              action={<MistakeAdviceButton items={checklist} tagged={items} />}
             >
               <Checklist items={checklist} />
             </Panel>

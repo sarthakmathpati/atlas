@@ -1,16 +1,23 @@
-// Settings → Claude (F21 basics). Shows the detected runtime and which AI modes it supports, and
-// saves the owner's choice and the model per tier. The Claude features themselves (and adding an
-// API key) arrive in phase 6; the choice made here is what they will use.
+// Settings → Claude (F21): the detected runtime, how Claude answers (built-in Claude, your API key,
+// or copy prompt), the API key with Test connection (web app only), and the model per tier.
+// Switching modes takes effect at once; when a choice can't be used in this view, the note says
+// why and copy prompt fills in.
 import { RotateCcw } from "lucide-react";
-import { useId } from "react";
+import { lazy, Suspense, useId } from "react";
 import type { Services } from "@/app/providers/servicesContext";
 import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { Input } from "@/components/ui/Field";
+import { Skeleton } from "@/components/ui/Misc";
+import { FALLBACK_NOTE, MODE_LABEL } from "@/lib/ai/mode";
 import { DEFAULT_TIER_MODELS } from "@/lib/constants";
 import type { AIMode, Profile, Tier } from "@/lib/types";
+import { useAIMode, useAIStore } from "@/stores/aiStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { SettingsRow, SettingsSection } from "./layout";
+
+// Left out of the artifact build entirely (CLAUDE.md decision 10).
+const ApiKeySettings = __ARTIFACT__ ? null : lazy(() => import("./ApiKeySettings"));
 
 interface ModeOption {
   value: AIMode;
@@ -21,9 +28,9 @@ interface ModeOption {
 }
 
 const TIERS: { tier: Tier; label: string; detail: string }[] = [
-  { tier: "quick", label: "Quick", detail: "Hints, drill grading and short answers." },
-  { tier: "default", label: "Default", detail: "Explanations, reviews and chat." },
-  { tier: "complex", label: "Complex", detail: "Mock interviews and revision sheets." },
+  { tier: "quick", label: "Quick", detail: "Grading short answers, drills and suggestions." },
+  { tier: "default", label: "Default", detail: "Hints, reviews, explanations and chat." },
+  { tier: "complex", label: "Complex", detail: "Deep explanations and new study material." },
 ];
 
 export function ClaudeSection({
@@ -37,6 +44,10 @@ export function ClaudeSection({
   const ids = useId();
   const runtime = services?.runtime;
   const inArtifact = Boolean(runtime?.inClaudeFrame);
+  const sampleBlocked = useAIStore((s) => s.sampleBlocked);
+  const hasKey = useAIStore((s) => s.hasKey);
+  const resolved = useAIMode();
+  const apiAllowed = services?.ai.apiAllowed ?? false;
   const options: ModeOption[] = [
     {
       value: "sample",
@@ -53,22 +64,19 @@ export function ClaudeSection({
       title: "Your API key",
       detail:
         "Calls go straight from this browser to Anthropic. Billed separately from your Claude plan.",
-      available: false,
-      unavailableNote: inArtifact
-        ? "Only in the web app version of Atlas."
-        : "Adding a key arrives with the Claude features in phase 6.",
+      available: apiAllowed,
+      unavailableNote: "Only in the web app version of Atlas.",
     },
     {
       value: "copy",
       title: "Copy prompt",
       detail:
-        "Atlas writes a complete prompt for you to paste into claude.ai, then you can paste the answer back. Works everywhere, free.",
+        "Atlas writes a complete prompt for you to paste into claude.ai, then you paste the answer back. Works everywhere, free.",
       available: true,
     },
   ];
-  const current = options.find((o) => o.value === profile.ai.mode && o.available)
-    ? profile.ai.mode
-    : "copy";
+  const preferred = profile.ai.mode;
+  const selected = options.find((o) => o.value === preferred && o.available) ? preferred : "copy";
   const setTier = (tier: Tier, model: string) =>
     update({ ai: { ...profile.ai, tierModels: { ...profile.ai.tierModels, [tier]: model } } });
   const isDefault = TIERS.every(
@@ -91,12 +99,13 @@ export function ClaudeSection({
     >
       <fieldset className="px-4 py-4 sm:px-5">
         <legend className="text-base font-medium text-text">How Claude answers</legend>
-        <p className="mt-0.5 text-sm text-muted">
-          Hints, reviews, quizzes and the tutor arrive in phase 6 and will use this choice.
+        <p className="mt-0.5 text-sm text-muted" role="status">
+          In use now: <span className="font-medium text-text">{MODE_LABEL[resolved.mode]}</span>.
+          {resolved.fallback ? ` ${FALLBACK_NOTE[resolved.fallback]}` : ""}
         </p>
         <div className="mt-3 grid gap-2 md:grid-cols-3">
           {options.map((o) => {
-            const checked = current === o.value;
+            const checked = selected === o.value;
             return (
               <label
                 key={o.value}
@@ -124,15 +133,34 @@ export function ClaudeSection({
                   {!o.available && o.unavailableNote && (
                     <span className="mt-1 block font-medium text-text">{o.unavailableNote}</span>
                   )}
+                  {o.available && o.value === "sample" && sampleBlocked && (
+                    <span className="mt-1 block font-medium text-text">
+                      Not allowed in this view right now. Reload to ask again.
+                    </span>
+                  )}
+                  {o.available && o.value === "api" && !hasKey && (
+                    <span className="mt-1 block font-medium text-text">Add a key below first.</span>
+                  )}
                 </span>
               </label>
             );
           })}
         </div>
       </fieldset>
+      {ApiKeySettings && apiAllowed && (
+        <SettingsRow
+          label="Your API key"
+          description="For the API key mode. Get one from Anthropic, then test it here."
+          stacked
+        >
+          <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+            <ApiKeySettings />
+          </Suspense>
+        </SettingsRow>
+      )}
       <SettingsRow
         label="Models"
-        description="Which Claude model each kind of task uses with an API key. Built-in Claude picks its own."
+        description="Which Claude model each kind of task uses with your API key. Built-in Claude picks its own, and with copy prompt you choose on claude.ai."
         stacked
       >
         <div className="grid gap-3 md:grid-cols-3">

@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react";
+import type { AIService } from "@/lib/ai/service";
 import type { FileSaver } from "@/lib/files/FileSaver";
 import type { RuntimeInfo } from "@/lib/runtime/detect";
 import type { Repository } from "@/lib/storage/Repository";
@@ -7,6 +8,8 @@ export interface Services {
   runtime: RuntimeInfo;
   repository: Repository;
   fileSaver: FileSaver;
+  /** Which Claude providers this view offers (built-in, API key, copy prompt). */
+  ai: AIService;
   /** A one-time message about storage (for example, "saved in this browser only"). */
   storageNotice?: string;
 }

@@ -212,6 +212,7 @@ function Wizard({ profile }: { profile: Profile }) {
   const update = useProfileStore((s) => s.update);
   const setCsvImportOpen = useUiStore((s) => s.setCsvImportOpen);
   const hasSample = services.status === "ready" && Boolean(services.services.runtime.sample);
+  const apiAllowed = services.status === "ready" && services.services.ai.apiAllowed;
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(() => ({
     name: profile.name,
@@ -224,7 +225,7 @@ function Wizard({ profile }: { profile: Profile }) {
     ai:
       profile.ai.mode === "sample" && !hasSample
         ? "copy"
-        : profile.ai.mode === "api"
+        : profile.ai.mode === "api" && !apiAllowed
           ? "copy"
           : profile.ai.mode,
     assessment: assessmentFromStates(useConceptStateStore.getState().states),
@@ -478,7 +479,7 @@ function Wizard({ profile }: { profile: Profile }) {
       {step === 4 && (
         <StepFrame
           title="Claude"
-          intro="Atlas can ask Claude to explain, hint, review your code and quiz you. The Claude features arrive in phase 6; choose how they'll reach Claude here."
+          intro="Atlas can ask Claude to explain, give hints, review your code, grade your explanations and quiz you. Choose how it reaches Claude; you can change this in Settings."
         >
           <div role="radiogroup" aria-label="How Atlas uses Claude" className="grid gap-3">
             <Choice
@@ -492,16 +493,21 @@ function Wizard({ profile }: { profile: Profile }) {
                   : "Available when Atlas runs as a published Claude artifact."
               }
             />
+            {apiAllowed && (
+              <Choice
+                selected={draft.ai === "api"}
+                onClick={() => set({ ai: "api" })}
+                title="Your API key"
+                detail="Answers stream straight from Anthropic. Billed separately; add the key in Settings, under Claude, after this."
+              />
+            )}
             <Choice
               selected={draft.ai === "copy"}
               onClick={() => set({ ai: "copy" })}
               title="Copy prompt"
-              detail="Atlas writes a complete prompt for you to paste into claude.ai. Works everywhere, free."
+              detail="Atlas writes a complete prompt for you to paste into claude.ai, then you paste the answer back. Works everywhere, free."
             />
           </div>
-          <p className="text-sm text-muted">
-            Using your own API key is an option in Settings once the Claude features arrive.
-          </p>
         </StepFrame>
       )}
 

@@ -1,7 +1,7 @@
 // Flashcards and quizzes (F14). Offline flashcards for everything due, a subject or a topic (one
 // concept starts from the map or its page); each session records a check per concept and moves
-// its review schedule. Quick quizzes written by Claude arrive in phase 6.
-import { CalendarClock, Layers } from "lucide-react";
+// its review schedule. Quick quizzes written and graded by Claude cover the chosen set too.
+import { CalendarClock, Layers, ListChecks } from "lucide-react";
 import { useMemo, useState } from "react";
 import { conceptHref } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
@@ -23,11 +23,10 @@ import { relativeDate } from "@/lib/problems/progress";
 import { deckSize } from "@/lib/review/flashcards";
 import { localDate } from "@/lib/time";
 import type { Check, Concept } from "@/lib/types";
-import { openFlashcards } from "@/stores/conceptDialogStore";
+import { openFlashcards, openQuickQuiz } from "@/stores/conceptDialogStore";
 import { useConceptStateStore } from "@/stores/conceptStateStore";
 import { findConcept, useCustomConceptStore } from "@/stores/customConceptStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { LaterClaudeButton } from "../problems/parts";
 import { useReviewQueue } from "./useReviewQueue";
 
 const KIND_LABEL: Record<Check["kind"], string> = {
@@ -191,28 +190,44 @@ export default function QuizPage() {
                   ? "No concepts in this set yet."
                   : `${chosen.length} ${chosen.length === 1 ? "concept" : "concepts"}, up to ${deckSize(chosen).cards} cards.`}
               </p>
-              <Button
-                icon={Layers}
-                disabled={chosen.length === 0}
-                onClick={() =>
-                  openFlashcards({
-                    conceptIds: chosen.map((c) => c.id),
-                    title: `Flashcards: ${setName}`,
-                  })
-                }
-              >
-                Start
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  icon={ListChecks}
+                  disabled={chosen.length === 0}
+                  onClick={() =>
+                    openQuickQuiz({
+                      conceptIds: chosen.slice(0, 40).map((c) => c.id),
+                      title: `Quick quiz: ${setName}`,
+                      scope: topicId ? `the topic ${setName}` : `the subject ${setName}`,
+                    })
+                  }
+                >
+                  Quick quiz
+                </Button>
+                <Button
+                  variant="primary"
+                  icon={Layers}
+                  disabled={chosen.length === 0}
+                  onClick={() =>
+                    openFlashcards({
+                      conceptIds: chosen.map((c) => c.id),
+                      title: `Flashcards: ${setName}`,
+                    })
+                  }
+                >
+                  Start flashcards
+                </Button>
+              </div>
             </div>
           </section>
 
           <p className="text-sm text-muted">
-            Concepts whose questions aren't written yet get one recall card: say what the concept
-            covers, then compare with its scope. The written questions arrive with the content.
+            Flashcards use each concept's interview questions and work offline. A quick quiz asks
+            Claude for five fresh questions on the set, weighted toward what needs review first.
           </p>
         </div>
 
-        <aside className="space-y-6" aria-label="History and quizzes">
+        <aside className="space-y-6" aria-label="Recent checks">
           <section
             aria-labelledby="recent-checks"
             className="rounded-panel border border-rule bg-surface"
@@ -225,7 +240,7 @@ export default function QuizPage() {
             </h2>
             {recent.length === 0 ? (
               <p className="px-4 py-3 text-sm text-muted">
-                Your flashcard and explain-it-back results appear here.
+                Your flashcard, quiz and explain-it-back results appear here.
               </p>
             ) : (
               <ul>
@@ -258,17 +273,6 @@ export default function QuizPage() {
                 })}
               </ul>
             )}
-          </section>
-          <section className="space-y-2 rounded-panel border border-rule bg-surface px-4 py-3">
-            <h2 className="text-md font-semibold text-text">Quick quizzes</h2>
-            <p className="text-sm text-muted">
-              Five questions written by Claude for a concept or topic, multiple choice and short
-              answer, graded for you.
-            </p>
-            <LaterClaudeButton size="sm" label="Start a quick quiz" title="Quick quizzes">
-              Claude writes and grades quizzes once the Claude features arrive in phase 6. Until
-              then, flashcards and explaining it back check you offline.
-            </LaterClaudeButton>
           </section>
         </aside>
       </div>

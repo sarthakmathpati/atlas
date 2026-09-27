@@ -167,6 +167,9 @@ export interface NewAttempt {
   mode: Attempt["mode"];
   /** Replaces the problem's insight when given. */
   insight?: string;
+  /** Claude's review and dry runs made during the attempt (F12). */
+  review?: Attempt["review"];
+  dryRuns?: Attempt["dryRuns"];
 }
 
 export interface SavedAttempt {
@@ -214,6 +217,8 @@ export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAtt
     mode: input.mode,
   };
   if (input.minutes !== undefined) attempt.minutes = input.minutes;
+  if (input.review) attempt.review = input.review;
+  if (input.dryRuns?.length) attempt.dryRuns = input.dryRuns;
   for (const key of ["approach", "timeComplexity", "spaceComplexity"] as const) {
     const v = input[key]?.trim();
     if (v) attempt[key] = v;
@@ -262,6 +267,34 @@ export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAtt
   else if (attempts.length > ATTEMPT_WARN)
     message += ` ${attempts.length} attempts saved; Atlas keeps the latest ${ATTEMPT_CAP}.`;
   return { attempt, state: next, previous, schedule, message, trimmed };
+}
+
+/** Keeps a Claude-written hint for a level (F11), replacing an older one for that level. */
+export function saveHint(problemId: string, level: 1 | 2 | 3, text: string): void {
+  const current = stateOrNew(problemId);
+  const hints = (current.hints ?? []).filter((h) => h.level !== level);
+  hints.push({ level, text, createdAt: nowIso() });
+  hints.sort((a, b) => a.level - b.level);
+  commit({ ...current, hints, updatedAt: nowIso() });
+}
+
+/** Stores a review on a saved attempt, and adds mistake tags to it (F12 on an older attempt). */
+export function updateAttempt(
+  problemId: string,
+  attemptId: string,
+  changes: { review?: Attempt["review"]; addTagIds?: string[] },
+): void {
+  const current = getProblemState(problemId);
+  if (!current) return;
+  const attempts = current.attempts.map((a) => {
+    if (a.id !== attemptId) return a;
+    const next: Attempt = { ...a };
+    if (changes.review) next.review = changes.review;
+    if (changes.addTagIds?.length)
+      next.mistakeTagIds = [...new Set([...a.mistakeTagIds, ...changes.addTagIds])];
+    return next;
+  });
+  commit({ ...current, attempts, updatedAt: nowIso() });
 }
 
 /** Deletes one attempt (the schedule stays as it is). Returns the state before, for Undo. */

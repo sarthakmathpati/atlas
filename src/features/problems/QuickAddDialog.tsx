@@ -1,8 +1,8 @@
 // Quick add (F6): paste a LeetCode link, or type a title or number. A match opens the problem;
 // anything else becomes the owner's own problem, prefilled from the link, with difficulty and
-// patterns to choose ("Suggest patterns" looks at similar problems in the bank; with Claude in
-// phase 6 it can also ask Claude).
-import { ArrowRight, Plus, Wand2 } from "lucide-react";
+// patterns to choose. "Suggest patterns" looks at similar problems in the bank (offline); "Ask
+// Claude" suggests patterns and a difficulty from the title and link (prompt 17, ids checked).
+import { ArrowRight, Plus, Sparkles, Wand2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { navigate } from "@/app/router";
 import { Button } from "@/components/ui/Button";
@@ -12,7 +12,9 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { MultiCombobox } from "@/components/ui/MultiCombobox";
 import { DIFFICULTY_LABEL } from "@/components/ui/labels";
-import { subjects, topics } from "@/data/syllabus";
+import { conceptsByTopic, patternConcepts, subjects, topics } from "@/data/syllabus";
+import { conceptSuggestPrompt } from "@/lib/ai/prompts";
+import type { ConceptSuggestion } from "@/lib/ai/schemas";
 import { problemLabel, withScheme, type ProblemInfo } from "@/lib/problems/catalog";
 import {
   findProblemMatches,
@@ -24,6 +26,9 @@ import type { Difficulty } from "@/lib/types";
 import { addCustomProblem, useProblemStore } from "@/stores/problemStore";
 import { toast } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
+import { promptEnv } from "../ai/gather";
+import { AIRunView, ClaudeTag } from "../ai/parts";
+import { useAIRequest } from "../ai/useAI";
 import { conceptName, conceptOptions, problemPageHref } from "./problemUi";
 
 const TOPIC_OPTIONS = [
@@ -65,6 +70,9 @@ export function QuickAddDialog() {
   const [topicId, setTopicId] = useState("");
   const [summary, setSummary] = useState("");
   const [suggested, setSuggested] = useState<string[] | null>(null);
+  const [suggestedBy, setSuggestedBy] = useState<"bank" | "claude">("bank");
+  const [claudeDifficulty, setClaudeDifficulty] = useState<Difficulty | null>(null);
+  const claude = useAIRequest<ConceptSuggestion>();
   const [showErrors, setShowErrors] = useState(false);
 
   // Start fresh each time it opens.
@@ -81,13 +89,18 @@ export function QuickAddDialog() {
       setTopicId("");
       setSummary("");
       setSuggested(null);
+      setSuggestedBy("bank");
+      setClaudeDifficulty(null);
       setShowErrors(false);
     }
   }
 
   const parsed = useMemo(() => parseProblemInput(text), [text]);
   const { exact, matches } = useMemo(() => findProblemMatches(parsed, states), [parsed, states]);
-  const close = () => setOpen(false);
+  const close = () => {
+    claude.reset();
+    setOpen(false);
+  };
 
   const openProblem = (info: ProblemInfo) => {
     close();
@@ -109,6 +122,38 @@ export function QuickAddDialog() {
   const suggest = () => {
     const ids = suggestConcepts(title || text).filter((id) => !conceptIds.includes(id));
     setSuggested(ids);
+    setSuggestedBy("bank");
+  };
+
+  const askClaude = () => {
+    const allowed = [
+      ...patternConcepts,
+      ...(topicId ? (conceptsByTopic.get(topicId) ?? []).filter((c) => !c.isPattern) : []),
+    ];
+    const valid = new Set(allowed.map((c) => c.id));
+    void claude.start(
+      () => ({
+        spec: conceptSuggestPrompt(promptEnv(), {
+          title: title || text,
+          link: url.trim() || undefined,
+          notes: summary,
+          allowed: allowed.map((c) => ({ id: c.id, name: c.name })),
+        }),
+      }),
+      {
+        title: "Suggested patterns",
+        onDone: (result) => {
+          // Only ids from the allowed list count; anything else is dropped.
+          const ids = (result.data?.conceptIds ?? []).filter(
+            (id) => valid.has(id) && !conceptIds.includes(id),
+          );
+          setSuggested(ids);
+          setSuggestedBy("claude");
+          if (result.data) setClaudeDifficulty(result.data.difficulty);
+          claude.reset();
+        },
+      },
+    );
   };
 
   const create = () => {
@@ -257,9 +302,21 @@ export function QuickAddDialog() {
                 <Button size="sm" variant="ghost" icon={Wand2} onClick={suggest}>
                   Suggest patterns
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={Sparkles}
+                  disabled={claude.busy || !(title || text).trim()}
+                  onClick={askClaude}
+                >
+                  Ask Claude for patterns
+                </Button>
+                {suggested && suggested.length > 0 && suggestedBy === "claude" && <ClaudeTag />}
                 {suggested && suggested.length === 0 && (
                   <span className="text-sm text-muted">
-                    No similar problems in the bank. Pick patterns yourself.
+                    {suggestedBy === "claude"
+                      ? "Claude had no patterns to add. Pick them yourself."
+                      : "No similar problems in the bank. Pick patterns yourself."}
                   </span>
                 )}
                 {suggested?.map((id) => (
@@ -278,6 +335,19 @@ export function QuickAddDialog() {
                   </button>
                 ))}
               </div>
+              <AIRunView
+                request={claude}
+                showStream={false}
+                thinkingLabel="Looking at the problem…"
+              />
+              {claudeDifficulty && claudeDifficulty !== difficulty && (
+                <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                  Claude thinks it's {DIFFICULTY_LABEL[claudeDifficulty].toLowerCase()}.
+                  <Button size="sm" variant="ghost" onClick={() => setDifficulty(claudeDifficulty)}>
+                    Use {DIFFICULTY_LABEL[claudeDifficulty].toLowerCase()}
+                  </Button>
+                </p>
+              )}
               <p className="text-sm text-muted">
                 Patterns link the problem to the map, so solving it counts toward them.
               </p>

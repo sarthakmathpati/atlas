@@ -2,7 +2,7 @@
 //   1. Nudge: the broad area, a clue (the pattern's first signal) and a guiding question.
 //   2. Approach: the pattern's name, what it covers, and how to spot it.
 //   3. Pseudocode: the pattern's template, or a step outline until the template is written.
-// With Claude (phase 6) each level is generated for the problem and cached in ProblemState.hints.
+// With Claude, each level is written for the problem and kept in ProblemState.hints (HintLadder).
 import { hintsForTopic } from "@/data/hintLadder";
 import { conceptById } from "@/data/syllabus";
 import type { ConceptContent } from "@/lib/types";
