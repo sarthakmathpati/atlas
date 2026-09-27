@@ -4,6 +4,8 @@ Atlas is a personal, zoomable study map for cracking SDE and quant interviews. `
 the single source of truth. Every session starts by reading this file, then `PROGRESS.md`, then
 `BUILD_SPEC.md`, and checks that the branch contains the previous phase's work (see `PROGRESS.md`).
 If it doesn't, tell the owner the previous pull request probably wasn't merged yet, and stop.
+During Phase 9, also read `docs/PHASE9_PLAN.md` (the plan for the colorful refresh, focus
+sessions, the audit and shipping) and tick its boxes as work lands.
 
 ## Standing rules (BUILD_SPEC.md section 0)
 
@@ -673,3 +675,12 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     delayMs: 40, chunks: 12 })` with `npx rolldown <entry> --format iife`, and inject it with
     Playwright's `addInitScript` into the dev server or `dist-artifact/index.html`. Fixture
     backups with `profile.ai.mode = "sample"` start in built-in mode.
+104. **Owner's direction for Phase 9** (session 18): make Atlas very beautiful and colorful, and
+    add features that help focus. This goes beyond section 12.1 ("boldness in one place") and
+    the gradient rule in 12.9: color may now carry identity everywhere (a color per subject and
+    per app section, tinted featured cards, gradient progress, illustrated empty states, small
+    micro-interactions). Unchanged: tokens only (light and dark), WCAG AA contrast (tested),
+    status shapes and difficulty bars, reduced motion, bundled fonts and inline SVG only, the
+    artifact URL check and size budget, and the copy rules. The new feature is called "focus
+    sessions" (not "focus mode", which is the map's). Details and checklists:
+    `docs/PHASE9_PLAN.md`.
