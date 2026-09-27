@@ -11,6 +11,7 @@ import { hydrateGeneratedDrills } from "@/stores/drillStore";
 import { hydrateMapOverrides } from "@/stores/mapStore";
 import { hydrateMentalMath } from "@/stores/mentalMathStore";
 import { hydrateStories } from "@/stores/storyStore";
+import { hydrateDesigns } from "@/stores/designStore";
 import { hydratePlan } from "@/stores/planStore";
 import { detachAll, hydrateAll } from "@/stores/hydrate";
 import { hydrateProfile, useProfileStore } from "@/stores/profileStore";
@@ -48,6 +49,7 @@ export function StoreHydrator() {
         else if (event.table === "generatedDrills") void hydrateGeneratedDrills(repository);
         else if (event.table === "mentalMath") void hydrateMentalMath(repository);
         else if (event.table === "stories") void hydrateStories(repository);
+        else if (event.table === "designs") void hydrateDesigns(repository);
         return;
       }
       toast(event.message, {

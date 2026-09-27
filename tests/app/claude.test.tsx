@@ -112,10 +112,14 @@ describe("Claude in the app", () => {
     expect(input.at(-1)).toMatchObject({ role: "user" });
     expect(sample.calls[0]!.options.cache).toBe(false);
 
-    await user.click(within(drawer).getByRole("button", { name: "Give an example" }));
+    // Quick actions appear once the answer has finished streaming.
+    await user.click(
+      await within(drawer).findByRole("button", { name: "Give an example" }, { timeout: 4000 }),
+    );
     await within(drawer).findByText(/shortest way there/, {}, { timeout: 4000 });
     expect(sample.calls).toHaveLength(2);
 
+    await within(drawer).findAllByRole("button", { name: "Save to concept" }, { timeout: 4000 });
     const saves = within(drawer).getAllByRole("button", { name: "Save to concept" });
     await user.click(saves.at(-1)!);
     await user.click(within(drawer).getByRole("button", { name: "Save answer" }));

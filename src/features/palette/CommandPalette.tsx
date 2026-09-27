@@ -293,6 +293,14 @@ export function CommandPalette() {
         run: () => navigate("/puzzles"),
       },
       {
+        id: "cmd:design",
+        label: "Practise a design",
+        icon: DraftingCompass,
+        keywords: "design practice system design lld hld architecture sketch 45 minutes",
+        group: "Commands",
+        run: () => navigate("/designs"),
+      },
+      {
         id: "cmd:story-practice",
         label: "Practise a behavioral question",
         icon: MessageSquareQuote,

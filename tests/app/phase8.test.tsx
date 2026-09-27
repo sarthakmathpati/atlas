@@ -12,6 +12,7 @@ import { useMentalMathStore } from "@/stores/mentalMathStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useStoryStore } from "@/stores/storyStore";
+import { useDesignStore } from "@/stores/designStore";
 import { useUiStore } from "@/stores/uiStore";
 
 async function go(hash: string) {
@@ -318,4 +319,84 @@ describe("story bank", () => {
       }),
     );
   }, 20_000);
+});
+
+describe("design practice", () => {
+  beforeEach(() => {
+    window.location.hash = "#/today";
+    localStorage.clear();
+  });
+  afterEach(() => cleanup());
+
+  it("lists the 46 prompts with their status", async () => {
+    await ready();
+    await go("#/designs?kind=hld");
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Designs" }, { timeout: 4000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/of 46 done/)).toBeInTheDocument();
+    const list = screen.getByRole("region", { name: "System design" });
+    expect(within(list).getByRole("link", { name: /URL shortener/ })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Low-level design" })).toBeNull();
+  });
+
+  it("autosaves sections, explains a bad sketch line, and saves a self-reviewed attempt as practice", async () => {
+    const user = userEvent.setup();
+    await ready();
+    await waitFor(() => expect(useDesignStore.getState().loaded).toBe(true));
+    await go("#/designs/hld-url-shortener");
+    await user.click(
+      await screen.findByRole("button", { name: "Start the design" }, { timeout: 4000 }),
+    );
+    const api = await screen.findByRole("textbox", { name: "API" });
+    await user.type(api, "POST /links returns a short code");
+    await user.tab();
+    const sketch = screen.getByRole("textbox", { name: "Architecture sketch" });
+    fireEvent.change(sketch, {
+      target: {
+        value:
+          "Client -> API Gateway : HTTPS\nAPI Gateway => Links DB\nAPI Gateway -> Links DB [db]",
+      },
+    });
+    const errors = await screen.findByRole("list", { name: "Lines to fix" });
+    expect(within(errors).getByRole("button", { name: "Line 2" })).toBeInTheDocument();
+    expect(errors.textContent).toMatch(/Write it as “->”/);
+    expect(await screen.findByText("3 boxes, 2 arrows")).toBeInTheDocument();
+    await waitFor(
+      () => {
+        const open = Object.values(useDesignStore.getState().attempts).find(
+          (a) => a.problemId === "hld-url-shortener" && !a.finishedAt,
+        );
+        expect(open?.sections).toMatchObject({
+          api: "POST /links returns a short code",
+          sketch: expect.stringContaining("Client -> API Gateway"),
+        });
+      },
+      { timeout: 4000 },
+    );
+    await user.click(screen.getByRole("button", { name: "Finish and review" }));
+    const save = screen.getByRole("button", { name: "Save attempt" });
+    expect(save).toBeDisabled();
+    for (const group of screen
+      .getAllByRole("radiogroup")
+      .filter((g) => within(g).queryByRole("radio", { name: "Covered" }))) {
+      await user.click(within(group).getByRole("radio", { name: "Covered" }));
+    }
+    expect(screen.getByText(/Counts as 5\/5/)).toBeInTheDocument();
+    await user.click(save);
+    await waitFor(() => {
+      const state = useProblemStore.getState().states["hld-url-shortener"];
+      expect(state?.attempts.at(-1)).toMatchObject({ result: "solved_alone", language: "text" });
+      expect(state?.inReview).toBe(false);
+    });
+    const finished = Object.values(useDesignStore.getState().attempts).find(
+      (a) => a.problemId === "hld-url-shortener" && a.finishedAt,
+    );
+    expect(finished?.selfReview).toEqual([2, 2, 2, 2, 2]);
+    expect(await screen.findByText("Earlier attempts")).toBeInTheDocument();
+    // It counts as practice for the classic concept.
+    expect(useConceptStateStore.getState().states["sysd.classics.url-shortener"]?.status).not.toBe(
+      "not_started",
+    );
+  }, 30_000);
 });

@@ -11,6 +11,7 @@ import type { AIMode } from "@/lib/types";
 import { useConceptStateStore } from "@/stores/conceptStateStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { addStory, updateStory, useStoryStore } from "@/stores/storyStore";
+import { startDesign, updateSection, useDesignStore } from "@/stores/designStore";
 import { answerCopy, go, resetClaude, setupMode } from "./claudeHarness";
 
 describe.each(["sample", "api", "copy"] as AIMode[])(
@@ -95,6 +96,44 @@ describe.each(["sample", "api", "copy"] as AIMode[])(
       const checks =
         useConceptStateStore.getState().checks["career.behavioral.building-a-story-bank"];
       expect(checks?.at(-1)?.score).toBeCloseTo(0.7);
+    }, 20_000);
+
+    it("reviews a design against its rubric and keeps the review with the attempt", async () => {
+      const user = userEvent.setup();
+      await setupMode(mode);
+      await waitFor(() => expect(useDesignStore.getState().loaded).toBe(true));
+      let id = "";
+      act(() => {
+        const a = startDesign("lld-parking-lot");
+        id = a.id;
+        updateSection(
+          id,
+          "requirements",
+          "Spot types for bikes, cars and trucks. Pricing strategy.",
+        );
+        updateSection(id, "entities", "ParkingLot, Floor, Spot, Ticket, Payment.");
+      });
+      await go("#/designs/lld-parking-lot");
+      await user.click(
+        await screen.findByRole("button", { name: "Finish and review" }, { timeout: 4000 }),
+      );
+      await user.click(screen.getByRole("button", { name: "Review with Claude" }));
+      await answerCopy(mode, user);
+      const panel = screen.getByRole("region", { name: "Review" });
+      expect(
+        await within(panel).findByText(/Overall \d\/5/, {}, { timeout: 4000 }),
+      ).toBeInTheDocument();
+      expect(
+        within(panel).getAllByText(/Not discussed|Covered with a concrete choice/).length,
+      ).toBe(5);
+      await user.click(screen.getByRole("button", { name: "Save attempt" }));
+      await waitFor(() => {
+        const a = useDesignStore.getState().attempts[id];
+        expect(a?.finishedAt).toBeDefined();
+        expect(a?.review).toMatchObject({ rubric: expect.any(Array), overall: expect.any(Number) });
+      });
+      const attempt = useProblemStore.getState().states["lld-parking-lot"]?.attempts.at(-1);
+      expect(attempt?.designAttemptId).toBe(id);
     }, 20_000);
   },
 );

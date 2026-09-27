@@ -217,6 +217,44 @@ export function demoSampleResponder(input: SampleInput): string {
     );
   }
 
+  if (text.includes("Review the learner's design against the rubric")) {
+    // Score each rubric point by whether the design mentions its first long word.
+    const rubricBlock = text.split("## Rubric")[1]?.split("## Learner's design")[0] ?? "";
+    const design = (text.split("## Learner's design")[1] ?? "").toLowerCase();
+    const points = rubricBlock
+      .split("\n")
+      .map((l) => l.replace(/^- /, "").trim())
+      .filter(Boolean);
+    const rubric = points.map((point) => {
+      const key = point
+        .toLowerCase()
+        .split(/\W+/)
+        .find((w) => w.length > 5);
+      const hit = key ? design.includes(key) : false;
+      return {
+        point,
+        score: hit ? 2 : 0,
+        comment: hit
+          ? "Covered with a concrete choice and a reason."
+          : "Not discussed. Say what you'd do and why.",
+      };
+    });
+    const covered = rubric.filter((r) => r.score === 2).length;
+    const overall = Math.max(
+      1,
+      Math.min(5, Math.round(1 + (4 * covered) / Math.max(1, points.length))),
+    );
+    return json({
+      rubric,
+      missed: rubric.filter((r) => r.score === 0).map((r) => r.point),
+      suggestions: [
+        "Start from the requirements and state the numbers you design for.",
+        "Name the trade-off you are making at each choice.",
+      ],
+      overall,
+    });
+  }
+
   if (text.includes("Critique this STAR story for a behavioral interview")) {
     const question = field(text, /Interview question: (.+)/) ?? "the question";
     return json({

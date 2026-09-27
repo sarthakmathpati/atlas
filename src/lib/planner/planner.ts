@@ -754,11 +754,19 @@ export function planDay(input: PlannerInput, kept: readonly PlanItem[] = []): Pl
       b.tryFirst(mentalMathCandidates());
   }
 
-  // 5. Weekly extras, before the reviews so a day of many small re-solves doesn't crowd them out
-  //    (each has narrow conditions and happens at most once or twice a week).
-  for (const kind of ["mock", "design", "story"] as const) {
-    if (can(kind) && !b.has(kind)) b.tryFirst(extraCandidates(ctx, kind, budget));
-  }
+  // 5. Weekly extras (each has narrow conditions and happens at most once or twice a week).
+  //    Usually before the reviews, so a day of many small re-solves doesn't crowd them out; within
+  //    14 days of the interview after them, because then reviews come first (step 6).
+  const extras = () => {
+    // Near the interview the short story practice goes first; it's meant for those weeks.
+    const order = ctx.near
+      ? (["story", "mock", "design"] as const)
+      : (["mock", "design", "story"] as const);
+    for (const kind of order) {
+      if (can(kind) && !b.has(kind)) b.tryFirst(extraCandidates(ctx, kind, budget));
+    }
+  };
+  if (!ctx.near) extras();
 
   // 3. Reviews block.
   const cap = budget * (ctx.near ? REVIEW_SHARE_NEAR : REVIEW_SHARE);
@@ -804,6 +812,8 @@ export function planDay(input: PlannerInput, kept: readonly PlanItem[] = []): Pl
       first = false;
     }
   }
+
+  if (ctx.near) extras();
 
   // 4. New learning, split by the balance setting.
   const remaining = Math.max(0, budget - b.total);

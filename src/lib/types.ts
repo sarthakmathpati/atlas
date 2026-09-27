@@ -266,6 +266,8 @@ export interface Attempt {
   mode: "normal" | "resolve" | "mock";
   review?: CodeReview; // AI code review result (F12)
   dryRuns?: { input: string; output: string; createdAt: string }[];
+  /** Design practice (F26): the design attempt this attempt records. */
+  designAttemptId?: string;
   /** Quant puzzles (F28): the final answer typed, and how it was checked or graded. */
   answer?: string;
   answerTries?: number;
@@ -487,8 +489,18 @@ export interface DesignAttempt {
   // LLD and HLD practice (F26)
   id: string;
   problemId: string;
-  sections: Record<string, string>; // requirements, entities, api, dataModel, diagram, tradeoffs…
+  sections: Record<string, string>; // requirements, entities, api, dataModel, sketch, tradeoffs…
+  /** Claude's rubric review (prompt 12, DesignReview). */
   review?: unknown;
+  /** The owner's own review: 0, 1 or 2 per rubric point, in rubric order. */
+  selfReview?: number[];
+  /** Time on the 45-minute timer. */
+  elapsedMs?: number;
+  /** Set when the owner finishes the attempt (then it counts as practice). */
+  finishedAt?: string;
+  /** Practice on its own, or the design round of a mock interview (F15). */
+  mode?: "practice" | "mock";
+  mockId?: string;
   createdAt: string;
   updatedAt: string;
 }

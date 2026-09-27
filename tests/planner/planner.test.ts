@@ -68,6 +68,15 @@ function expectFitsBudget(items: readonly PlanItem[], budget: number) {
 
 const kinds = (items: readonly PlanItem[]) => items.map((i) => i.kind);
 
+/**
+ * An ordinary day in the week: this week's design practice and mock are already done, so the
+ * plan shows the core mix of reviews and new learning (weekly extras are tested on their own).
+ */
+const ORDINARY_WEEK: PlannerInput["history"] = {
+  designs: [addDaysToDate(DAY, -2)],
+  mocks: [addDaysToDate(DAY, -3)],
+};
+
 describe("budget ceiling", () => {
   it("is B plus 10%, never more than 15 minutes over", () => {
     expect(budgetCeiling(30)).toBe(33);
@@ -124,7 +133,7 @@ describe("a new owner", () => {
 });
 
 describe("an owner mid-way", () => {
-  const input = inputFor("mid");
+  const input = inputFor("mid", { history: ORDINARY_WEEK });
   const plan = planDay(input);
 
   it("mixes reviews and new learning within the budget rules", () => {
@@ -159,7 +168,7 @@ describe("an owner mid-way", () => {
   });
 
   it("biases new learning toward the focus subject", () => {
-    const learn = inputFor("mid", { budget: 120 });
+    const learn = inputFor("mid", { budget: 120, history: ORDINARY_WEEK });
     const items = planDay(learn).filter((i) => i.kind === "learn-concept");
     expect(items.length).toBeGreaterThan(0);
     expect(conceptById.get(items[0]!.refId!)!.subjectId).toBe("os");

@@ -160,6 +160,7 @@ export const attemptSchema: z.ZodType<Attempt> = z.object({
   dryRuns: z
     .array(z.object({ input: z.string(), output: z.string(), createdAt: isoTime }))
     .optional(),
+  designAttemptId: z.string().optional(),
   answer: z.string().optional(),
   answerTries: z.number().int().min(0).optional(),
   grade: puzzleAttemptGradeSchema.optional(),
@@ -333,6 +334,11 @@ export const designAttemptSchema: z.ZodType<DesignAttempt> = z.object({
   problemId: z.string().min(1),
   sections: z.record(z.string(), z.string()),
   review: z.unknown().optional(),
+  selfReview: z.array(z.number().int().min(0).max(2)).optional(),
+  elapsedMs: z.number().min(0).optional(),
+  finishedAt: isoTime.optional(),
+  mode: z.enum(["practice", "mock"]).optional(),
+  mockId: z.string().optional(),
   createdAt: isoTime,
   updatedAt: isoTime,
 });

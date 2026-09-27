@@ -16,6 +16,7 @@ import { useConceptStateStore } from "@/stores/conceptStateStore";
 import { useCustomConceptStore } from "@/stores/customConceptStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { designDates, useDesignStore } from "@/stores/designStore";
 import { useStoryStore } from "@/stores/storyStore";
 
 /** Everything the status engine and the planner read, from the stores as they are now. */
@@ -43,6 +44,7 @@ const toLocalDate = (iso: string) => localDate(new Date(iso));
  */
 export function plannerHistoryNow(): PlannerHistory {
   return {
+    designs: designDates(useDesignStore.getState().attempts, toLocalDate),
     stories: practiceDates(Object.values(useStoryStore.getState().stories), toLocalDate),
   };
 }
