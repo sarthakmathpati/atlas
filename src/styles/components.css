@@ -14,7 +14,7 @@
   dialog.atlas-layer {
     color: var(--text);
     background: var(--surface-raised);
-    border: 1px solid var(--rule);
+    border: 1px solid var(--layer-edge);
     padding: 0;
     max-width: none;
     max-height: none;
@@ -47,7 +47,7 @@
   /* Centered dialog: 150 ms fade and scale from 98 %. */
   dialog.atlas-dialog {
     margin: auto;
-    border-radius: var(--radius-panel);
+    border-radius: var(--radius-focal);
     box-shadow: var(--shadow-float);
     opacity: 0;
     transform: scale(0.98);
@@ -103,7 +103,7 @@
     max-height: calc(100% - 48px - env(safe-area-inset-top, 0px));
     margin: 0;
     border-width: 1px 0 0 0;
-    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+    border-radius: var(--radius-focal) var(--radius-focal) 0 0;
     box-shadow: var(--shadow-float);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     transform: translateY(100%);
@@ -242,14 +242,21 @@
     text-decoration: underline;
   }
 
-  /* ----- Reading text (MarkdownView): 16 px, about 70 characters per line ---------------------- */
+  /* ----- Reading text (MarkdownView, 12.10.4): 17 px, 18 px from 1280 px wide, line height 1.6,
+     60 to 70 characters per line. Lessons stay plain: Plex for headings too, no decoration. -- */
 
   .atlas-prose {
-    font-size: 16px;
+    font-size: 17px;
     line-height: 1.6;
-    max-width: 70ch;
+    max-width: 68ch;
     color: var(--text);
     overflow-wrap: break-word;
+  }
+
+  @media (min-width: 1280px) {
+    .atlas-prose {
+      font-size: 18px;
+    }
   }
 
   .atlas-prose > * + * {
@@ -266,16 +273,16 @@
   }
 
   .atlas-prose h1 {
-    font-size: 22px;
+    font-size: 1.3em;
   }
   .atlas-prose h2 {
-    font-size: 20px;
+    font-size: 1.2em;
   }
   .atlas-prose h3 {
-    font-size: 18px;
+    font-size: 1.1em;
   }
   .atlas-prose h4 {
-    font-size: 16px;
+    font-size: 1em;
   }
 
   .atlas-prose :is(h1, h2, h3, h4):first-child {
@@ -338,7 +345,7 @@
   .atlas-prose table {
     border-collapse: collapse;
     width: 100%;
-    font-size: 14px;
+    font-size: 15px;
   }
 
   .atlas-prose th,
@@ -430,50 +437,20 @@
 }
 
 /*
- * Printing: whatever the app's theme, a sheet prints in the light theme. The shell hides itself
- * (print: classes in AppShell, Sidebar, TopBar, MobileNav and the notices); each subject of a
- * 1-week sheet starts a new page; headings stay with what follows; code wraps instead of being
- * cut off. The triple :root outranks both dark-theme selectors in tokens.css.
+ * Printing: whatever the app's theme, a sheet prints in Day (tokens.css keeps Dusk and Night
+ * off paper), on white. The shell hides itself (print: classes in AppShell, Sidebar, TopBar,
+ * MobileNav and the notices); each subject of a 1-week sheet starts a new page; headings stay
+ * with what follows; code wraps instead of being cut off.
  */
 @media print {
   @page {
     margin: 14mm 12mm;
   }
 
-  :root:root:root {
-    color-scheme: light;
+  :root {
     --canvas: #ffffff;
     --surface: #ffffff;
     --surface-raised: #ffffff;
-    --surface-sunken: #eef2f6;
-    --rule: #d3dee8;
-    --rule-strong: #b7c7d6;
-    --text: #0e2233;
-    --text-muted: #4e6477;
-    --text-faint: #5a6f82;
-    --accent: #1f6fb2;
-    --accent-soft: rgb(31 111 178 / 0.1);
-    --on-accent: #ffffff;
-    --success: #1f7a4d;
-    --warning: #8a5d00;
-    --code-bg: #f6f8fb;
-    --code-gutter: #667a8c;
-    --code-keyword: #7b3fb0;
-    --code-string: #17735a;
-    --code-number: #9a4d00;
-    --code-comment: #5a6f82;
-    --code-function: #1560a0;
-    --code-type: #8a3a8a;
-    --code-meta: #9a4d00;
-    --code-operator: #33495c;
-    --code-invalid: #b23a2c;
-    --status-not-started-stroke: #7c90a2;
-    --status-learning-fill: #f4c75a;
-    --status-learning-stroke: #a97408;
-    --status-strong-fill: #57c28f;
-    --status-strong-stroke: #1f7a4d;
-    --status-fading-fill: #f08a7e;
-    --status-fading-stroke: #b23a2c;
   }
 
   html,

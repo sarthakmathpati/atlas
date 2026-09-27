@@ -5,6 +5,6 @@ shortName: "Math"
 order: 13
 tracks: [quant]
 icon: sigma
-regionHue: 236
+regionHue: 70
 description: "Counting, algebra, calculus and fast mental arithmetic for quant rounds."
 ---

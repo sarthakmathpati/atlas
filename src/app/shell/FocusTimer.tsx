@@ -82,8 +82,10 @@ export function FocusTimerButton() {
               active ? `${modeLabel} timer, ${formatClock(remaining)} left` : "Focus timer"
             }
             className={cx(
-              "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-control transition-colors hover:bg-surface-sunken max-md:h-11",
-              active ? "px-2.5 text-text" : "w-9 text-muted hover:text-text max-md:w-11",
+              "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full transition-colors max-md:h-11",
+              active
+                ? "bg-surface px-3 text-text hover:bg-surface-raised"
+                : "w-9 text-muted hover:bg-surface hover:text-text max-md:w-11",
             )}
           >
             <Timer

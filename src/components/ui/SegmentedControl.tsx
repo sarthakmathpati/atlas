@@ -59,7 +59,7 @@ export function SegmentedControl<T extends string>({
       aria-label={label}
       onKeyDown={onKeyDown}
       className={cx(
-        "inline-flex rounded-control border border-rule bg-surface-sunken p-0.5",
+        "inline-flex rounded-full bg-surface-sunken p-[3px]",
         full && "flex w-full",
         className,
       )}
@@ -80,12 +80,10 @@ export function SegmentedControl<T extends string>({
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(option.value)}
             className={cx(
-              "inline-flex items-center justify-center gap-1.5 rounded-[5px] font-medium whitespace-nowrap transition-colors duration-100",
-              size === "sm" ? "h-7 px-2.5 text-sm max-md:h-10" : "h-8 px-3 text-base max-md:h-10",
+              "inline-flex items-center justify-center gap-1.5 rounded-full font-medium whitespace-nowrap transition-colors duration-100",
+              size === "sm" ? "h-7 px-3 text-sm max-md:h-10" : "h-8 px-3.5 text-base max-md:h-10",
               full && "flex-1",
-              active
-                ? "bg-surface text-text shadow-[0_0_0_1px_var(--rule)]"
-                : "text-muted hover:text-text",
+              active ? "bg-surface-raised text-text shadow-pill" : "text-muted hover:text-text",
             )}
           >
             {Icon && <Icon size={15} aria-hidden="true" className="shrink-0" />}

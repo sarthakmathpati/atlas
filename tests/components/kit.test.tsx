@@ -5,6 +5,11 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, IconButton } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { ContourCanvas } from "@/components/ui/ContourCanvas";
+import { cx } from "@/components/ui/cx";
+import { SubjectEmblem } from "@/components/ui/SubjectEmblem";
+import { KitThemes } from "@/features/kit/KitThemes";
 import { DifficultyChip, StatusChip } from "@/components/ui/Chip";
 import { Dialog } from "@/components/ui/Dialog";
 import { Switch } from "@/components/ui/Field";
@@ -230,5 +235,63 @@ describe("status and difficulty", () => {
       screen.getByRole("img", { name: "1 not started, 2 learning, 3 strong" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+  });
+});
+
+describe("Survey parts (12.10)", () => {
+  it("draws a subject emblem as decoration, or as an image when labelled", () => {
+    const { container, rerender } = render(<SubjectEmblem subjectId="dsa" size={32} />);
+    const svg = container.querySelector("svg")!;
+    expect(svg.getAttribute("data-subject")).toBe("dsa");
+    expect(svg.getAttribute("aria-hidden")).toBe("true");
+    expect(svg.querySelectorAll("path").length).toBeGreaterThanOrEqual(3);
+    rerender(<SubjectEmblem subjectId="dsa" label="Data structures and algorithms" />);
+    expect(screen.getByRole("img", { name: "Data structures and algorithms" })).toBeInTheDocument();
+  });
+
+  it("keeps the contour canvas out of the accessibility tree", () => {
+    const { container } = render(
+      <div className="relative">
+        <ContourCanvas
+          seed="test"
+          hills={[{ x: 0.5, y: 0.5, r: 0.1, height: 1, label: "DSA 40" }]}
+        />
+        <p>Good evening</p>
+      </div>,
+    );
+    expect(container.querySelector("canvas")?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("shows Day, Dusk and Night side by side, each in its own theme", () => {
+    const { container } = render(<KitThemes />);
+    const previews = [...container.querySelectorAll("[data-theme-preview]")];
+    expect(previews.map((p) => p.getAttribute("data-theme-preview"))).toEqual([
+      "day",
+      "dusk",
+      "night",
+    ]);
+    for (const name of ["Day", "Dusk", "Night"]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    }
+  });
+
+  it("gives cards a title in the display face and marks the focal one", () => {
+    render(
+      <>
+        <Card title="Streak">A card</Card>
+        <Card focal title="Up next">
+          The focal card
+        </Card>
+      </>,
+    );
+    expect(screen.getByRole("heading", { name: "Streak" }).className).toContain("font-display");
+    expect(screen.getByText("The focal card").className).toContain("shadow-focal");
+  });
+
+  it("merges the custom size, radius and shadow tokens (cx)", () => {
+    expect(cx("text-2xl text-page")).toBe("text-page");
+    expect(cx("text-page text-muted")).toBe("text-page text-muted");
+    expect(cx("rounded-panel rounded-focal")).toBe("rounded-focal");
+    expect(cx("shadow-float shadow-focal")).toBe("shadow-focal");
   });
 });

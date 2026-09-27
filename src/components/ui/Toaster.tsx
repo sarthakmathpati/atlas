@@ -29,7 +29,7 @@ function ToastView({ toast }: { toast: ToastItem }) {
       onPointerLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
-      className="atlas-toast pointer-events-auto flex w-full items-center gap-3 rounded-panel border border-rule bg-surface-raised py-2 pr-2 pl-4 text-base text-text shadow-float"
+      className="atlas-toast pointer-events-auto flex w-full items-center gap-3 rounded-panel border border-layer-edge bg-surface-raised py-2 pr-2 pl-4 text-base text-text shadow-float"
     >
       {Icon && (
         <Icon
@@ -46,7 +46,7 @@ function ToastView({ toast }: { toast: ToastItem }) {
             toast.action?.onClick();
             dismiss(toast.id);
           }}
-          className="h-8 shrink-0 rounded-control px-2.5 text-base font-medium text-accent hover:bg-accent-soft max-md:h-10"
+          className="h-8 shrink-0 rounded-full px-3 text-base font-semibold text-accent hover:bg-accent-soft max-md:h-10"
         >
           {toast.action.label}
         </button>
@@ -55,7 +55,7 @@ function ToastView({ toast }: { toast: ToastItem }) {
         type="button"
         onClick={() => dismiss(toast.id)}
         aria-label="Dismiss"
-        className="grid size-8 shrink-0 place-items-center rounded-control text-muted hover:bg-surface-sunken hover:text-text max-md:size-10"
+        className="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-sunken hover:text-text max-md:size-10"
       >
         <X size={16} aria-hidden="true" />
       </button>

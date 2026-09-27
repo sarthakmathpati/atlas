@@ -1,4 +1,5 @@
-// The design kit (section 12.7): every component on one page, in the current theme. Linked from
+// The design kit (sections 12.7 and 12.10): every component on one page, in the current theme,
+// plus Day, Dusk and Night side by side, the subject colors and the contour texture. Linked from
 // Settings → About. Useful for reviewing the design system and for screenshots.
 import { Bell, Filter, Plus, Settings2, Trash2 } from "lucide-react";
 import { lazy, Suspense, useState, type ReactNode } from "react";
@@ -31,6 +32,7 @@ import { CodeView } from "@/components/ui/code/CodeView";
 import { concepts } from "@/data/syllabus";
 import { AIErrorView, ClaudeTag, StopButton, Thinking } from "@/features/ai/parts";
 import { toast } from "@/stores/toastStore";
+import { KitContours, KitSubjects, KitThemes } from "./KitThemes";
 
 const MarkdownView = lazy(() => import("@/components/ui/MarkdownView"));
 const CodeEditor = lazy(() => import("@/components/ui/code/CodeEditor"));
@@ -98,11 +100,27 @@ const COMBO_OPTIONS = concepts
 
 function Demo({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section aria-label={title} className="rounded-panel border border-rule bg-surface">
-      <h2 className="border-b border-rule px-4 py-2.5 text-base font-semibold text-text">
-        {title}
-      </h2>
-      <div className="flex flex-col gap-4 p-4">{children}</div>
+    <section aria-label={title} className="rounded-panel bg-surface">
+      <h2 className="px-4 pt-4 font-display text-lg font-semibold text-text sm:px-5">{title}</h2>
+      <div className="flex flex-col gap-4 p-4 sm:px-5 sm:pb-5">{children}</div>
+    </section>
+  );
+}
+
+function KitSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-label={title} className="mb-8">
+      <h2 className="font-display text-xl font-semibold text-text">{title}</h2>
+      <p className="mt-1 mb-4 max-w-[70ch] text-base text-muted">{description}</p>
+      {children}
     </section>
   );
 }
@@ -127,9 +145,27 @@ export default function KitPage() {
     <PageFrame className="max-w-7xl">
       <PageHeader
         title="Design kit"
-        description="Every building block of Atlas, drawn with the current theme's tokens."
+        description="Every building block of Atlas. The three themes are shown side by side; everything below them uses the theme showing now."
       />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <KitSection
+        title="Three kinds of map"
+        description="Day, Dusk and Night share one layout. Each panel is drawn in its own theme, whatever the app shows."
+      >
+        <KitThemes />
+      </KitSection>
+      <KitSection
+        title="Subject colors"
+        description="One hue per subject at one lightness, so no subject shouts. A subject color is a tint, an emblem or a small square mark, always with the subject's name."
+      >
+        <KitSubjects />
+      </KitSection>
+      <KitSection
+        title="Contour texture"
+        description="The paper of page heads, empty states and breaks, with the theme's extras: spot heights by day, a graticule at dusk, soundings at night."
+      >
+        <KitContours />
+      </KitSection>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Demo title="Buttons">
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="primary" icon={Plus}>
@@ -404,7 +440,7 @@ export default function KitPage() {
         </Demo>
       </div>
 
-      <div className="mt-6 grid gap-6">
+      <div className="mt-6 grid grid-cols-1 gap-6">
         <Demo title="Markdown with math, tables and code">
           <Suspense fallback={<Loading />}>
             <MarkdownView>{SAMPLE_MARKDOWN}</MarkdownView>

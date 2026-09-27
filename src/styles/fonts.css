@@ -1,4 +1,26 @@
-/* IBM Plex, Latin subset, weights 400/500/600, woff2 only (bundled, never fetched from a CDN). */
+/*
+ * Bundled fonts, Latin subset, woff2 only (never fetched from a CDN):
+ * IBM Plex Sans, Sans Condensed and Mono at 400/500/600 for the interface, reading and code;
+ * Bricolage Grotesque at 600/700 for display (page titles, card titles, big numbers; 12.10.4).
+ */
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("@fontsource-files/bricolage-grotesque/files/bricolage-grotesque-latin-600-normal.woff2")
+    format("woff2");
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("@fontsource-files/bricolage-grotesque/files/bricolage-grotesque-latin-700-normal.woff2")
+    format("woff2");
+}
 
 @font-face {
   font-family: "IBM Plex Sans";

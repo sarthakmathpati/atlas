@@ -17,7 +17,7 @@ import { hydratePlan } from "@/stores/planStore";
 import { detachAll, hydrateAll } from "@/stores/hydrate";
 import { hydrateProfile, useProfileStore } from "@/stores/profileStore";
 import { toast } from "@/stores/toastStore";
-import { applyMotion, applyTheme, readStoredTheme } from "../theme";
+import { applyMotion, readStoredSchedule, readStoredTheme, useThemeController } from "../theme";
 import { useServicesState } from "./servicesContext";
 
 export function StoreHydrator() {
@@ -106,13 +106,15 @@ export function StoreHydrator() {
   return null;
 }
 
-/** Applies the profile's theme and motion settings (the profile syncs across devices). */
+/**
+ * Applies the profile's theme and motion settings (the profile syncs across devices). Until the
+ * profile loads, the choice mirrored in localStorage (the one index.html applied) keeps showing.
+ */
 export function AppearanceSync() {
-  const theme = useProfileStore((s) => s.profile?.theme);
+  const theme = useProfileStore((s) => s.profile?.theme) ?? readStoredTheme();
+  const schedule = useProfileStore((s) => s.profile?.prefs.themeSchedule) ?? readStoredSchedule();
   const motion = useProfileStore((s) => s.profile?.prefs.reducedMotion);
-  useEffect(() => {
-    if (theme && theme !== readStoredTheme()) applyTheme(theme);
-  }, [theme]);
+  useThemeController(theme, schedule);
   useEffect(() => {
     if (motion) applyMotion(motion);
   }, [motion]);

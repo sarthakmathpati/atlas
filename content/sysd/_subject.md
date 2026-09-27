@@ -5,6 +5,6 @@ shortName: "System design"
 order: 11
 tracks: [sde]
 icon: server
-regionHue: 242
+regionHue: 130
 description: "Designing large systems that scale, stay up and stay consistent."
 ---

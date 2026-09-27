@@ -1,6 +1,7 @@
 // A complete, realistic set of user data touching every table and every optional field, used by
 // the storage round-trip and merge tests.
 import { createDefaultProfile } from "@/lib/storage/defaults";
+import { SCHEMA_VERSION } from "@/lib/constants";
 import type { AtlasExport, ExportData } from "@/lib/storage/schemas";
 import type { Attempt, ProblemState } from "@/lib/types";
 
@@ -349,5 +350,5 @@ export function fullFixture(): ExportData {
 }
 
 export function asBackup(data: ExportData): AtlasExport {
-  return { app: "Atlas", schemaVersion: 1, exportedAt: T2, data };
+  return { app: "Atlas", schemaVersion: SCHEMA_VERSION, exportedAt: T2, data };
 }

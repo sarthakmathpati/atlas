@@ -23,12 +23,12 @@ export function BottomTabs({
   const tabClass = (active: boolean) =>
     cx(
       "relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs transition-colors",
-      active ? "font-medium text-accent" : "text-muted",
+      active ? "font-semibold text-accent" : "text-muted",
     );
   return (
     <nav
       aria-label="Main"
-      className="flex shrink-0 border-t border-rule bg-surface md:hidden print:hidden"
+      className="flex shrink-0 border-t border-rule bg-sidebar md:hidden print:hidden"
     >
       {TABS.map((item) => {
         const active = item.routes.includes(route.name);
@@ -84,8 +84,8 @@ function SheetLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cx(
-        "flex h-12 items-center gap-3 rounded-control px-3 text-md",
-        active ? "bg-accent-soft font-medium text-text" : "text-text hover:bg-surface-sunken",
+        "flex h-12 items-center gap-3 rounded-full px-4 text-md",
+        active ? "bg-surface-sunken font-semibold text-text" : "text-text hover:bg-surface-sunken",
       )}
     >
       <Icon
@@ -119,7 +119,7 @@ export function MoreSheet({ route }: { route: Route }) {
               close();
               setShortcutsOpen(true);
             }}
-            className="flex h-12 w-full items-center gap-3 rounded-control px-3 text-md text-text hover:bg-surface-sunken"
+            className="flex h-12 w-full items-center gap-3 rounded-full px-4 text-md text-text hover:bg-surface-sunken"
           >
             <Keyboard size={20} strokeWidth={1.75} aria-hidden="true" className="text-muted" />
             Keyboard shortcuts

@@ -5,6 +5,6 @@ shortName: "Architecture"
 order: 7
 tracks: [quant, sde]
 icon: microchip
-regionHue: 262
+regionHue: 212
 description: "How the hardware runs your code, and how to make it fast."
 ---

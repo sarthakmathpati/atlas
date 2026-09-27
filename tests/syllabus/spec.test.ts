@@ -40,8 +40,7 @@ describe("syllabus matches BUILD_SPEC.md section 6", () => {
       const built = syllabus.subjects.find((b) => b.id === s.id)!;
       expect(built).toMatchObject({ name: s.name, tracks: s.tracks, icon: s.icon, order: s.order });
       expect(built.description.length).toBeGreaterThan(10);
-      expect(built.regionHue).toBeGreaterThanOrEqual(170);
-      expect(built.regionHue).toBeLessThanOrEqual(280); // cool hues only (12.2)
+      // Hues and their colors (12.10.3) are checked in tests/styles/subjectColors.test.ts.
     }
   });
 

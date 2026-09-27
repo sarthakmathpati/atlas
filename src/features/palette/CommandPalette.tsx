@@ -19,15 +19,12 @@ import {
   ListChecks,
   MessageSquareQuote,
   MessagesSquare,
-  Monitor,
-  Moon,
   PanelLeft,
   Puzzle,
   Route,
   ScrollText,
   Search,
   Sparkles,
-  Sun,
   Tag,
   type LucideIcon,
 } from "lucide-react";
@@ -36,6 +33,8 @@ import { useServicesState } from "@/app/providers/servicesContext";
 import { navigate, routeHref } from "@/app/router";
 import { ALL_NAV_ITEMS } from "@/app/shell/nav";
 import { setTheme } from "@/app/theme";
+import { THEME_OPTIONS } from "@/app/themeOptions";
+import type { ThemeChoice } from "@/lib/types";
 import { Dialog } from "@/components/ui/Dialog";
 import { Kbd } from "@/components/ui/Misc";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
@@ -99,6 +98,14 @@ function HitIcon({ kind, id }: { kind: SearchKind; id: string }) {
   const Icon = KIND_ICON[kind] ?? ArrowRight;
   return <Icon size={16} aria-hidden="true" />;
 }
+
+const THEME_COMMAND: Record<ThemeChoice, string> = {
+  system: "Match the device's theme",
+  day: "Switch to the Day theme",
+  dusk: "Switch to the Dusk theme",
+  night: "Switch to the Night theme",
+  schedule: "Switch themes by time of day",
+};
 
 interface PaletteAction {
   id: string;
@@ -410,30 +417,14 @@ export function CommandPalette() {
           if (result.message) toast(result.message, { tone: result.ok ? "success" : "error" });
         },
       },
-      {
-        id: "cmd:theme-dark",
-        label: "Switch to dark theme",
-        icon: Moon,
-        keywords: "theme night appearance",
-        group: "Commands",
-        run: () => setTheme("dark"),
-      },
-      {
-        id: "cmd:theme-light",
-        label: "Switch to light theme",
-        icon: Sun,
-        keywords: "theme day appearance",
-        group: "Commands",
-        run: () => setTheme("light"),
-      },
-      {
-        id: "cmd:theme-system",
-        label: "Match the system theme",
-        icon: Monitor,
-        keywords: "theme auto appearance",
-        group: "Commands",
-        run: () => setTheme("system"),
-      },
+      ...THEME_OPTIONS.map((o) => ({
+        id: `cmd:theme-${o.value}`,
+        label: THEME_COMMAND[o.value],
+        icon: o.icon,
+        keywords: "theme appearance colors day dusk night light dark",
+        group: "Commands" as const,
+        run: () => setTheme(o.value),
+      })),
       {
         id: "cmd:sidebar",
         label: sidebarCollapsed ? "Expand the sidebar" : "Collapse the sidebar",

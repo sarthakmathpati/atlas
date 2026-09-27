@@ -23,6 +23,30 @@ export function useIsMobile(): boolean {
   return useMediaQuery(MOBILE_QUERY);
 }
 
+export type ShownTheme = "day" | "dusk" | "night";
+
+function shownTheme(): ShownTheme {
+  const value = typeof document === "undefined" ? null : document.documentElement.dataset.theme;
+  return value === "dusk" || value === "night" ? value : "day";
+}
+
+/** The theme showing now (<html data-theme>), updated whenever it switches. */
+export function useShownTheme(): ShownTheme {
+  return useSyncExternalStore(
+    (onChange) => {
+      if (typeof MutationObserver === "undefined") return () => undefined;
+      const observer = new MutationObserver(onChange);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
+      });
+      return () => observer.disconnect();
+    },
+    shownTheme,
+    () => "day",
+  );
+}
+
 /** True when motion should be reduced: the Settings override wins, then the system setting. */
 export function prefersReducedMotion(): boolean {
   if (typeof document === "undefined") return true;

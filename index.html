@@ -14,15 +14,43 @@
     />
     <title>Atlas</title>
     <script>
-      // Apply the saved theme before the first paint so there is never a flash of the wrong theme.
-      // "system" (the default) leaves data-theme unset and lets prefers-color-scheme decide.
+      // Show the right theme before the first paint, so there is never a flash of the wrong one
+      // (BUILD_SPEC.md 12.10.2). data-theme is always day, dusk or night: System follows the
+      // device, "schedule" picks by the local time. Mirrors src/lib/theme.ts (tested).
       (function () {
+        var choice = "system";
+        var schedule = null;
         try {
-          var t = localStorage.getItem("atlas.theme");
-          if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+          choice = localStorage.getItem("atlas.theme") || "system";
+          schedule = JSON.parse(localStorage.getItem("atlas.themeSchedule") || "null");
         } catch (e) {
-          /* storage can be blocked; the system theme is used */
+          /* storage can be blocked; the device's theme is used */
         }
+        if (choice === "light") choice = "day";
+        if (choice === "dark") choice = "night";
+        var theme = choice;
+        if (choice === "schedule") {
+          var defaults = { day: "06:30", dusk: "19:00", night: "22:30" };
+          var names = ["day", "dusk", "night"];
+          var starts = [];
+          for (var i = 0; i < 3; i++) {
+            var t = schedule && schedule[names[i]];
+            var m = typeof t === "string" && /^([01]\d|2[0-3]):([0-5]\d)$/.exec(t);
+            if (!m) m = /^(\d\d):(\d\d)$/.exec(defaults[names[i]]);
+            starts.push({ name: names[i], minute: Number(m[1]) * 60 + Number(m[2]), order: i });
+          }
+          starts.sort(function (a, b) {
+            return a.minute - b.minute || a.order - b.order;
+          });
+          var now = new Date();
+          var minute = now.getHours() * 60 + now.getMinutes();
+          theme = starts[2].name;
+          for (var j = 0; j < 3; j++) if (starts[j].minute <= minute) theme = starts[j].name;
+        } else if (choice !== "day" && choice !== "dusk" && choice !== "night") {
+          var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          theme = dark ? "night" : "day";
+        }
+        document.documentElement.setAttribute("data-theme", theme);
       })();
     </script>
   </head>

@@ -49,7 +49,7 @@ function languageExtension(lang: CodeLanguage): Extension[] {
   }
 }
 
-// Every color is a design token, so the editor follows the light and dark themes by itself.
+// Every color is a design token, so the editor follows Day, Dusk and Night by itself.
 const atlasTheme = EditorView.theme({
   "&": {
     height: "100%",

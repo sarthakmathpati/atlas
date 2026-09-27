@@ -27,7 +27,7 @@ export interface Subject {
   mapTracks: TrackId[];
   order: number;
   icon: string; // lucide icon name
-  regionHue: number; // 0-360, used only for the faint region tint
+  regionHue: number; // OKLCH hue, 0-360: the subject color (12.10.3, subjects.generated.css)
   description: string; // one sentence, plain language
 }
 
@@ -163,6 +163,14 @@ export type Track = "sde" | "quant" | "both";
 export type PrimaryLanguage = "cpp" | "java" | "python";
 export type AIMode = "sample" | "api" | "copy";
 export type Tier = "quick" | "default" | "complex";
+/** The theme setting (12.10.2): a fixed theme, the device's (System) or by time of day. */
+export type ThemeChoice = "system" | "day" | "dusk" | "night" | "schedule";
+/** Local start times ("HH:MM") of each theme when the setting is "By time of day". */
+export interface ThemeSchedule {
+  day: string;
+  dusk: string;
+  night: string;
+}
 
 export interface Profile {
   name: string;
@@ -172,7 +180,7 @@ export interface Profile {
   dailyMinutes: number; // default 90
   balance: { problems: number; theory: number }; // default 60/40
   focusSubjects: SubjectId[]; // "this week" focus, optional
-  theme: "system" | "light" | "dark";
+  theme: ThemeChoice;
   ai: { mode: AIMode; tierModels: Record<Tier, string> };
   onboardingDone: boolean;
   hidePremium: boolean;
@@ -187,6 +195,7 @@ export interface Profile {
     timerAutoStart: boolean; // start the attempt timer on the first keystroke
     extraLanguages: PrimaryLanguage[]; // other language topics the owner wants counted
     backupReminder: boolean;
+    themeSchedule: ThemeSchedule; // default 06:30, 19:00, 22:30
   };
   lastBackupAt?: string;
   /** When the owner last dismissed the backup banner (it stays hidden for 3 days). */

@@ -1,6 +1,6 @@
 // App-wide constants. Algorithm constants from BUILD_SPEC.md section 11 live here so they can be
 // tuned in one place and imported by tests.
-import type { Importance, Tier, TrackId } from "./types";
+import type { Importance, ThemeSchedule, Tier, TrackId } from "./types";
 
 /** The app's name, shown in the UI and written into exports. Rename the app here. */
 export const APP_NAME = "Atlas";
@@ -8,7 +8,14 @@ export const APP_EMOJI = "🧭";
 export const APP_VERSION: string = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
 
 /** Current user-data schema version (see lib/storage/migrations.ts). */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+
+/** "By time of day" start times (12.10.2): Day from 06:30, Dusk from 19:00, Night from 22:30. */
+export const DEFAULT_THEME_SCHEDULE: Readonly<ThemeSchedule> = {
+  day: "06:30",
+  dusk: "19:00",
+  night: "22:30",
+};
 
 // Spaced repetition (11.1)
 export const PROBLEM_STEPS_DAYS = [1, 3, 7, 14, 30, 60, 120] as const;

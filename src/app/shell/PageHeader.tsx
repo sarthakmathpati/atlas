@@ -40,7 +40,11 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {eyebrow && <div className="mb-1.5 text-sm text-muted">{eyebrow}</div>}
-        <h1 ref={ref} tabIndex={-1} className="text-2xl text-text outline-none max-sm:text-xl">
+        <h1
+          ref={ref}
+          tabIndex={-1}
+          className="font-display text-page font-semibold tracking-[-0.01em] text-balance text-text outline-none max-sm:text-2xl"
+        >
           {title}
         </h1>
         {description && <p className="mt-2 max-w-[68ch] text-md text-muted">{description}</p>}

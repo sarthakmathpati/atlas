@@ -4,8 +4,12 @@ import { extendTailwindMerge } from "tailwind-merge";
 
 const merge = extendTailwindMerge({
   extend: {
-    // Custom radius and shadow tokens from tokens.css (section 12.2).
-    theme: { radius: ["control", "panel"], shadow: ["float"] },
+    // Custom radius, shadow and font-size tokens (tokens.css and index.css, section 12.10).
+    theme: {
+      radius: ["control", "panel", "focal"],
+      shadow: ["float", "focal", "pill"],
+      text: ["page"],
+    },
   },
 });
 

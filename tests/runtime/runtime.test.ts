@@ -10,6 +10,7 @@ import {
 import { detectRuntime, STANDALONE_RUNTIME } from "@/lib/runtime/detect";
 import { createFakeClaude, FakeClaudeDb, FakeClaudeDownloads } from "@/lib/runtime/fakeClaude";
 import type { ClaudeEntry } from "@/lib/runtime/claude";
+import { SCHEMA_VERSION } from "@/lib/constants";
 import { openRepository, prepareRepository } from "@/lib/storage";
 import { MemoryRepository } from "@/lib/storage/MemoryRepository";
 
@@ -174,7 +175,7 @@ describe("storage selection and first run", () => {
       onboardingDone: false,
       dailyMinutes: 90,
       balance: { problems: 60, theory: 40 },
-      schemaVersion: 1,
+      schemaVersion: SCHEMA_VERSION,
     });
     expect(await repo.mistakeTags.list()).toHaveLength(MISTAKE_TAG_SEED.length);
     await repo.profile.patch({ name: "Sam" });

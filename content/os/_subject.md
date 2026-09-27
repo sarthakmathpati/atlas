@@ -5,6 +5,6 @@ shortName: "OS"
 order: 5
 tracks: [sde, quant]
 icon: cpu
-regionHue: 228
+regionHue: 196
 description: "How processes, threads, memory and files are managed underneath your code."
 ---

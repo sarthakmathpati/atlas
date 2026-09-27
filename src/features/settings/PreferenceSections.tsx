@@ -1,29 +1,70 @@
 // Settings → Appearance and Learning (F24).
-import { Monitor, Moon, Sun } from "lucide-react";
 import { useId } from "react";
-import { setTheme, type ThemeChoice } from "@/app/theme";
-import { Select, Switch } from "@/components/ui/Field";
+import { setTheme, setThemeSchedule, type ThemeChoice } from "@/app/theme";
+import { THEME_OPTIONS } from "@/app/themeOptions";
+import { Field, Input, Select, Switch } from "@/components/ui/Field";
+import { useShownTheme } from "@/components/ui/hooks";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { parseClock, THEME_LABEL, THEME_NAMES } from "@/lib/theme";
 import type { Profile } from "@/lib/types";
 import { useProfileStore } from "@/stores/profileStore";
 import { SettingsRow, SettingsSection } from "./layout";
+
+const THEME_DESCRIPTION: Record<ThemeChoice, string> = {
+  system: "Follows your device: Day when it's light, Night when it's dark.",
+  day: "A survey sheet: green-gray paper and dark ink, easiest to read in daylight.",
+  dusk: "An old atlas: dim, warm paper for the evening.",
+  night: "A sea chart: charcoal and soft light text for a dark room.",
+  schedule: "Day, Dusk and Night in turn, switching at the times you set.",
+};
+
+function ThemeSetting({ profile }: { profile: Profile }) {
+  const shown = useShownTheme();
+  const schedule = profile.prefs.themeSchedule;
+  return (
+    <SettingsRow
+      label="Theme"
+      stacked
+      description={
+        <>
+          {THEME_DESCRIPTION[profile.theme]} Showing {THEME_LABEL[shown]} now. Printing always uses
+          Day.
+        </>
+      }
+    >
+      <SegmentedControl<ThemeChoice>
+        label="Theme"
+        value={profile.theme}
+        onChange={setTheme}
+        compactOnMobile
+        options={THEME_OPTIONS.map((o) => ({ ...o, ariaLabel: o.label }))}
+      />
+      {profile.theme === "schedule" && (
+        <div className="mt-4 grid max-w-lg grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-3">
+          {THEME_NAMES.map((name) => (
+            <Field key={name} label={`${THEME_LABEL[name]} from`}>
+              <Input
+                type="time"
+                required
+                value={schedule[name]}
+                onChange={(e) => {
+                  if (parseClock(e.target.value) === null) return;
+                  setThemeSchedule({ ...schedule, [name]: e.target.value });
+                }}
+              />
+            </Field>
+          ))}
+        </div>
+      )}
+    </SettingsRow>
+  );
+}
 
 export function AppearanceSection({ profile }: { profile: Profile }) {
   const updatePrefs = useProfileStore((s) => s.updatePrefs);
   return (
     <SettingsSection id="appearance" title="Appearance">
-      <SettingsRow label="Theme" description="Match your system, or always use light or dark.">
-        <SegmentedControl<ThemeChoice>
-          label="Theme"
-          value={profile.theme}
-          onChange={setTheme}
-          options={[
-            { value: "system", label: "System", icon: Monitor },
-            { value: "light", label: "Light", icon: Sun },
-            { value: "dark", label: "Dark", icon: Moon },
-          ]}
-        />
-      </SettingsRow>
+      <ThemeSetting profile={profile} />
       <SettingsRow
         label="Reduce motion"
         description="Panels and the map change instantly instead of animating."

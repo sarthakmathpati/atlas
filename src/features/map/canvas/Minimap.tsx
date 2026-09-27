@@ -1,7 +1,7 @@
 // The minimap (F2): the whole map in a corner, regions and status-colored dots, with the visible
 // area outlined. Click or drag in it to move the view there.
 import { useReactFlow, useStore, type ReactFlowState } from "@xyflow/react";
-import { useMemo, useRef, type CSSProperties } from "react";
+import { useMemo, useRef } from "react";
 import { layout } from "@/data/layout";
 import { subjects } from "@/data/syllabus";
 import type { Status } from "@/lib/types";
@@ -84,7 +84,7 @@ export function Minimap({ model }: { model: MapModel }) {
             className="map-region"
             data-level="far"
             data-off={!model.subjectIds.includes(s.id) || undefined}
-            style={{ "--h": s.regionHue } as CSSProperties}
+            data-subject={s.id}
           />
         ))}
         {(Object.keys(dots) as Status[]).map((s) => (

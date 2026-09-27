@@ -28,6 +28,7 @@ import type { TableName, TableTypes } from "./tables";
 
 const isoTime = z.string().min(1);
 const localDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected a yyyy-mm-dd date");
+const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "expected an HH:MM time");
 const status = z.enum(["not_started", "learning", "strong", "fading"]);
 const difficulty = z.enum(["easy", "medium", "hard"]);
 const importance = z.enum(["must", "important", "advanced"]);
@@ -46,7 +47,7 @@ export const profileSchema: z.ZodType<Profile> = z.object({
     .max(24 * 60),
   balance: z.object({ problems: z.number().min(0).max(100), theory: z.number().min(0).max(100) }),
   focusSubjects: z.array(z.string()),
-  theme: z.enum(["system", "light", "dark"]),
+  theme: z.enum(["system", "day", "dusk", "night", "schedule"]),
   ai: z.object({
     mode: aiMode,
     tierModels: z.object({ quick: z.string(), default: z.string(), complex: z.string() }),
@@ -64,6 +65,7 @@ export const profileSchema: z.ZodType<Profile> = z.object({
     timerAutoStart: z.boolean(),
     extraLanguages: z.array(language),
     backupReminder: z.boolean(),
+    themeSchedule: z.object({ day: clockTime, dusk: clockTime, night: clockTime }),
   }),
   lastBackupAt: isoTime.optional(),
   backupReminderDismissedAt: isoTime.optional(),

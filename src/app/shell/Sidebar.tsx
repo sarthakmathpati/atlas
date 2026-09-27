@@ -1,4 +1,5 @@
-// Desktop sidebar (F1): icons and labels, collapsible to icons only.
+// Desktop sidebar (F1, 12.10.5): icons and labels on the sidebar tone with no dividing line, the
+// current page a raised pill; collapsible to icons only.
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { BrandMark } from "@/components/ui/BrandMark";
 import { cx } from "@/components/ui/cx";
@@ -26,33 +27,27 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       aria-label={collapsed ? item.label : undefined}
       className={cx(
-        "group relative flex h-9 items-center gap-3 rounded-control text-base transition-colors duration-100",
-        collapsed ? "w-10 justify-center" : "px-2.5",
+        "group relative flex h-10 items-center gap-3 rounded-full text-base transition-colors duration-100",
+        collapsed ? "w-10 justify-center" : "px-3",
         active
-          ? "bg-accent-soft font-medium text-text"
+          ? "bg-surface-raised font-semibold text-text shadow-pill"
           : "text-muted hover:bg-surface-sunken hover:text-text",
       )}
     >
-      {active && (
-        <span
-          aria-hidden="true"
-          className="absolute top-2 bottom-2 -left-2 w-[3px] rounded-full bg-accent"
-        />
-      )}
       <Icon
         size={18}
-        strokeWidth={1.75}
+        strokeWidth={active ? 2 : 1.75}
         aria-hidden="true"
-        className={cx("shrink-0", active ? "text-accent" : "text-muted group-hover:text-text")}
+        className={cx("shrink-0", active ? "text-text" : "text-muted group-hover:text-text")}
       />
       {!collapsed && <span className="truncate">{item.label}</span>}
       {badge !== undefined && badge > 0 && (
         <span
           className={cx(
-            "rounded-full bg-accent px-1.5 text-xs font-medium text-on-accent tabular-nums",
+            "text-xs font-medium tabular-nums",
             collapsed
-              ? "absolute -top-0.5 -right-0.5 min-w-4 text-center text-[10px] leading-4"
-              : "ml-auto",
+              ? "absolute -top-1 -right-1 min-w-4 rounded-full bg-surface-raised px-1 text-center text-[10px] leading-4 text-text shadow-pill"
+              : "ml-auto text-muted",
           )}
         >
           {badge}
@@ -87,8 +82,8 @@ export function Sidebar({ route, collapsed, badges = {} }: SidebarProps) {
       aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       aria-expanded={!collapsed}
       className={cx(
-        "flex h-9 items-center gap-3 rounded-control text-base text-muted transition-colors hover:bg-surface-sunken hover:text-text",
-        collapsed ? "w-10 justify-center" : "px-2.5",
+        "flex h-10 items-center gap-3 rounded-full text-base text-muted transition-colors hover:bg-surface-sunken hover:text-text",
+        collapsed ? "w-10 justify-center" : "px-3",
       )}
     >
       {collapsed ? (
@@ -103,27 +98,22 @@ export function Sidebar({ route, collapsed, badges = {} }: SidebarProps) {
     <nav
       aria-label="Main"
       className={cx(
-        "hidden h-full shrink-0 flex-col border-r border-rule bg-surface md:flex print:hidden",
-        collapsed ? "w-16 items-center" : "w-58",
+        "hidden h-full shrink-0 flex-col bg-sidebar md:flex print:hidden",
+        collapsed ? "w-16 items-center" : "w-60",
       )}
     >
       <a
         href="#/today"
         className={cx(
-          "flex h-14 shrink-0 items-center gap-2.5 text-text",
-          collapsed ? "justify-center" : "px-4",
+          "flex h-16 shrink-0 items-center gap-2.5 text-text",
+          collapsed ? "justify-center" : "px-5",
         )}
         aria-label={`${APP_NAME}, go to Today`}
       >
         <BrandMark size={24} className="text-accent" />
-        {!collapsed && <span className="text-lg font-semibold tracking-tight">{APP_NAME}</span>}
+        {!collapsed && <span className="font-display text-xl font-bold">{APP_NAME}</span>}
       </a>
-      <ul
-        className={cx(
-          "flex flex-1 flex-col gap-0.5 overflow-y-auto py-2",
-          collapsed ? "px-3" : "px-3",
-        )}
-      >
+      <ul className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
         {NAV_ITEMS.map((item) => (
           <li key={item.id}>
             <NavLink
@@ -135,12 +125,7 @@ export function Sidebar({ route, collapsed, badges = {} }: SidebarProps) {
           </li>
         ))}
       </ul>
-      <div
-        className={cx(
-          "flex shrink-0 flex-col gap-0.5 border-t border-rule py-2",
-          collapsed ? "px-3" : "px-3",
-        )}
-      >
+      <div className="flex shrink-0 flex-col gap-1 px-3 pt-2 pb-3">
         <NavLink item={SETTINGS_ITEM} active={isActive(SETTINGS_ITEM)} collapsed={collapsed} />
         {collapsed ? (
           <Tooltip content="Expand sidebar" placement="right">

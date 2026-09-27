@@ -1,5 +1,5 @@
 // Factory functions for fresh records, so every new record starts complete and valid.
-import { DEFAULT_TIER_MODELS, SCHEMA_VERSION } from "@/lib/constants";
+import { DEFAULT_THEME_SCHEDULE, DEFAULT_TIER_MODELS, SCHEMA_VERSION } from "@/lib/constants";
 import { nowIso } from "@/lib/time";
 import type { ConceptState, MistakeTag, ProblemState, Profile, SrsState } from "@/lib/types";
 
@@ -27,6 +27,7 @@ export function createDefaultProfile(now: Date = new Date()): Profile {
       timerAutoStart: true,
       extraLanguages: [],
       backupReminder: true,
+      themeSchedule: { ...DEFAULT_THEME_SCHEDULE },
     },
     createdAt: stamp,
     updatedAt: stamp,

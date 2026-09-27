@@ -12,11 +12,15 @@ weekly review and revision sheets. **Phase 8, "Practice extensions", finished in
 with a coverage matrix, timed practice and "Tell me about yourself" (F27), design practice with
 the architecture sketch and rubric reviews (F26), mock interviews of all four types with streamed
 replies, Stop, reload survival, feedback and history (F15), a real Practice hub, drill results on
-the dashboard (F10), and every plan kind on Today. 785 tests. **Phase 9 is planned** (27 Sep
-2026, after Phase 8): a redesign called Survey (Day, Dusk and Night themes, subject colors,
-contour texture), a focus layer for everyone (F31) and ADHD mode (F32), then polish and ship. The
-plan is in BUILD_SPEC.md (sections 12.10, 13, F31, F32), with its research in
-`docs/design/phase9-research.md` and mockups in `docs/design/phase9-plan.html`.
+the dashboard (F10), and every plan kind on Today. 785 tests. **Phase 9** (the Survey look, a
+focus layer for everyone (F31), ADHD mode (F32), then polish and ship) is planned in BUILD_SPEC.md
+(sections 12.10, 13, F31, F32), with its research in `docs/design/phase9-research.md` and mockups
+in `docs/design/phase9-plan.html`. **Session 9.1, "Foundations", finished in session 19 (27 Sep
+2026):** Day, Dusk and Night themes with System and "By time of day" (data version 2), subject
+colors generated from one hue each, Bricolage Grotesque for display, the contour engine with
+`ContourCanvas` and subject emblems, the restyled component kit and app frame, the design kit
+showing each theme, and a test of the WCAG contrast of every text and background pair in every
+theme. 844 tests.
 
 Content, for reference (Phase 5): every one of the 909 concepts has a simple level, interview
 points and 3 to 5 flashcard questions (4,056 questions); all 400 must-know concepts have a deep
@@ -56,15 +60,18 @@ What each subject was checked against (session in brackets):
   script; a story bank checked against the app's 30 behavioral questions; resume bullets and the
   Atlas project deep dive; an exact made-up offer under India's FY 2025-26 tax (`needsReview`).
 
-**Next up:** Phase 9 (BUILD_SPEC.md section 13), in five sessions, in order. **Session 9.1,
-foundations:** Day, Dusk and Night themes with System and "By time of day", subject colors, the
-display font, the contour engine and subject emblems, the restyled component kit and a contrast
-test (section 12.10.1 to 12.10.6). Then 9.2 every screen (living terrain, the route, the summit
-profile, weekly stamps, pencil and ink; 12.10.7 and 12.10.8), 9.3 the focus layer (F31), 9.4 ADHD
-mode (F32) and 9.5 polish and ship (the F30 audit and a visual review in all three themes,
-`npm run build:syllabus -- --strict`, the release zip, `DEPLOY.md`, `README.md`, section 15).
-Session 9.1 reads `docs/design/phase9-research.md` and opens `docs/design/phase9-plan.html`
-first. Known gaps to look at in 9.5 are listed under "Known issues and notes" (Phase 8 notes).
+**Next up:** Phase 9 session 9.2, **every screen** (BUILD_SPEC.md 12.10.7 and 12.10.8): the app
+frame's focus subjects in the sidebar (with their square marks); Today with living terrain (the
+hills come from `lib/art/contours.ts` with `ContourCanvas`), Up next as the focal `Card`, the
+route, the scale bar, the minutes ring, the week strip and ready cards; the Dashboard with the
+subject-colored ring, the summit profile, subject bars with emblems and weekly stamps; map paper
+and far-zoom emblems; Problems; the workspace; the concept panel and page with the reading
+layout; review, flashcards and drill; the Phase 8 practice screens; weekly review; revision;
+settings; welcome; the palette; pencil and ink; line drawings for empty states. Before and after
+screenshots of every screen in Day, Dusk and Night at 390 and 1280 px. Then 9.3 the focus layer
+(F31, including the optional bedtime and wrap-up note), 9.4 ADHD mode (F32, with the switch in
+the top bar) and 9.5 polish and ship. Known gaps to look at in 9.5 are listed under "Known issues
+and notes" (Phase 8 notes).
 
 ## Phases (BUILD_SPEC.md section 13)
 
@@ -79,7 +86,7 @@ first. Known gaps to look at in 9.5 are listed under "Known issues and notes" (P
 | 6. Version 3: Claude inside | Done | Session 16. `AIProvider` with `SampleAIProvider` (sample contract 0.2.54), `AnthropicApiProvider` (streamed Messages API, web app only, left out of the artifact) and `CopyPromptProvider`; the AI service chosen in ServicesProvider and the mode resolved per view (built-in Claude falls back to copy prompt for the visit on `not_granted` and friends). Context builder (48 KiB, trimming order) and all 19 prompts; JSON validated with zod, one tightened retry, plain errors with the next step. Settings → Claude (mode, API key in IndexedDB only, Test connection per tier, models), copy prompt modal, Ask Claude drawer and concept Ask tab, Explain with Claude, Claude hints (kept per problem and level), code review and dry run saved with the attempt, full solution, explain-it-back grading with a follow-up, quick quizzes, the pattern drill page with approach grading and new prompts, and Claude suggestions in quick add and the mistake journal. 539 tests (every feature in all three modes, no network, no real key). Screens reviewed at 1280 and 390 px in light and dark: the artifact file with a simulated claude.ai runtime (fake `db`, `user`, `downloads`, `sample`; no console errors, no network requests) and the web app build with the Messages API intercepted (API key, Test connection, a wrong key). |
 | 7. Version 4: planning and insight | Done | Session 17. Planner (11.4) with fixture tests for a new owner, one mid-way and one a week before interviews (32 tests: budget rules, swaps never duplicate, replanning keeps done items, determinism, Phase 8 kinds); Today plan; readiness dashboard (every number explained, a year of data in about 150 ms); weekly review (Claude's reflection in three modes); revision sheets (print, Markdown, HTML, Tighten with Claude); year heatmap; activity exact across midnight, time zones and DST. 684 tests. Screens at 1280 and 390 px in both themes; printed PDFs; the artifact with a simulated claude.ai runtime. |
 | 8. Practice extensions | Done | Session 18. F28 quant puzzles (answer checking in any equivalent form, open-ended grading by Claude or against the answer note, attempts with the answer and grade) and mental math sprints (four modes, three tiers, keyboard first, history charts); F27 story bank (STAR editor, tags, links both ways, coverage matrix, 2-minute practice with a self-check or Claude's critique and a tighter version, "Tell me about yourself" builder); F26 design practice (46 prompts, 45-minute workspace, sketch lines drawn by dagre and React Flow with line-numbered errors, review with Claude or by yourself, attempts as practice on the classic); F15 mock interviews (coding with a phase stepper, chat and editor side by side; theory rapid-fire; design in the design workspace; behavioral from the bank; streamed replies with Stop, a reload resumes the turns, code, phase and clock; feedback with scores, strengths, improvements and a hire signal; the code as a mock attempt; history with score trends; copy prompt mode as a whole script plus a feedback form); Practice hub; drill accuracy and confusion pairs on the dashboard; mental math, story, design and mock items on Today, completing themselves. 785 tests. Screens reviewed at 1280 and 390 px in both themes; the artifact with a simulated claude.ai runtime; `release/atlas-artifact.zip` rebuilt. |
-| 9. The Survey look, focus layer, ADHD mode, polish and ship | Not started | Planned in five sessions (BUILD_SPEC.md section 13): 9.1 foundations, 9.2 every screen, 9.3 focus layer (F31), 9.4 ADHD mode (F32), 9.5 polish and ship. Design in section 12.10 (decisions taken for the owner in 12.10.10); research in `docs/design/phase9-research.md`; mockups in `docs/design/phase9-plan.html`. |
+| 9. The Survey look, focus layer, ADHD mode, polish and ship | In progress | Five sessions (BUILD_SPEC.md section 13): **9.1 foundations: done (session 19)**, 9.2 every screen, 9.3 focus layer (F31), 9.4 ADHD mode (F32), 9.5 polish and ship. Design in section 12.10 (decisions taken for the owner in 12.10.10); research in `docs/design/phase9-research.md`; mockups in `docs/design/phase9-plan.html`. 9.1: Day, Dusk and Night tokens (code, diff, chart, heat and feedback tokens per theme, contrast-tested), the theme setting (System, Day, Dusk, Night, By time of day; migration; pre-paint script; switch timer; top-bar menu; Settings; palette), subject colors (hues in `_subject.md`, generated CSS, map regions recolored, `layout.json` unchanged), Bricolage Grotesque, the contour engine with `ContourCanvas` and emblems, the kit and app frame restyled, the design kit showing each theme. 844 tests. |
 
 ## Features (BUILD_SPEC.md section 9)
 
@@ -87,7 +94,7 @@ Status: **Not started**, **Foundation** (data or logic exists, no UI yet), **In 
 
 | ID | Feature | Phase | Status | Notes |
 |---|---|---|---|---|
-| F1 | App shell, navigation and theme | 2 | Done | Sidebar (collapsible; collapsed by default under 1024 px), top bar, bottom tabs and More sheet under 768 px, every route in the spec (plus the `#/practice` hub, with where you stand in each kind of practice, and `#/kit`), toasts with Undo, skeletons while loading, error boundaries (app and per page) with "Export my data", no-flash theme. The Ask Claude button (or `a`) opens the chat drawer (F20). |
+| F1 | App shell, navigation and theme | 2 / 9 | Done | Sidebar (collapsible; collapsed by default under 1024 px), top bar, bottom tabs and More sheet under 768 px, every route in the spec (plus the `#/practice` hub, with where you stand in each kind of practice, and `#/kit`), toasts with Undo, skeletons while loading, error boundaries (app and per page) with "Export my data", no-flash theme. The Ask Claude button (or `a`) opens the chat drawer (F20). Phase 9 (9.1): Day, Dusk and Night themes with System and By time of day (switching at the set times while open, cross-fading), a theme menu in the top bar, the Survey frame (sidebar tone with a raised pill, pills in the top bar, display page titles). |
 | F2 | Knowledge map | 4 | Done | React Flow canvas on a drafting grid with adaptive spacing. Far (below 0.3): subject cards over tinted organic regions, progress ring (share strong), coral fading badge, cross-subject links bundled per subject pair (thickness by count). Middle (to 0.7): topic cards with a status bar (culled when crowded), topic prerequisite arrows, status dots, faint subject names. Near: concept bubbles in the four status shapes, sized by importance, P mark for patterns, clock when due, dot for linked problems (bigger for 3+), diamond for your own concepts, labels that never overlap. Level changes cross-fade. Pan, zoom, pinch, zoom buttons, fit all; click a region or topic to fly there; click a concept to open the panel; hover tooltip plus prerequisite and dependent highlight; right-click or long-press menu (studied, set status, flashcards, explain it back, Ask Claude, path, add to plan, hide); drag with a mouse to move (saved, Reset layout with undo); filters (subjects, status, importance, ready to learn, due, track override, advanced, hidden) in the URL; focus mode (1 or 2 steps); minimap with status dots; search jump flies and pulses; add your own concept from a topic's menu or the map menu; the ink moment when a concept turns strong; list view (F30). Dragging is off on touch screens (touch pans; long-press opens the menu). 60 fps couldn't be measured in the headless browser; only visible bubbles render and each subscribes to its own status. |
 | F3 | Concept panel | 4 | Done | Side panel (resizable, from 768 px) or bottom sheet on the map, and `#/concept/<id>` as a page. Header: breadcrumb, name, status chip with "Why this color?" (knowledge and its sources, practice by difficulty, reviews, what would turn it green, manual status and never fade), importance, minutes, tracks, pattern, unverified, yours, hidden. Learn: Simple, Interview, Deep (remembered per concept; Simple for not started), scope, Mark as studied, Flashcards, Explain it back (offline or graded by Claude), Quick quiz, Ask Claude, "Explain another way" (simpler, deeper, an example), interview questions with hidden answers, Learn first, Unlocks, Connected ideas (fly the map there). Practice: suggested next problem (easy, medium, hard ramp), linked problems with status and next review, signals and template for patterns, and "Start a drill" for the pattern (F10). Notes: autosaved Markdown with preview (side by side when wide), saved answers (move into notes, delete with undo), your explanations. Ask: a chat about the concept (F20). Back and forward through visited concepts. For the owner's own concepts, "Explain with Claude" writes a simple level, interview points and flashcards (prompt 2), kept with "Keep it" and used until the owner writes their own. The text loads with its subject (skeleton meanwhile, "Try again" if it fails). |
 | F4 | Mastery status and colors | 4 | Done | Section 11.2 engine with tests; statuses refresh after attempts, checks, studied, manual status, on start and at midnight. Manual status (a manual strong counts as a 0.8 check and still fades when overdue), never fade, "Why this color?" computed by the same functions as the status, status changes to strong or fading logged per day, the ink moment. |
@@ -116,7 +123,7 @@ Status: **Not started**, **Foundation** (data or logic exists, no UI yet), **In 
 | F27 | Behavioral story bank | 8 | Done | `#/stories`: stories with an autosaved STAR editor, tags, and linked questions from the 30-question bank (one record of each link, so the editor, the matrix and practice agree), suggested questions by tag, Claude's critique of a story. Coverage matrix (questions × stories, click to link or unlink, questions without a story highlighted with "Write one"). Practice: a random or chosen question, a 2-minute timer, a typed answer or a story delivered as it is, word count and speaking time at 140 words a minute, an offline self-check (6 lines) and Claude's critique with a tighter version (prompt 13); saved on the story or on "Unsorted practice", with a check on the matching career.behavioral concepts. "Tell me about yourself" builder: present, past, why this role, a 90-second target with word count, speaking time and critique. |
 | F28 | Quant practice: puzzles and mental math | 8 | Done | Puzzle library (`#/puzzles`) of all 98 puzzles plus the owner's own quant problems: filters for subject or topic, difficulty, status and kind in the URL, grouped by topic, "Pick one for me". Each puzzle page has an answer box: equivalent forms (2/3, 0.667, 66.7%, 1/e, sqrt(2), 5√2, "about 2.718", yes/no) are checked within 0.5% by `answerCheck`, tries counted; open-ended puzzles are graded by Claude (prompt 16) or against the answer note ("I had it", "Partly", "I missed it"). The check or grade decides the honest result in the save dialog; hints and "Show the answer" limit it as for problems; answer, tries and grade are kept in the draft and on the attempt, which feeds the linked concepts. Mental math (`#/mental-math`): speed arithmetic (80 in 8 minutes, +, −, ×, ÷ with whole and one-decimal numbers, clean division), fractions and percentages (30 in 5), number sequences (20 in 5, only sequences every simple rule agrees on) and estimation (20 in 5, within 5%), easy, medium and hard tiers (2 × 1 up to 3 × 2 digits), Enter to answer, Tab to skip, instant feedback; a finished sprint is a MentalMathRun and a check on the F28 concepts (sequences on number series), with score and speed charts. |
 | F29 | Focus timer, activity heatmap and streak | 7 | Done | Focus timer in the top bar; the activity clock counts each minute once, on the day it was spent, carrying part-minutes across midnight and sessions (tested in six time zones and on DST days). Year heatmap on the dashboard (and 16 weeks on Today) from the same computation as the streak, with the weekly freeze outlined; streak and freeze tested to agree with the data. |
-| F30 | Accessibility, keyboard, mobile and performance | 9 | In progress | Shortcuts: Ctrl/Cmd + K, `/`, `g` + t/m/p/r/d/s, `a`, `?`, Esc (single keys ignored while typing or in a dialog). Skip link, page headings take focus after navigation, landmarks, labelled icon buttons, 44 px touch targets on phones, reduced-motion override, contrast-checked tokens (code and chart colors too). Map: list view with statuses and status mixes (the accessible alternative), bubbles are labelled buttons (Enter opens, Shift+F10 or the context-menu key opens the menu), map key explains the symbols. Full audit in Phase 9. |
+| F30 | Accessibility, keyboard, mobile and performance | 9 | In progress | Shortcuts: Ctrl/Cmd + K, `/`, `g` + t/m/p/r/d/s, `a`, `?`, Esc (single keys ignored while typing or in a dialog). Skip link, page headings take focus after navigation, landmarks, labelled icon buttons, 44 px touch targets on phones, reduced-motion override, contrast-checked tokens (code and chart colors too). Map: list view with statuses and status mixes (the accessible alternative), bubbles are labelled buttons (Enter opens, Shift+F10 or the context-menu key opens the menu), map key explains the symbols. Since 9.1 a test computes the WCAG contrast of every text and background pair in Day, Dusk and Night (AA everywhere, AAA for body text). Full audit in Phase 9. |
 | F31 | Focus layer | 9 | Not started | Planned (session 9.3): focus blocks with a one-line intention, the horizon line, the focus lens and held notices, Park it (`p`), break views with breathing, the memory walk, interview day, themes by the clock with a wrap-up note. |
 | F32 | ADHD mode | 9 | Not started | Planned (session 9.4): a switch at the right of the top bar on every page; calm screen, Now card with steps, visible time and learned pace, where you left off, instant rewards, breaks and a hyperfocus check-in, if-then start, reading support with read aloud, focus sound and Study with Claude (both off by default), gentle language and Fresh start. |
 
@@ -150,6 +157,37 @@ deep for every must-know concept; signals and template for every pattern.
 The C++ counts are blocks inside deep articles; DSA's 90 pattern templates bring the total to 907.
 
 ## Known issues and notes
+
+- **Phase 9 notes (session 19, 9.1 foundations):** read `docs/design/phase9-research.md` and
+  screenshot `docs/design/phase9-plan.html` in Day, Dusk and Night first (its Google fonts are
+  blocked here, so the mockups showed fallback fonts). CLAUDE.md decisions 105 to 109 say how the
+  spec was read: two small `--text-faint` adjustments so faint text clears AA on every plain
+  background (Day `#616A5D`, Dusk `#978B77`; the spec measured only on `--surface`), Dusk's soft
+  tints at 10%, a crimson danger apart from the fading coral, ramps on the accent's hue validated
+  with the dataviz ordinal checks; data version 2 with the light → day and dark → night
+  migration; Dusk and Night kept off paper so printing uses Day (checked: with Night on screen,
+  print media gets Day's tokens and white paper); subject colors by per-channel clipping (all 72
+  table values reproduced); the engine's locality (hills cut to zero at 3 radii, level spacing
+  from the background) and automatic quiet zones from the text beside the canvas. Tests (844):
+  contrast of every pair in every theme and the 12.10.2 table, the subject color table and the
+  generated CSS, hues outside the layout hash, the pre-paint script against `lib/theme.ts` (800
+  cases), the schedule and its next switch, the theme clock (switching at 19:00 and 22:30, catching
+  up after sleep, System following the device), the migration of stored and imported data, the
+  engine (determinism, locality, 8 ms budget, soundings and spot heights never under text),
+  emblems, the kit parts and the theme menu and Settings. `layout.json` did not change, even with
+  a forced rebuild. Screens reviewed at 1280 and 390 px in Day, Dusk and Night: the design kit
+  (every section), Today, the map, Settings with By time of day, the theme menu, a dialog, the
+  Ask Claude drawer, the More sheet, and a sweep of every other screen in Dusk (problems, the
+  workspace, dashboard, concept page, practice, designs, welcome and more) for anything the new
+  tokens broke; nothing did. Fixed on the way: the kit's component grid overflowed a phone (a
+  single-column grid sized to a code block), Night soundings crowded a description (now measured
+  from the text), the schedule's time fields were cut off on phones, dark region tints too
+  strong. The artifact file ran with a simulated claude.ai runtime (decision 103): the theme
+  chosen in the menu is on `<html>` before the first paint after a reload (Night, Day, Dusk),
+  saved to the synced profile at data version 2 with the schedule, the display font loads from
+  the inlined file, no console errors, no outside requests. The artifact is 9.69 MB (Bricolage
+  added about 45 KB). Left for later sessions as planned: focus subjects in the sidebar and every
+  screen's own layout (9.2), the optional bedtime (9.3), the ADHD switch (9.4).
 
 - **Phase 8 notes (session 18, practice extensions):** built in the order F28, F27, F26, F15,
   each committed when its checks passed. CLAUDE.md decisions 96 to 103 say how the spec was read

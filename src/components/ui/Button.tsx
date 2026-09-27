@@ -1,5 +1,6 @@
-// Buttons (section 12.7): primary (at most one per view), secondary, ghost, and danger for
-// destructive confirmations. Touch targets grow to 44 px on phones (F30).
+// Buttons (sections 12.7 and 12.10.5): pills. Primary is a filled accent pill (at most one per
+// view), secondary a sunken pill, ghost just icon and text, danger a filled pill for destructive
+// confirmations. Touch targets grow to 44 px on phones (F30).
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode, type Ref } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cx } from "./cx";
@@ -9,16 +10,15 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-on-accent hover:bg-accent-hover border border-transparent",
-  secondary:
-    "bg-surface text-text border border-rule hover:bg-surface-sunken hover:border-rule-strong",
-  ghost: "bg-transparent text-text border border-transparent hover:bg-surface-sunken",
-  danger: "bg-danger text-on-danger hover:bg-danger-hover border border-transparent",
+  primary: "bg-accent text-on-accent hover:bg-accent-hover",
+  secondary: "bg-surface-sunken text-text hover:bg-rule",
+  ghost: "bg-transparent text-text hover:bg-surface-sunken",
+  danger: "bg-danger text-on-danger hover:bg-danger-hover",
 };
 
 const SIZE: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-sm gap-1.5 max-md:min-h-11 max-md:h-auto",
-  md: "h-10 px-4 text-base gap-2 max-md:h-11",
+  sm: "h-8 px-3.5 text-sm gap-1.5 max-md:min-h-11 max-md:h-auto",
+  md: "h-10 px-5 text-base gap-2 max-md:h-11",
 };
 
 function buttonClasses(
@@ -27,7 +27,7 @@ function buttonClasses(
   extra?: string,
 ): string {
   return cx(
-    "inline-flex shrink-0 items-center justify-center rounded-control font-medium whitespace-nowrap select-none",
+    "inline-flex shrink-0 items-center justify-center rounded-full font-semibold whitespace-nowrap select-none",
     "transition-colors duration-100 disabled:pointer-events-none disabled:opacity-55",
     "aria-disabled:pointer-events-none aria-disabled:opacity-55",
     VARIANT[variant],
@@ -155,12 +155,11 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       type={type}
       aria-label={label}
       className={cx(
-        "inline-grid shrink-0 place-items-center rounded-control transition-colors duration-100",
+        "inline-grid shrink-0 place-items-center rounded-full transition-colors duration-100",
         "disabled:pointer-events-none disabled:opacity-55",
         size === "sm" ? "size-8 max-md:size-11" : "size-9 max-md:size-11",
         variant === "ghost" && "text-muted hover:bg-surface-sunken hover:text-text",
-        variant === "secondary" &&
-          "border border-rule bg-surface text-text hover:bg-surface-sunken",
+        variant === "secondary" && "bg-surface-sunken text-text hover:bg-rule",
         variant === "primary" && "bg-accent text-on-accent hover:bg-accent-hover",
         className,
       )}
