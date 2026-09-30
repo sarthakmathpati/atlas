@@ -20,6 +20,7 @@ import { Coverage } from "./Coverage";
 import { IntroBuilder } from "./IntroBuilder";
 import { Practice } from "./Practice";
 import { StoryEditor } from "./StoryEditor";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 type Tab = "stories" | "coverage" | "practice" | "intro";
 const TABS: Tab[] = ["stories", "coverage", "practice", "intro"];
@@ -84,6 +85,7 @@ export default function StoriesPage() {
   const route = useRoute();
   const loaded = useStoryStore((s) => s.loaded);
   const record = useStoryStore((s) => s.stories);
+  usePageFocusLine("Practice one behavioral answer");
   const stories = useMemo(
     () =>
       Object.values(record).sort((a, b) => {

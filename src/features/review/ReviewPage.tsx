@@ -19,6 +19,7 @@ import { openConceptReview, openFlashcards } from "@/stores/conceptDialogStore";
 import { findConcept } from "@/stores/customConceptStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useReviewQueue } from "./useReviewQueue";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 function lateLabel(daysLate: number): string {
   return daysLate <= 0 ? "Due today" : `Overdue ${daysLate} ${daysLate === 1 ? "day" : "days"}`;
@@ -134,6 +135,7 @@ export default function ReviewPage() {
   const loaded = useProblemStore((s) => s.loaded);
   const queue = useReviewQueue();
   const today = useToday();
+  usePageFocusLine("Clear today's reviews");
   const minutes = queue.problems.reduce((n, p) => n + ESTIMATES.resolve[p.info.difficulty], 0);
 
   const description =

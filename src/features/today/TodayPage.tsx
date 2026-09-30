@@ -1,9 +1,11 @@
 // Today (home, F16, 12.10.8): the page head with living terrain, the countdown as a scale bar
 // and today's minutes as a ring; "Up next" (the one focal card) and "Today's route"; on the side
 // the 7-day streak strip, ready-to-learn cards with subject tiles and the review count as one big
-// number; a setup checklist while it isn't finished.
+// number; a setup checklist while it isn't finished. On the interview date and the day before,
+// a calm interview day view replaces the plan (F31); `?view=plan` shows the plan anyway.
 import { CalendarRange, Check, Circle, Search, Sparkles } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
+import { routeHref, useRoute } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -14,6 +16,7 @@ import { DESIGN_PROBLEMS } from "@/data/designs.seed";
 import { LEETCODE_PROBLEMS } from "@/data/problems.seed";
 import { QUANT_PUZZLES } from "@/data/quant.seed";
 import { syllabus } from "@/data/syllabus";
+import { interviewDay } from "@/lib/focus/interviewDay";
 import { weeklyReviewDue } from "@/lib/insight/weekly";
 import { useToday } from "@/stores/clockStore";
 import { usePlanStore } from "@/stores/planStore";
@@ -22,6 +25,7 @@ import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useReadiness } from "../insight/useInsight";
 import { useReviewQueue } from "../review/useReviewQueue";
+import { InterviewDayView } from "./InterviewDay";
 import { RouteCard, UpNextCard } from "./PlanSection";
 import { setupStepDone } from "./setupSteps";
 import { TodayHead } from "./TodayHead";
@@ -81,6 +85,7 @@ function SetupChecklist({ steps }: { steps: Step[] }) {
 }
 
 export default function TodayPage() {
+  const route = useRoute();
   const profile = useProfileStore((s) => s.profile);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const today = useToday();
@@ -177,10 +182,28 @@ export default function TodayPage() {
       ]
     : [];
   const doneCount = steps.filter((s) => s.done).length;
+  const calm = interviewDay(today, profile?.interviewDate);
+  const showPlan = route.query.get("view") === "plan";
+
+  if (calm && !showPlan) {
+    return (
+      <PageFrame>
+        <TodayHead profile={profile} model={model} plan={plan} today={today} calm />
+        <InterviewDayView which={calm} today={today} />
+      </PageFrame>
+    );
+  }
 
   return (
     <PageFrame>
       <TodayHead profile={profile} model={model} plan={plan} today={today} />
+      {calm && (
+        <p className="-mt-2 mb-4 text-sm">
+          <a href={routeHref("/today")} className="text-accent hover:underline">
+            Back to the interview day view
+          </a>
+        </p>
+      )}
 
       {profile && !profile.onboardingDone && (
         <Callout
@@ -231,7 +254,10 @@ export default function TodayPage() {
           )}
         </div>
 
-        <div className="min-w-0 space-y-6 self-start lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        <div
+          data-peripheral
+          className="min-w-0 space-y-6 self-start lg:col-start-2 lg:row-span-2 lg:row-start-1"
+        >
           <StreakStrip />
           <ReadyCard ready={ready} fading={fading} />
           <ReviewCount

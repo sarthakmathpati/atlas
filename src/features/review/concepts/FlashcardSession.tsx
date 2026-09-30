@@ -28,6 +28,8 @@ import { studyContent } from "@/lib/concepts/custom";
 import { useConceptNoteStore } from "@/stores/conceptNoteStore";
 import { useConceptContents } from "@/stores/contentStore";
 import { findConcept } from "@/stores/customConceptStore";
+import { sessionConcepts } from "./walkOrder";
+import { WalkStrip } from "./WalkStrip";
 
 import { ContentUnavailable } from "../../concept/ContentUnavailable";
 
@@ -58,6 +60,8 @@ const shortDate = (day: string) =>
 interface FlashcardSessionProps {
   conceptIds: readonly string[];
   session?: boolean;
+  /** Order a topic's or subject's cards as a memory walk over their map places (F31). */
+  walk?: boolean;
   /** Called once when the results are saved (end of deck, or closing part way). */
   onSaved?: (summary: SessionSummary) => void;
   onDone: () => void;
@@ -66,7 +70,7 @@ interface FlashcardSessionProps {
 /** Loads the cards' text (data/content.ts), then runs the session with a fixed deck. */
 export function FlashcardSession(props: FlashcardSessionProps) {
   const concepts = useMemo(
-    () => props.conceptIds.map((id) => findConcept(id)).filter((c): c is Concept => Boolean(c)),
+    () => sessionConcepts(props.conceptIds, props.walk),
     // The deck is fixed for the session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -109,9 +113,22 @@ function Session({
   concepts,
   deck,
   session,
+  walk,
   onSaved,
   onDone,
 }: FlashcardSessionProps & { concepts: readonly Concept[]; deck: readonly Flashcard[] }) {
+  // The memory walk's stops: the concepts the deck reaches, in deck order.
+  const stops = useMemo(() => {
+    if (!walk) return [];
+    const seen = new Set<string>();
+    const out: { id: string; name: string }[] = [];
+    for (const c of deck) {
+      if (seen.has(c.conceptId)) continue;
+      seen.add(c.conceptId);
+      out.push({ id: c.conceptId, name: findConcept(c.conceptId)?.name ?? c.conceptId });
+    }
+    return out;
+  }, [walk, deck]);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [results, setResults] = useState<CardResult[]>([]);
@@ -260,6 +277,9 @@ function Session({
         </span>
       </div>
       <ProgressBar value={index / deck.length} label={`Card ${index + 1} of ${deck.length}`} />
+      {walk && (
+        <WalkStrip stops={stops} current={stops.findIndex((s) => s.id === card!.conceptId)} />
+      )}
       {/* The card turns to show the answer: the back keeps the question small above it. */}
       <div
         key={revealed ? `back-${index}` : `front-${index}`}

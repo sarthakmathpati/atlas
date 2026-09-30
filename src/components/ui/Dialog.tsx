@@ -14,7 +14,7 @@ import { cx } from "./cx";
 import { useLatest, usePresence } from "./hooks";
 import { IconButton } from "./Button";
 
-type LayerKind = "dialog" | "drawer" | "sheet";
+type LayerKind = "dialog" | "drawer" | "sheet" | "screen";
 
 interface LayerProps {
   open: boolean;
@@ -94,9 +94,10 @@ function Layer({
     };
   }, [open, ref, onCloseRef, mounted]);
 
-  // Non-modal drawers still close with Escape when focus is inside them.
+  // Non-modal drawers still close with Escape when focus is inside them; so does a full-screen
+  // layer (besides the native cancel event, which some browsers skip after a second Escape).
   const onKeyDown = (e: React.KeyboardEvent<HTMLDialogElement>) => {
-    if (!modal && e.key === "Escape" && !e.defaultPrevented) {
+    if ((!modal || kind === "screen") && e.key === "Escape" && !e.defaultPrevented) {
       e.preventDefault();
       onClose();
     }
@@ -130,6 +131,7 @@ function Layer({
         kind === "dialog" && "atlas-dialog",
         kind === "drawer" && "atlas-drawer",
         kind === "sheet" && "atlas-sheet",
+        kind === "screen" && "atlas-screen",
         className,
       )}
       style={style}
@@ -240,6 +242,37 @@ export function Dialog({
           </div>
         )}
       </div>
+    </Layer>
+  );
+}
+
+/**
+ * A layer that fills the whole window (the break view, F31): a real modal with Escape to close,
+ * fading in over 150 ms. The content provides its own heading, named by `label`.
+ */
+export function FullScreenLayer({
+  open,
+  onClose,
+  label,
+  children,
+  className,
+}: {
+  open: boolean;
+  onClose: () => void;
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Layer
+      open={open}
+      onClose={onClose}
+      kind="screen"
+      label={label}
+      closeOnBackdrop={false}
+      className={className}
+    >
+      {children}
     </Layer>
   );
 }

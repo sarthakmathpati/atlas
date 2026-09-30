@@ -7,7 +7,7 @@
 import { create } from "zustand";
 import type { Repository } from "@/lib/storage/Repository";
 import { localDate, nowIso } from "@/lib/time";
-import type { ActivityDay, ActivityMonth, WeeklyNote } from "@/lib/types";
+import type { ActivityDay, ActivityMonth, FocusOutcome, WeeklyNote } from "@/lib/types";
 
 interface ActivityState {
   months: Record<string, ActivityMonth>;
@@ -34,11 +34,29 @@ export function detachActivity(): void {
 
 const EMPTY_DAY: ActivityDay = { minutes: 0, problemsSolved: 0, reviews: 0, conceptsTouched: 0 };
 
+/** The day's plain number counters (everything except the focus block tally). */
+export type ActivityCounter = Exclude<keyof ActivityDay, "focusBlocks">;
+
 /** Adds to one day's counters (minutes, attempts, …) and saves the month. */
 export function recordActivity(
   date: string,
-  changes: Partial<Record<keyof ActivityDay, number>>,
+  changes: Partial<Record<ActivityCounter, number>>,
 ): void {
+  updateDay(date, (day) => {
+    for (const [key, amount] of Object.entries(changes) as [ActivityCounter, number][]) {
+      day[key] = (day[key] ?? 0) + amount;
+    }
+  });
+}
+
+/** Counts a finished focus block under how it went (F31: Done, Partly or Moved on). */
+export function recordFocusBlock(date: string, outcome: FocusOutcome): void {
+  updateDay(date, (day) => {
+    day.focusBlocks = { ...day.focusBlocks, [outcome]: (day.focusBlocks?.[outcome] ?? 0) + 1 };
+  });
+}
+
+function updateDay(date: string, change: (day: ActivityDay) => void): void {
   const monthKey = date.slice(0, 7);
   const { months } = useActivityStore.getState();
   const month: ActivityMonth = months[monthKey] ?? {
@@ -47,9 +65,7 @@ export function recordActivity(
     updatedAt: nowIso(),
   };
   const day: ActivityDay = { ...EMPTY_DAY, ...month.days[date] };
-  for (const [key, amount] of Object.entries(changes) as [keyof ActivityDay, number][]) {
-    day[key] = (day[key] ?? 0) + amount;
-  }
+  change(day);
   const next: ActivityMonth = {
     ...month,
     days: { ...month.days, [date]: day },

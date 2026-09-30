@@ -3,6 +3,7 @@
 // The planner (section 11.4) knows every kind, and tests exercise all of them. A kind is planned
 // only once its screen works, so Start never leads to a page that can't do the thing yet
 // (CLAUDE.md decision 85). Phase 8 added mental math, story practice, design practice and mocks.
+// Phase 9 added parked thoughts, which only the owner puts on a day (F31); the planner never does.
 import type { PlanItem } from "@/lib/types";
 
 export type PlanKind = PlanItem["kind"];
@@ -18,6 +19,7 @@ export const ALL_PLAN_KINDS: readonly PlanKind[] = [
   "design",
   "mock",
   "story",
+  "thought",
 ];
 
 /** Kinds whose Start button opens a screen that does the thing today. */
@@ -32,6 +34,7 @@ export const AVAILABLE_PLAN_KINDS: ReadonlySet<PlanKind> = new Set<PlanKind>([
   "story",
   "design",
   "mock",
+  "thought",
 ]);
 
 /** Display order in the plan: revision first near the interview, reviews, learning, practice. */

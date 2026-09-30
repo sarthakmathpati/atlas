@@ -211,6 +211,7 @@ export default function QuizPage() {
                     openFlashcards({
                       conceptIds: chosen.map((c) => c.id),
                       title: `Flashcards: ${setName}`,
+                      walk: true,
                     })
                   }
                 >

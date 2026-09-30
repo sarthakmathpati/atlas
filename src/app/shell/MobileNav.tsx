@@ -30,6 +30,7 @@ export function BottomTabs({
   return (
     <nav
       aria-label="Main"
+      data-peripheral
       className="flex shrink-0 border-t border-rule bg-sidebar md:hidden print:hidden"
     >
       {TABS.map((item) => {

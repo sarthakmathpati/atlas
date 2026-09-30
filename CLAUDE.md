@@ -66,7 +66,7 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   concept statuses and checks, concept notes, custom concepts, map positions, today's plan,
   problems, mistake tags, today's date, toasts, shell UI, concept dialogs, Claude, the open
   workspace, generated drill prompts, mental math runs, stories, design attempts, mock
-  sessions), loaded by
+  sessions, parked thoughts), loaded by
   `stores/hydrate.ts` (via `app/providers/StoreHydrator.tsx`) once storage is ready, reloaded after
   import/reset and on remote changes. Stores write through the Repository. Saving an attempt
   (`problemStore.saveAttempt`) reschedules, refreshes linked concept statuses, logs activity and
@@ -139,11 +139,24 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   `lib/insight/summit.ts` (readiness as of a past day, weeks, the projection trail, weekly
   stamps); stamps render with `features/insight/Stamp.tsx` (`stamps.ts` reads the stores).
   Focus subjects in the frame come from `app/shell/focusSubjects.ts`.
+- **Focus layer** (F31, session 9.3): pure parts in `lib/focus/` (`horizon.ts` steps and dots,
+  `park.ts` when a thought comes back, `bedtime.ts` the wrap-up window, `interviewDay.ts`,
+  `breathing.ts`, `prompts.ts` break ideas, `intention.ts` a block's line, `walk.ts` the memory
+  walk, `prefs.ts` the settings with defaults). `stores/focusTimerStore.ts` runs the timer and
+  blocks (the line, the outcome, the break, held notices through the toast gate, the mirror in
+  localStorage); `stores/parkStore.ts` keeps parked thoughts. Screens in `features/focus/`
+  (`FocusLayer` mounted in the shell: `WindowHorizon`, `FocusStartDialog`, `ParkDialog`,
+  `BreakView` and `BlockDoneDialog`; `TopBarFocus` the line and held notes; `ParkedBack` and
+  `WrapUpNote` in `ShellNotices`; `Breathing`; `hooks.ts` with `usePageFocusLine` for pages);
+  `components/ui/Horizon.tsx` (the line, also on timed rounds); `FullScreenLayer` in
+  `components/ui/Dialog.tsx`; interview day in `features/today/InterviewDay.tsx`; the memory walk
+  in `features/review/concepts/walkOrder.ts` and `WalkStrip.tsx`.
 - **Dates**: local time; due dates stored as `yyyy-mm-dd` (`src/lib/time.ts`).
 - **Phase 9 design**: BUILD_SPEC.md 12.10 (the Survey look: Day, Dusk and Night themes, subject
   colors, the contour engine, living terrain, emblems, pencil and ink, the route, the summit
   profile, stamps), F31 (focus layer) and F32 (ADHD mode). Session 9.1 built the foundations
-  (12.10.1 to 12.10.6); session 9.2 every screen (12.10.7, 12.10.8). Research with sources and evidence levels:
+  (12.10.1 to 12.10.6); session 9.2 every screen (12.10.7, 12.10.8); session 9.3 the focus layer
+  (F31, 12.10.9). Research with sources and evidence levels:
   `docs/design/phase9-research.md`. Mockups: `docs/design/phase9-plan.html` (open in a browser;
   a reference, the spec wins).
 
@@ -265,7 +278,9 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
 28. **Per-browser conveniences in localStorage** (never synced, always in try/catch):
     `atlas.theme`, `atlas.themeSchedule`, `atlas.sidebar`, `atlas.recent` (palette), `atlas.setup.map|search` (Today
     checklist), `atlas.askWidth` (drawer width), `atlas.split` (workspace split), `atlas.template`
-    (start attempts from the starter template), `atlas.mapPanel` (map panel width).
+    (start attempts from the starter template), `atlas.mapPanel` (map panel width),
+    `atlas.focusBlock` (a running or paused focus block, so a reload keeps it) and `atlas.wrapUp`
+    (the night the wrap-up note was closed).
 29. **Problem scheduling reading of 11.1**: "first ever attempt" means the problem has never been
     scheduled (`srs.dueAt` unset). Retirement needs a solo solve made *at* step 5 or higher (the
     60-day interval was reached) with `soloStreak ≥ 3` after it; a retired problem that is later
@@ -735,7 +750,7 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     tab). By time of day re-arms a timer for the next start time and re-checks when the tab
     comes back (timers pause in sleep). The pre-paint script is checked against `lib/theme.ts`
     for 800 combinations of choice, schedule, time and device setting. The optional bedtime
-    (12.10.8) arrives with the wrap-up note in 9.3.
+    (12.10.8) arrived with the wrap-up note in 9.3 (decision 131).
 107. **Subject colors** (9.1): `scripts/build-subject-colors.mjs` (part of `build:data`) turns
     each `regionHue` into OKLCH marks and tints, clipping out-of-gamut channels, which reproduces
     all 72 values of the 12.10.3 table (a test compares them). `[data-subject="<id>"]` sets
@@ -844,4 +859,90 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     jsdom joins screen-reader-only text without a space); two plan tests find the next stop's
     Start and Swap on that card; the theme menu test matches `/^Night/`, because before 06:30
     the By time of day item reads "Night now". `tests/app/survey.test.tsx` covers the new parts.
+122. **Focus blocks** (session 21, 9.3): starting a block (the timer's popover, `f`, a plan item's
+    "Start a focus block", the palette) opens "In this block I will…" with a line filled in: the
+    plan item for what's on screen (a page names its problem or concept with `usePageFocusLine`),
+    else the page's own line ("Solve 1. Two Sum", "Finish a pattern drill"), else the next plan
+    item; plan titles become lines by kind (`intentionForItem`: "Re-solve 69. Sqrt(x)"). Enter
+    starts; an empty line is allowed. The line shows in the top bar ("In this block: …"; a
+    second row on phones). "End now" ends the block early and asks how it went; "Stop without
+    counting" discards it. Done, Partly and Moved on count in `ActivityDay.focusBlocks`
+    (`{ done, partly, movedOn }`, optional, merged with the day). A running or paused block is
+    mirrored to `atlas.focusBlock` and comes back after a reload unless its time ran out
+    meanwhile (then it is dropped without an outcome); breaks are not kept. The block's length
+    is read once the profile has loaded.
+123. **Horizon line**: the elapsed time is counted in whole 5-second steps (`horizonFraction`), so
+    the line moves every 5 s and never animates; dotted for the last 2 minutes, or the last
+    quarter of a round shorter than 8 minutes (a 2-minute drill prompt dots at 30 s left, not
+    all along). The block's line runs along the window's top edge in the top layer (re-shown
+    each step so a dialog opened since doesn't hide it for long), on every page, and stops at
+    the break. Timed rounds show their own line in place of their progress bar, with the same
+    accessible name: drill prompts, mental math sprints and story practice under their clock,
+    design and mock rounds along the top edge of their sticky bar. The break view's tide line is
+    the same idea along the bottom edge.
+124. **Focus lens and held notices**: `<html data-focus-lens>` is set only while a block runs
+    (not paused) with dimming on; parts marked `data-peripheral` (the sidebar, the bottom tabs,
+    the top bar's search, minutes chip, Ask Claude and theme menu, Today's side column, a
+    concept's connections, the map's minimap) fade to 45% and come back on hover or
+    `:focus-within`, never nested (opacities would multiply). While a block runs, a toast marked
+    `notice` (storage notices below error level, the weekly review hand-over) goes to a gate in
+    the focus store instead of the screen, and the backup reminder, thoughts that came back and
+    the wrap-up note hide; the top bar counts them all ("2 notes held for your break"). Errors
+    and answers to what the owner just did always show. Everything shows at the break, when the
+    block stops or pauses, or on "Show them now" (which stops holding for the rest of the
+    block). During a block the search pill shrinks to its icon and the minutes chip steps aside
+    so the line has room; on phones the app name gives up its place.
+125. **Park it**: `ParkedThought` is a new table (Dexie version 2; one grouped `parkedThoughts`
+    document in the artifact, latest 300; merged newer-wins). When: the break is the running
+    block's end (without a block, one block's length from now); tonight is the Dusk start time
+    with By time of day, else 19:00, or an hour from now once that has passed; tomorrow is the
+    next morning at the Day start time with By time of day, else 06:30. A break that starts
+    makes every open break thought due, so they stay listed after the break view. Done sets
+    `doneAt`; Add to today adds the owner's plan item of the new kind `thought` (10 minutes, no
+    Start, no Swap, never planned by the planner) and sets `doneAt`; Dismiss deletes (Undo puts
+    it back). Thoughts that came back show above every page, five at a time; the Park dialog
+    lists those still waiting.
+126. **Break views**: a full-screen native `<dialog>` (`FullScreenLayer`, Esc through the cancel
+    event and a keydown fallback) that opens when a block ends and when a break is started from
+    the timer. Order: the question about the block, one idea (eye rest, movement, water) that
+    moves on after each block of the day from a daily start, "Breathe for a minute", the
+    thoughts parked for the break with Park a thought, Back to work. The landscape is seeded per
+    break; spot heights, the Dusk graticule and Night soundings keep off the text as elsewhere.
+    When the break's time is up the view says so (no toast); "Back to work" or Esc readies the
+    timer for the next block. With break views off in Settings, a small "Focus block done"
+    dialog asks the question and the break waits in the timer, as before.
+127. **Breathing**: six breaths of 5 s growing and 5 s shrinking (`breathingAt`), only when
+    started; the ring is a 5 s CSS transition (`@starting-style` lets the first breath grow);
+    with reduced motion the ring is left out and a large count (1 to 5 per half breath) keeps
+    the rhythm; "Breathe in" and "Breathe out" are a polite live region; focus moves to Stop.
+128. **Memory walk**: `FlashcardRequest.walk` is set for a topic's or a subject's set (the
+    Flashcards and quizzes page, a topic's menu on the map), never for "everything due". The
+    concepts a session reaches (the first 30, chosen as before) are reordered by a
+    nearest-neighbour walk over their map places (moved bubbles, then the layout, then the
+    topic's place for the owner's own concepts), starting from the one that comes first in the
+    syllabus; each concept's cards stay together. A strip of dots joined by a dashed line shows
+    the stops, the current one ringed, with "stop N of M".
+129. **Interview day**: on the interview date and the day before (`interviewDay`), Today shows the
+    calm view instead of the plan: the head with a calm line and no minutes ring, the 1-day
+    sheet (a link, as the sheet is two printed pages), the mistake checklist (top 5 with how to
+    avoid each), Breathe for a minute and Park a worry (tonight by default). `#/today?view=plan`
+    shows the plan with a link back; the plan is still made that day, so items keep completing
+    themselves.
+130. **Themes by the clock** were built in 9.1 (decision 106) and are unchanged.
+131. **Bedtime and wrap-up**: `prefs.bedtime` (optional "HH:MM") is set in Settings → Appearance
+    with a switch (23:00 when first turned on). The note shows from 30 minutes before bedtime
+    until bedtime, across midnight too; Close hides it for that night (`atlas.wrapUp`). "Park
+    what's left" opens Park it with Tomorrow; "Plan tomorrow" turns tonight's open thoughts into
+    the owner's items on the plan of the day after sleep (the date 12 hours ahead, so a bedtime
+    after midnight plans the same date), reading that plan from storage first.
+132. **Focus settings**: `prefs.focus` holds optional flags (`dim`, `holdNotices`, `breakView`),
+    each on when missing (`focusPrefs`), so the data version stays 2 and nothing migrates.
+    Settings → Focus sessions holds the block and break lengths (moved from Learning) and the
+    three switches; the timer popover links there. Shortcuts `f` and `p` and two palette
+    commands start a block and park a thought.
+133. **Performance (9.3)**: the dashboard's cold load with a year of data, measured by
+    alternating the Phase 9.2 build and this one in the same harness (8 runs each): 0.87 to
+    1.04 s before, 0.89 to 0.96 s after (this machine is slower than session 20's, where the
+    same page took 0.51 to 0.76 s). The focus layer adds one small table read at start and no
+    work to the dashboard.
 

@@ -82,6 +82,9 @@ export abstract class BaseRepository implements Repository {
   get generatedDrills() {
     return this.table("generatedDrills");
   }
+  get parkedThoughts() {
+    return this.table("parkedThoughts");
+  }
 
   exportAll(): Promise<AtlasExport> {
     return exportRepository(this);

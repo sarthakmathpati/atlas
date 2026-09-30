@@ -101,11 +101,14 @@ export function TodayHead({
   model,
   plan,
   today,
+  calm,
 }: {
   profile: Profile | null;
   model: ReadinessModel | null;
   plan: TodayPlan | null;
   today: string;
+  /** Interview day (F31): a calm line instead of the plan's, and no minutes ring. */
+  calm?: boolean;
 }) {
   const now = new Date();
   const name = profile?.name.trim();
@@ -134,13 +137,17 @@ export function TodayHead({
             {title}
           </h1>
           {profile && (
-            <p className="mt-1.5 max-w-[52ch] text-md text-muted">{headLine(profile, plan)}</p>
+            <p className="mt-1.5 max-w-[52ch] text-md text-muted">
+              {calm
+                ? "A calm day: nothing new, only what helps you go in ready."
+                : headLine(profile, plan)}
+            </p>
           )}
           {profile?.interviewDate && (
             <ScaleBar interviewDate={profile.interviewDate} today={today} />
           )}
         </div>
-        {plan && <MinutesRing done={plan.done} budget={plan.budget} />}
+        {plan && !calm && <MinutesRing done={plan.done} budget={plan.budget} />}
       </div>
     </header>
   );

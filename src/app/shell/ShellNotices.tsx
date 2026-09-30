@@ -1,9 +1,14 @@
 // Notices above every page: storage problems, the storage notice from startup (for example "saved
-// in this browser only"), and the gentle backup reminder (F22).
+// in this browser only"), the gentle backup reminder (F22), parked thoughts that came back and
+// the wrap-up note before bedtime (F31). While a focus block runs, the reminders wait for the
+// break (held notices); storage problems still show at once.
 import { CloudOff, Download, HardDrive, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Misc";
+import { useHoldingNotices } from "@/features/focus/hooks";
+import { ParkedBack } from "@/features/focus/ParkedBack";
+import { WrapUpNote } from "@/features/focus/WrapUpNote";
 import { backupReminderDue, exportBackup, relativeDay } from "@/features/settings/backup";
 import { nowIso } from "@/lib/time";
 import { useProfileStore } from "@/stores/profileStore";
@@ -16,6 +21,7 @@ export function ShellNotices() {
   const update = useProfileStore((s) => s.update);
   const [noticeHidden, setNoticeHidden] = useState(false);
   const [busy, setBusy] = useState(false);
+  const holding = useHoldingNotices();
 
   const notices = [];
   if (state.status === "error") {
@@ -51,7 +57,7 @@ export function ShellNotices() {
       </Callout>,
     );
   }
-  if (state.status === "ready" && profile && backupReminderDue(profile)) {
+  if (state.status === "ready" && profile && !holding && backupReminderDue(profile)) {
     const services = state.services;
     notices.push(
       <Callout
@@ -90,10 +96,13 @@ export function ShellNotices() {
       </Callout>,
     );
   }
-  if (notices.length === 0) return null;
+  // The focus layer's notes decide for themselves whether to show; the strip collapses when
+  // nothing in it rendered.
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 pt-4 sm:px-6 lg:px-10 print:hidden">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 pt-4 empty:hidden sm:px-6 lg:px-10 print:hidden">
       {notices}
+      {state.status === "ready" && <WrapUpNote />}
+      {state.status === "ready" && <ParkedBack />}
     </div>
   );
 }

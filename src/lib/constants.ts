@@ -95,6 +95,7 @@ export const DB_LIMITS = {
   trimmedCodeChars: 2000,
   checksPerSubject: 400,
   mentalMathRuns: 300,
+  parkedThoughts: 300,
   planDays: 60,
   writeDebounceMs: 800,
   pageSize: 500,

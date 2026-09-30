@@ -13,6 +13,7 @@ import type {
   MentalMathRun,
   MistakeTag,
   MockSession,
+  ParkedThought,
   ProblemState,
   Story,
 } from "@/lib/types";
@@ -32,6 +33,7 @@ export const TABLE_NAMES = [
   "mapOverrides",
   "customConcepts",
   "generatedDrills",
+  "parkedThoughts",
 ] as const;
 
 export type TableName = (typeof TABLE_NAMES)[number];
@@ -51,6 +53,7 @@ export interface TableTypes {
   mapOverrides: MapOverride;
   customConcepts: CustomConcept;
   generatedDrills: GeneratedDrill;
+  parkedThoughts: ParkedThought;
 }
 
 /** The field that identifies each record. */
@@ -69,6 +72,7 @@ export const TABLE_KEY: { [K in TableName]: keyof TableTypes[K] & string } = {
   mapOverrides: "nodeId",
   customConcepts: "id",
   generatedDrills: "id",
+  parkedThoughts: "id",
 };
 
 export function keyOf<K extends TableName>(table: K, value: TableTypes[K]): string {
@@ -91,4 +95,5 @@ export const TABLE_LABELS: Record<TableName, string> = {
   mapOverrides: "moved map bubbles",
   customConcepts: "your own concepts",
   generatedDrills: "generated drills",
+  parkedThoughts: "parked thoughts",
 };

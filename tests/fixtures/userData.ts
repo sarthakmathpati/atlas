@@ -54,6 +54,11 @@ export function fullFixture(): ExportData {
     track: "sde" as const,
     interviewDate: "2026-11-15",
   };
+  profile.prefs = {
+    ...profile.prefs,
+    focus: { dim: true, holdNotices: false, breakView: true },
+    bedtime: "23:15",
+  };
   const reviewed = makeProblem("lc-1", 3);
   reviewed.attempts[2] = {
     ...reviewed.attempts[2]!,
@@ -236,6 +241,17 @@ export function fullFixture(): ExportData {
             done: false,
             skipped: true,
           },
+          {
+            id: "p3",
+            kind: "thought",
+            refId: "pt2",
+            title: "Email the recruiter about the date",
+            reason: "Parked on 1 Sep.",
+            estMinutes: 10,
+            done: false,
+            skipped: false,
+            origin: "owner",
+          },
         ],
         generatedAt: T2,
         updatedAt: T2,
@@ -246,7 +262,13 @@ export function fullFixture(): ExportData {
         month: "2026-09",
         days: {
           "2026-09-01": { minutes: 45, problemsSolved: 1, reviews: 2, conceptsTouched: 3 },
-          "2026-09-20": { minutes: 60, problemsSolved: 2, reviews: 1, conceptsTouched: 1 },
+          "2026-09-20": {
+            minutes: 60,
+            problemsSolved: 2,
+            reviews: 1,
+            conceptsTouched: 1,
+            focusBlocks: { done: 2, partly: 1, movedOn: 1 },
+          },
         },
         streakFreezeUsed: ["2026-09-05"],
         updatedAt: T2,
@@ -343,6 +365,25 @@ export function fullFixture(): ExportData {
         keyInsight: "Shrink from the left when the condition breaks.",
         difficulty: "easy",
         createdAt: T1,
+        updatedAt: T1,
+      },
+    ],
+    parkedThoughts: [
+      {
+        id: "pt1",
+        text: "Look up why TCP needs a three-way handshake",
+        when: "tonight",
+        dueAt: "2026-09-20T13:30:00.000Z",
+        createdAt: T1,
+        updatedAt: T1,
+      },
+      {
+        id: "pt2",
+        text: "Email the recruiter about the date",
+        when: "break",
+        dueAt: T1,
+        createdAt: T0,
+        doneAt: T1,
         updatedAt: T1,
       },
     ],

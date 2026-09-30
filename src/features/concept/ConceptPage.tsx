@@ -17,12 +17,14 @@ import { useConcept, useCustomConceptStore } from "@/stores/customConceptStore";
 import { NotFoundPage } from "../placeholder/pages";
 import { conceptMenuItems } from "./conceptActions";
 import { Breadcrumb, ConceptChips, ConceptTabs } from "./ConceptPanel";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 export default function ConceptPage() {
   const route = useRoute();
   const concept = useConcept(route.id);
   const customLoaded = useCustomConceptStore((s) => s.loaded);
   const wide = useMediaQuery("(min-width: 1024px)");
+  usePageFocusLine(concept ? `Learn ${concept.name}` : "", concept?.id ?? null);
   if (!concept) {
     // The owner's own concepts load with the rest of their data.
     if (!customLoaded && route.id?.startsWith("custom."))
