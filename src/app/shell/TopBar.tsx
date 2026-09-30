@@ -115,6 +115,7 @@ export function TopBar() {
   const setAskOpen = useUiStore((s) => s.setAskOpen);
   // During a focus block the search pill narrows to make room for the block's line.
   const focusing = useFocusTimerStore((s) => blockActive(s) && s.intention !== "");
+  const blockOn = useFocusTimerStore((s) => blockActive(s));
   return (
     <header className="shrink-0 bg-canvas print:hidden">
       <div className="flex h-16 items-center gap-1 px-2 sm:gap-2 sm:px-4 lg:px-6">
@@ -124,7 +125,10 @@ export function TopBar() {
           aria-label={`${APP_NAME}, go to Today`}
         >
           <BrandMark size={22} className="text-accent" />
-          <span className="font-display text-lg font-bold">{APP_NAME}</span>
+          {/* During a block the name steps aside on phones: the line has its own row below. */}
+          <span className={cx("font-display text-lg font-bold", blockOn && "max-sm:sr-only")}>
+            {APP_NAME}
+          </span>
         </a>
         <button
           type="button"
