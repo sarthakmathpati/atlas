@@ -136,7 +136,7 @@ export default function DesignsPage() {
                   {list.length}
                 </span>
               </h2>
-              <ul className="overflow-hidden rounded-panel border border-rule bg-surface">
+              <ul className="overflow-hidden rounded-panel bg-surface">
                 {list.map((p) => (
                   <Row key={p.id} problem={p} summary={summaries.get(p.id)!} />
                 ))}

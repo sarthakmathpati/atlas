@@ -17,9 +17,7 @@ export function SettingsSection({ id, title, description, children }: SectionPro
         {title}
       </h2>
       {description && <p className="mt-1 text-base text-muted">{description}</p>}
-      <div className="mt-3 divide-y divide-rule rounded-panel border border-rule bg-surface">
-        {children}
-      </div>
+      <div className="mt-3 divide-y divide-rule rounded-panel bg-surface">{children}</div>
     </section>
   );
 }

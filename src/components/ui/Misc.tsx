@@ -54,6 +54,8 @@ interface EmptyStateProps {
   className?: string;
   /** Compact version for panels and lists. */
   compact?: boolean;
+  /** No contour texture: for data-heavy screens (the workspace, tables), which stay plain. */
+  plain?: boolean;
 }
 
 /**
@@ -68,6 +70,7 @@ export function EmptyState({
   actions,
   className,
   compact,
+  plain,
 }: EmptyStateProps) {
   return (
     <div
@@ -77,12 +80,14 @@ export function EmptyState({
         className,
       )}
     >
-      <ContourCanvas
-        seed={typeof title === "string" ? title : "empty"}
-        levels={compact ? 8 : 10}
-        texture="lines"
-        className="-z-10 opacity-80"
-      />
+      {!plain && (
+        <ContourCanvas
+          seed={typeof title === "string" ? title : "empty"}
+          levels={compact ? 8 : 10}
+          texture="lines"
+          className="-z-10 opacity-80"
+        />
+      )}
       {drawing ? (
         <LineDrawing name={drawing} size={compact ? 56 : 72} className="-ml-1" />
       ) : (

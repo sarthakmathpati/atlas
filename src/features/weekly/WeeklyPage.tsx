@@ -4,10 +4,10 @@
 // up to 3 focus subjects for next week, accepted in one click. It opens on the first visit after
 // Sunday 18:00 and on demand from the dashboard; past weeks stay viewable.
 import { ChevronLeft, ChevronRight, RotateCcw, Sparkles, Target } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { conceptHref, navigate, routeHref, useRoute } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
-import { PageHeader } from "@/app/shell/PageHeader";
+import { usePageHeading } from "@/app/shell/usePageTitle";
 import { Button, IconButton } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { Skeleton } from "@/components/ui/Misc";
@@ -38,6 +38,8 @@ import { promptEnv } from "../ai/gather";
 import { AIMarkdown, AIRunView, ClaudeTag } from "../ai/parts";
 import { useAIRequest } from "../ai/useAI";
 import { ExplainNumber, MathTable } from "../insight/Explain";
+import { Stamp } from "../insight/Stamp";
+import { useStamps } from "../insight/stamps";
 import { useActivityInsight, useReadiness } from "../insight/useInsight";
 
 const longDate = (day: string) =>
@@ -75,7 +77,7 @@ function Stat({
   sub?: string;
 }) {
   return (
-    <div className="min-w-0 rounded-panel border border-rule bg-surface px-4 py-3">
+    <div className="min-w-0 rounded-panel bg-surface px-4 py-3">
       <p className="text-sm text-muted">{label}</p>
       <p className="mt-0.5 text-2xl font-semibold text-text tabular-nums">
         <ExplainNumber label={label} valueText={valueText} explain={explain} wide>
@@ -136,6 +138,39 @@ function FocusChoice({
   );
 }
 
+/**
+ * The weekly review's head (12.10.8): a logbook page, ruled, with the week's stamp when the week
+ * had 5 or more active days (derived, never stored).
+ */
+function LogbookHead({ week, nav }: { week: string; nav: ReactNode }) {
+  const ref = usePageHeading("Weekly review");
+  const weeks = useMemo(() => [week], [week]);
+  const [stamp] = useStamps(weeks);
+  return (
+    <header className="logbook relative mb-6 overflow-hidden rounded-focal bg-surface px-5 py-5 sm:mb-8 sm:px-7 sm:py-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 sm:pl-6">
+          <p className="text-sm text-muted">
+            {longDate(week)} to {longDate(addDaysToDate(week, 6))}
+          </p>
+          <h1
+            ref={ref}
+            tabIndex={-1}
+            className="mt-1 font-display text-page font-semibold tracking-[-0.01em] text-text outline-none max-sm:text-2xl"
+          >
+            Weekly review
+          </h1>
+          <p className="mt-2 max-w-[60ch] text-md text-muted">
+            A look back at the week, without guilt, and a focus for the next one.
+          </p>
+          <div className="mt-4">{nav}</div>
+        </div>
+        {stamp && <Stamp stamp={stamp} size={104} />}
+      </div>
+    </header>
+  );
+}
+
 export default function WeeklyPage() {
   const route = useRoute();
   const profile = useProfileStore((s) => s.profile);
@@ -180,11 +215,9 @@ export default function WeeklyPage() {
     navigate(routeHref("/weekly", undefined, w === current ? undefined : { week: w }));
 
   const header = (
-    <PageHeader
-      title="Weekly review"
-      eyebrow={`${longDate(week)} to ${longDate(addDaysToDate(week, 6))}`}
-      description="A look back at the week, without guilt, and a focus for the next one."
-      actions={
+    <LogbookHead
+      week={week}
+      nav={
         <div className="flex items-center gap-1">
           <IconButton
             icon={ChevronLeft}
@@ -325,10 +358,7 @@ export default function WeeklyPage() {
           />
         </section>
 
-        <section
-          aria-label="Day by day"
-          className="rounded-panel border border-rule bg-surface px-4 py-3"
-        >
+        <section aria-label="Day by day" className="rounded-panel bg-surface px-4 py-3">
           <ol className="grid grid-cols-7 gap-1.5">
             {s.days.map((d) => (
               <li key={d.date} className="flex flex-col items-center gap-1 text-center">
@@ -352,7 +382,7 @@ export default function WeeklyPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <section
             aria-labelledby="short-heading"
-            className="space-y-3 rounded-panel border border-rule bg-surface px-4 py-4 sm:px-5"
+            className="space-y-3 rounded-panel bg-surface px-4 py-4 sm:px-5"
           >
             <h2 id="short-heading" className="text-md font-semibold text-text">
               In short
@@ -365,7 +395,7 @@ export default function WeeklyPage() {
 
           <section
             aria-labelledby="claude-heading"
-            className="space-y-3 rounded-panel border border-rule bg-surface px-4 py-4 sm:px-5"
+            className="space-y-3 rounded-panel bg-surface px-4 py-4 sm:px-5"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2
@@ -407,7 +437,7 @@ export default function WeeklyPage() {
             {s.strongNames.length > 0 && (
               <section
                 aria-labelledby="strong-heading"
-                className="rounded-panel border border-rule bg-surface px-4 py-3 sm:px-5"
+                className="rounded-panel bg-surface px-4 py-3 sm:px-5"
               >
                 <h2 id="strong-heading" className="text-md font-semibold text-text">
                   Turned strong this week
@@ -429,7 +459,7 @@ export default function WeeklyPage() {
             {s.topMistakes.length > 0 && (
               <section
                 aria-labelledby="mistakes-heading"
-                className="rounded-panel border border-rule bg-surface px-4 py-3 sm:px-5"
+                className="rounded-panel bg-surface px-4 py-3 sm:px-5"
               >
                 <h2 id="mistakes-heading" className="text-md font-semibold text-text">
                   Top mistakes
@@ -455,10 +485,7 @@ export default function WeeklyPage() {
         )}
 
         {past.length > 0 && (
-          <section
-            aria-labelledby="past-heading"
-            className="rounded-panel border border-rule bg-surface"
-          >
+          <section aria-labelledby="past-heading" className="rounded-panel bg-surface">
             <h2
               id="past-heading"
               className="border-b border-rule px-4 py-2.5 text-md font-semibold text-text sm:px-5"

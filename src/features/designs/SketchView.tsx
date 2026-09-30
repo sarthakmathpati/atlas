@@ -3,6 +3,8 @@
 // boxes. Read-only: pan by dragging, pinch or use the buttons to zoom; the page still scrolls.
 import "@xyflow/react/dist/base.css";
 import {
+  Background,
+  BackgroundVariant,
   BaseEdge,
   EdgeLabelRenderer,
   Handle,
@@ -34,6 +36,7 @@ import {
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
+import { useShownTheme } from "@/components/ui/hooks";
 import {
   layoutSketch,
   routePath,
@@ -79,10 +82,10 @@ const Box = memo(function Box({ data }: NodeProps<BoxNode>) {
       className={cx(
         "flex items-center gap-2 border bg-surface px-3 text-sm font-medium text-text",
         data.kind === "db" || data.kind === "storage"
-          ? "rounded-[14px] border-rule-strong"
+          ? "rounded-[14px] border-muted"
           : data.kind === "client" || data.kind === "external"
-            ? "rounded-full border-dashed border-rule-strong"
-            : "rounded-control border-rule-strong",
+            ? "rounded-full border-dashed border-muted"
+            : "rounded-control border-muted",
       )}
     >
       <Handle
@@ -122,6 +125,21 @@ function Route({ id, data, markerEnd, markerStart, style }: EdgeProps<RouteEdge>
         </EdgeLabelRenderer>
       )}
     </>
+  );
+}
+
+/** The theme's paper (12.10.8): a drafting grid, dotted in Dusk like the map. */
+function SketchPaper() {
+  const dotted = useShownTheme() === "dusk";
+  return (
+    <Background
+      variant={dotted ? BackgroundVariant.Dots : BackgroundVariant.Lines}
+      gap={24}
+      size={dotted ? 1.4 : undefined}
+      lineWidth={1}
+      color={dotted ? "var(--contour)" : "var(--grid-line)"}
+      bgColor="var(--canvas)"
+    />
   );
 }
 
@@ -282,6 +300,7 @@ export default function SketchView({
           proOptions={{ hideAttribution: true }}
           aria-label={`Architecture sketch with ${summary}`}
         >
+          <SketchPaper />
           <Controls fitKey={fitKey} />
         </ReactFlow>
       </ReactFlowProvider>

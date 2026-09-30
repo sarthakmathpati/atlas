@@ -108,10 +108,7 @@ function Chat({
   };
 
   return (
-    <section
-      aria-label="Interview chat"
-      className="flex min-h-0 flex-col rounded-panel border border-rule bg-surface"
-    >
+    <section aria-label="Interview chat" className="flex min-h-0 flex-col rounded-panel bg-surface">
       <div
         ref={list}
         className="min-h-60 flex-1 space-y-4 overflow-y-auto px-4 py-4"
@@ -369,7 +366,7 @@ function Live({ session }: { session: MockSession }) {
   const timeUp = interview.remaining <= 0 && !ended;
   return (
     <div className="space-y-4">
-      <div className="sticky top-2 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-panel border border-rule bg-surface/95 px-3 py-2 backdrop-blur">
+      <div className="sticky top-2 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-panel bg-surface/95 px-3 py-2 backdrop-blur">
         <span
           role="timer"
           aria-label="Time left in the interview"
@@ -427,10 +424,7 @@ function Live({ session }: { session: MockSession }) {
         </Callout>
       )}
       {ended && !session.feedback && (
-        <section
-          aria-label="Feedback request"
-          className="space-y-3 rounded-panel border border-rule bg-surface p-4"
-        >
+        <section aria-label="Feedback request" className="space-y-3 rounded-panel bg-surface p-4">
           {feedback.state.phase === "idle" ? (
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-base text-text">The interview has ended.</p>
@@ -465,7 +459,7 @@ function Finished({ session }: { session: MockSession }) {
     : undefined;
   return (
     <div className="space-y-6">
-      <div className="rounded-panel border border-rule bg-surface p-4 sm:p-5">
+      <div className="rounded-panel bg-surface p-4 sm:p-5">
         <FeedbackView feedback={session.feedback!} />
       </div>
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-base text-muted">
@@ -495,7 +489,7 @@ function Finished({ session }: { session: MockSession }) {
         ) : null}
       </div>
       {session.turns.length > 0 && (
-        <details className="rounded-panel border border-rule bg-surface">
+        <details className="rounded-panel bg-surface">
           <summary className="cursor-pointer px-4 py-3 text-base font-medium text-text">
             The conversation ({session.turns.length} messages)
           </summary>
@@ -516,7 +510,7 @@ function Finished({ session }: { session: MockSession }) {
         </details>
       )}
       {session.kind === "dsa" && session.code?.trim() && (
-        <details className="rounded-panel border border-rule bg-surface">
+        <details className="rounded-panel bg-surface">
           <summary className="cursor-pointer px-4 py-3 text-base font-medium text-text">
             Your code
           </summary>
@@ -567,6 +561,7 @@ export default function MockSessionPage() {
         <PageHeader eyebrow="Mock interview" title="Mock interview" />
         <EmptyState
           icon={MessagesSquare}
+          drawing="compass"
           title="This interview isn't here"
           actions={
             <Button href="#/mock" variant="primary">

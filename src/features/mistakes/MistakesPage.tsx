@@ -86,10 +86,7 @@ function Panel({
   className?: string;
 }) {
   return (
-    <section
-      aria-labelledby={id}
-      className={cx("rounded-panel border border-rule bg-surface", className)}
-    >
+    <section aria-labelledby={id} className={cx("rounded-panel bg-surface", className)}>
       <div className="flex items-start justify-between gap-3 border-b border-rule px-4 py-3">
         <div>
           <h2 id={id} className="text-md font-semibold text-text">
@@ -201,7 +198,12 @@ function TagDetail({
   );
   if (!tag) {
     return (
-      <EmptyState icon={NotebookPen} title="This mistake tag doesn't exist anymore" actions={back}>
+      <EmptyState
+        icon={NotebookPen}
+        drawing="compass"
+        title="This mistake tag doesn't exist anymore"
+        actions={back}
+      >
         It may have been merged into another tag.
       </EmptyState>
     );
@@ -210,7 +212,7 @@ function TagDetail({
   return (
     <div className="space-y-5">
       {back}
-      <div className="rounded-panel border border-rule bg-surface px-4 py-4 sm:px-5">
+      <div className="rounded-panel bg-surface px-4 py-4 sm:px-5">
         <p className="text-sm text-muted">
           Category: <span className="text-text">{CATEGORY_LABEL[tag.category]}</span>
         </p>
@@ -224,10 +226,7 @@ function TagDetail({
           />
         </div>
       </div>
-      <section
-        aria-labelledby="tag-attempts"
-        className="rounded-panel border border-rule bg-surface"
-      >
+      <section aria-labelledby="tag-attempts" className="rounded-panel bg-surface">
         <h3
           id="tag-attempts"
           className="border-b border-rule px-4 py-3 text-md font-semibold text-text"
@@ -317,6 +316,7 @@ export default function MistakesPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={NotebookPen}
+          drawing="trail"
           title="No mistakes logged yet"
           actions={<Button href="#/problems">Go to problems</Button>}
         >

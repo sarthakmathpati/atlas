@@ -15,11 +15,12 @@ import {
 } from "lucide-react";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
+import { CardLabel } from "@/components/ui/Card";
 import { Callout, CodeSpans, EmptyState, Skeleton } from "@/components/ui/Misc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { dependentsOf, hasCoreContent } from "@/data/syllabus";
 import { isCustomConceptId, studyContent } from "@/lib/concepts/custom";
-import type { Concept, ConceptContent, ConceptState } from "@/lib/types";
+import type { Concept, ConceptContent, ConceptState, QA } from "@/lib/types";
 import { openExplainBack, openFlashcards, openQuickQuiz } from "@/stores/conceptDialogStore";
 import { useConceptNoteStore } from "@/stores/conceptNoteStore";
 import { setLastLevel, useConceptState, useConceptStatus } from "@/stores/conceptStateStore";
@@ -36,8 +37,8 @@ type Level = NonNullable<ConceptState["lastLevelOpened"]>;
 
 function Block({ title, children, id }: { title: string; children: ReactNode; id: string }) {
   return (
-    <section aria-labelledby={id} className="border-t border-rule pt-4">
-      <h3 id={id} className="mb-2 text-base font-semibold text-text">
+    <section aria-labelledby={id} className="pt-2">
+      <h3 id={id} className="mb-2 font-display text-md font-semibold text-text">
         {title}
       </h3>
       {children}
@@ -45,13 +46,88 @@ function Block({ title, children, id }: { title: string; children: ReactNode; id
   );
 }
 
+/**
+ * "Check yourself" (12.10.8): a short block at the end of each level, with one question from the
+ * concept's set (a different one per level; the answer hidden) and one way to check properly.
+ */
+function CheckYourself({
+  concept,
+  level,
+  questions,
+}: {
+  concept: Concept;
+  level: Level;
+  questions: QA[];
+}) {
+  const index = level === "simple" ? 0 : level === "interview" ? 1 : 2;
+  const qa = questions.length ? questions[index % questions.length] : undefined;
+  const action =
+    level === "simple" ? (
+      <Button size="sm" icon={MessageSquareText} onClick={() => openExplainBack(concept.id)}>
+        Check by explaining it
+      </Button>
+    ) : level === "interview" ? (
+      <Button
+        size="sm"
+        icon={Layers}
+        onClick={() =>
+          openFlashcards({ conceptIds: [concept.id], title: `Flashcards: ${concept.name}` })
+        }
+      >
+        Check with flashcards
+      </Button>
+    ) : (
+      <Button
+        size="sm"
+        icon={ListChecks}
+        onClick={() =>
+          openQuickQuiz({
+            conceptIds: [concept.id],
+            title: `Quick quiz: ${concept.name}`,
+            scope: concept.name,
+          })
+        }
+      >
+        Check with a quick quiz
+      </Button>
+    );
+  return (
+    <section
+      aria-labelledby={`${concept.id}-check-${level}`}
+      className="max-w-[74ch] rounded-panel bg-surface-sunken px-5 py-4"
+    >
+      <h3 id={`${concept.id}-check-${level}`} className="text-sm font-semibold text-accent">
+        Check yourself
+      </h3>
+      {qa ? (
+        <details className="group mt-1.5">
+          <summary className="cursor-pointer list-none text-base font-medium text-text marker:hidden">
+            {qa.q}
+            <span className="ml-2 text-sm font-normal text-accent group-open:hidden">
+              Show the answer
+            </span>
+          </summary>
+          <p className="mt-1 text-base text-muted">{qa.a}</p>
+        </details>
+      ) : (
+        <p className="mt-1.5 text-base text-text">
+          Close the text and say the main idea in two sentences.
+        </p>
+      )}
+      <div className="mt-3">{action}</div>
+    </section>
+  );
+}
+
 function Levels({
   concept,
   content,
+  questions,
   onOpenConcept,
 }: {
   concept: Concept;
   content: ConceptContent;
+  questions: QA[];
   onOpenConcept?: (id: string) => void;
 }) {
   const state = useConceptState(concept.id);
@@ -84,7 +160,20 @@ function Levels({
         ]}
       />
       <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-        <MarkdownView onConceptLink={onOpenConcept}>{text}</MarkdownView>
+        {level === "interview" ? (
+          // The interview points in their own card (12.10.8).
+          <section
+            aria-labelledby={`${concept.id}-points`}
+            className="max-w-[74ch] rounded-panel bg-surface-sunken px-5 py-4"
+          >
+            <CardLabel className="mb-1">
+              <span id={`${concept.id}-points`}>Interview points</span>
+            </CardLabel>
+            <MarkdownView onConceptLink={onOpenConcept}>{text}</MarkdownView>
+          </section>
+        ) : (
+          <MarkdownView onConceptLink={onOpenConcept}>{text}</MarkdownView>
+        )}
       </Suspense>
       {level === "interview" && !state?.studied && (
         <Callout
@@ -98,6 +187,7 @@ function Levels({
           Read the interview points? Mark it as studied and it comes back for a short review.
         </Callout>
       )}
+      <CheckYourself concept={concept} level={level} questions={questions} />
     </div>
   );
 }
@@ -169,6 +259,7 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
           key={concept.id}
           concept={concept}
           content={content}
+          questions={questions}
           onOpenConcept={onOpenConcept}
         />
       ) : failed ? (

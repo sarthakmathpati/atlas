@@ -137,7 +137,7 @@ function Round({
   return (
     <section
       aria-label="Practice question"
-      className="space-y-4 rounded-panel border border-rule bg-surface p-4 sm:p-5"
+      className="space-y-4 rounded-panel bg-surface p-4 sm:p-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -379,7 +379,7 @@ export function Practice({
           <h2 id="recent-practice" className="text-md font-semibold text-text">
             Recent practice
           </h2>
-          <ul className="divide-y divide-rule rounded-panel border border-rule bg-surface">
+          <ul className="divide-y divide-rule rounded-panel bg-surface">
             {recent.map(({ story, practice }) => {
               const c = readCritique(practice.critique);
               return (

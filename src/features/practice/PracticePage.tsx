@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
 import { cx } from "@/components/ui/cx";
+import { LineDrawing } from "@/components/ui/LineDrawing";
 import { BEHAVIORAL_QUESTIONS } from "@/data/behavioral.seed";
 import { DESIGN_PROBLEMS } from "@/data/designs.seed";
 import { QUANT_PUZZLES } from "@/data/quant.seed";
@@ -175,23 +176,46 @@ export default function PracticePage() {
         title="Practice"
         description="Short, focused practice that feeds your progress on the map."
       />
+      {/* One tile leads (12.10.5): the drill, the quickest daily practice; the rest step back. */}
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {tiles.map((t) => {
+        {tiles.map((t, i) => {
           const Icon = t.icon;
+          const lead = i === 0;
           return (
-            <li key={t.href}>
+            <li key={t.href} className={cx(lead && "sm:col-span-2")}>
               <a
                 href={t.href}
-                className="flex h-full flex-col gap-1.5 rounded-panel border border-rule bg-surface p-4 transition-colors hover:border-rule-strong hover:bg-surface-sunken"
+                className={cx(
+                  "flex h-full gap-4 p-4 transition-colors sm:p-5",
+                  lead
+                    ? "rounded-focal bg-surface-raised shadow-focal hover:bg-surface"
+                    : "rounded-panel bg-surface hover:bg-surface-sunken",
+                )}
               >
-                <span className="flex items-center gap-2.5 text-base font-medium text-text">
-                  <Icon size={18} aria-hidden="true" className="text-accent" />
-                  {t.title}
+                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <span className="flex items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-control bg-accent-soft text-accent">
+                      <Icon size={19} aria-hidden="true" />
+                    </span>
+                    <span
+                      className={cx(
+                        "font-display font-semibold text-text",
+                        lead ? "text-xl" : "text-lg",
+                      )}
+                    >
+                      {t.title}
+                    </span>
+                  </span>
+                  <span className={cx("text-muted", lead ? "text-base" : "text-sm")}>{t.text}</span>
+                  <span
+                    className={cx("mt-auto pt-2 text-sm", t.status ? "text-text" : "text-muted")}
+                  >
+                    {t.status ?? t.start}
+                  </span>
                 </span>
-                <span className="text-sm text-muted">{t.text}</span>
-                <span className={cx("mt-auto pt-2 text-sm", t.status ? "text-text" : "text-muted")}>
-                  {t.status ?? t.start}
-                </span>
+                {lead && (
+                  <LineDrawing name="trail" size={88} className="self-center max-sm:hidden" />
+                )}
               </a>
             </li>
           );

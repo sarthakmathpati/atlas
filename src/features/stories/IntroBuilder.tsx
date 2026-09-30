@@ -137,7 +137,7 @@ export function IntroBuilder() {
         >
           {verdictText}
         </p>
-        <div className="max-w-[70ch] rounded-panel border border-rule bg-surface px-4 py-3 text-md whitespace-pre-wrap text-text">
+        <div className="max-w-[70ch] rounded-panel bg-surface px-4 py-3 text-md whitespace-pre-wrap text-text">
           {script || <span className="text-muted">Your script appears here as you write.</span>}
         </div>
         <div className="flex flex-wrap gap-2">

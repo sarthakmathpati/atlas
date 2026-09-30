@@ -16,8 +16,8 @@ import { cx } from "@/components/ui/cx";
 import { CodeSpans } from "@/components/ui/Misc";
 import { prefersReducedMotion } from "@/components/ui/hooks";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
-import { STATUS_LABEL } from "@/components/ui/labels";
-import { SubjectIcon } from "@/components/ui/SubjectIcon";
+import { INK_CLASS, STATUS_LABEL } from "@/components/ui/labels";
+import { SubjectEmblem } from "@/components/ui/SubjectEmblem";
 import { seedProblemsByConcept } from "@/data/seed";
 import {
   conceptById,
@@ -50,7 +50,7 @@ function ConceptRow({ concept, highlighted }: { concept: Concept; highlighted: b
           <div className="flex flex-wrap items-center gap-2">
             <StatusGlyph status={status} size={14} />
             <span className="sr-only">{STATUS_LABEL[status]}:</span>
-            <span className="font-medium text-text">{concept.name}</span>
+            <span className={cx("font-medium", INK_CLASS[status])}>{concept.name}</span>
             {concept.isPattern && (
               <span className="rounded-control bg-accent-soft px-1.5 font-condensed text-xs font-semibold text-accent">
                 Pattern
@@ -186,7 +186,7 @@ export function MapListView({ target }: MapListViewProps) {
         </p>
       )}
 
-      <div className="mt-4 overflow-hidden rounded-panel border border-rule bg-surface">
+      <div className="mt-4 overflow-hidden rounded-panel bg-surface">
         {subjects.map((subject) => {
           const subjectTopics = topicsBySubject.get(subject.id) ?? [];
           const visibleTopics = subjectTopics
@@ -233,9 +233,7 @@ export function MapListView({ target }: MapListViewProps) {
                       isOpen && "rotate-90",
                     )}
                   />
-                  <span className="text-muted">
-                    <SubjectIcon name={subject.icon} />
-                  </span>
+                  <SubjectEmblem subjectId={subject.id} size={28} />
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium text-text">{subject.name}</span>
                     <span className="block truncate text-sm text-muted">{subject.description}</span>

@@ -37,16 +37,25 @@ export function ProblemStatusGlyph({
 export function ResultLabel({
   result,
   short,
+  chip,
   className,
 }: {
   result: AttemptResult | undefined;
   short?: boolean;
+  /** As a pill on the sunken fill, like the other chips in a row. */
+  chip?: boolean;
   className?: string;
 }) {
   if (!result) return <span className={cx("text-faint", className)}>No result</span>;
   const Icon = RESULT_ICON[result];
   return (
-    <span className={cx("inline-flex items-center gap-1.5 whitespace-nowrap", className)}>
+    <span
+      className={cx(
+        "inline-flex items-center gap-1.5 whitespace-nowrap",
+        chip && "h-6 rounded-full bg-surface-sunken pr-2.5 pl-2 text-xs font-medium",
+        className,
+      )}
+    >
       <Icon size={15} aria-hidden="true" className={cx("shrink-0", RESULT_TONE[result])} />
       <span className="text-text">{short ? RESULT_SHORT[result] : RESULT_LABEL[result]}</span>
     </span>

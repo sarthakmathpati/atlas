@@ -14,6 +14,7 @@ export function NotFoundPage() {
       <PageHeader title="Page not found" />
       <EmptyState
         icon={Compass}
+        drawing="compass"
         title="This link doesn't match any page"
         actions={
           <>

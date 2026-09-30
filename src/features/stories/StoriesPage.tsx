@@ -43,7 +43,7 @@ function StoryList({
       {list.length === 0 ? (
         <p className="text-sm text-muted">No stories yet.</p>
       ) : (
-        <ul className="divide-y divide-rule overflow-hidden rounded-panel border border-rule bg-surface">
+        <ul className="divide-y divide-rule overflow-hidden rounded-panel bg-surface">
           {list.map((s) => (
             <li key={s.id}>
               <a
@@ -150,6 +150,7 @@ export default function StoriesPage() {
             ) : own.length === 0 ? (
               <EmptyState
                 icon={MessageSquareQuote}
+                drawing="tent"
                 title="No stories yet"
                 actions={
                   <>

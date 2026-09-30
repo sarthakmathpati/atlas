@@ -11,10 +11,12 @@ interface TimerProps {
   className?: string;
   /** Hide the reset button (for example while a mock interview runs). */
   noReset?: boolean;
+  /** The workspace's larger clock (12.10.8), in the display face. */
+  large?: boolean;
 }
 
 /** Displays a timer from useTimer() with its controls. */
-export function Timer({ timer, label, className, noReset }: TimerProps) {
+export function Timer({ timer, label, className, noReset, large }: TimerProps) {
   const shown = timer.remainingMs ?? timer.elapsedMs;
   return (
     <div
@@ -26,7 +28,8 @@ export function Timer({ timer, label, className, noReset }: TimerProps) {
         role="timer"
         aria-live="off"
         className={cx(
-          "min-w-14 px-1 text-center text-md font-medium tabular-nums",
+          "min-w-14 px-1 text-center font-medium tabular-nums",
+          large ? "min-w-20 font-display text-2xl font-semibold tracking-tight" : "text-md",
           timer.running ? "text-text" : "text-muted",
         )}
       >

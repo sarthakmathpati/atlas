@@ -131,7 +131,7 @@ export function ReviewResult({
       )}
       <List title="Code quality" items={review.codeQuality} />
       {insight && (
-        <div className="rounded-control border border-rule bg-surface-sunken px-3 py-2">
+        <div className="rounded-control bg-surface px-3 py-2">
           <h4 className="text-sm font-semibold text-text">Suggested insight</h4>
           <p className="mt-0.5 text-base text-text">{insight}</p>
           {canUseInsight &&
@@ -203,9 +203,13 @@ function PanelFrame({ title, icon: Icon, onClose, className, children }: PanelFr
   return (
     <section
       aria-label={title}
-      className={cx("flex min-h-0 flex-col border-t border-rule bg-surface", className)}
+      className={cx(
+        // A soft tray under the editor (12.10.8): rounded, sunken, no hairline.
+        "mx-2 mt-2 flex min-h-0 flex-col rounded-panel bg-surface-sunken",
+        className,
+      )}
     >
-      <div className="flex shrink-0 items-center gap-2 px-3 py-2">
+      <div className="flex shrink-0 items-center gap-2 px-3.5 pt-2.5 pb-2">
         <Icon size={16} aria-hidden="true" className="text-accent" />
         <h2 className="text-base font-semibold text-text">{title}</h2>
         <ClaudeTag />
@@ -217,7 +221,7 @@ function PanelFrame({ title, icon: Icon, onClose, className, children }: PanelFr
           onClick={onClose}
         />
       </div>
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-3">{children}</div>
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3.5 pb-3.5">{children}</div>
     </section>
   );
 }
@@ -428,7 +432,7 @@ export function DryRunPanel({
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-text">Earlier dry runs in this attempt</h3>
               {[...earlier].reverse().map((d) => (
-                <details key={d.createdAt} className="rounded-control border border-rule px-3 py-2">
+                <details key={d.createdAt} className="rounded-control bg-surface px-3 py-2">
                   <summary className="cursor-pointer truncate font-mono text-sm text-text">
                     {d.input}
                   </summary>

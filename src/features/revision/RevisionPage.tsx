@@ -296,7 +296,7 @@ export default function RevisionPage() {
       <div className="space-y-5">
         <section
           aria-label="Choose a sheet"
-          className="space-y-4 rounded-panel border border-rule bg-surface p-4 sm:p-5 print:hidden"
+          className="space-y-4 rounded-panel bg-surface p-4 sm:p-5 print:hidden"
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SegmentedControl<SheetScope>
@@ -430,7 +430,7 @@ export default function RevisionPage() {
             The sheet needs the text of the concepts it lists. Reload the page to try again.
           </Callout>
         ) : customEmpty ? (
-          <EmptyState icon={ScrollText} title="Choose what goes on the sheet">
+          <EmptyState icon={ScrollText} drawing="trail" title="Choose what goes on the sheet">
             Pick one or more subjects, topics or patterns above.
           </EmptyState>
         ) : !sheet ? (
@@ -441,13 +441,13 @@ export default function RevisionPage() {
         ) : (
           <article
             className={cx(
-              "revision-sheet rounded-panel border border-rule bg-surface px-4 py-5 sm:px-8 sm:py-7",
+              "revision-sheet rounded-panel bg-surface px-4 py-5 sm:px-8 sm:py-7",
               "print:rounded-none print:border-0 print:p-0",
             )}
             aria-label={sheet.title}
           >
-            <header className="mb-5 border-b border-rule pb-4">
-              <p className="flex flex-wrap items-center gap-2 text-2xl font-semibold text-text">
+            <header className="mb-5 border-b border-rule pb-4 print:border-rule">
+              <p className="flex flex-wrap items-center gap-2 font-display text-2xl font-semibold text-text print:font-sans">
                 {sheet.title}
                 {showing === "tightened" && <ClaudeTag label="Edited by Claude" />}
               </p>

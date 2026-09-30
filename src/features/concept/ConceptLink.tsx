@@ -3,7 +3,8 @@
 // elsewhere it is a link to the concept's page.
 import { conceptHref } from "@/app/router";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
-import { STATUS_LABEL } from "@/components/ui/labels";
+import { cx } from "@/components/ui/cx";
+import { INK_CLASS, STATUS_LABEL } from "@/components/ui/labels";
 import { topicById } from "@/data/syllabus";
 import { useConceptStatus } from "@/stores/conceptStateStore";
 import { useConcept } from "@/stores/customConceptStore";
@@ -22,7 +23,7 @@ export function ConceptLink({ id, detail, onOpen }: ConceptLinkProps) {
     <>
       <StatusGlyph status={status} size={14} title={STATUS_LABEL[status]} className="mt-1" />
       <span className="min-w-0">
-        <span className="block text-base text-text">{concept.name}</span>
+        <span className={cx("block text-base", INK_CLASS[status])}>{concept.name}</span>
         <span className="block text-sm text-muted">
           {detail ?? topicById.get(concept.topicId)?.name ?? ""}
         </span>

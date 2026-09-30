@@ -393,6 +393,7 @@ export default function KitPage() {
         <Demo title="Empty state, skeleton and notices">
           <EmptyState
             icon={Plus}
+            drawing="compass"
             title="No problems yet"
             compact
             actions={
