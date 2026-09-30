@@ -1,7 +1,11 @@
-// Today's plan (F16): the planner fills it on the first open of the day (lib/planner); the owner
-// picks the time for today (15, 30, 60, 90, 120 minutes or their own number) or a minimum day,
-// and each item has Start, Done, Skip and Swap. Changing the time plans the rest of the day
-// again and keeps what is done. A bar shows the minutes done against the budget.
+// Today's plan (F16, 12.10.7): the planner fills it on the first open of the day (lib/planner);
+// the owner picks the time for today (15, 30, 60, 90, 120 minutes or their own number) or a
+// minimum day, and each item has Start, Done, Skip and Swap. Changing the time plans the rest of
+// the day again and keeps what is done.
+// Shown as "Up next" (the first item not done, the screen's one focal card, with a big Start) and
+// "Today's route": every item is a stop on a dashed line (done stops a filled accent check, the
+// current one ringed, the last a flag), and finishing a stop inks the line to the next one in
+// 250 ms. The minutes done against the budget are the ring in the page head (TodayHead).
 import {
   ArrowLeftRight,
   BookOpen,
@@ -9,6 +13,7 @@ import {
   Check,
   ChevronDown,
   Code2,
+  Flag,
   DraftingCompass,
   Dumbbell,
   Layers,
@@ -21,34 +26,35 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { routeHref } from "@/app/router";
-import { Button, IconButton } from "@/components/ui/Button";
+import { Button, IconButton, type ButtonVariant } from "@/components/ui/Button";
+import { Card, CardLabel } from "@/components/ui/Card";
+import { Chip, DifficultyChip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
 import { Input, Switch } from "@/components/ui/Field";
+import { LineDrawing } from "@/components/ui/LineDrawing";
 import { Skeleton } from "@/components/ui/Misc";
 import { Popover } from "@/components/ui/Popover";
-import { ProgressBar } from "@/components/ui/Progress";
-import { MINIMUM_DAY_MINUTES, planMinutes, swapOptions } from "@/lib/planner/planner";
+import { SubjectMark } from "@/components/ui/SubjectEmblem";
+import { subjectById, topicById } from "@/data/syllabus";
+import { swapOptions } from "@/lib/planner/planner";
+import { problemInfo } from "@/lib/problems/catalog";
 import { formatMinutes } from "@/lib/time";
-import type { DayPlan, PlanItem } from "@/lib/types";
-import { useMinutesOn } from "@/stores/activityStore";
-import { useToday } from "@/stores/clockStore";
+import type { DayPlan, Difficulty, PlanItem, Subject } from "@/lib/types";
 import { openConceptReview, openFlashcards } from "@/stores/conceptDialogStore";
-import { useDataReady } from "@/stores/hydrate";
 import {
-  ensurePlanned,
   removePlanItem,
-  replan,
   restorePlan,
   setPlanItemDone,
   setPlanItemSkipped,
   swapPlanItem,
-  usePlanStore,
 } from "@/stores/planStore";
-import { useProfileStore } from "@/stores/profileStore";
+import { findConcept } from "@/stores/customConceptStore";
+import { useProblemStore } from "@/stores/problemStore";
 import { toast } from "@/stores/toastStore";
 import { plannerInputNow } from "../insight/useInsight";
+import type { TodayPlan } from "./useTodayPlan";
 
 const BUDGET_PRESETS = [15, 30, 60, 90, 120] as const;
 
@@ -112,21 +118,38 @@ function startTarget(item: PlanItem): { href: string } | { run: () => void } | n
   }
 }
 
-function StartButton({ item }: { item: PlanItem }) {
+function StartButton({
+  item,
+  variant = "secondary",
+  className,
+}: {
+  item: PlanItem;
+  variant?: ButtonVariant;
+  className?: string;
+}) {
   const target = startTarget(item);
   if (!target) return null;
+  const size = variant === "primary" ? "md" : "sm";
   return "href" in target ? (
-    <Button size="sm" href={target.href}>
+    <Button size={size} variant={variant} href={target.href} className={className}>
       Start
     </Button>
   ) : (
-    <Button size="sm" onClick={target.run}>
+    <Button size={size} variant={variant} onClick={target.run} className={className}>
       Start
     </Button>
   );
 }
 
-function SwapButton({ item, plan }: { item: PlanItem; plan: DayPlan }) {
+function SwapButton({
+  item,
+  plan,
+  className,
+}: {
+  item: PlanItem;
+  plan: DayPlan;
+  className?: string;
+}) {
   const [options, setOptions] = useState<PlanItem[] | null>(null);
   return (
     <Popover
@@ -139,7 +162,7 @@ function SwapButton({ item, plan }: { item: PlanItem; plan: DayPlan }) {
         setOptions(input ? swapOptions(input, plan.items, item.id) : []);
       }}
       renderTrigger={(props) => (
-        <Button {...props} size="sm" variant="ghost" icon={ArrowLeftRight}>
+        <Button {...props} size="sm" variant="ghost" icon={ArrowLeftRight} className={className}>
           Swap
         </Button>
       )}
@@ -185,94 +208,6 @@ function SwapButton({ item, plan }: { item: PlanItem; plan: DayPlan }) {
         </div>
       )}
     </Popover>
-  );
-}
-
-function PlanRow({ item, plan }: { item: PlanItem; plan: DayPlan }) {
-  const Icon = KIND_ICON[item.kind];
-  const owner = item.origin !== "planner";
-  const date = plan.date;
-  return (
-    <li className={cx("flex gap-3 px-3 py-3 sm:px-4", item.done && "bg-surface-sunken/40")}>
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={item.done}
-        aria-label={`Done: ${item.title}`}
-        onClick={() => setPlanItemDone(date, item.id, !item.done)}
-        className={cx(
-          "mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border transition-colors max-md:size-7",
-          item.done
-            ? "border-strong-stroke bg-strong text-canvas"
-            : "border-rule-strong bg-surface hover:border-accent",
-        )}
-      >
-        {item.done && <Check size={14} strokeWidth={3} aria-hidden="true" />}
-      </button>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-2">
-          <Icon size={16} aria-hidden="true" className="mt-1 shrink-0 text-muted" />
-          <p
-            className={cx(
-              "min-w-0 flex-1 font-medium",
-              item.done ? "text-muted line-through" : "text-text",
-            )}
-          >
-            {item.title}
-          </p>
-          <span className="mt-0.5 shrink-0 text-sm text-muted tabular-nums">
-            {item.estMinutes} min
-          </span>
-        </div>
-        <p className="mt-0.5 text-sm text-muted">
-          {item.reason}
-          {owner && !/Added by you/.test(item.reason) && (
-            <span className="text-faint"> Added by you.</span>
-          )}
-        </p>
-        {!item.done && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <StartButton item={item} />
-            {item.kind !== "drill" && item.kind !== "mental-math" && (
-              <SwapButton item={item} plan={plan} />
-            )}
-            {owner ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                icon={X}
-                onClick={() => {
-                  const before = removePlanItem(date, item.id);
-                  if (before)
-                    toast("Removed from today's plan.", {
-                      action: { label: "Undo", onClick: () => restorePlan(before) },
-                    });
-                }}
-              >
-                Remove
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="ghost"
-                icon={SkipForward}
-                onClick={() => {
-                  setPlanItemSkipped(date, item.id, true);
-                  toast("Skipped for today.", {
-                    action: {
-                      label: "Undo",
-                      onClick: () => setPlanItemSkipped(date, item.id, false),
-                    },
-                  });
-                }}
-              >
-                Skip
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-    </li>
   );
 }
 
@@ -365,58 +300,315 @@ function BudgetPicker({ plan, onPick }: { plan: DayPlan; onPick: (budget: number
   );
 }
 
-/** The plan card on Today. */
-export function PlanSection() {
-  const profile = useProfileStore((s) => s.profile);
-  const today = useToday();
-  const ready = useDataReady((s) => s.ready);
-  const plan = usePlanStore((s) => s.plans[today]);
-  const activity = useMinutesOn(today);
-  const [showSkipped, setShowSkipped] = useState(false);
+/** The subject an item belongs to (its concept, or its problem's first concept or topic). */
+function itemSubject(
+  item: PlanItem,
+  problems: ReturnType<typeof useProblemStore.getState>["states"],
+): Subject | undefined {
+  const ref = item.refIds?.[0] ?? item.refId;
+  if (!ref) return item.kind === "story" ? subjectById.get("career") : undefined;
+  if (item.kind === "resolve" || item.kind === "new-problem" || item.kind === "design") {
+    const info = problemInfo(ref, problems[ref]);
+    const concept = info?.conceptIds[0] ? findConcept(info.conceptIds[0]) : undefined;
+    const subjectId =
+      concept?.subjectId ?? (info?.topicId ? topicById.get(info.topicId)?.subjectId : undefined);
+    return subjectId ? subjectById.get(subjectId) : undefined;
+  }
+  if (item.kind === "story") return subjectById.get("career");
+  const concept = findConcept(ref);
+  return concept ? subjectById.get(concept.subjectId) : undefined;
+}
 
-  // Plan the day on the first open (and after midnight, once the new day's plan is loaded).
-  useEffect(() => {
-    if (!ready || !profile || plan?.plannedAt) return;
-    const input = plannerInputNow({
-      budget: plan?.budgetMinutes ?? profile.dailyMinutes,
-      minimumDay: plan?.minimumDay ?? false,
-    });
-    if (input && input.date === today) ensurePlanned(input);
-  }, [ready, profile, plan?.plannedAt, plan?.budgetMinutes, plan?.minimumDay, today]);
+function itemDifficulty(
+  item: PlanItem,
+  problems: ReturnType<typeof useProblemStore.getState>["states"],
+): Difficulty | undefined {
+  if (item.kind !== "resolve" && item.kind !== "new-problem") return undefined;
+  return item.refId ? problemInfo(item.refId, problems[item.refId])?.difficulty : undefined;
+}
 
-  const planAgain = (budget: number, minimumDay: boolean, message: string) => {
-    const input = plannerInputNow({ budget, minimumDay });
-    if (!input) return;
-    const before = replan(input);
-    toast(message, before ? { action: { label: "Undo", onClick: () => restorePlan(before) } } : {});
-  };
+/** Skip for planned items; Remove for the owner's own (both with Undo). */
+function SkipButton({
+  item,
+  date,
+  className,
+}: {
+  item: PlanItem;
+  date: string;
+  className?: string;
+}) {
+  const owner = item.origin !== "planner";
+  return owner ? (
+    <Button
+      size="sm"
+      variant="ghost"
+      icon={X}
+      className={className}
+      onClick={() => {
+        const before = removePlanItem(date, item.id);
+        if (before)
+          toast("Removed from today's plan.", {
+            action: { label: "Undo", onClick: () => restorePlan(before) },
+          });
+      }}
+    >
+      Remove
+    </Button>
+  ) : (
+    <Button
+      size="sm"
+      variant="ghost"
+      icon={SkipForward}
+      className={className}
+      onClick={() => {
+        setPlanItemSkipped(date, item.id, true);
+        toast("Skipped for today.", {
+          action: {
+            label: "Undo",
+            onClick: () => setPlanItemSkipped(date, item.id, false),
+          },
+        });
+      }}
+    >
+      Skip
+    </Button>
+  );
+}
 
-  if (!plan?.plannedAt) {
+const swappable = (item: PlanItem) => item.kind !== "drill" && item.kind !== "mental-math";
+
+function OwnerNote({ item }: { item: PlanItem }) {
+  if (item.origin === "planner" || /Added by you/.test(item.reason)) return null;
+  return <span className="text-faint"> Added by you.</span>;
+}
+
+// ----- the day's plan, shared by the head, Up next and the route -------------------------------
+
+// ----- Up next -----------------------------------------------------------------------------------
+
+/** The one focal card on Today: the first stop not done, with a big Start. */
+export function UpNextCard({ today }: { today: TodayPlan | null }) {
+  const problems = useProblemStore((s) => s.states);
+  if (!today) {
     return (
-      <section aria-label="Today's plan" className="rounded-panel border border-rule bg-surface">
-        <div className="space-y-3 p-5" role="status" aria-label="Planning your day">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-2 w-full" />
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
+      <Card focal aria-label="Up next">
+        <div className="space-y-3" role="status" aria-label="Planning your day">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-7 w-2/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-11 w-32 rounded-full" />
         </div>
-      </section>
+      </Card>
     );
   }
-
-  const budget = plan.minimumDay ? MINIMUM_DAY_MINUTES : plan.budgetMinutes;
-  const { planned, done } = planMinutes(plan.items);
-  const shown = plan.items.filter((i) => !i.skipped);
-  const skipped = plan.items.filter((i) => i.skipped);
-  const allDone = shown.length > 0 && shown.every((i) => i.done);
-
+  const { current, plan, allDone, shown } = today;
+  if (!current) {
+    return (
+      <Card focal className="flex items-center gap-5">
+        <LineDrawing name={allDone ? "flag" : "compass"} size={76} />
+        <div className="min-w-0 space-y-1" role="status">
+          <CardLabel>{allDone ? "Route finished" : "Up next"}</CardLabel>
+          <h2 className="font-display text-xl font-semibold text-text">
+            {allDone ? "Everything on today's plan is done" : "Nothing is planned for today"}
+          </h2>
+          <p className="text-base text-muted">
+            {allDone
+              ? "Anything more is a bonus."
+              : shown.length === 0
+                ? "Pick something from the map, or choose a longer time."
+                : "Every stop left is skipped. Bring one back, or pick something from the map."}
+          </p>
+          {!allDone && (
+            <div className="pt-2">
+              <Button href="#/map">Open the map</Button>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  }
+  const Icon = KIND_ICON[current.kind];
+  const subject = itemSubject(current, problems);
+  const difficulty = itemDifficulty(current, problems);
   return (
-    <section aria-labelledby="plan-heading" className="rounded-panel border border-rule bg-surface">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-rule px-4 py-3 sm:px-5">
-        <h2 id="plan-heading" className="text-md font-semibold text-text">
-          Today's plan
+    <Card focal aria-label={`Up next: ${current.title}`} className="space-y-3">
+      <CardLabel>Up next</CardLabel>
+      <div className="flex items-start gap-3.5">
+        <span className="grid size-11 shrink-0 place-items-center rounded-control bg-accent-soft text-accent">
+          <Icon size={20} aria-hidden="true" />
+        </span>
+        <h2 className="min-w-0 pt-1.5 font-display text-xl font-semibold text-balance text-text sm:text-2xl">
+          {current.title}
         </h2>
+      </div>
+      <p className="max-w-[62ch] text-md text-muted">
+        {current.reason}
+        <OwnerNote item={current} />
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {subject && (
+          <Chip className="text-text" title={subject.name}>
+            <SubjectMark subjectId={subject.id} />
+            {subject.shortName}
+          </Chip>
+        )}
+        {difficulty && <DifficultyChip difficulty={difficulty} />}
+        <Chip>{current.estMinutes} min</Chip>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 pt-2">
+        <StartButton item={current} variant="primary" className="h-12 px-8 text-md max-sm:w-full" />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={Check}
+          onClick={() => setPlanItemDone(plan.date, current.id, true)}
+        >
+          Done
+        </Button>
+        {swappable(current) && <SwapButton item={current} plan={plan} />}
+        <SkipButton item={current} date={plan.date} />
+      </div>
+    </Card>
+  );
+}
+
+// ----- Today's route -----------------------------------------------------------------------------
+
+function StopMarker({
+  item,
+  current,
+  last,
+  onToggle,
+}: {
+  item: PlanItem;
+  current: boolean;
+  last: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={item.done}
+      aria-label={`Done: ${item.title}`}
+      onClick={onToggle}
+      className={cx(
+        "relative z-10 grid size-7 shrink-0 place-items-center rounded-full border-2 transition-colors",
+        item.done
+          ? "border-accent bg-accent text-on-accent"
+          : current
+            ? "border-accent bg-surface text-accent ring-4 ring-accent-soft"
+            : "border-rule-strong bg-surface text-muted hover:border-accent",
+      )}
+    >
+      {item.done ? (
+        <Check size={15} strokeWidth={3} aria-hidden="true" />
+      ) : last ? (
+        <Flag size={13} strokeWidth={2.2} aria-hidden="true" />
+      ) : current ? (
+        <span aria-hidden="true" className="size-2.5 rounded-full bg-accent" />
+      ) : null}
+    </button>
+  );
+}
+
+function RouteStop({
+  item,
+  plan,
+  current,
+  last,
+}: {
+  item: PlanItem;
+  plan: DayPlan;
+  current: boolean;
+  last: boolean;
+}) {
+  const problems = useProblemStore((s) => s.states);
+  const subject = itemSubject(item, problems);
+  // The ink stroke plays when this stop is finished on screen, not on every render.
+  const [wasDone, setWasDone] = useState(item.done);
+  const [inked, setInked] = useState(false);
+  if (item.done !== wasDone) {
+    setWasDone(item.done);
+    setInked(item.done);
+  }
+  return (
+    <li className="relative flex gap-3.5 pb-4 last:pb-0">
+      {!last && (
+        <span aria-hidden="true" className="absolute top-8 -bottom-1 left-[13px] w-0.5">
+          <span className="absolute inset-0 border-l-2 border-dashed border-rule-strong" />
+          {item.done && (
+            <span
+              data-inked={inked || undefined}
+              className="route-ink absolute inset-0 rounded-full bg-accent"
+            />
+          )}
+        </span>
+      )}
+      <StopMarker
+        item={item}
+        current={current}
+        last={last}
+        onToggle={() => setPlanItemDone(plan.date, item.id, !item.done)}
+      />
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="flex items-baseline gap-3">
+          <p
+            className={cx(
+              "min-w-0 flex-1 font-semibold",
+              item.done ? "text-muted line-through decoration-rule-strong" : "text-text",
+            )}
+          >
+            {item.title}
+          </p>
+          <span className="shrink-0 text-sm text-muted tabular-nums">{item.estMinutes} min</span>
+        </div>
+        <p className="mt-0.5 text-sm text-muted">
+          {subject && <SubjectMark subjectId={subject.id} className="mr-1.5 align-[0.05em]" />}
+          {item.reason}
+          <OwnerNote item={item} />
+        </p>
+        {current && !item.done && <p className="mt-1 text-sm font-semibold text-accent">Up next</p>}
+        {!item.done && !current && (
+          <div className="-ml-2 mt-1 flex flex-wrap items-center">
+            <StartButton item={item} variant="ghost" className="h-8 px-2.5 text-accent" />
+            {swappable(item) && <SwapButton item={item} plan={plan} className="h-8 px-2.5" />}
+            <SkipButton item={item} date={plan.date} className="h-8 px-2.5" />
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+/** Today's route: every stop of the day on a dashed line, the time for today and minimum day. */
+export function RouteCard({ today }: { today: TodayPlan | null }) {
+  const [showSkipped, setShowSkipped] = useState(false);
+  if (!today) {
+    return (
+      <Card title="Today's route">
+        <div className="space-y-3" role="status" aria-label="Planning your day">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </Card>
+    );
+  }
+  const { plan, shown, skipped, current, planned, activity, planAgain } = today;
+  const doneStops = shown.filter((i) => i.done).length;
+  return (
+    <section aria-labelledby="plan-heading" className="rounded-panel bg-surface p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0">
+          <h2 id="plan-heading" className="font-display text-lg font-semibold text-text">
+            Today's route
+          </h2>
+          <p className="text-sm text-muted tabular-nums">
+            {shown.length > 0 && `${doneStops} of ${shown.length} stops done. `}
+            {planned} min planned, {activity} min of activity today.
+          </p>
+        </div>
         <BudgetPicker
           plan={plan}
           onPick={(m) =>
@@ -424,52 +616,40 @@ export function PlanSection() {
           }
         />
       </div>
-      <div className="space-y-3 px-4 py-4 sm:px-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-          <span className="text-text tabular-nums">
-            <span className="font-semibold">{done}</span> of {budget} min done
-          </span>
-          <span className="text-muted tabular-nums">
-            {planned} min planned, {Math.round(activity)} min of activity today
-          </span>
-        </div>
-        <ProgressBar
-          value={budget > 0 ? done / budget : 0}
-          label="Minutes done against today's time"
-        />
-        <Switch
-          checked={plan.minimumDay}
-          onChange={(on) =>
-            planAgain(
-              plan.budgetMinutes,
-              on,
-              on
-                ? "Minimum day: one small thing keeps the streak going."
-                : `Back to ${formatMinutes(plan.budgetMinutes)}. Done items stay.`,
-            )
-          }
-          label="Minimum day"
-          description="For a hard day: one small thing, about 15 minutes, to keep momentum."
-        />
-      </div>
+      <Switch
+        className="mt-3 rounded-control bg-surface-sunken px-3 py-2.5"
+        checked={plan.minimumDay}
+        onChange={(on) =>
+          planAgain(
+            plan.budgetMinutes,
+            on,
+            on
+              ? "Minimum day: one small thing keeps the streak going."
+              : `Back to ${formatMinutes(plan.budgetMinutes)}. Done items stay.`,
+          )
+        }
+        label="Minimum day"
+        description="For a hard day: one small thing, about 15 minutes, to keep momentum."
+      />
       {shown.length === 0 ? (
-        <p className="border-t border-rule px-4 py-4 text-base text-muted sm:px-5">
+        <p className="mt-4 text-base text-muted">
           Nothing is planned for today. Pick something from the map, or choose a longer time.
         </p>
       ) : (
-        <ul className="divide-y divide-rule border-t border-rule" aria-label="Plan items">
-          {shown.map((item) => (
-            <PlanRow key={item.id} item={item} plan={plan} />
+        <ol className="mt-5" aria-label="Plan items">
+          {shown.map((item, i) => (
+            <RouteStop
+              key={item.id}
+              item={item}
+              plan={plan}
+              current={item.id === current?.id}
+              last={i === shown.length - 1}
+            />
           ))}
-        </ul>
-      )}
-      {allDone && (
-        <p className="border-t border-rule px-4 py-3 text-base text-text sm:px-5" role="status">
-          Everything on today's plan is done. Anything more is a bonus.
-        </p>
+        </ol>
       )}
       {skipped.length > 0 && (
-        <div className="border-t border-rule px-4 py-2.5 sm:px-5">
+        <div className="mt-4 border-t border-rule pt-3">
           <button
             type="button"
             onClick={() => setShowSkipped((v) => !v)}

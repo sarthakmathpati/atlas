@@ -1,13 +1,62 @@
-// Desktop sidebar (F1, 12.10.5): icons and labels on the sidebar tone with no dividing line, the
-// current page a raised pill; collapsible to icons only.
+// Desktop sidebar (F1, 12.10.5, 12.10.8): icons and labels on the sidebar tone with no dividing
+// line, the current page a raised pill, then the owner's focus subjects as links with their
+// square marks; collapsible to icons only.
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { BrandMark } from "@/components/ui/BrandMark";
 import { cx } from "@/components/ui/cx";
+import { SubjectMark } from "@/components/ui/SubjectEmblem";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { APP_NAME } from "@/lib/constants";
 import { useUiStore } from "@/stores/uiStore";
 import type { Route } from "../router";
+import { focusSubjectHref, useFocusSubjects } from "./focusSubjects";
 import { NAV_ITEMS, SETTINGS_ITEM, type NavItem } from "./nav";
+
+function FocusLinks({ route, collapsed }: { route: Route; collapsed: boolean }) {
+  const subjects = useFocusSubjects();
+  if (subjects.length === 0) return null;
+  const current = route.name === "map" ? route.query.get("subject") : null;
+  return (
+    <div className={cx("mt-4", collapsed && "flex flex-col items-center")}>
+      <p
+        id="focus-subjects-heading"
+        className={cx("px-3 pb-1 text-sm font-semibold text-muted", collapsed && "sr-only")}
+      >
+        Your focus
+      </p>
+      <ul aria-labelledby="focus-subjects-heading" className="flex flex-col gap-0.5">
+        {subjects.map((s) => {
+          const link = (
+            <a
+              href={focusSubjectHref(s.id)}
+              aria-current={current === s.id ? "page" : undefined}
+              aria-label={collapsed ? s.name : undefined}
+              className={cx(
+                "flex h-9 items-center gap-3 rounded-full text-base text-muted transition-colors hover:bg-surface-sunken hover:text-text",
+                collapsed ? "w-10 justify-center" : "px-3",
+                current === s.id && "text-text",
+              )}
+            >
+              <SubjectMark subjectId={s.id} className="size-3" />
+              {!collapsed && <span className="truncate">{s.shortName}</span>}
+            </a>
+          );
+          return (
+            <li key={s.id} title={collapsed ? undefined : s.name}>
+              {collapsed ? (
+                <Tooltip content={s.name} placement="right">
+                  {link}
+                </Tooltip>
+              ) : (
+                link
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 function NavLink({
   item,
@@ -113,18 +162,21 @@ export function Sidebar({ route, collapsed, badges = {} }: SidebarProps) {
         <BrandMark size={24} className="text-accent" />
         {!collapsed && <span className="font-display text-xl font-bold">{APP_NAME}</span>}
       </a>
-      <ul className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-        {NAV_ITEMS.map((item) => (
-          <li key={item.id}>
-            <NavLink
-              item={item}
-              active={isActive(item)}
-              collapsed={collapsed}
-              badge={badges[item.id]}
-            />
-          </li>
-        ))}
-      </ul>
+      <div className="flex-1 overflow-y-auto px-3 py-2">
+        <ul className="flex flex-col gap-1">
+          {NAV_ITEMS.map((item) => (
+            <li key={item.id}>
+              <NavLink
+                item={item}
+                active={isActive(item)}
+                collapsed={collapsed}
+                badge={badges[item.id]}
+              />
+            </li>
+          ))}
+        </ul>
+        <FocusLinks route={route} collapsed={collapsed} />
+      </div>
       <div className="flex shrink-0 flex-col gap-1 px-3 pt-2 pb-3">
         <NavLink item={SETTINGS_ITEM} active={isActive(SETTINGS_ITEM)} collapsed={collapsed} />
         {collapsed ? (

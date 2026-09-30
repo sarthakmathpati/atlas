@@ -6,6 +6,7 @@
 import { ViewportPortal } from "@xyflow/react";
 import { memo, useEffect, useMemo, useState } from "react";
 import { layout } from "@/data/layout";
+import { paperContours, type PaperLine } from "@/lib/map/paper";
 import { concepts as seedConcepts, dependentsOf, subjects, topicById } from "@/data/syllabus";
 import type { Status } from "@/lib/types";
 import { findConcept } from "@/stores/customConceptStore";
@@ -58,6 +59,33 @@ const SUBJECT_PAIRS: { a: string; b: string; count: number }[] = (() => {
   });
 })();
 
+let paperCache: PaperLine[] | null = null;
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
+/** The paper's contour lines, worked out once when the browser is idle after the map paints. */
+function usePaper(): PaperLine[] | null {
+  const [lines, setLines] = useState(paperCache);
+  useEffect(() => {
+    if (paperCache) return;
+    const w = window as IdleWindow;
+    const make = () => {
+      paperCache ??= paperContours(layout.bounds, Object.values(layout.regions));
+      setLines(paperCache);
+    };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(make, { timeout: 1500 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(make, 50);
+    return () => clearTimeout(t);
+  }, []);
+  return lines;
+}
+
 interface LayersProps {
   model: MapModel;
   /** Live positions of bubbles being dragged. */
@@ -76,6 +104,7 @@ export const MapLayers = memo(function MapLayers({ model, dragged, pathIds }: La
   );
 
   const pos = (id: string): Point | undefined => dragged.get(id) ?? model.positions.get(id);
+  const paper = usePaper();
 
   // After the ink fill, draw the lines to concepts that this one made ready.
   useEffect(() => {
@@ -255,6 +284,13 @@ export const MapLayers = memo(function MapLayers({ model, dragged, pathIds }: La
         style={{ left: minX, top: minY }}
         aria-hidden="true"
       >
+        {paper && (
+          <g className="map-paper" data-level={level}>
+            {paper.map((l, i) => (
+              <path key={i} d={l.d} data-major={l.major || undefined} />
+            ))}
+          </g>
+        )}
         {regionPaths}
         {far && (
           <g className="map-bundles">

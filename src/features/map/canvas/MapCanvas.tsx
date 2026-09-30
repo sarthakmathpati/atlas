@@ -20,7 +20,7 @@ import {
 import { Maximize, Minus, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "@/components/ui/Button";
-import { useMediaQuery, prefersReducedMotion } from "@/components/ui/hooks";
+import { prefersReducedMotion, useMediaQuery, useShownTheme } from "@/components/ui/hooks";
 import { CodeSpans } from "@/components/ui/Misc";
 import { STATUS_LABEL } from "@/components/ui/labels";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
@@ -124,15 +124,18 @@ const zoomSelector = (s: ReactFlowState) => s.transform[2];
 /** A drafting grid whose spacing adapts to the zoom, so it never turns into a dense mesh. */
 function Grid() {
   const zoom = useStore(zoomSelector);
+  // The paper follows the theme's kind of map (12.10.2): Dusk's old atlas has a dotted graticule.
+  const dotted = useShownTheme() === "dusk";
   let gap = 48;
   while (gap * zoom < 26) gap *= 2;
   while (gap * zoom > 60 && gap > 12) gap /= 2;
   return (
     <Background
-      variant={BackgroundVariant.Lines}
+      variant={dotted ? BackgroundVariant.Dots : BackgroundVariant.Lines}
       gap={gap}
+      size={dotted ? 1.6 : undefined}
       lineWidth={1}
-      color="var(--grid-line)"
+      color={dotted ? "var(--contour)" : "var(--grid-line)"}
       bgColor="var(--canvas)"
     />
   );

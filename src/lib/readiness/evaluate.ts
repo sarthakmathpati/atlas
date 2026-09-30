@@ -4,7 +4,8 @@
 import { concepts as seedConcepts } from "@/data/syllabus";
 import { inScope } from "@/lib/concepts/scope";
 import { computeStatus, type LinkedProblem, type StatusResult } from "@/lib/mastery/status";
-import { problemsForConcept } from "@/lib/problems/catalog";
+import { seedProblemsByConcept } from "@/data/seed";
+import { problemInfo, problemsForConcept, type ProblemInfo } from "@/lib/problems/catalog";
 import type { Intensity } from "@/lib/srs/intervals";
 import type { Check, Concept, ConceptState, ProblemState, Profile } from "@/lib/types";
 import { readinessModel, type ReadinessModel } from "./model";
@@ -45,10 +46,41 @@ export function linkedProblems(
   }));
 }
 
+/**
+ * Linked problems for any concept, with the owner's own problems indexed once: the same lists
+ * (and order) as `linkedProblems`, without scanning every problem for every concept.
+ */
+export function linkedProblemsIndex(
+  problemStates: Readonly<Record<string, ProblemState>>,
+): (conceptId: string) => LinkedProblem[] {
+  const custom = new Map<string, ProblemInfo[]>();
+  for (const s of Object.values(problemStates)) {
+    if (!s.custom) continue;
+    const info = problemInfo(s.problemId, s);
+    if (!info) continue;
+    for (const id of s.custom.conceptIds) {
+      const list = custom.get(id);
+      if (list) list.push(info);
+      else custom.set(id, [info]);
+    }
+  }
+  return (conceptId) => {
+    const seed = (seedProblemsByConcept.get(conceptId) ?? []).map((p) => problemInfo(p.id)!);
+    return [...seed, ...(custom.get(conceptId) ?? [])].map((p) => ({
+      id: p.id,
+      difficulty: p.difficulty,
+      state: problemStates[p.id],
+    }));
+  };
+}
+
 /** The status engine's result for one concept, or null when there is no evidence to read. */
-export function evaluateConcept(concept: Concept, src: EvaluationSources): StatusResult | null {
+export function evaluateConcept(
+  concept: Concept,
+  src: EvaluationSources,
+  linked: LinkedProblem[] = linkedProblems(concept.id, src.problemStates),
+): StatusResult | null {
   const state = src.conceptStates[concept.id];
-  const linked = linkedProblems(concept.id, src.problemStates);
   const checks = src.checks[concept.id] ?? [];
   if (!state && checks.length === 0 && !linked.some((l) => l.state?.attempts.length)) return null;
   return computeStatus({
@@ -63,5 +95,10 @@ export function evaluateConcept(concept: Concept, src: EvaluationSources): Statu
 }
 
 export function evaluateReadiness(src: EvaluationSources): ReadinessModel {
-  return readinessModel(conceptsInScope(src), (c) => evaluateConcept(c, src), src.profile.track);
+  const linked = linkedProblemsIndex(src.problemStates);
+  return readinessModel(
+    conceptsInScope(src),
+    (c) => evaluateConcept(c, src, linked(c.id)),
+    src.profile.track,
+  );
 }

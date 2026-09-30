@@ -1,9 +1,8 @@
 // Page heading (every route): the h1, an optional description and actions. Takes focus after an
 // in-app navigation so screen readers announce the new page, and sets the document title.
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { cx } from "@/components/ui/cx";
-import { consumeNavigationFocus } from "../router";
-import { usePageTitle } from "./usePageTitle";
+import { usePageHeading } from "./usePageTitle";
 
 interface PageHeaderProps {
   title: ReactNode;
@@ -24,12 +23,7 @@ export function PageHeader({
   eyebrow,
   className,
 }: PageHeaderProps) {
-  const ref = useRef<HTMLHeadingElement>(null);
-  usePageTitle(documentTitle ?? (typeof title === "string" ? title : ""));
-
-  useEffect(() => {
-    if (consumeNavigationFocus()) ref.current?.focus({ preventScroll: true });
-  }, []);
+  const ref = usePageHeading(documentTitle ?? (typeof title === "string" ? title : ""));
 
   return (
     <header

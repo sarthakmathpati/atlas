@@ -102,6 +102,11 @@ async function answer(mode: AIMode, user: User) {
 
 const planNow = () => usePlanStore.getState().plans[localDate()];
 
+/** Where an item's Start, Swap and Skip are: the Up next card for the next stop, else its stop. */
+const controlsOf = (title: string): HTMLElement =>
+  screen.queryByRole("region", { name: `Up next: ${title}` }) ??
+  screen.getByRole("checkbox", { name: `Done: ${title}` }).closest("li")!;
+
 beforeEach(async () => {
   window.location.hash = "#/settings";
   localStorage.clear();
@@ -164,8 +169,7 @@ describe("the Today plan", () => {
     await go("#/today");
     await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
     const learn = planNow()!.items.find((i) => i.kind === "learn-concept")!;
-    const row = screen.getByRole("checkbox", { name: `Done: ${learn.title}` }).closest("li")!;
-    await user.click(within(row).getByRole("button", { name: "Swap" }));
+    await user.click(within(controlsOf(learn.title)).getByRole("button", { name: "Swap" }));
     const panel = await screen.findByRole("dialog", { name: `Swap ${learn.title}` });
     const options = within(panel).getAllByRole("button");
     expect(options.length).toBeGreaterThan(0);
@@ -177,7 +181,7 @@ describe("the Today plan", () => {
     expect(new Set(refs).size).toBe(refs.length);
 
     const drill = swapped.items.find((i) => i.kind === "drill")!;
-    const drillRow = screen.getByRole("checkbox", { name: `Done: ${drill.title}` }).closest("li")!;
+    const drillRow = controlsOf(drill.title);
     expect(within(drillRow).queryByRole("button", { name: "Swap" })).toBeNull();
     await user.click(within(drillRow).getByRole("button", { name: "Skip" }));
     expect(planNow()!.items.find((i) => i.id === drill.id)?.skipped).toBe(true);

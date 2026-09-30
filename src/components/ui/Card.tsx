@@ -14,11 +14,23 @@ interface CardProps {
   focal?: boolean;
   as?: ElementType;
   className?: string;
+  id?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }
 
-export function Card({ children, title, aside, focal, as: Tag = "section", className }: CardProps) {
+export function Card({
+  children,
+  title,
+  aside,
+  focal,
+  as: Tag = "section",
+  className,
+  ...rest
+}: CardProps) {
   return (
     <Tag
+      {...rest}
       className={cx(
         focal
           ? "rounded-focal bg-surface-raised p-5 shadow-focal sm:p-6"

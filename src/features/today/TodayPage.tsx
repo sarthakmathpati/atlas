@@ -1,153 +1,33 @@
-// Today (home, F16): a greeting with the interview countdown, the day's plan (PlanSection), then
-// "Ready to learn next" (section 11.5), the fading count, the streak with a small heatmap, and a
-// setup checklist while it isn't finished.
-import {
-  ArrowRight,
-  CalendarRange,
-  Check,
-  Circle,
-  Flame,
-  RotateCcw,
-  Search,
-  Sparkles,
-} from "lucide-react";
+// Today (home, F16, 12.10.8): the page head with living terrain, the countdown as a scale bar
+// and today's minutes as a ring; "Up next" (the one focal card) and "Today's route"; on the side
+// the 7-day streak strip, ready-to-learn cards with subject tiles and the review count as one big
+// number; a setup checklist while it isn't finished.
+import { CalendarRange, Check, Circle, Search, Sparkles } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
-import { routeHref } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
-import { PageHeader } from "@/app/shell/PageHeader";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { cx } from "@/components/ui/cx";
 import { Callout, Kbd, Skeleton } from "@/components/ui/Misc";
 import { MOD_KEY } from "@/components/ui/platform";
-import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { DESIGN_PROBLEMS } from "@/data/designs.seed";
 import { LEETCODE_PROBLEMS } from "@/data/problems.seed";
 import { QUANT_PUZZLES } from "@/data/quant.seed";
-import { syllabus, topicById } from "@/data/syllabus";
+import { syllabus } from "@/data/syllabus";
 import { weeklyReviewDue } from "@/lib/insight/weekly";
-import { daysBetween, localDate } from "@/lib/time";
 import { useToday } from "@/stores/clockStore";
-import { useConceptStatus } from "@/stores/conceptStateStore";
 import { usePlanStore } from "@/stores/planStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
-import { Heatmap } from "../insight/Heatmap";
-import { useActivityInsight } from "../insight/useInsight";
+import { useReadiness } from "../insight/useInsight";
 import { useReviewQueue } from "../review/useReviewQueue";
-import { PlanSection } from "./PlanSection";
+import { RouteCard, UpNextCard } from "./PlanSection";
 import { setupStepDone } from "./setupSteps";
+import { TodayHead } from "./TodayHead";
+import { ReadyCard, ReviewCount, StreakStrip } from "./TodaySide";
 import { useReadyToLearn } from "./useReadyToLearn";
-
-function greeting(hour: number): string {
-  if (hour < 5) return "Working late";
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-const TRACK_LABEL = { sde: "SDE", quant: "Quant", both: "SDE and quant" } as const;
-
-function Countdown({ date }: { date: string }) {
-  const days = daysBetween(localDate(), date);
-  const text =
-    days > 1
-      ? `${days} days to go`
-      : days === 1
-        ? "Tomorrow"
-        : days === 0
-          ? "Today"
-          : "Interview date passed";
-  return (
-    <a
-      href="#/settings?section=profile"
-      className="inline-flex h-9 items-center rounded-full border border-rule bg-surface px-3.5 text-base font-medium text-text tabular-nums hover:border-rule-strong"
-      title="Interview date (change it in Settings)"
-    >
-      {text}
-    </a>
-  );
-}
-
-function ReadyRow({
-  id,
-  name,
-  topicId,
-  minutes,
-}: {
-  id: string;
-  name: string;
-  topicId: string;
-  minutes: number;
-}) {
-  const status = useConceptStatus(id);
-  return (
-    <li>
-      <a
-        href={routeHref("/map", undefined, { focus: id })}
-        className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-sunken"
-      >
-        <StatusGlyph status={status} size={14} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium text-text">{name}</span>
-          <span className="block truncate text-sm text-muted">{topicById.get(topicId)?.name}</span>
-        </span>
-        <span className="shrink-0 text-sm text-muted tabular-nums">{minutes} min</span>
-        <ArrowRight size={15} aria-hidden="true" className="shrink-0 text-faint" />
-      </a>
-    </li>
-  );
-}
-
-/** The streak, this week's freeze, and the last 16 weeks of activity (F16, F29). */
-function StreakCard() {
-  const { lookup, streak, frozen, loaded } = useActivityInsight();
-  const today = useToday();
-  const freezeOn = useProfileStore((s) => s.profile?.prefs.streakFreeze ?? true);
-  if (!loaded) return <Skeleton className="h-40 w-full" />;
-  const days = streak.current;
-  return (
-    <section
-      aria-labelledby="streak-heading"
-      className="rounded-panel border border-rule bg-surface"
-    >
-      <div className="flex items-baseline justify-between gap-2 border-b border-rule px-4 py-3">
-        <h2 id="streak-heading" className="text-md font-semibold text-text">
-          Streak
-        </h2>
-        <a href="#/dashboard" className="text-sm text-accent hover:underline">
-          Dashboard
-        </a>
-      </div>
-      <div className="space-y-3 px-4 py-3">
-        <p className="flex items-center gap-2 text-base text-text">
-          <Flame
-            size={18}
-            aria-hidden="true"
-            className={days > 0 ? "text-warning" : "text-faint"}
-          />
-          <span>
-            <span className="text-lg font-semibold tabular-nums">{days}</span>{" "}
-            {days === 1 ? "day" : "days"}
-            {!streak.activeToday && days > 0 && (
-              <span className="text-sm text-muted"> (today still counts once you start)</span>
-            )}
-          </span>
-        </p>
-        {freezeOn && streak.frozenDays.length > 0 && (
-          <p className="text-sm text-muted">
-            The weekly freeze covered{" "}
-            {streak.frozenDays.length === 1
-              ? "a missed day"
-              : `${streak.frozenDays.length} missed days`}
-            .
-          </p>
-        )}
-        <Heatmap lookup={lookup} today={today} weeks={16} frozen={frozen} compact />
-      </div>
-    </section>
-  );
-}
+import { useTodayPlan } from "./useTodayPlan";
 
 interface Step {
   id: string;
@@ -155,6 +35,49 @@ interface Step {
   title: string;
   detail: string;
   action: ReactNode;
+}
+
+function SetupChecklist({ steps }: { steps: Step[] }) {
+  const doneCount = steps.filter((s) => s.done).length;
+  return (
+    <Card
+      aria-labelledby="setup-heading"
+      title={<span id="setup-heading">Get set up</span>}
+      aside={`${doneCount} of ${steps.length} done`}
+    >
+      <ol className="-mx-4 sm:-mx-5">
+        {steps.map((step) => (
+          <li
+            key={step.id}
+            className="flex flex-col gap-3 border-t border-rule px-4 py-3.5 first:border-t-0 sm:flex-row sm:items-center sm:px-5"
+          >
+            <div className="flex min-w-0 flex-1 gap-3">
+              {step.done ? (
+                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-accent text-on-accent">
+                  <Check size={13} strokeWidth={3} aria-hidden="true" />
+                </span>
+              ) : (
+                <Circle
+                  size={20}
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-faint"
+                />
+              )}
+              <div className="min-w-0">
+                <p className={cx("font-medium", step.done ? "text-muted" : "text-text")}>
+                  {step.title}
+                  <span className="sr-only">{step.done ? " (done)" : ""}</span>
+                </p>
+                <p className="text-sm text-muted">{step.detail}</p>
+              </div>
+            </div>
+            <div className="shrink-0 pl-8 sm:pl-0">{step.action}</div>
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
 }
 
 export default function TodayPage() {
@@ -165,7 +88,9 @@ export default function TodayPage() {
   const hasAttempt = useProblemStore((s) =>
     Object.values(s.states).some((p) => p.attempts.length > 0),
   );
-  const { ready: readyAll, fading } = useReadyToLearn(10);
+  const model = useReadiness();
+  const { ready: readyAll, fading } = useReadyToLearn(model, 10);
+  const plan = useTodayPlan();
   // Concepts already on today's plan aren't repeated here.
   const planned = usePlanStore((s) => s.plans[today]);
   const ready = useMemo(() => {
@@ -174,13 +99,7 @@ export default function TodayPage() {
     );
     return readyAll.filter((c) => !onPlan.has(c.id)).slice(0, 5);
   }, [readyAll, planned]);
-  const now = new Date();
-  const name = profile?.name.trim();
-  const dateLine = now.toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  const fadingDue = queue.concepts.filter((c) => c.state.status === "fading").length;
 
   const steps: Step[] = profile
     ? [
@@ -261,17 +180,7 @@ export default function TodayPage() {
 
   return (
     <PageFrame>
-      <PageHeader
-        documentTitle="Today"
-        eyebrow={dateLine}
-        title={name ? `${greeting(now.getHours())}, ${name}` : greeting(now.getHours())}
-        description={
-          profile
-            ? `Preparing for ${TRACK_LABEL[profile.track]} interviews, about ${profile.dailyMinutes} minutes a day.`
-            : undefined
-        }
-        actions={profile?.interviewDate ? <Countdown date={profile.interviewDate} /> : undefined}
-      />
+      <TodayHead profile={profile} model={model} plan={plan} today={today} />
 
       {profile && !profile.onboardingDone && (
         <Callout
@@ -302,145 +211,40 @@ export default function TodayPage() {
           A short look back at the week, and a focus for the next one.
         </Callout>
       )}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
-        <div className="space-y-6">
-          <PlanSection />
-
-          <section
-            aria-labelledby="ready-heading"
-            className="rounded-panel border border-rule bg-surface"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule px-4 py-3 sm:px-5">
-              <h2 id="ready-heading" className="text-md font-semibold text-text">
-                Ready to learn next
-              </h2>
-              <a
-                href={routeHref("/map", undefined, { ready: "1" })}
-                className="text-sm text-accent hover:underline"
-              >
-                See all on the map
-              </a>
-            </div>
-            {ready.length === 0 ? (
-              <p className="px-4 py-4 text-base text-muted sm:px-5">
-                Nothing is waiting: everything you can start is under way. Open the map to pick
-                something new.
-              </p>
-            ) : (
-              <ul className="divide-y divide-rule">
-                {ready.map((c) => (
-                  <ReadyRow
-                    key={c.id}
-                    id={c.id}
-                    name={c.name}
-                    topicId={c.topicId}
-                    minutes={c.estMinutes}
-                  />
-                ))}
-              </ul>
-            )}
-            {fading > 0 && (
-              <a
-                href="#/review"
-                className="flex items-center gap-3 border-t border-rule px-4 py-2.5 text-base hover:bg-surface-sunken sm:px-5"
-              >
-                <StatusGlyph status="fading" size={14} />
-                <span className="flex-1 text-text">
-                  {fading} {fading === 1 ? "concept is" : "concepts are"} fading. Review them to
-                  bring them back.
-                </span>
-                <ArrowRight size={15} aria-hidden="true" className="text-faint" />
-              </a>
-            )}
-          </section>
-
-          {(!profile || doneCount < steps.length) && (
-            <section
-              aria-labelledby="setup-heading"
-              className="rounded-panel border border-rule bg-surface"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule px-4 py-3 sm:px-5">
-                <h2 id="setup-heading" className="text-md font-semibold text-text">
-                  Get set up
-                </h2>
-                {profile && (
-                  <span className="text-sm text-muted">
-                    {doneCount} of {steps.length} done
-                  </span>
-                )}
+      {/* On phones the setup checklist comes after the side cards, so the day comes first. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:gap-x-8">
+        <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
+          <UpNextCard today={plan} />
+          <RouteCard today={plan} />
+        </div>
+        <div className="min-w-0 max-lg:order-last lg:col-start-1 lg:row-start-2">
+          {!profile ? (
+            <Card title="Get set up">
+              <div className="space-y-3" role="status" aria-label="Loading">
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="h-5 w-1/2" />
+                <Skeleton className="h-5 w-3/5" />
               </div>
-              {!profile ? (
-                <div className="space-y-3 p-5" role="status" aria-label="Loading">
-                  <Skeleton className="h-5 w-2/3" />
-                  <Skeleton className="h-5 w-1/2" />
-                  <Skeleton className="h-5 w-3/5" />
-                </div>
-              ) : (
-                <ol>
-                  {steps.map((step) => (
-                    <li
-                      key={step.id}
-                      className="flex flex-col gap-3 border-b border-rule px-4 py-3.5 last:border-b-0 sm:flex-row sm:items-center sm:px-5"
-                    >
-                      <div className="flex min-w-0 flex-1 gap-3">
-                        {step.done ? (
-                          <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-strong text-canvas">
-                            <Check size={13} strokeWidth={3} aria-hidden="true" />
-                          </span>
-                        ) : (
-                          <Circle
-                            size={20}
-                            strokeWidth={1.5}
-                            aria-hidden="true"
-                            className="mt-0.5 shrink-0 text-faint"
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <p className={cx("font-medium", step.done ? "text-muted" : "text-text")}>
-                            {step.title}
-                            <span className="sr-only">{step.done ? " (done)" : ""}</span>
-                          </p>
-                          <p className="text-sm text-muted">{step.detail}</p>
-                        </div>
-                      </div>
-                      <div className="shrink-0 pl-8 sm:pl-0">{step.action}</div>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </section>
+            </Card>
+          ) : (
+            doneCount < steps.length && <SetupChecklist steps={steps} />
           )}
         </div>
 
-        <div className="space-y-6 self-start">
-          <StreakCard />
-          {queue.count > 0 && (
-            <a
-              href="#/review"
-              className="flex items-center gap-3 rounded-panel border border-rule bg-surface px-4 py-3 text-base hover:bg-surface-sunken"
-            >
-              <RotateCcw size={16} aria-hidden="true" className="shrink-0 text-muted" />
-              <span className="flex-1 text-text">
-                {queue.count} due for review in all
-                <span className="block text-sm text-muted">
-                  {queue.problems.length} {queue.problems.length === 1 ? "problem" : "problems"},{" "}
-                  {queue.concepts.length} {queue.concepts.length === 1 ? "concept" : "concepts"}
-                </span>
-              </span>
-              <ArrowRight size={15} aria-hidden="true" className="shrink-0 text-faint" />
-            </a>
-          )}
-          <aside
+        <div className="min-w-0 space-y-6 self-start lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <StreakStrip />
+          <ReadyCard ready={ready} fading={fading} />
+          <ReviewCount
+            problems={queue.problems.length}
+            concepts={queue.concepts.length}
+            fading={fadingDue}
+          />
+          <Card
+            as="aside"
             aria-labelledby="atlas-heading"
-            className="rounded-panel border border-rule bg-surface"
+            title={<span id="atlas-heading">Your atlas</span>}
           >
-            <h2
-              id="atlas-heading"
-              className="border-b border-rule px-4 py-3 text-md font-semibold text-text"
-            >
-              Your atlas
-            </h2>
-            <ul className="divide-y divide-rule text-base">
+            <ul className="-mx-2 text-base">
               {[
                 ["Subjects", syllabus.counts.subjects, "#/map"],
                 ["Concepts", syllabus.counts.concepts, "#/map"],
@@ -453,7 +257,7 @@ export default function TodayPage() {
                 <li key={label as string}>
                   <a
                     href={href as string}
-                    className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-surface-sunken"
+                    className="flex items-center justify-between gap-3 rounded-control px-2 py-1.5 hover:bg-surface-sunken"
                   >
                     <span className="text-muted">{label}</span>
                     <span className="font-medium text-text tabular-nums">{value}</span>
@@ -461,7 +265,7 @@ export default function TodayPage() {
                 </li>
               ))}
             </ul>
-          </aside>
+          </Card>
         </div>
       </div>
     </PageFrame>

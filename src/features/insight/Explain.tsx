@@ -2,7 +2,7 @@
 // number is traceable"): the number is a button with a dotted underline that opens a popover with
 // the data and the formula behind it.
 import { Info } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, FocusEvent, KeyboardEvent, ReactNode } from "react";
 import { cx } from "@/components/ui/cx";
 import { Popover } from "@/components/ui/Popover";
 
@@ -18,6 +18,12 @@ interface ExplainNumberProps {
   className?: string;
   style?: CSSProperties;
   wide?: boolean;
+  /** For a group of numbers with one tab stop (the summit profile's points move with arrows). */
+  tabIndex?: number;
+  onKeyDown?: (e: KeyboardEvent<HTMLButtonElement>) => void;
+  onFocus?: (e: FocusEvent<HTMLButtonElement>) => void;
+  /** Marks the trigger, for example `data-point`. */
+  dataPoint?: number;
 }
 
 export function ExplainNumber({
@@ -28,6 +34,10 @@ export function ExplainNumber({
   className,
   style,
   wide,
+  tabIndex,
+  onKeyDown,
+  onFocus,
+  dataPoint,
 }: ExplainNumberProps) {
   return (
     <Popover
@@ -41,6 +51,10 @@ export function ExplainNumber({
           type="button"
           aria-label={`${label}: ${valueText}. Show how it's worked out`}
           style={style}
+          tabIndex={tabIndex}
+          onKeyDown={onKeyDown}
+          onFocus={onFocus}
+          data-point={dataPoint}
           className={cx(
             "cursor-help rounded-[3px] text-left underline decoration-rule-strong decoration-dotted underline-offset-4 hover:decoration-accent focus-visible:decoration-accent",
             className,

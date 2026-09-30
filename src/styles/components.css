@@ -501,3 +501,24 @@
     text-decoration: none;
   }
 }
+
+@layer components {
+  /* Today's route (12.10.7, 12.10.9): finishing a stop inks the line to the next one in 250 ms.
+     Only a stop finished on screen plays it (data-inked); reduced motion makes it instant. */
+  .route-ink {
+    transform-origin: top;
+  }
+
+  .route-ink[data-inked] {
+    animation: route-ink 250ms var(--ease-out) both;
+  }
+
+  @keyframes route-ink {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+}
