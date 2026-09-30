@@ -49,6 +49,15 @@ export function StreakStrip() {
           <span className="text-sm text-muted">(today still counts once you start)</span>
         )}
       </p>
+      {freezeOn && streak.frozenDays.length > 0 && (
+        <p className="mt-1 text-sm text-muted">
+          The weekly freeze covered{" "}
+          {streak.frozenDays.length === 1
+            ? "a missed day"
+            : `${streak.frozenDays.length} missed days`}
+          .
+        </p>
+      )}
       <ol className="mt-3 grid grid-cols-7 gap-1.5" aria-label="The last 7 days">
         {days.map((d) => {
           const day = lookup(d);
@@ -57,8 +66,19 @@ export function StreakStrip() {
           const active = isActiveDay(day);
           const level = Math.max(heatLevel(minutes), active ? 1 : 0);
           const isToday = d === today;
+          const text = covered
+            ? "covered by the weekly freeze"
+            : minutes
+              ? formatMinutes(minutes)
+              : active
+                ? "active"
+                : "no activity";
           return (
-            <li key={d} className="flex flex-col items-center gap-1">
+            <li
+              key={d}
+              className="flex flex-col items-center gap-1"
+              title={`${weekday(d, "long")}: ${text}`}
+            >
               <span
                 aria-hidden="true"
                 className={cx(
@@ -73,14 +93,7 @@ export function StreakStrip() {
               </span>
               <span className="sr-only">
                 {weekday(d, "long")}
-                {isToday ? " (today)" : ""}:{" "}
-                {covered
-                  ? "covered by the weekly freeze"
-                  : minutes
-                    ? formatMinutes(minutes)
-                    : active
-                      ? "active"
-                      : "no activity"}
+                {isToday ? " (today)" : ""}: {text}
               </span>
             </li>
           );

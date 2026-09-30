@@ -58,7 +58,15 @@ export function Stamp({ stamp, size = 84 }: { stamp: WeekStamp; size?: number })
 }
 
 /** A row of stamps, or a line saying how one is earned. */
-export function StampRow({ stamps, className }: { stamps: WeekStamp[]; className?: string }) {
+export function StampRow({
+  stamps,
+  size = 84,
+  className,
+}: {
+  stamps: WeekStamp[];
+  size?: number;
+  className?: string;
+}) {
   if (stamps.length === 0)
     return (
       <p className={cx("text-base text-muted", className)}>
@@ -70,7 +78,7 @@ export function StampRow({ stamps, className }: { stamps: WeekStamp[]; className
     <ul className={cx("flex flex-wrap gap-3", className)}>
       {stamps.map((s) => (
         <li key={s.week}>
-          <Stamp stamp={s} />
+          <Stamp stamp={s} size={size} />
         </li>
       ))}
     </ul>

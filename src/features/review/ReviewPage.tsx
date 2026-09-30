@@ -208,7 +208,7 @@ export default function ReviewPage() {
                   ))}
                 </ul>
               )}
-              <p className="border-t border-rule px-4 py-3 text-sm text-muted first:border-t-0">
+              <p className="px-4 pb-4 text-sm text-muted">
                 {queue.concepts.length === 0
                   ? "Concepts join the review queue once you study them or take a quick check. "
                   : ""}

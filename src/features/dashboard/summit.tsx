@@ -4,6 +4,7 @@
 // points are one tab stop (arrow keys move between them), and the chart has "Show as table".
 import { useState, type KeyboardEvent } from "react";
 import { cx } from "@/components/ui/cx";
+import { LineDrawing } from "@/components/ui/LineDrawing";
 import { SubjectMark } from "@/components/ui/SubjectEmblem";
 import { subjectById } from "@/data/syllabus";
 import { PACE_DAYS, PROJECTION_SPREAD, type SubjectRow } from "@/lib/insight/dashboard";
@@ -247,7 +248,15 @@ export function SummitProfile({
         {upcoming ? ", climbing toward the interview." : "."}
         {summit.pending > 0 && <span role="status"> Adding {summit.pending} earlier weeks.</span>}
       </p>
-      {table ? (
+      {summit.weeks.length === 0 && summit.pending === 0 && !upcoming ? (
+        <div className="mt-4 flex items-center gap-4 rounded-panel bg-surface-sunken px-4 py-4">
+          <LineDrawing name="trail" size={64} />
+          <p className="text-base text-muted">
+            The profile starts with your first week of study: each Sunday adds a point, and an
+            interview date adds the summit.
+          </p>
+        </div>
+      ) : table ? (
         <div className="mt-3 max-h-80 overflow-auto rounded-control border border-rule">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-surface-sunken text-left text-muted">
@@ -389,9 +398,11 @@ export function SummitProfile({
               {v}
             </span>
           ))}
-          <span className="absolute bottom-0 text-xs text-muted" style={{ left: pct(PAD.l, W) }}>
-            {dayMonth(first)}
-          </span>
+          {x(today) - x(first) > 90 && (
+            <span className="absolute bottom-0 text-xs text-muted" style={{ left: pct(PAD.l, W) }}>
+              {dayMonth(first)}
+            </span>
+          )}
           <span
             className="absolute bottom-0 -translate-x-1/2 text-xs font-medium text-text"
             style={{ left: pct(x(today), W) }}

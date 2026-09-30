@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/Chip";
 import { BottomSheet, Dialog, Drawer } from "@/components/ui/Dialog";
 import { Field, Input, Select, Slider, Switch, Textarea } from "@/components/ui/Field";
+import { LineDrawing } from "@/components/ui/LineDrawing";
+import { Stamp } from "../insight/Stamp";
 import { Callout, CodeSpans, EmptyState, Kbd, Skeleton } from "@/components/ui/Misc";
 import { MOD_KEY } from "@/components/ui/platform";
 import { MultiCombobox } from "@/components/ui/MultiCombobox";
@@ -410,6 +412,20 @@ export default function KitPage() {
           </div>
           <Callout title="Time for a backup">Your last backup was 9 days ago.</Callout>
           <Callout tone="warning">Saved in this browser only.</Callout>
+        </Demo>
+
+        <Demo title="Line drawings and a weekly stamp">
+          <div className="flex flex-wrap items-end gap-4">
+            {(["compass", "trail", "flag", "tent", "telescope"] as const).map((name) => (
+              <figure key={name} className="m-0 flex flex-col items-center gap-1">
+                <LineDrawing name={name} size={64} />
+                <figcaption className="text-xs text-muted">{name}</figcaption>
+              </figure>
+            ))}
+            <Stamp
+              stamp={{ week: "2026-09-14", number: 38, activeDays: 6, subjectId: "os", count: 9 }}
+            />
+          </div>
         </Demo>
 
         <Demo title="Claude">

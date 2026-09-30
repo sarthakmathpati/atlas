@@ -221,7 +221,7 @@ export default function DashboardPage() {
               id="stamps-heading"
               actions={<span className="text-sm text-muted">The last 12 weeks</span>}
             >
-              <StampRow stamps={stamps} />
+              <StampRow stamps={stamps} size={70} />
             </Card>
             <MemoryHealthCard memory={dash.memory} />
           </div>

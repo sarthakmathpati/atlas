@@ -127,12 +127,23 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   and the clock), `app/themeOptions.ts`; the pre-paint script in `index.html` mirrors
   `lib/theme.ts` (tested). `useShownTheme()` (components/ui/hooks) reads `<html data-theme>`.
 - **Art**: `lib/art/contours.ts` (the contour engine: seeded hills and waves, marching squares,
-  soundings and spot heights) and `lib/art/emblem.ts` (a subject's emblem lines).
+  soundings and spot heights), `lib/art/emblem.ts` (a subject's emblem lines),
+  `lib/art/terrain.ts` (living terrain: which subjects are hills, their heights and places, the
+  week's seed) and `lib/map/paper.ts` (the map's contour paper). Line drawings (compass, trail,
+  flag, tent, telescope) in `components/ui/LineDrawing.tsx`; `INK_CLASS` (pencil and ink) in
+  `components/ui/labels.ts`.
+- **Survey screens** (9.2): Today is `features/today/` (`TodayHead` with the terrain, scale bar
+  and minutes ring; `PlanSection` with `UpNextCard` and `RouteCard`; `TodaySide` with the streak
+  strip, ready cards and review count; `useTodayPlan`). The dashboard's summit profile and
+  subject ring are `features/dashboard/summit.tsx` with `features/insight/useSummit.ts` over
+  `lib/insight/summit.ts` (readiness as of a past day, weeks, the projection trail, weekly
+  stamps); stamps render with `features/insight/Stamp.tsx` (`stamps.ts` reads the stores).
+  Focus subjects in the frame come from `app/shell/focusSubjects.ts`.
 - **Dates**: local time; due dates stored as `yyyy-mm-dd` (`src/lib/time.ts`).
 - **Phase 9 design**: BUILD_SPEC.md 12.10 (the Survey look: Day, Dusk and Night themes, subject
   colors, the contour engine, living terrain, emblems, pencil and ink, the route, the summit
   profile, stamps), F31 (focus layer) and F32 (ADHD mode). Session 9.1 built the foundations
-  (12.10.1 to 12.10.6); screens follow in 9.2. Research with sources and evidence levels:
+  (12.10.1 to 12.10.6); session 9.2 every screen (12.10.7, 12.10.8). Research with sources and evidence levels:
   `docs/design/phase9-research.md`. Mockups: `docs/design/phase9-plan.html` (open in a browser;
   a reference, the spec wins).
 
@@ -755,3 +766,82 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     the current page; the top bar is pills on the canvas with the theme menu (five choices, "Dusk
     now" for System and By time of day, and a link to the times in Settings). Screens keep their
     own layouts until 9.2.
+110. **Focus subjects in the frame** (session 20, 9.2): `Profile.focusSubjects` show under "Your
+    focus" in the sidebar (square marks; marks only, with tooltips, when collapsed) and in the
+    More sheet on phones; each opens its region (`#/map?subject=<id>`). Nothing shows without
+    focus subjects.
+111. **Today** (9.2): the head is living terrain: the focus subjects, or the three heaviest in the
+    track, as hills 0.35 + readiness / 100 × 1.3 high, placed from a seed of the subject id
+    (candidates in the right part of the head, x 0.5 to 0.84, at least 0.13 apart), on a
+    background seeded by the ISO week (`terrain:2026-W39`, 20 levels); the scale bar links to
+    the interview date; the ring is minutes done against the time for today. Up next is the
+    first stop not done, the focal card with a big Start (full width on phones), Done, Swap and
+    Skip (Remove for the owner's items); every stop is on the route (its marker is the Done
+    checkbox, the next stop ringed, the last a flag), the next stop's buttons live on the card
+    and the others keep small Start, Swap and Skip. The ink stroke (250 ms) plays only when a
+    stop turns done on screen. The side has the last 7 days (the heat ramp; an active day of
+    few minutes shows at least the first step; a day the freeze covered is hatched), ready
+    cards (subject tint tile with the status glyph, names in pencil and ink), the review count
+    and "Your atlas". On phones the setup checklist comes after the side cards.
+112. **Summit profile** (9.2): a past week's point is `evaluateReadiness` on the records as of its
+    Sunday 23:59: checks and attempts up to then; a schedule with nothing recorded later is the
+    stored one (so today's point equals the live readiness exactly), otherwise it is replayed
+    (problems with `replaySchedule`, concepts check by check as plain checks, since whether a
+    check came from a review session isn't stored); "studied" and a manual status count from
+    the concept's first activity (a manual strong from its manual check), "ever strong" from
+    `strongSince`. Weeks are the Sundays of finished weeks from the first week with any check,
+    attempt or active day (at most 104); this week's point is live. Weeks are worked out one
+    per idle callback after first paint, published every four, and cached for the visit under a
+    fingerprint of the records up to that day. The trail applies F17's projection rule to
+    readiness (the 14-day pace carried to the interview, ±20% of the growth, capped at 100,
+    never below today). Points are one tab stop (arrow keys, Home, End), each an ExplainNumber;
+    Show as table. A year of data takes about 17 ms a week in Node; the dashboard's cold load
+    stays 0.5 to 0.7 s in the screenshot harness (the old build 0.46 to 0.55 s), and the profile
+    fills in about 3.7 s later.
+113. **Linked problems indexed once** per readiness evaluation (`linkedProblemsIndex`): the same
+    lists in the same order as `linkedProblems`, without scanning every problem per concept
+    (the live evaluation with a year of data went from about 18 to 11 ms).
+114. **Ring and stamps** (9.2): the readiness ring fills to the score with each counted subject's
+    share (weight × readiness ÷ Σ weights) in its own color, largest first, with a legend of the
+    top five (a color never stands alone). A Monday to Sunday week with 5 or more active days
+    earns a stamp: its ISO week number and the subject with the most checks plus attempts that
+    week (ties by id; with none, the flag drawing and the day count), a steady tilt from the
+    week's hash. Stamps are derived, never stored; the dashboard shows those of the last 12
+    weeks (or says how one is earned) and the weekly review its own week's.
+115. **Map paper** (9.2): contour lines in map coordinates (`lib/map/paper.ts`: each region a hill
+    of 0.75 × its radius, height 0.9, a 48-unit cell, 14 levels, 1,600 units of margin), worked
+    out once when the browser is idle; full at far zoom, 0.45 in the middle, hidden near. Dusk's
+    grid is dotted (the map and the sketch canvas). Far-zoom rings hold the subject's emblem on
+    its tint; near-zoom labels follow pencil and ink through `data-status`.
+116. **Pencil and ink** (`INK_CLASS`): not started in `--text-faint`, learning and fading in
+    `--text`, strong in `--text` semibold; used by ready to learn, the palette's concept
+    results, paths, concept links (Learn first, Unlocks), the map's list view and map labels.
+117. **Problems and workspace** (9.2): a row's subject mark comes from its first concept (else its
+    topic); rows are taller, the last result is a chip, the stats strip is set apart by tone. The
+    workspace timer is `large` (display face); hints, review and dry run are soft trays (sunken,
+    rounded, floating on the surface); `EmptyState plain` skips the texture on data screens.
+118. **Concept reading** (9.2): the page head sits on the subject's tint with its emblem and
+    contour lines (the map panel's head takes the tint too); interview points are a sunken card;
+    each level ends with "Check yourself": one question (simple the first, interview the second,
+    deep the third, cycling) with its answer hidden, and one way to check with its own label
+    ("Check by explaining it", "Check with flashcards", "Check with a quick quiz"), so no button
+    name repeats the row below.
+119. **Flashcards and drill** (9.2): a card turns (240 ms from −80° about the vertical axis;
+    instant with reduced motion); the back keeps the question small above the answer. The
+    flashcard dialog is the large size; the finish lists each concept's status before and after
+    and its next review. The drill's prompt card turns on reveal; Ctrl or Cmd + Enter reveals and
+    Enter goes on (not while typing, on a button or under a dialog); the clock uses the display
+    face; the results say how many drill checks were recorded on how many patterns.
+120. **Other screens** (9.2): the practice hub leads with one wider focal tile (the drill); the
+    weekly review's head is a ruled logbook page with a margin rule and its week's stamp;
+    revision sheets read as one centered column with display headings on screen (print styles
+    unchanged); the welcome page has a first living terrain (the track's heaviest subjects) and
+    emblems in the self-assessment; empty states carry line drawings (flag when nothing is due,
+    tent for no stories or mocks, trail for no mistakes, telescope for no matches, compass for
+    a missing page). Cards are set apart by tone rather than hairlines across the app; dense
+    lists and tables keep bordered rows, and code panels and the sketch keep their edge.
+121. **Tests for 9.2**: Up next is a region labelled `Up next: <title>` (an `aria-label`, since
+    jsdom joins screen-reader-only text without a space); two plan tests find the next stop's
+    Start and Swap on that card; the theme menu test matches `/^Night/`, because before 06:30
+    the By time of day item reads "Night now". `tests/app/survey.test.tsx` covers the new parts.
+

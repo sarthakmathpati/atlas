@@ -6,7 +6,7 @@ import { conceptHref, routeHref } from "@/app/router";
 import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { SegmentedBar } from "@/components/ui/Progress";
-import { SubjectEmblem } from "@/components/ui/SubjectEmblem";
+import { SubjectEmblem, SubjectMark } from "@/components/ui/SubjectEmblem";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { STATUS_LABEL } from "@/components/ui/labels";
 import { conceptById } from "@/data/syllabus";
@@ -548,8 +548,12 @@ export function StatusMix({ subjects }: { subjects: SubjectRow[] }) {
           <ul className="space-y-2.5">
             {rows.map((s) => (
               <li key={s.subjectId} className="flex items-center gap-3">
-                <span title={s.name} className="w-24 shrink-0 truncate text-sm text-text sm:w-32">
-                  {s.shortName}
+                <span
+                  title={s.name}
+                  className="flex w-24 shrink-0 items-center gap-2 text-sm text-text sm:w-32"
+                >
+                  <SubjectMark subjectId={s.subjectId} />
+                  <span className="truncate">{s.shortName}</span>
                 </span>
                 <SegmentedBar counts={s.counts} height={10} className="flex-1" />
                 <span className="w-10 shrink-0 text-right text-xs text-muted tabular-nums">

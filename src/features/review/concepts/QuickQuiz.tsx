@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { Textarea } from "@/components/ui/Field";
 import { Callout, CodeSpans } from "@/components/ui/Misc";
+import { StatusGlyph } from "@/components/ui/StatusGlyph";
+import { STATUS_LABEL } from "@/components/ui/labels";
+import type { Status } from "@/lib/types";
 import { quizGradePrompt, quizPrompt } from "@/lib/ai/prompts";
 import type { QuizQuestion, ShortAnswerGrade } from "@/lib/ai/schemas";
 import {
@@ -19,7 +22,7 @@ import {
 } from "@/lib/review/quiz";
 import { useAIMode } from "@/stores/aiStore";
 import type { QuizRequest } from "@/stores/conceptDialogStore";
-import { recordChecks } from "@/stores/conceptStateStore";
+import { recordChecks, useConceptStateStore } from "@/stores/conceptStateStore";
 import { findConcept } from "@/stores/customConceptStore";
 import { fitPrompt, gatherContext, promptEnv } from "../../ai/gather";
 import { AIMarkdown, AIRunView, ClaudeTag } from "../../ai/parts";
@@ -51,6 +54,14 @@ export function QuickQuizBody({ request, onDone }: { request: QuizRequest; onDon
   const [results, setResults] = useState<QuizItemResult[]>([]);
   const [unusable, setUnusable] = useState(false);
   const recorded = useRef(false);
+  // Statuses before the quiz, so the finish can say what changed.
+  const [before] = useState<Record<string, Status>>(() => {
+    const states = useConceptStateStore.getState().states;
+    return Object.fromEntries(
+      request.conceptIds.map((id) => [id, states[id]?.status ?? "not_started"]),
+    );
+  });
+  const statesNow = useConceptStateStore((s) => s.states);
 
   const concepts = request.conceptIds
     .map((id) => findConcept(id))
@@ -321,10 +332,7 @@ export function QuickQuizBody({ request, onDone }: { request: QuizRequest; onDon
             const tone =
               r.score >= 1 ? "text-success" : r.score > 0 ? "text-warning" : "text-danger";
             return (
-              <li
-                key={index}
-                className="space-y-1.5 rounded-control border border-rule px-3 py-2.5"
-              >
+              <li key={index} className="space-y-1.5 rounded-control bg-surface-sunken px-3 py-2.5">
                 <div className="flex gap-2">
                   <Icon size={18} aria-hidden="true" className={cx("mt-0.5 shrink-0", tone)} />
                   <div className="min-w-0 flex-1 text-base text-text">
@@ -360,13 +368,28 @@ export function QuickQuizBody({ request, onDone }: { request: QuizRequest; onDon
             );
           })}
         </ol>
-        <p className="text-sm text-muted">
-          Saved as a quiz check for{" "}
-          {quizChecks(results)
-            .map((c) => findConcept(c.conceptId)?.name ?? c.conceptId)
-            .join(", ")}
-          .
-        </p>
+        <div className="rounded-panel bg-surface-sunken px-3 py-2.5">
+          <p className="text-sm text-muted">Saved as a quiz check for:</p>
+          <ul className="mt-1 space-y-1">
+            {quizChecks(results).map((c) => {
+              const was = before[c.conceptId] ?? "not_started";
+              const now = statesNow[c.conceptId]?.status ?? "not_started";
+              return (
+                <li key={c.conceptId} className="flex items-center gap-2 text-sm">
+                  <StatusGlyph status={now} size={14} title={STATUS_LABEL[now]} />
+                  <span className="min-w-0 flex-1 text-text">
+                    {findConcept(c.conceptId)?.name ?? c.conceptId}
+                  </span>
+                  <span className="shrink-0 text-muted">
+                    {was !== now
+                      ? `${STATUS_LABEL[was]} to ${STATUS_LABEL[now].toLowerCase()}`
+                      : STATUS_LABEL[now]}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
       <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-rule bg-surface-raised px-4 py-3 sm:px-5">
         <Button
