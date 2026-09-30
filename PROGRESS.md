@@ -60,6 +60,14 @@ What each subject was checked against (session in brackets):
   script; a story bank checked against the app's 30 behavioral questions; resume bullets and the
   Atlas project deep dive; an exact made-up offer under India's FY 2025-26 tax (`needsReview`).
 
+**Session 9.2 in progress (session 20, 30 Sep 2026):** done so far: focus subjects in the
+sidebar, Today (living terrain, scale bar, minutes ring, Up next, the route with its ink stroke,
+7-day streak strip, ready cards, review number), the dashboard (subject-colored ring, summit
+profile, subject bars with emblems, weekly stamps, softer pattern field), the map's paper and
+far-zoom emblems, pencil and ink map labels, line drawings. Next in this session: Problems, the
+workspace, the concept panel and page, review, flashcards and drill, the Phase 8 practice
+screens, weekly review, revision, settings, welcome and the palette.
+
 **Next up:** Phase 9 session 9.2, **every screen** (BUILD_SPEC.md 12.10.7 and 12.10.8): the app
 frame's focus subjects in the sidebar (with their square marks); Today with living terrain (the
 hills come from `lib/art/contours.ts` with `ContourCanvas`), Up next as the focal `Card`, the
