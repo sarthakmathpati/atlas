@@ -94,9 +94,10 @@ function Layer({
     };
   }, [open, ref, onCloseRef, mounted]);
 
-  // Non-modal drawers still close with Escape when focus is inside them.
+  // Non-modal drawers still close with Escape when focus is inside them; so does a full-screen
+  // layer (besides the native cancel event, which some browsers skip after a second Escape).
   const onKeyDown = (e: React.KeyboardEvent<HTMLDialogElement>) => {
-    if (!modal && e.key === "Escape" && !e.defaultPrevented) {
+    if ((!modal || kind === "screen") && e.key === "Escape" && !e.defaultPrevented) {
       e.preventDefault();
       onClose();
     }

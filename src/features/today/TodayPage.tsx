@@ -188,7 +188,7 @@ export default function TodayPage() {
   if (calm && !showPlan) {
     return (
       <PageFrame>
-        <TodayHead profile={profile} model={model} plan={plan} today={today} />
+        <TodayHead profile={profile} model={model} plan={plan} today={today} calm />
         <InterviewDayView which={calm} today={today} />
       </PageFrame>
     );

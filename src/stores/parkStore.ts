@@ -16,7 +16,7 @@ import { DEFAULT_THEME_SCHEDULE } from "@/lib/constants";
 import type { Repository } from "@/lib/storage/Repository";
 import { localDate, nowIso, parseLocalDate } from "@/lib/time";
 import type { ParkedThought } from "@/lib/types";
-import { blockEndsAt } from "./focusTimerStore";
+import { blockEndsAt, useFocusTimerStore } from "./focusTimerStore";
 import { addPlanItems, addPlanItemsOn } from "./planStore";
 import { useProfileStore } from "./profileStore";
 import { toast } from "./toastStore";
@@ -95,6 +95,22 @@ export function parkThought(text: string, when: ParkWhen, now: Date = new Date()
   write(thought);
   return thought;
 }
+
+/**
+ * A break began: thoughts parked "at the break" are due now, even ones parked before the block
+ * with a later time, so they stay listed after the break view closes.
+ */
+export function breakArrived(now: Date = new Date()): void {
+  const stamp = nowIso(now);
+  for (const t of Object.values(useParkStore.getState().thoughts)) {
+    if (t.doneAt || t.when !== "break" || t.dueAt <= stamp) continue;
+    write({ ...t, dueAt: stamp, updatedAt: stamp });
+  }
+}
+
+useFocusTimerStore.subscribe((s, prev) => {
+  if (s.mode === "break" && prev.mode !== "break" && s.running) breakArrived();
+});
 
 export function markThoughtDone(id: string, now: Date = new Date()): void {
   const t = useParkStore.getState().thoughts[id];

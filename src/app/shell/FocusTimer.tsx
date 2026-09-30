@@ -10,6 +10,7 @@ import { cx } from "@/components/ui/cx";
 import { Popover } from "@/components/ui/Popover";
 import { formatClock } from "@/components/ui/timer";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { inlineIntention } from "@/lib/focus/intention";
 import {
   askToStartBlock,
   blockActive,
@@ -127,7 +128,7 @@ export function FocusTimerButton() {
                     {intention ? (
                       <>
                         <span className="text-muted">In this block I will </span>
-                        {intention.charAt(0).toLowerCase() + intention.slice(1)}
+                        {inlineIntention(intention)}
                       </>
                     ) : (
                       <span className="text-muted">No line for this block.</span>

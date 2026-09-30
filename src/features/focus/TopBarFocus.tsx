@@ -4,6 +4,7 @@ import { BellOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { Popover } from "@/components/ui/Popover";
+import { inlineIntention } from "@/lib/focus/intention";
 import { blockActive, showHeldNow, useFocusTimerStore } from "@/stores/focusTimerStore";
 import { useHeldCount } from "./hooks";
 
@@ -12,17 +13,14 @@ export function FocusLine({ className }: { className?: string }) {
   const intention = useFocusTimerStore((s) => (blockActive(s) ? s.intention : ""));
   const paused = useFocusTimerStore((s) => !s.running);
   if (!intention) return null;
-  const line = intention.charAt(0).toLowerCase() + intention.slice(1);
+  const line = inlineIntention(intention);
   return (
     <p
       className={cx("min-w-0 truncate text-base text-text", className)}
       title={`In this block I will ${line}`}
       data-testid="focus-line"
     >
-      <span className="font-semibold">
-        In this block<span className="max-sm:hidden"> I will</span>:
-      </span>{" "}
-      {line}
+      <span className="font-semibold">In this block:</span> {line}
       {paused && <span className="text-muted"> (paused)</span>}
     </p>
   );
@@ -45,8 +43,8 @@ export function HeldNotes() {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-surface-sunken px-3 text-sm whitespace-nowrap text-muted transition-colors hover:text-text max-md:h-11"
         >
           <BellOff size={14} aria-hidden="true" />
-          <span className="max-lg:hidden">{label}</span>
-          <span className="lg:hidden" aria-hidden="true">
+          <span className="max-xl:hidden">{label}</span>
+          <span className="xl:hidden" aria-hidden="true">
             {count} held
           </span>
         </button>

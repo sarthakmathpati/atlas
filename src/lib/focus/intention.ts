@@ -42,3 +42,9 @@ export function intentionForItem(item: Pick<PlanItem, "kind" | "title">): string
 export function cleanIntention(line: string): string {
   return line.replace(/\s+/g, " ").trim().slice(0, INTENTION_MAX);
 }
+
+/** The line inside a sentence ("In this block: re-solve 69…"): a capital that only starts the
+ *  sentence is lowered; names and acronyms ("TCP", "DSA") keep theirs. */
+export function inlineIntention(line: string): string {
+  return /^[A-Z][a-z]/.test(line) ? line.charAt(0).toLowerCase() + line.slice(1) : line;
+}

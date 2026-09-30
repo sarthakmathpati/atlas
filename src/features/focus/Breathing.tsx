@@ -66,7 +66,8 @@ export function Breathing({ className }: { className?: string }) {
       <p className="text-sm text-muted">
         Breath {moment.breath} of {BREATHS}
       </p>
-      <Button size="sm" variant="ghost" onClick={() => setStartedAt(null)}>
+      {/* Focus moves here when breathing starts, so the keyboard keeps its place. */}
+      <Button size="sm" variant="ghost" onClick={() => setStartedAt(null)} autoFocus>
         Stop
       </Button>
     </div>

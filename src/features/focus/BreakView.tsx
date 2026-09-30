@@ -14,6 +14,7 @@ import { Kbd } from "@/components/ui/Misc";
 import { breakThoughts } from "@/lib/focus/park";
 import { breakPrompt } from "@/lib/focus/prompts";
 import { horizonFraction } from "@/lib/focus/horizon";
+import { inlineIntention } from "@/lib/focus/intention";
 import { localDate } from "@/lib/time";
 import type { FocusOutcome } from "@/lib/types";
 import { useActivityStore } from "@/stores/activityStore";
@@ -46,9 +47,7 @@ const OUTCOME_SAID: Record<FocusOutcome, string> = {
 
 /** "How did it go?" for the block that just ended. */
 function Outcome({ ended, onAnswer }: { ended: EndedBlock; onAnswer: (o: FocusOutcome) => void }) {
-  const line = ended.intention
-    ? ended.intention.charAt(0).toLowerCase() + ended.intention.slice(1)
-    : "";
+  const line = ended.intention ? inlineIntention(ended.intention) : "";
   return (
     <fieldset className="w-full">
       <legend className="w-full text-base text-text">
@@ -172,7 +171,7 @@ function BreakContent() {
             {forBreak.length > 0 && (
               <ul className="divide-y divide-rule">
                 {forBreak.map((t) => (
-                  <ThoughtRow key={t.id} thought={t} />
+                  <ThoughtRow key={t.id} thought={t} stacked />
                 ))}
               </ul>
             )}

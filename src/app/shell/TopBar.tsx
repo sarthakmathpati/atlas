@@ -24,6 +24,7 @@ import { navigate } from "../router";
 import { readStoredTheme, setTheme, type ThemeChoice } from "../theme";
 import { THEME_ICON, THEME_OPTIONS } from "../themeOptions";
 import { FocusLine, HeldNotes } from "@/features/focus/TopBarFocus";
+import { blockActive, useFocusTimerStore } from "@/stores/focusTimerStore";
 import { FocusTimerButton } from "./FocusTimer";
 
 function ActivityChip() {
@@ -112,6 +113,8 @@ function ThemeMenu() {
 export function TopBar() {
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const setAskOpen = useUiStore((s) => s.setAskOpen);
+  // During a focus block the search pill narrows to make room for the block's line.
+  const focusing = useFocusTimerStore((s) => blockActive(s) && s.intention !== "");
   return (
     <header className="shrink-0 bg-canvas print:hidden">
       <div className="flex h-16 items-center gap-1 px-2 sm:gap-2 sm:px-4 lg:px-6">
@@ -127,23 +130,30 @@ export function TopBar() {
           type="button"
           onClick={() => setPaletteOpen(true)}
           data-peripheral
+          aria-label={focusing ? `Search or jump to (shortcut ${MOD_KEY} K)` : undefined}
           className={cx(
             "hidden h-10 w-full max-w-md min-w-0 items-center gap-2 rounded-full bg-surface px-4 text-left text-base text-faint transition-colors hover:bg-surface-raised md:flex",
+            // During a focus block, search shrinks to its icon so the block's line has room.
+            focusing && "w-10 shrink-0 justify-center px-0",
           )}
         >
           <Search size={16} aria-hidden="true" className="shrink-0" />
-          <span className="flex-1 truncate">Search or jump to…</span>
-          <span className="flex shrink-0 gap-1" aria-hidden="true">
-            <Kbd>{MOD_KEY}</Kbd>
-            <Kbd>K</Kbd>
-          </span>
-          <span className="sr-only">(shortcut {MOD_KEY} K)</span>
+          {!focusing && (
+            <>
+              <span className="flex-1 truncate">Search or jump to…</span>
+              <span className="flex shrink-0 gap-1" aria-hidden="true">
+                <Kbd>{MOD_KEY}</Kbd>
+                <Kbd>K</Kbd>
+              </span>
+              <span className="sr-only">(shortcut {MOD_KEY} K)</span>
+            </>
+          )}
         </button>
-        <div className="flex min-w-0 flex-1 justify-center px-2 max-md:hidden">
+        <div className="flex min-w-0 flex-1 px-3 max-md:hidden">
           <FocusLine />
         </div>
         <div className="flex-1 md:hidden" />
-        <ActivityChip />
+        {!focusing && <ActivityChip />}
         <HeldNotes />
         <FocusTimerButton />
         <Button
