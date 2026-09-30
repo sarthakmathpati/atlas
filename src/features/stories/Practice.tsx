@@ -8,7 +8,7 @@ import { routeHref } from "@/app/router";
 import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { Select, Textarea } from "@/components/ui/Field";
-import { ProgressBar } from "@/components/ui/Progress";
+import { HorizonLine } from "@/components/ui/Horizon";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatClock, useTimer } from "@/components/ui/timer";
 import { BEHAVIORAL_QUESTIONS } from "@/data/behavioral.seed";
@@ -155,10 +155,11 @@ function Round({
           {formatClock(remaining)}
         </span>
       </div>
-      <ProgressBar
-        value={remaining / (PRACTICE_SECONDS * 1000)}
+      {/* The round's horizon line (F31): 5-second steps, dotted in the last quarter. */}
+      <HorizonLine
+        elapsedMs={PRACTICE_SECONDS * 1000 - remaining}
+        totalMs={PRACTICE_SECONDS * 1000}
         label="Time left"
-        className="h-1"
       />
 
       {phase === "answer" && (

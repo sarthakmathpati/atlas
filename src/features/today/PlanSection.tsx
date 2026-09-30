@@ -22,6 +22,8 @@ import {
   RotateCcw,
   ScrollText,
   SkipForward,
+  StickyNote,
+  Timer,
   Undo2,
   X,
   type LucideIcon,
@@ -38,6 +40,7 @@ import { Skeleton } from "@/components/ui/Misc";
 import { Popover } from "@/components/ui/Popover";
 import { SubjectMark } from "@/components/ui/SubjectEmblem";
 import { subjectById, topicById } from "@/data/syllabus";
+import { intentionForItem } from "@/lib/focus/intention";
 import { swapOptions } from "@/lib/planner/planner";
 import { problemInfo } from "@/lib/problems/catalog";
 import { formatMinutes } from "@/lib/time";
@@ -51,6 +54,7 @@ import {
   swapPlanItem,
 } from "@/stores/planStore";
 import { findConcept } from "@/stores/customConceptStore";
+import { askToStartBlock, blockActive, useFocusTimerStore } from "@/stores/focusTimerStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { toast } from "@/stores/toastStore";
 import { plannerInputNow } from "../insight/useInsight";
@@ -69,6 +73,7 @@ const KIND_ICON: Record<PlanItem["kind"], LucideIcon> = {
   design: DraftingCompass,
   story: MessageSquareQuote,
   revision: ScrollText,
+  thought: StickyNote,
 };
 
 const KIND_LABEL: Record<PlanItem["kind"], string> = {
@@ -82,6 +87,7 @@ const KIND_LABEL: Record<PlanItem["kind"], string> = {
   design: "design prompts",
   story: "behavioral questions",
   revision: "revision sheets",
+  thought: "parked thoughts",
 };
 
 /** Where Start goes: a link, or a dialog opened in place (flashcards, a concept review). */
@@ -115,6 +121,9 @@ function startTarget(item: PlanItem): { href: string } | { run: () => void } | n
       return ref ? { href: routeHref("/designs", ref) } : null;
     case "story":
       return { href: routeHref("/stories", undefined, ref ? { question: ref } : undefined) };
+    case "thought":
+      // A parked thought is the owner's own note: it has no screen, only Done.
+      return null;
   }
 }
 
@@ -375,7 +384,24 @@ function SkipButton({
   );
 }
 
-const swappable = (item: PlanItem) => item.kind !== "drill" && item.kind !== "mental-math";
+/** "Start a focus block" for a plan item (F31): the block's line comes from the item. */
+function FocusBlockButton({ item }: { item: PlanItem }) {
+  const busy = useFocusTimerStore((s) => blockActive(s));
+  if (busy) return null;
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      icon={Timer}
+      onClick={() => askToStartBlock({ line: intentionForItem(item), planItemId: item.id })}
+    >
+      Start a focus block
+    </Button>
+  );
+}
+
+const swappable = (item: PlanItem) =>
+  item.kind !== "drill" && item.kind !== "mental-math" && item.kind !== "thought";
 
 function OwnerNote({ item }: { item: PlanItem }) {
   if (item.origin === "planner" || /Added by you/.test(item.reason)) return null;
@@ -457,6 +483,7 @@ export function UpNextCard({ today }: { today: TodayPlan | null }) {
       </div>
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 pt-2">
         <StartButton item={current} variant="primary" className="h-12 px-8 text-md max-sm:w-full" />
+        <FocusBlockButton item={current} />
         <Button
           size="sm"
           variant="ghost"

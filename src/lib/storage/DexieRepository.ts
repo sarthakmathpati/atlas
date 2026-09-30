@@ -37,6 +37,8 @@ export class AtlasDexie extends Dexie {
       customConcepts: "id",
       generatedDrills: "id",
     });
+    // Phase 9 (F31): parked thoughts.
+    this.version(2).stores({ parkedThoughts: "id" });
   }
 
   entityTable<K extends TableName>(name: K): DexieTables[K] {

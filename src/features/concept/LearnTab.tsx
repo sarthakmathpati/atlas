@@ -350,37 +350,45 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
         </Block>
       )}
 
-      <Block title="Learn first" id={`${concept.id}-prereqs`}>
-        {concept.prereqs.length === 0 ? (
-          <p className="text-base text-muted">Nothing. You can start here.</p>
-        ) : (
-          <ul className="space-y-0.5">
-            {concept.prereqs.map((id) => (
-              <ConceptLink key={id} id={id} onOpen={onOpenConcept} />
-            ))}
-          </ul>
-        )}
-      </Block>
-      <Block title="Unlocks" id={`${concept.id}-unlocks`}>
-        {unlocks.length === 0 ? (
-          <p className="text-base text-muted">No concepts build directly on this one.</p>
-        ) : (
-          <ul className="space-y-0.5">
-            {unlocks.map((id) => (
-              <ConceptLink key={id} id={id} onOpen={onOpenConcept} />
-            ))}
-          </ul>
-        )}
-      </Block>
-      {concept.related.length > 0 && (
-        <Block title="Connected ideas" id={`${concept.id}-related`}>
-          <ul className="space-y-0.5">
-            {concept.related.map((link) => (
-              <ConceptLink key={link.to} id={link.to} detail={link.reason} onOpen={onOpenConcept} />
-            ))}
-          </ul>
+      {/* Connections step back while a focus block runs (F31 focus lens). */}
+      <div data-peripheral className="space-y-5">
+        <Block title="Learn first" id={`${concept.id}-prereqs`}>
+          {concept.prereqs.length === 0 ? (
+            <p className="text-base text-muted">Nothing. You can start here.</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {concept.prereqs.map((id) => (
+                <ConceptLink key={id} id={id} onOpen={onOpenConcept} />
+              ))}
+            </ul>
+          )}
         </Block>
-      )}
+        <Block title="Unlocks" id={`${concept.id}-unlocks`}>
+          {unlocks.length === 0 ? (
+            <p className="text-base text-muted">No concepts build directly on this one.</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {unlocks.map((id) => (
+                <ConceptLink key={id} id={id} onOpen={onOpenConcept} />
+              ))}
+            </ul>
+          )}
+        </Block>
+        {concept.related.length > 0 && (
+          <Block title="Connected ideas" id={`${concept.id}-related`}>
+            <ul className="space-y-0.5">
+              {concept.related.map((link) => (
+                <ConceptLink
+                  key={link.to}
+                  id={link.to}
+                  detail={link.reason}
+                  onOpen={onOpenConcept}
+                />
+              ))}
+            </ul>
+          </Block>
+        )}
+      </div>
     </div>
   );
 }

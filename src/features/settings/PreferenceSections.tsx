@@ -1,10 +1,12 @@
-// Settings → Appearance and Learning (F24).
+// Settings → Appearance (with the optional bedtime, F31), Learning and Focus sessions (F24, F31).
 import { useId } from "react";
 import { setTheme, setThemeSchedule, type ThemeChoice } from "@/app/theme";
 import { THEME_OPTIONS } from "@/app/themeOptions";
 import { Field, Input, Select, Switch } from "@/components/ui/Field";
 import { useShownTheme } from "@/components/ui/hooks";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { WRAP_UP_MINUTES } from "@/lib/focus/bedtime";
+import { focusPrefs } from "@/lib/focus/prefs";
 import { parseClock, THEME_LABEL, THEME_NAMES } from "@/lib/theme";
 import type { Profile } from "@/lib/types";
 import { useProfileStore } from "@/stores/profileStore";
@@ -60,11 +62,45 @@ function ThemeSetting({ profile }: { profile: Profile }) {
   );
 }
 
+const DEFAULT_BEDTIME = "23:00";
+
+/** The optional bedtime (F31): a wrap-up note 30 minutes before it. Off until it is set. */
+function BedtimeSetting({ profile }: { profile: Profile }) {
+  const updatePrefs = useProfileStore((s) => s.updatePrefs);
+  const bedtime = profile.prefs.bedtime;
+  return (
+    <div className="space-y-3 px-4 py-4 sm:px-5">
+      <Switch
+        label="Wrap-up note before bedtime"
+        description={`A quiet note ${WRAP_UP_MINUTES} minutes before your bedtime offers to park what's left and plan tomorrow.`}
+        checked={bedtime !== undefined}
+        onChange={(on) => updatePrefs({ bedtime: on ? DEFAULT_BEDTIME : undefined })}
+      />
+      {bedtime !== undefined && (
+        <div className="max-w-[12rem]">
+          <Field label="Bedtime">
+            <Input
+              type="time"
+              required
+              value={bedtime}
+              onChange={(e) => {
+                if (parseClock(e.target.value) === null) return;
+                updatePrefs({ bedtime: e.target.value });
+              }}
+            />
+          </Field>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AppearanceSection({ profile }: { profile: Profile }) {
   const updatePrefs = useProfileStore((s) => s.updatePrefs);
   return (
     <SettingsSection id="appearance" title="Appearance">
       <ThemeSetting profile={profile} />
+      <BedtimeSetting profile={profile} />
       <SettingsRow
         label="Reduce motion"
         description="Panels and the map change instantly instead of animating."
@@ -113,7 +149,6 @@ const BREAK_OPTIONS = [3, 5, 10, 15];
 export function LearningSection({ profile }: { profile: Profile }) {
   const update = useProfileStore((s) => s.update);
   const updatePrefs = useProfileStore((s) => s.updatePrefs);
-  const ids = useId();
   return (
     <SettingsSection id="learning" title="Learning">
       <SettingsRow
@@ -139,7 +174,32 @@ export function LearningSection({ profile }: { profile: Profile }) {
           onChange={(streakFreeze) => updatePrefs({ streakFreeze })}
         />
       </div>
-      <SettingsRow label="Focus timer" description="Session lengths for the timer in the top bar.">
+      <div className="px-4 py-4 sm:px-5">
+        <Switch
+          label="Start the attempt timer when I start typing"
+          description="In the problem workspace, the timer starts with your first keystroke."
+          checked={profile.prefs.timerAutoStart}
+          onChange={(timerAutoStart) => updatePrefs({ timerAutoStart })}
+        />
+      </div>
+    </SettingsSection>
+  );
+}
+
+/** Focus sessions (F31): block and break lengths, the focus lens, held notices and break views. */
+export function FocusSection({ profile }: { profile: Profile }) {
+  const updatePrefs = useProfileStore((s) => s.updatePrefs);
+  const ids = useId();
+  const focus = focusPrefs(profile.prefs);
+  const setFocus = (changes: Partial<typeof focus>) =>
+    updatePrefs({ focus: { ...focus, ...changes } });
+  return (
+    <SettingsSection
+      id="focus"
+      title="Focus sessions"
+      description="A focus block starts with one line about what you'll do, from the timer in the top bar or the F key. A thin line along the top edge shows the time left."
+    >
+      <SettingsRow label="Block and break lengths" description="The focus timer in the top bar.">
         <div className="flex flex-wrap items-center gap-3">
           <label htmlFor={`${ids}-focus`} className="sr-only">
             Focus length
@@ -165,10 +225,26 @@ export function LearningSection({ profile }: { profile: Profile }) {
       </SettingsRow>
       <div className="px-4 py-4 sm:px-5">
         <Switch
-          label="Start the attempt timer when I start typing"
-          description="In the problem workspace, the timer starts with your first keystroke."
-          checked={profile.prefs.timerAutoStart}
-          onChange={(timerAutoStart) => updatePrefs({ timerAutoStart })}
+          label="Dim everything but the work"
+          description="While a block runs, the sidebar, extras in the top bar and side panels fade to the background. Point at them or tab to them to bring them back."
+          checked={focus.dim}
+          onChange={(dim) => setFocus({ dim })}
+        />
+      </div>
+      <div className="px-4 py-4 sm:px-5">
+        <Switch
+          label="Hold notes for the break"
+          description="Reminders and sync notes wait until the block ends. Problems that stop you working still show at once."
+          checked={focus.holdNotices}
+          onChange={(holdNotices) => setFocus({ holdNotices })}
+        />
+      </div>
+      <div className="px-4 py-4 sm:px-5">
+        <Switch
+          label="Fill the screen on breaks"
+          description="When a block ends, a calm break view with a rest idea, your parked thoughts and a minute of slow breathing. Esc or Back to work leaves it."
+          checked={focus.breakView}
+          onChange={(breakView) => setFocus({ breakView })}
         />
       </div>
     </SettingsSection>

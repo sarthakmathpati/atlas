@@ -20,7 +20,7 @@ import { seedProblemById } from "@/data/seed";
 import { subjectById } from "@/data/syllabus";
 import { mockFeedbackPrompt } from "@/lib/ai/prompts";
 import type { MockFeedback } from "@/lib/ai/schemas";
-import { currentPhase, MOCK_TYPES, stripNote, transcript } from "@/lib/mock/mock";
+import { currentPhase, limitMs, MOCK_TYPES, stripNote, transcript } from "@/lib/mock/mock";
 import { problemInfo, problemLabel } from "@/lib/problems/catalog";
 import { RESULT_LABEL } from "@/lib/problems/progress";
 import type { MockSession } from "@/lib/types";
@@ -42,6 +42,8 @@ import { designSectionsFor, languageLabel, questionText } from "./context";
 import { CopyMock } from "./CopyMock";
 import { FeedbackView } from "./FeedbackView";
 import { OPENING, useMockInterview } from "./useMockInterview";
+import { HorizonLine } from "@/components/ui/Horizon";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 const CodeEditor = lazy(() => import("@/components/ui/code/CodeEditor"));
 
@@ -367,6 +369,15 @@ function Live({ session }: { session: MockSession }) {
   return (
     <div className="space-y-4">
       <div className="sticky top-2 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-panel bg-surface/95 px-3 py-2 backdrop-blur">
+        {!ended && (
+          // The round's horizon line (F31): 5-second steps, dotted in the last 2 minutes.
+          <HorizonLine
+            elapsedMs={limitMs(session) - interview.remaining}
+            totalMs={limitMs(session)}
+            label="Interview time left"
+            className="absolute inset-x-4 top-0"
+          />
+        )}
         <span
           role="timer"
           aria-label="Time left in the interview"
@@ -526,6 +537,8 @@ function Finished({ session }: { session: MockSession }) {
   );
 }
 
+const MOCK_LINE = { dsa: "coding", theory: "theory", design: "design", behavioral: "behavioral" };
+
 export default function MockSessionPage() {
   const route = useRoute();
   const loaded = useMockStore((s) => s.loaded);
@@ -548,6 +561,9 @@ export default function MockSessionPage() {
       ? null
       : `You code in ${languageLabel(session.language)}. The interviewer states the problem in their own words.`;
   }, [session]);
+  usePageFocusLine(
+    session && !session.endedAt ? `Do a ${MOCK_LINE[session.kind]} mock interview` : "",
+  );
 
   if (!loaded || !designsLoaded)
     return (

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { prefersReducedMotion, useLatest } from "@/components/ui/hooks";
 import { Kbd, Skeleton } from "@/components/ui/Misc";
-import { ProgressBar } from "@/components/ui/Progress";
+import { HorizonLine } from "@/components/ui/Horizon";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatClock, useTimer } from "@/components/ui/timer";
 import { conceptById } from "@/data/syllabus";
@@ -42,6 +42,7 @@ import { hashSeed } from "@/lib/random";
 import { localDate } from "@/lib/time";
 import type { MentalMathRun } from "@/lib/types";
 import { runsOf, saveSprint, useMentalMathStore } from "@/stores/mentalMathStore";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 const HistoryCharts = lazy(() => import("./HistoryCharts"));
 
@@ -219,10 +220,11 @@ function Sprint({
           {formatClock(remaining)}
         </span>
       </div>
-      <ProgressBar
-        value={remaining / (info.seconds * 1000)}
+      {/* The round's horizon line (F31): 5-second steps, dotted near the end. */}
+      <HorizonLine
+        elapsedMs={info.seconds * 1000 - remaining}
+        totalMs={info.seconds * 1000}
         label="Time left in the sprint"
-        className="h-1"
       />
 
       <div className="py-2 sm:py-6">
@@ -538,6 +540,7 @@ export default function MentalMathPage() {
   const tier: SprintTier = isTier(qTier) ? qTier : "medium";
   const [phase, setPhase] = useState<Phase>({ kind: "setup" });
   const runs = useRef(0);
+  usePageFocusLine("Finish a mental math sprint");
 
   const setChoice = (next: { mode?: SprintMode; tier?: SprintTier }) =>
     navigate(

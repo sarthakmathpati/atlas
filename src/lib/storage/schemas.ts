@@ -17,6 +17,7 @@ import type {
   MentalMathRun,
   MistakeTag,
   MockSession,
+  ParkedThought,
   ProblemState,
   Profile,
   PuzzleAttemptGrade,
@@ -66,6 +67,14 @@ export const profileSchema: z.ZodType<Profile> = z.object({
     extraLanguages: z.array(language),
     backupReminder: z.boolean(),
     themeSchedule: z.object({ day: clockTime, dusk: clockTime, night: clockTime }),
+    focus: z
+      .object({
+        dim: z.boolean().optional(),
+        holdNotices: z.boolean().optional(),
+        breakView: z.boolean().optional(),
+      })
+      .optional(),
+    bedtime: clockTime.optional(),
   }),
   lastBackupAt: isoTime.optional(),
   backupReminderDismissedAt: isoTime.optional(),
@@ -262,6 +271,7 @@ export const dayPlanSchema: z.ZodType<DayPlan> = z.object({
         "revision",
         "design",
         "story",
+        "thought",
       ]),
       refId: z.string().optional(),
       refIds: z.array(z.string()).optional(),
@@ -298,6 +308,13 @@ export const activityMonthSchema: z.ZodType<ActivityMonth> = z.object({
       drillSessions: z.number().int().min(0).optional(),
       drillAnswers: z.number().int().min(0).optional(),
       mocks: z.number().int().min(0).optional(),
+      focusBlocks: z
+        .object({
+          done: z.number().int().min(0).optional(),
+          partly: z.number().int().min(0).optional(),
+          movedOn: z.number().int().min(0).optional(),
+        })
+        .optional(),
     }),
   ),
   streakFreezeUsed: z.array(localDay).optional(),
@@ -421,6 +438,16 @@ export const generatedDrillSchema: z.ZodType<GeneratedDrill> = z.object({
   updatedAt: isoTime,
 });
 
+export const parkedThoughtSchema: z.ZodType<ParkedThought> = z.object({
+  id: z.string().min(1),
+  text: z.string().min(1).max(500),
+  when: z.enum(["break", "tonight", "tomorrow"]),
+  dueAt: isoTime,
+  createdAt: isoTime,
+  doneAt: isoTime.optional(),
+  updatedAt: isoTime,
+});
+
 export const TABLE_SCHEMAS: { [K in TableName]: z.ZodType<TableTypes[K]> } = {
   conceptStates: conceptStateSchema,
   conceptNotes: conceptNoteSchema,
@@ -436,6 +463,7 @@ export const TABLE_SCHEMAS: { [K in TableName]: z.ZodType<TableTypes[K]> } = {
   mapOverrides: mapOverrideSchema,
   customConcepts: customConceptSchema,
   generatedDrills: generatedDrillSchema,
+  parkedThoughts: parkedThoughtSchema,
 };
 
 /** The "data" part of a backup file. */
@@ -465,6 +493,7 @@ export const exportDataSchema: z.ZodType<ExportData> = z.object({
   mapOverrides: z.array(mapOverrideSchema),
   customConcepts: z.array(customConceptSchema),
   generatedDrills: z.array(generatedDrillSchema),
+  parkedThoughts: z.array(parkedThoughtSchema),
 });
 
 /** The file envelope before migrations: only the fields needed to decide how to read it. */

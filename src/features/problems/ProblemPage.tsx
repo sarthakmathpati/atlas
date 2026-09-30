@@ -9,7 +9,12 @@ import { Dialog } from "@/components/ui/Dialog";
 import { useMediaQuery } from "@/components/ui/hooks";
 import { Callout, PageSkeleton } from "@/components/ui/Misc";
 import { Tabs } from "@/components/ui/Tabs";
-import { isDesignProblem, problemInfo, type ProblemInfo } from "@/lib/problems/catalog";
+import {
+  isDesignProblem,
+  problemInfo,
+  problemLabel,
+  type ProblemInfo,
+} from "@/lib/problems/catalog";
 import type { Attempt } from "@/lib/types";
 import { deleteAttempt, restoreProblem, useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -24,6 +29,7 @@ import { PuzzleAnswer } from "./workspace/PuzzleAnswer";
 import { SaveAttemptDialog } from "./workspace/SaveAttemptDialog";
 import { isBlankCode, readTemplatePref, writeTemplatePref } from "./workspace/templates";
 import { useAttemptSession, type SessionMode } from "./workspace/useAttemptSession";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 const SPLIT_KEY = "atlas.split";
 const WIDE = "(min-width: 1024px)";
@@ -58,6 +64,7 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
         ? "text"
         : normalizeLanguage(profile?.primaryLanguage ?? "cpp");
   const attempt = useAttemptSession(info.id, mode, defaultLanguage, templateOn);
+  usePageFocusLine(`${mode === "resolve" ? "Re-solve" : "Solve"} ${problemLabel(info)}`, info.id);
   const { session } = attempt;
   const [panel, setPanel] = useState<WorkspacePanel>(session.hintsUsed > 0 ? "hints" : null);
   const [saveOpen, setSaveOpen] = useState(false);

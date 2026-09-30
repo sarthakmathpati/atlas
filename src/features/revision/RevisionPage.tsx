@@ -45,6 +45,7 @@ import { AIRunView, ClaudeTag } from "../ai/parts";
 import { useAIRequest } from "../ai/useAI";
 import { useReadiness } from "../insight/useInsight";
 import { keepTightened, useTightenStore } from "./tightenStore";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 const MarkdownView = lazy(() => import("@/components/ui/MarkdownView"));
 
@@ -88,6 +89,11 @@ export default function RevisionPage() {
   const route = useRoute();
   const choice = useMemo(() => choiceFrom(route.query), [route.query]);
   const choiceKey = choiceHref(choice);
+  usePageFocusLine(
+    choice.scope === "custom"
+      ? "Read my revision sheet"
+      : `Read the ${choice.scope === "week" ? "1-week" : "1-day"} revision sheet`,
+  );
   const profile = useProfileStore((s) => s.profile);
   const ready = useDataReady((s) => s.ready);
   const model = useReadiness();

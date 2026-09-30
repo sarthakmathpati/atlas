@@ -27,6 +27,7 @@ import { EmptyState, Kbd } from "@/components/ui/Misc";
 import { MOD_KEY } from "@/components/ui/platform";
 import { MultiCombobox, type ComboOption } from "@/components/ui/MultiCombobox";
 import { ProgressBar } from "@/components/ui/Progress";
+import { HorizonLine } from "@/components/ui/Horizon";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatClock, useTimer } from "@/components/ui/timer";
 import { DRILL_PROMPTS } from "@/data/drills.seed";
@@ -65,6 +66,7 @@ import { toast } from "@/stores/toastStore";
 import { promptEnv } from "../ai/gather";
 import { AIRunView, ClaudeTag } from "../ai/parts";
 import { useAIRequest } from "../ai/useAI";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 type Source = "bank" | "solved";
 
@@ -222,10 +224,11 @@ function PromptCard({
           {formatClock(remaining)}
         </span>
       </div>
-      <ProgressBar
-        value={remaining / (DRILL_SECONDS * 1000)}
+      {/* The round's horizon line (F31): 5-second steps, dotted in the last quarter. */}
+      <HorizonLine
+        elapsedMs={DRILL_SECONDS * 1000 - remaining}
+        totalMs={DRILL_SECONDS * 1000}
         label="Time left for this prompt"
-        className="h-1"
       />
       {/* The prompt is a card that turns over to show the pattern and the key insight. */}
       <div
@@ -641,6 +644,7 @@ export default function DrillPage() {
   const [focusWeak, setFocusWeak] = useState(false);
   const [session, setSession] = useState<DrillItem[] | null>(null);
   const [runs, setRuns] = useState(0);
+  usePageFocusLine("Finish a pattern drill");
 
   const bank = useMemo<DrillItem[]>(
     () => [

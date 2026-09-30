@@ -77,6 +77,7 @@ function FlashcardsDialog() {
             key={key}
             conceptIds={request.conceptIds}
             session={request.session}
+            walk={request.walk}
             onDone={close}
           />
         ) : (

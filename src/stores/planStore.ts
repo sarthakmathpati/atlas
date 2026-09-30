@@ -96,6 +96,22 @@ export function addPlanItems(
   return fresh.length;
 }
 
+/**
+ * Adds items to another day's plan (tomorrow's, from the wrap-up note), reading that day's plan
+ * from storage first so nothing already on it is lost.
+ */
+export async function addPlanItemsOn(
+  date: string,
+  items: readonly NewPlanItem[],
+  budget?: number,
+): Promise<number> {
+  if (!usePlanStore.getState().plans[date] && repo) {
+    const stored = await repo.dayPlans.get(date).catch(() => undefined);
+    if (stored && !usePlanStore.getState().plans[date]) notePlanWritten(stored);
+  }
+  return addPlanItems(items, { date, budget });
+}
+
 export function setPlanItemDone(date: string, itemId: string, done: boolean): void {
   const plan = usePlanStore.getState().plans[date];
   const item = plan?.items.find((i) => i.id === itemId);

@@ -17,6 +17,7 @@
 //   mapOverrides            { [nodeId]: MapOverride }
 //   customConcepts          { [id]: CustomConcept }
 //   generatedDrills         { [id]: GeneratedDrill }
+//   parkedThoughts          { [id]: ParkedThought }, latest 300
 //
 // Every body is an envelope { kind, key, v, updatedAt, data } where `key` is the document id, so
 // startup can load kind by kind, paging on the key. Reads are served from an in-memory cache.
@@ -95,6 +96,12 @@ const LAYOUT: Record<TableName, DocLayout> = {
   mapOverrides: { mode: "grouped", kind: "mapOverrides", docFor: () => "mapOverrides" },
   customConcepts: { mode: "grouped", kind: "customConcepts", docFor: () => "customConcepts" },
   generatedDrills: { mode: "grouped", kind: "generatedDrills", docFor: () => "generatedDrills" },
+  parkedThoughts: {
+    mode: "grouped",
+    kind: "parkedThoughts",
+    docFor: () => "parkedThoughts",
+    cap: DB_LIMITS.parkedThoughts,
+  },
 };
 
 const KIND_TO_TABLE = new Map<string, TableName>(TABLE_NAMES.map((t) => [LAYOUT[t].kind, t]));

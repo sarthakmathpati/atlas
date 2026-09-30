@@ -172,6 +172,16 @@ export interface ThemeSchedule {
   night: string;
 }
 
+/** Focus layer settings (F31); a missing flag means on. */
+export interface FocusPrefs {
+  /** Dim everything but the work while a focus block runs. */
+  dim?: boolean;
+  /** Keep notices that aren't an answer to what the owner just did until the break. */
+  holdNotices?: boolean;
+  /** Fill the screen with a break view when a block ends. */
+  breakView?: boolean;
+}
+
 export interface Profile {
   name: string;
   track: Track;
@@ -196,6 +206,10 @@ export interface Profile {
     extraLanguages: PrimaryLanguage[]; // other language topics the owner wants counted
     backupReminder: boolean;
     themeSchedule: ThemeSchedule; // default 06:30, 19:00, 22:30
+    /** The focus layer (F31). Each flag defaults to on when missing (read with `focusPrefs`). */
+    focus?: FocusPrefs;
+    /** An optional bedtime ("HH:MM", local): a wrap-up note shows 30 minutes before it (F31). */
+    bedtime?: string;
   };
   lastBackupAt?: string;
   /** When the owner last dismissed the backup banner (it stays hidden for 3 days). */
@@ -405,8 +419,10 @@ export interface PlanItem {
     | "mental-math"
     | "revision"
     | "design"
-    | "story";
-  refId?: string; // conceptId or problemId
+    | "story"
+    // A thought the owner parked and then added to a day (F31); only the owner adds these.
+    | "thought";
+  refId?: string; // conceptId or problemId (a parked thought's id for "thought")
   refIds?: string[]; // for bundles, e.g. a flashcard item covering several concepts
   title: string;
   reason: string; // plain-language "why this is here"
@@ -457,6 +473,28 @@ export interface ActivityDay {
   drillAnswers?: number;
   /** Mock interviews finished (F15, phase 8). */
   mocks?: number;
+  /** Focus blocks ended, by how the owner said they went (F31). */
+  focusBlocks?: FocusBlockCounts;
+}
+
+export type FocusOutcome = "done" | "partly" | "movedOn";
+
+export type FocusBlockCounts = Partial<Record<FocusOutcome, number>>;
+
+/**
+ * A stray thought parked during study (F31 "Park it"): it comes back at its time (the break,
+ * tonight or tomorrow morning) with Done, Add to today and Dismiss.
+ */
+export interface ParkedThought {
+  id: string;
+  text: string;
+  when: "break" | "tonight" | "tomorrow";
+  /** When it comes back (ISO time). */
+  dueAt: string;
+  createdAt: string;
+  /** Set when the owner marks it done or adds it to a day's plan. */
+  doneAt?: string;
+  updatedAt: string;
 }
 
 /** What the owner kept from a weekly review (F18): Claude's reflection and the focus accepted. */

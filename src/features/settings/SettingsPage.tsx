@@ -1,4 +1,4 @@
-// Settings (F24): profile, appearance, learning, Claude, data and about. A section list on wide
+// Settings (F24): profile, appearance, learning, focus sessions (F31), Claude, data and about. A section list on wide
 // screens; #/settings?section=<id> scrolls to a section.
 import { Keyboard, Palette } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -20,13 +20,14 @@ import { useUiStore } from "@/stores/uiStore";
 import { ClaudeSection } from "./ClaudeSection";
 import { DataSection } from "./DataSection";
 import { SettingsRow, SettingsSection } from "./layout";
-import { AppearanceSection, LearningSection } from "./PreferenceSections";
+import { AppearanceSection, FocusSection, LearningSection } from "./PreferenceSections";
 import { ProfileSection } from "./ProfileSection";
 
 const SECTIONS = [
   { id: "profile", label: "Profile" },
   { id: "appearance", label: "Appearance" },
   { id: "learning", label: "Learning" },
+  { id: "focus", label: "Focus sessions" },
   { id: "claude", label: "Claude" },
   { id: "data", label: "Data" },
   { id: "about", label: "About" },
@@ -121,6 +122,7 @@ function Sections({ profile, services }: { profile: Profile; services: Services 
       <ProfileSection profile={profile} />
       <AppearanceSection profile={profile} />
       <LearningSection profile={profile} />
+      <FocusSection profile={profile} />
       <ClaudeSection profile={profile} services={services} />
       {services ? (
         <DataSection profile={profile} services={services} />

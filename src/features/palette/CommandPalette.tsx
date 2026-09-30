@@ -3,6 +3,8 @@
 // when the search is empty. Built on cmdk for keyboard handling; results come from MiniSearch.
 import { Command } from "cmdk";
 import {
+  SquareParking,
+  Timer,
   Calculator,
   Dumbbell,
   ArrowRight,
@@ -45,6 +47,8 @@ import { loadAllContent } from "@/data/content";
 import { concepts, subjectById } from "@/data/syllabus";
 import type { SearchHit, SearchKind } from "@/lib/search/searchIndex";
 import { openAddConcept, openFlashcards } from "@/stores/conceptDialogStore";
+import { askToStartBlock } from "@/stores/focusTimerStore";
+import { openPark } from "@/stores/parkStore";
 import { useConceptStateStore, useConceptStatus } from "@/stores/conceptStateStore";
 import { useCustomConceptStore } from "@/stores/customConceptStore";
 import { isDue } from "@/lib/srs/intervals";
@@ -412,6 +416,24 @@ export function CommandPalette() {
         group: "Commands",
         shortcut: ["A"],
         run: () => setAskOpen(true),
+      },
+      {
+        id: "cmd:focus",
+        label: "Start a focus block",
+        icon: Timer,
+        keywords: "focus timer pomodoro block concentrate intention",
+        group: "Commands",
+        shortcut: ["F"],
+        run: () => askToStartBlock(),
+      },
+      {
+        id: "cmd:park",
+        label: "Park a thought for later",
+        icon: SquareParking,
+        keywords: "park thought note later remember distraction worry",
+        group: "Commands",
+        shortcut: ["P"],
+        run: () => openPark(),
       },
       {
         id: "cmd:export",

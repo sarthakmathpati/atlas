@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { normalizeLanguage } from "@/components/ui/code/languages";
 import { cx } from "@/components/ui/cx";
 import { Skeleton } from "@/components/ui/Misc";
-import { ProgressBar } from "@/components/ui/Progress";
+import { HorizonLine } from "@/components/ui/Horizon";
 import { formatClock, useTimer } from "@/components/ui/timer";
 import { DESIGN_MINUTES, designKind, sectionsFor, wordsWritten } from "@/lib/designs/designs";
 import type { DesignAttempt, SeedProblem } from "@/lib/types";
@@ -156,6 +156,14 @@ export function DesignWorkspace({
     <div className="space-y-6">
       {clock && (
         <div className="sticky top-2 z-20 flex items-center gap-3 rounded-panel bg-surface/95 px-3 py-2 backdrop-blur max-sm:gap-1.5">
+          {/* The round's horizon line (F31) along the bar's top edge: 5-second steps, dotted in
+              the last 2 minutes. */}
+          <HorizonLine
+            elapsedMs={LIMIT_MS - remaining}
+            totalMs={LIMIT_MS}
+            label="Time left for the design"
+            className="absolute inset-x-4 top-0"
+          />
           <span
             role="timer"
             aria-label="Time left"
@@ -179,11 +187,7 @@ export function DesignWorkspace({
               {timer.running ? "Pause" : timer.elapsedMs > 0 ? "Resume" : "Start the timer"}
             </Button>
           )}
-          <ProgressBar
-            value={remaining / LIMIT_MS}
-            label="Time left for the design"
-            className="h-1 min-w-24 flex-1 max-sm:hidden"
-          />
+          <span className="flex-1 max-sm:hidden" />
           <span className="text-sm text-muted tabular-nums max-sm:hidden">{words} words</span>
           {stage === "write" && !hideReview && (
             <Button

@@ -2,6 +2,8 @@
 // field or the code editor, and never while a dialog is open. Ctrl/Cmd + K works everywhere.
 import { useEffect } from "react";
 import { isEditableTarget } from "@/components/ui/hooks";
+import { askToStartBlock } from "@/stores/focusTimerStore";
+import { openPark } from "@/stores/parkStore";
 import { useUiStore } from "@/stores/uiStore";
 import { navigate } from "../router";
 import { ALL_NAV_ITEMS } from "./nav";
@@ -18,6 +20,8 @@ export const SHORTCUT_GROUPS: { title: string; items: ShortcutInfo[] }[] = [
       { keys: ["Mod", "K"], label: "Search and commands" },
       { keys: ["/"], label: "Search" },
       { keys: ["A"], label: "Ask Claude" },
+      { keys: ["F"], label: "Start a focus block" },
+      { keys: ["P"], label: "Park a thought for later" },
       { keys: ["?"], label: "Show keyboard shortcuts" },
       { keys: ["Esc"], label: "Close a panel or dialog" },
     ],
@@ -76,6 +80,16 @@ export function useGlobalShortcuts(): void {
         case "A":
           e.preventDefault();
           ui.setAskOpen(true);
+          break;
+        case "f":
+        case "F":
+          e.preventDefault();
+          askToStartBlock();
+          break;
+        case "p":
+        case "P":
+          e.preventDefault();
+          openPark();
           break;
         case "g":
         case "G":

@@ -45,6 +45,7 @@ import { useMapModel } from "./canvas/useMapModel";
 import { MapListView, type ListTarget } from "./MapListView";
 import { MapToolbar } from "./MapToolbar";
 import { PathPanel } from "./PathPanel";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 const SUBJECT_IDS = subjects.map((s) => s.id);
 const PANEL_KEY = "atlas.mapPanel";
@@ -143,6 +144,7 @@ function MapScreen() {
   const focus = query.get("focus");
   const selectedConcept = useConcept(focus ?? undefined);
   const selected = selectedConcept ? selectedConcept.id : null;
+  usePageFocusLine(selectedConcept ? `Learn ${selectedConcept.name}` : "", selected);
 
   // ----- the path (F25) ---------------------------------------------------------------------
   const pathTarget = query.get("path");
@@ -304,6 +306,7 @@ function MapScreen() {
             openFlashcards({
               conceptIds: inTopic.map((c) => c.id),
               title: `Flashcards: ${topic?.name}`,
+              walk: true,
             }),
         },
         {

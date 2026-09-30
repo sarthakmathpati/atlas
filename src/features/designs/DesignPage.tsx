@@ -35,6 +35,7 @@ import { toast } from "@/stores/toastStore";
 import { NotFoundPage } from "../placeholder/pages";
 import { ReviewView, SelfReviewView } from "./DesignReviewPanel";
 import { DesignWorkspace } from "./DesignWorkspace";
+import { usePageFocusLine } from "@/features/focus/hooks";
 
 const SketchView = lazy(() => import("./SketchView"));
 
@@ -105,6 +106,7 @@ export default function DesignPage() {
     [all, problem],
   );
   const summary = summarizeDesign(attempts.filter((a) => a.mode !== "mock"));
+  usePageFocusLine(problem ? `Design ${problem.title}` : "", problem?.id ?? null);
 
   if (!problem || (problem.source !== "design-lld" && problem.source !== "design-hld")) {
     return <NotFoundPage />;

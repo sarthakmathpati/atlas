@@ -9,6 +9,11 @@ export interface FlashcardRequest {
   title: string;
   /** An explicit concept review: checks count even before the due date. */
   session?: boolean;
+  /**
+   * A topic's or a subject's cards come as a memory walk (F31): in the order of a walk through
+   * the concepts' places on the map. "Everything due" keeps its urgency order.
+   */
+  walk?: boolean;
 }
 
 /** A quick quiz written by Claude (F14) on one concept or a topic's concepts. */

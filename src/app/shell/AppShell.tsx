@@ -6,12 +6,15 @@ import { PageSkeleton } from "@/components/ui/Misc";
 import { CopyPromptModal } from "@/features/ai/CopyPromptModal";
 import { CommandPalette } from "@/features/palette/CommandPalette";
 import { getSearchIndex } from "@/features/palette/docs";
+import { FocusLayer } from "@/features/focus/FocusLayer";
 import { CsvImportDialog } from "@/features/problems/CsvImportDialog";
 import { QuickAddDialog } from "@/features/problems/QuickAddDialog";
 import { useReviewQueue } from "@/features/review/useReviewQueue";
 import { weeklyReviewDue } from "@/lib/insight/weekly";
 import { useConceptDialogs } from "@/stores/conceptDialogStore";
+import { holdingNotices } from "@/stores/focusTimerStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { toast } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { PAGES } from "../routes";
@@ -60,7 +63,8 @@ function useFirstRunWelcome() {
 
 /**
  * After Sunday 18:00, the first visit to Today hands over to the weekly review once (F18). A
- * deep link elsewhere isn't interrupted; Today then shows a note instead.
+ * deep link elsewhere isn't interrupted; Today then shows a note instead. During a focus block
+ * (F31) the hand-over waits: a note is held for the break instead.
  */
 function useWeeklyReviewPrompt() {
   const profile = useProfileStore((s) => s.profile);
@@ -69,7 +73,16 @@ function useWeeklyReviewPrompt() {
     if (!profile || checked.current) return;
     checked.current = true;
     if (!profile.onboardingDone || parseHash(window.location.hash).name !== "today") return;
-    if (weeklyReviewDue(new Date(), profile)) navigate("/weekly", { replace: true });
+    if (!weeklyReviewDue(new Date(), profile)) return;
+    if (holdingNotices()) {
+      toast("Your weekly review is ready.", {
+        notice: true,
+        id: "weekly-review",
+        action: { label: "Open", onClick: () => navigate("/weekly") },
+      });
+      return;
+    }
+    navigate("/weekly", { replace: true });
   }, [profile]);
 }
 
@@ -151,6 +164,7 @@ export function AppShell() {
       <QuickAddDialog />
       <CsvImportDialog />
       <FocusTimerController />
+      <FocusLayer />
       <ConceptDialogHost />
       <CopyPromptModal />
     </div>

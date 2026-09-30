@@ -13,6 +13,7 @@ import { hydrateMentalMath } from "@/stores/mentalMathStore";
 import { hydrateStories } from "@/stores/storyStore";
 import { hydrateDesigns } from "@/stores/designStore";
 import { hydrateMocks } from "@/stores/mockStore";
+import { hydrateParked } from "@/stores/parkStore";
 import { hydratePlan } from "@/stores/planStore";
 import { detachAll, hydrateAll } from "@/stores/hydrate";
 import { hydrateProfile, useProfileStore } from "@/stores/profileStore";
@@ -52,11 +53,14 @@ export function StoreHydrator() {
         else if (event.table === "stories") void hydrateStories(repository);
         else if (event.table === "designs") void hydrateDesigns(repository);
         else if (event.table === "mocks") void hydrateMocks(repository);
+        else if (event.table === "parkedThoughts") void hydrateParked(repository);
         return;
       }
+      // Errors that block work show at once; the rest wait for the break during a focus block.
       toast(event.message, {
         tone: event.level === "error" ? "error" : "neutral",
         id: `storage-${event.code}`,
+        notice: event.level !== "error",
       });
     });
     const unwatch = repository.watch("profile", "profile");

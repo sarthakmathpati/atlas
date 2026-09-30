@@ -535,7 +535,7 @@ export function MapCanvas({
             />
           </Panel>
           {!pathIds && (
-            <Panel position="bottom-left" className="max-md:hidden">
+            <Panel position="bottom-left" className="max-md:hidden" data-peripheral>
               <Minimap model={model} />
             </Panel>
           )}
