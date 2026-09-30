@@ -129,9 +129,13 @@ export function HintLadder({
   return (
     <section
       aria-label="Hints"
-      className={cx("flex min-h-0 flex-col border-t border-rule bg-surface", className)}
+      className={cx(
+        // A soft tray under the editor (12.10.8): rounded, sunken, no hairline.
+        "mx-2 mt-2 flex min-h-0 flex-col rounded-panel bg-surface-sunken",
+        className,
+      )}
     >
-      <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 px-3.5 pt-2.5 pb-2">
         <Lightbulb size={16} aria-hidden="true" className="text-warning" />
         <h2 className="text-base font-semibold text-text">Hints</h2>
         <SegmentedControl<Source>
@@ -149,12 +153,12 @@ export function HintLadder({
         </span>
         <IconButton icon={ChevronDown} label="Hide hints" size="sm" onClick={onClose} />
       </div>
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-3">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3.5 pb-3.5">
         {shown.map((level) => {
           const fromClaude = source === "claude" ? cached.get(level) : undefined;
           const offline = levels[level - 1]!;
           return (
-            <div key={level} className="rounded-control border border-rule bg-canvas px-3 py-2.5">
+            <div key={level} className="rounded-control bg-surface px-3 py-2.5">
               <p className="mb-1 flex items-center gap-2 text-sm font-medium text-muted">
                 {level}. {HINT_TITLES[level]}
                 {fromClaude && <ClaudeTag />}
@@ -190,7 +194,7 @@ export function HintLadder({
           );
         })}
         {pending !== null && hint.state.phase !== "idle" && (
-          <div className="rounded-control border border-rule bg-canvas px-3 py-2.5">
+          <div className="rounded-control bg-surface px-3 py-2.5">
             <p className="mb-1 flex items-center gap-2 text-sm font-medium text-muted">
               {pending}. {HINT_TITLES[pending]} <ClaudeTag />
             </p>
@@ -198,7 +202,7 @@ export function HintLadder({
           </div>
         )}
         {hasAnswer && sawSolution && (
-          <div className="rounded-control border border-rule bg-canvas px-3 py-2.5">
+          <div className="rounded-control bg-surface px-3 py-2.5">
             <p className="mb-1 text-sm font-medium text-muted">Answer</p>
             <p className="text-base font-medium text-text">
               {info.answer === null
@@ -209,7 +213,7 @@ export function HintLadder({
           </div>
         )}
         {solution.state.phase !== "idle" && (
-          <div className="rounded-control border border-rule bg-canvas px-3 py-2.5">
+          <div className="rounded-control bg-surface px-3 py-2.5">
             <p className="mb-1 flex items-center gap-2 text-sm font-medium text-muted">
               Full solution <ClaudeTag />
             </p>
@@ -219,7 +223,7 @@ export function HintLadder({
         {warn && (
           <div
             role="alert"
-            className="rounded-control border border-rule bg-warning-soft px-3 py-2.5 text-base text-text"
+            className="rounded-control bg-warning-soft px-3 py-2.5 text-base text-text"
           >
             The pseudocode gives away most of the solution. Try a few more minutes with the approach
             first?

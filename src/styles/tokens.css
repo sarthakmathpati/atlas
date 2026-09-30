@@ -33,6 +33,8 @@
   --on-accent: #ffffff;
   --focus-ring: #23669a;
   --contour: rgb(140 110 70 / 0.3);
+  /* Contour lines that must read at small sizes (line drawings, the summit profile's terrain). */
+  --contour-strong: rgb(140 110 70 / 0.55);
   --contour-label: #4f584c;
   --shadow-float: 0 1px 2px rgb(31 36 29 / 0.07), 0 10px 28px rgb(31 36 29 / 0.12);
   --shadow-focal: 0 1px 2px rgb(31 36 29 / 0.06), 0 10px 26px rgb(31 36 29 / 0.09);
@@ -131,6 +133,7 @@
     --on-accent: #1b1712;
     --focus-ring: #a6c0d8;
     --contour: rgb(221 190 140 / 0.14);
+    --contour-strong: rgb(221 190 140 / 0.32);
     --contour-label: #a89b86;
     --shadow-float: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 28px rgb(0 0 0 / 0.38);
     --shadow-focal: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 26px rgb(0 0 0 / 0.3);
@@ -216,6 +219,7 @@
     --on-accent: #151a16;
     --focus-ring: #86b9e4;
     --contour: rgb(150 190 215 / 0.14);
+    --contour-strong: rgb(150 190 215 / 0.32);
     --contour-label: #a3ac9d;
     --shadow-float: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 28px rgb(0 0 0 / 0.38);
     --shadow-focal: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 26px rgb(0 0 0 / 0.3);

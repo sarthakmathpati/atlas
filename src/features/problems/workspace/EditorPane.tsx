@@ -79,7 +79,7 @@ export function EditorPane({
     draftState === "saving" ? "Saving draft" : draftState === "saved" ? "Draft saved" : "";
 
   return (
-    <div className={cx("flex min-h-0 flex-col", fill && "h-full")}>
+    <div className={cx("flex min-h-0 flex-col bg-surface", fill && "h-full")}>
       <div className="flex shrink-0 flex-nowrap items-center gap-2 border-b border-rule px-3 py-2">
         <Select
           aria-label="Language"
@@ -107,7 +107,7 @@ export function EditorPane({
         >
           {draftLabel}
         </span>
-        <Timer timer={timer} label="Attempt timer" className="max-sm:ml-auto" />
+        <Timer timer={timer} label="Attempt timer" large className="max-sm:ml-auto" />
       </div>
       <div className={cx("min-h-0 bg-code", fill ? "flex-1" : "h-[56vh] min-h-[300px]")}>
         <Suspense fallback={<Skeleton className="h-full w-full rounded-none" />}>

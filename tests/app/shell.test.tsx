@@ -133,7 +133,7 @@ describe("app shell", () => {
     render(<App />);
     await go("#/today");
     await user.click(await screen.findByRole("button", { name: /^Theme, / }));
-    await user.click(await screen.findByRole("menuitemradio", { name: /Night/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /^Night/ }));
     expect(document.documentElement.dataset.theme).toBe("night");
     await waitFor(() => expect(useProfileStore.getState().profile?.theme).toBe("night"));
     expect(screen.getByRole("button", { name: "Theme, Night showing" })).toBeInTheDocument();

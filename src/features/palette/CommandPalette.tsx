@@ -38,6 +38,8 @@ import type { ThemeChoice } from "@/lib/types";
 import { Dialog } from "@/components/ui/Dialog";
 import { Kbd } from "@/components/ui/Misc";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
+import { SubjectEmblem } from "@/components/ui/SubjectEmblem";
+import { INK_CLASS } from "@/components/ui/labels";
 import { SubjectIcon } from "@/components/ui/SubjectIcon";
 import { loadAllContent } from "@/data/content";
 import { concepts, subjectById } from "@/data/syllabus";
@@ -88,12 +90,21 @@ function ConceptGlyph({ conceptId }: { conceptId: string }) {
   return <StatusGlyph status={status} size={14} />;
 }
 
+/** Pencil and ink (12.10.7): a concept's name in pencil until it's started, bold ink once strong. */
+function ConceptTitle({ conceptId, children }: { conceptId: string; children: ReactNode }) {
+  const status = useConceptStatus(conceptId);
+  return <span className={INK_CLASS[status]}>{children}</span>;
+}
+
 function HitIcon({ kind, id }: { kind: SearchKind; id: string }) {
   const raw = id.slice(id.indexOf(":") + 1);
   if (kind === "concept") return <ConceptGlyph conceptId={raw} />;
   if (kind === "subject") {
-    const subject = subjectById.get(raw);
-    return <SubjectIcon name={subject?.icon ?? ""} size={16} />;
+    return subjectById.has(raw) ? (
+      <SubjectEmblem subjectId={raw} size={20} />
+    ) : (
+      <SubjectIcon name="" size={16} />
+    );
   }
   const Icon = KIND_ICON[kind] ?? ArrowRight;
   return <Icon size={16} aria-hidden="true" />;
@@ -130,7 +141,7 @@ function Row({
   value: string;
   onSelect: () => void;
   icon: ReactNode;
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   trailing?: ReactNode;
 }) {
@@ -624,7 +635,15 @@ export function CommandPalette() {
                   value={hit.id}
                   onSelect={() => openHit(hit)}
                   icon={<HitIcon kind={hit.kind} id={hit.id} />}
-                  title={hit.title}
+                  title={
+                    hit.kind === "concept" ? (
+                      <ConceptTitle conceptId={hit.id.slice(hit.id.indexOf(":") + 1)}>
+                        {hit.title}
+                      </ConceptTitle>
+                    ) : (
+                      hit.title
+                    )
+                  }
                   subtitle={hit.subtitle}
                 />
               ))}

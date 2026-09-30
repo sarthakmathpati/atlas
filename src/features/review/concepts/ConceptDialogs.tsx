@@ -10,6 +10,7 @@ import { useMemo, useState } from "react";
 import { navigate, routeHref } from "@/app/router";
 import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
+import { CardLabel } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field, Input, Select, Switch, Textarea, type SelectOption } from "@/components/ui/Field";
 import { IMPORTANCE_LABEL, STATUS_LABEL, STATUS_ORDER } from "@/components/ui/labels";
@@ -68,7 +69,7 @@ function FlashcardsDialog() {
       open={request !== null}
       onClose={close}
       title={request?.title ?? "Flashcards"}
-      size="md"
+      size="lg"
     >
       {request &&
         (running ? (
@@ -404,11 +405,17 @@ function ConceptReviewDialog() {
           ) : !content ? (
             <Skeleton className="h-32 w-full" />
           ) : points.length > 0 ? (
-            <ul className="list-disc space-y-1.5 pl-5 text-base text-text">
-              {points.map((p) => (
-                <li key={p}>{plainText(p)}</li>
-              ))}
-            </ul>
+            <section
+              aria-label="Interview points"
+              className="rounded-panel bg-surface-sunken px-5 py-4"
+            >
+              <CardLabel className="mb-2">Interview points</CardLabel>
+              <ul className="list-disc space-y-2 pl-5 text-md text-text">
+                {points.map((p) => (
+                  <li key={p}>{plainText(p)}</li>
+                ))}
+              </ul>
+            </section>
           ) : (
             <div className="space-y-2">
               <p className="flex items-center gap-2 text-sm font-medium text-muted">

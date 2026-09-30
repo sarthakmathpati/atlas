@@ -10,15 +10,16 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useServicesState } from "@/app/providers/servicesContext";
 import { navigate } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
-import { PageHeader } from "@/app/shell/PageHeader";
+import { usePageHeading } from "@/app/shell/usePageTitle";
 import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { Field, Input, Slider } from "@/components/ui/Field";
 import { PageSkeleton } from "@/components/ui/Misc";
 import { ProgressBar } from "@/components/ui/Progress";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { SubjectIcon } from "@/components/ui/SubjectIcon";
+import { SubjectEmblem } from "@/components/ui/SubjectEmblem";
 import { subjects, topicsBySubject } from "@/data/syllabus";
+import { terrainSubjects } from "@/lib/art/terrain";
 import { inScope, inTrack } from "@/lib/concepts/scope";
 import {
   assessmentFromStates,
@@ -28,10 +29,12 @@ import {
 } from "@/lib/onboarding/selfAssess";
 import { formatMinutes, localDate } from "@/lib/time";
 import type { AIMode, PrimaryLanguage, Profile, Track } from "@/lib/types";
+import { useToday } from "@/stores/clockStore";
 import { applyConceptStates, useConceptStateStore } from "@/stores/conceptStateStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { toast } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
+import { LivingTerrain } from "../today/TodayHead";
 
 const STEPS = [
   "About you",
@@ -134,9 +137,7 @@ function SubjectAssessment({
     <li className="border-t border-rule px-3 py-3 first:border-t-0 sm:px-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <span className="flex min-w-0 flex-1 items-center gap-2.5">
-          <span className="text-muted">
-            <SubjectIcon name={subject.icon} size={17} />
-          </span>
+          <SubjectEmblem subjectId={subject.id} size={28} />
           <span className="font-medium text-text">{subject.name}</span>
         </span>
         <SegmentedControl<AssessLevel>
@@ -380,7 +381,7 @@ function Wizard({ profile }: { profile: Profile }) {
             </p>
           </div>
           {draft.track !== "sde" && draft.primaryLanguage !== "cpp" && (
-            <label className="flex max-w-[62ch] cursor-pointer items-start gap-3 rounded-panel border border-rule bg-surface p-3">
+            <label className="flex max-w-[62ch] cursor-pointer items-start gap-3 rounded-panel bg-surface p-3">
               <input
                 type="checkbox"
                 className="mt-1 size-4 shrink-0 accent-[var(--accent)]"
@@ -458,7 +459,7 @@ function Wizard({ profile }: { profile: Profile }) {
           title="What you already know"
           intro="So the map doesn't start as a sea of grey. Topics you know a little start as learning. Topics you're comfortable with get quick reviews over the coming days, so nothing turns green until a check confirms it."
         >
-          <ul className="overflow-hidden rounded-panel border border-rule bg-surface">
+          <ul className="overflow-hidden rounded-panel bg-surface">
             {trackSubjects.map((s) => (
               <SubjectAssessment
                 key={s.id}
@@ -550,14 +551,43 @@ function Wizard({ profile }: { profile: Profile }) {
   );
 }
 
+/**
+ * The welcome head (12.10.8): a first living terrain, the track's three heaviest subjects as low
+ * hills (nothing is learned yet, or what the owner has so far), on this week's background.
+ */
+function WelcomeHead({ profile }: { profile: Profile | null }) {
+  const title = profile?.onboardingDone ? "Set up Atlas again" : "Welcome to Atlas";
+  const ref = usePageHeading(title);
+  const today = useToday();
+  const subjects = useMemo(
+    () => terrainSubjects({ focusSubjects: [], track: profile?.track ?? "sde" }, null),
+    [profile?.track],
+  );
+  return (
+    <header className="relative isolate mb-6 overflow-hidden rounded-focal bg-sidebar px-5 py-6 sm:mb-8 sm:px-7 sm:py-8">
+      <LivingTerrain subjects={subjects} day={today} />
+      <div className="max-w-[46ch]">
+        <h1
+          ref={ref}
+          tabIndex={-1}
+          className="font-display text-4xl font-semibold tracking-[-0.01em] text-text outline-none max-sm:text-[28px]"
+        >
+          {title}
+        </h1>
+        <p className="mt-2 text-md text-muted">
+          A few questions so the map, your plan and your reviews fit you. About two minutes;
+          everything can be changed later in Settings.
+        </p>
+      </div>
+    </header>
+  );
+}
+
 export default function OnboardingPage() {
   const profile = useProfileStore((s) => s.profile);
   return (
     <PageFrame className="max-w-3xl">
-      <PageHeader
-        title={profile?.onboardingDone ? "Set up Atlas again" : "Welcome to Atlas"}
-        description="A few questions so the map, your plan and your reviews fit you. About two minutes; everything can be changed later in Settings."
-      />
+      <WelcomeHead profile={profile} />
       {profile ? <Wizard profile={profile} /> : <PageSkeleton />}
     </PageFrame>
   );

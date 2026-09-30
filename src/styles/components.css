@@ -434,6 +434,30 @@
     margin-right: 0.45em;
     accent-color: var(--accent);
   }
+
+  /* On screen a sheet reads like a lesson (12.10.8): one centered reading column, sections set
+     apart by space and display headings. Printing keeps its own styles below. */
+  @media screen {
+    .revision-sheet {
+      max-width: 52rem;
+      margin-inline: auto;
+    }
+
+    .revision-sheet header {
+      border-bottom-color: transparent;
+    }
+
+    .revision-sheet .sheet-section + .sheet-section {
+      border-top: 0;
+      margin-top: var(--space-8);
+      padding-top: 0;
+    }
+
+    .revision-sheet h2 {
+      font-family: var(--font-display);
+      font-size: 22px;
+    }
+  }
 }
 
 /*
@@ -499,5 +523,68 @@
   .revision-sheet a {
     color: inherit;
     text-decoration: none;
+  }
+}
+
+@layer components {
+  /* Today's route (12.10.7, 12.10.9): finishing a stop inks the line to the next one in 250 ms.
+     Only a stop finished on screen plays it (data-inked); reduced motion makes it instant. */
+  .route-ink {
+    transform-origin: top;
+  }
+
+  .route-ink[data-inked] {
+    animation: route-ink 250ms var(--ease-out) both;
+  }
+
+  /* The weekly review's logbook page (12.10.8): faint ruled lines and a margin rule. */
+  .logbook {
+    background-image:
+      linear-gradient(
+        to right,
+        transparent 34px,
+        color-mix(in srgb, var(--accent) 28%, transparent) 34px 35px,
+        transparent 35px
+      ),
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0 27px,
+        color-mix(in srgb, var(--rule) 70%, transparent) 27px 28px
+      );
+  }
+
+  @media (max-width: 639px) {
+    .logbook {
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0 27px,
+        color-mix(in srgb, var(--rule) 70%, transparent) 27px 28px
+      );
+    }
+  }
+
+  /* A flashcard turns over to show its answer (12.10.8); instant with reduced motion. */
+  .flashcard-turn {
+    animation: flashcard-turn 240ms var(--ease-out) both;
+  }
+
+  @keyframes flashcard-turn {
+    from {
+      transform: perspective(1000px) rotateY(-80deg);
+      opacity: 0.4;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  @keyframes route-ink {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
   }
 }

@@ -2,6 +2,7 @@
 // the owner's own problems, which live in ProblemState.custom. Pure lookups over plain data.
 import { leetCodeEditorialUrl, leetCodeSlug, leetCodeUrl } from "@/data/problems.seed";
 import { SEED_PROBLEMS, seedProblemById, seedProblemsByConcept } from "@/data/seed";
+import { conceptById, topicById } from "@/data/syllabus";
 import type {
   ConceptId,
   Difficulty,
@@ -140,6 +141,17 @@ export function problemsForConcept(
     }
   }
   return [...seed, ...custom];
+}
+
+/** The subject a problem belongs to: its first concept's, else its topic's (for its mark). */
+export function problemSubjectId(
+  info: Pick<ProblemInfo, "conceptIds" | "topicId">,
+): string | undefined {
+  const first = info.conceptIds[0];
+  const concept = first ? conceptById.get(first) : undefined;
+  if (concept) return concept.subjectId;
+  if (first) return first.split(".")[0];
+  return info.topicId ? topicById.get(info.topicId)?.subjectId : undefined;
 }
 
 /** Concepts a problem feeds (its patterns). */

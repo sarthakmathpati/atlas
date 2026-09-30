@@ -478,11 +478,13 @@ describe("practice hub", () => {
     });
     await go("#/today");
     const list = await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    // The next stop's Start is on the Up next card; the other stops keep theirs on the route.
     const startOf = (title: string) =>
       within(
-        within(list)
-          .getByRole("checkbox", { name: `Done: ${title}` })
-          .closest("li")!,
+        screen.queryByRole("region", { name: `Up next: ${title}` }) ??
+          within(list)
+            .getByRole("checkbox", { name: `Done: ${title}` })
+            .closest("li")!,
       ).getByRole("link", { name: "Start" });
     expect(startOf("Mental math sprint")).toHaveAttribute("href", "#/mental-math?mode=speed");
     expect(startOf("Story practice: one behavioral answer")).toHaveAttribute(

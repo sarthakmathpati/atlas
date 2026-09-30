@@ -5,7 +5,8 @@ import { useState, type ReactNode } from "react";
 import { conceptHref, routeHref } from "@/app/router";
 import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
-import { ProgressRing, SegmentedBar } from "@/components/ui/Progress";
+import { SegmentedBar } from "@/components/ui/Progress";
+import { SubjectEmblem, SubjectMark } from "@/components/ui/SubjectEmblem";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
 import { STATUS_LABEL } from "@/components/ui/labels";
 import { conceptById } from "@/data/syllabus";
@@ -29,6 +30,7 @@ import type { ConceptEval, ReadinessModel } from "@/lib/readiness/model";
 import { parseLocalDate } from "@/lib/time";
 import type { Status, Track } from "@/lib/types";
 import { ExplainButton, ExplainNumber, Formula, MathTable } from "../insight/Explain";
+import { RingLegend, SubjectRing } from "./summit";
 
 const TRACK_NAME: Record<Track, string> = { sde: "SDE", quant: "Quant", both: "SDE and quant" };
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -52,17 +54,19 @@ export function Card({
   return (
     <section
       aria-labelledby={title ? id : undefined}
-      className={cx("min-w-0 rounded-panel border border-rule bg-surface", className)}
+      className={cx("min-w-0 rounded-panel bg-surface", className)}
     >
       {title && (
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-rule px-4 py-2.5 sm:px-5">
-          <h2 id={id} className="text-md font-semibold text-text">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 pt-4 sm:px-5">
+          <h2 id={id} className="font-display text-lg font-semibold text-text">
             {title}
           </h2>
           {actions}
         </div>
       )}
-      <div className="px-4 py-4 sm:px-5">{children}</div>
+      <div className={cx("px-4 pb-4 sm:px-5 sm:pb-5", title ? "pt-3" : "pt-4 sm:pt-5")}>
+        {children}
+      </div>
     </section>
   );
 }
@@ -125,15 +129,13 @@ export function ReadinessCard({
   return (
     <Card title="Overall readiness" id="readiness-heading">
       <div className="flex flex-wrap items-center gap-5">
-        <ProgressRing
-          value={model.overall / 100}
-          size={112}
-          thickness={9}
-          label={`Overall readiness ${r0(model.overall)} out of 100`}
-        >
-          <span className="text-2xl">{r0(model.overall)}</span>
-        </ProgressRing>
-        <div className="min-w-0 flex-1 space-y-1.5">
+        <SubjectRing subjects={subjects} overall={model.overall} />
+        <div className="min-w-40 flex-1">
+          <RingLegend subjects={subjects} />
+        </div>
+      </div>
+      <div className="mt-4 space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <p className="text-base text-text">
             <ExplainNumber
               label="Overall readiness"
@@ -178,7 +180,7 @@ function ProjectionLine({ p }: { p: Projection }) {
     </>
   );
   return (
-    <p className="mt-4 border-t border-rule pt-3 text-base text-text">
+    <p className="mt-4 rounded-control bg-surface-sunken px-3 py-2.5 text-base text-text">
       At your pace over the last {PACE_DAYS} days, you'll reach about{" "}
       <ExplainNumber
         label="Projection"
@@ -226,15 +228,16 @@ export function SubjectBars({ subjects }: { subjects: SubjectRow[] }) {
         />
       }
     >
-      <ul className="space-y-2">
+      <ul className="space-y-1.5">
         {rows.map((s) => (
-          <li key={s.subjectId} className="flex items-center gap-3">
+          <li key={s.subjectId} data-subject={s.subjectId} className="flex items-center gap-3">
             <a
               href={routeHref("/map", undefined, { subject: s.subjectId })}
               title={s.name}
-              className="w-24 shrink-0 truncate text-sm text-text hover:underline sm:w-32"
+              className="flex w-32 shrink-0 items-center gap-2 text-sm text-text hover:underline sm:w-40"
             >
-              {s.shortName}
+              <SubjectEmblem subjectId={s.subjectId} size={26} />
+              <span className="truncate">{s.shortName}</span>
             </a>
             <span
               className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-surface-sunken"
@@ -248,7 +251,7 @@ export function SubjectBars({ subjects }: { subjects: SubjectRow[] }) {
                 className="absolute inset-y-0 left-0 rounded-full"
                 style={{
                   width: `${Math.min(100, s.readiness)}%`,
-                  background: s.weight > 0 ? "var(--chart-series)" : "var(--rule-strong)",
+                  background: s.weight > 0 ? "var(--subject-mark)" : "var(--rule-strong)",
                 }}
               />
             </span>
@@ -349,10 +352,12 @@ function PatternTileView({ t }: { t: PatternTile }) {
         valueText={`practice ${Math.round(t.practice * 100)}%, solved alone ${counts}`}
         explain={explain}
         className={cx(
-          "flex h-full min-h-16 w-full flex-col gap-1 rounded-control border p-2.5 no-underline hover:border-accent",
-          t.noHard ? "border-dashed border-rule-strong" : "border-rule",
+          "flex h-full min-h-16 w-full flex-col gap-1 rounded-control border p-2.5 no-underline transition-shadow hover:shadow-pill",
+          t.noHard ? "border-dashed border-rule-strong" : "border-transparent",
         )}
-        style={{ background: `color-mix(in srgb, var(--heat-2) ${TINT[level]}%, var(--surface))` }}
+        style={{
+          background: `color-mix(in srgb, var(--heat-2) ${TINT[level]}%, var(--surface-sunken))`,
+        }}
       >
         <span className="line-clamp-2 text-sm font-medium text-text">{t.name}</span>
         <span className="mt-auto flex items-baseline justify-between gap-2 text-xs text-muted tabular-nums">
@@ -487,9 +492,9 @@ export function PatternGrid({
               <span key={l} className="inline-flex items-center gap-1.5">
                 <span
                   aria-hidden="true"
-                  className="inline-block size-3 rounded-[3px] border border-rule"
+                  className="inline-block size-3 rounded-[3px]"
                   style={{
-                    background: `color-mix(in srgb, var(--heat-2) ${TINT[i]}%, var(--surface))`,
+                    background: `color-mix(in srgb, var(--heat-2) ${TINT[i]}%, var(--surface-sunken))`,
                   }}
                 />
                 {l}
@@ -503,7 +508,7 @@ export function PatternGrid({
               no hard solved alone
             </span>
           </div>
-          <div className="mt-4 border-t border-rule pt-3">
+          <div className="mt-4 rounded-control bg-surface-sunken px-3 py-2.5">
             <RecognitionSummary r={recognition} />
           </div>
         </>
@@ -543,8 +548,12 @@ export function StatusMix({ subjects }: { subjects: SubjectRow[] }) {
           <ul className="space-y-2.5">
             {rows.map((s) => (
               <li key={s.subjectId} className="flex items-center gap-3">
-                <span title={s.name} className="w-24 shrink-0 truncate text-sm text-text sm:w-32">
-                  {s.shortName}
+                <span
+                  title={s.name}
+                  className="flex w-24 shrink-0 items-center gap-2 text-sm text-text sm:w-32"
+                >
+                  <SubjectMark subjectId={s.subjectId} />
+                  <span className="truncate">{s.shortName}</span>
                 </span>
                 <SegmentedBar counts={s.counts} height={10} className="flex-1" />
                 <span className="w-10 shrink-0 text-right text-xs text-muted tabular-nums">

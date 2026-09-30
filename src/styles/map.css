@@ -377,9 +377,57 @@
     overflow: hidden;
   }
 
+  /* Pencil and ink (12.10.7): not started in pencil, learning and fading in ink, strong in bold
+     ink. The bubble keeps the status's shape and color. */
+  .map-concept[data-status="not_started"] .map-label {
+    color: var(--text-faint);
+  }
+
+  .map-concept[data-status="strong"] .map-label,
   .map-concept[data-selected] .map-label,
   .map-concept[data-emphasis] .map-label {
     font-weight: 600;
+  }
+
+  .map-concept[data-selected] .map-label,
+  .map-concept[data-emphasis] .map-label {
+    color: var(--text);
+  }
+
+  /* The subject's emblem inside its ring at far zoom, clipped to the circle. */
+  .map-subject-emblem {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: var(--subject-tint);
+  }
+
+  /* The paper's contour lines (12.10.6): the regions as hills, strongest far out. */
+  .map-paper path {
+    fill: none;
+    stroke: var(--contour);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .map-paper path[data-major] {
+    stroke-width: 1.5;
+  }
+
+  .map-paper {
+    transition: opacity 200ms var(--ease-out);
+  }
+
+  .map-paper[data-level="middle"] {
+    opacity: 0.45;
+  }
+
+  .map-paper[data-level="near"] {
+    opacity: 0;
   }
 
   /* ----- Topic and subject cards --------------------------------------------------------------- */

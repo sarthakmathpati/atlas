@@ -208,7 +208,7 @@ export function AttemptsTimeline({ state, onOpen }: TimelineProps) {
 
   if (attempts.length === 0) {
     return (
-      <EmptyState icon={Code2} title="No attempts yet" compact>
+      <EmptyState icon={Code2} title="No attempts yet" compact plain>
         Write your solution in the editor, then save it as an attempt. Every attempt keeps its code,
         so you can read it again or compare two.
       </EmptyState>

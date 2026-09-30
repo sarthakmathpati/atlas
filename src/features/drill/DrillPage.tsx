@@ -18,10 +18,13 @@ import { conceptHref, useRoute } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
 import { Button, IconButton } from "@/components/ui/Button";
+import { CardLabel } from "@/components/ui/Card";
 import { DifficultyChip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
 import { Switch, Textarea } from "@/components/ui/Field";
-import { EmptyState } from "@/components/ui/Misc";
+import { LineDrawing } from "@/components/ui/LineDrawing";
+import { EmptyState, Kbd } from "@/components/ui/Misc";
+import { MOD_KEY } from "@/components/ui/platform";
 import { MultiCombobox, type ComboOption } from "@/components/ui/MultiCombobox";
 import { ProgressBar } from "@/components/ui/Progress";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -175,13 +178,29 @@ function PromptCard({
       },
     );
 
+  // Keyboard: Ctrl or Cmd + Enter reveals; after the reveal, Enter goes on (not while typing).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || e.defaultPrevented) return;
+      if (document.querySelector("dialog[open]")) return;
+      const typing =
+        e.target instanceof HTMLElement && e.target.closest("input, textarea, [role=combobox]");
+      if (!answer && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        reveal();
+      } else if (answer && !typing && !(e.target instanceof HTMLButtonElement)) {
+        e.preventDefault();
+        onNext();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const remaining = timer.remainingMs ?? 0;
   const copy = answer ? RESULT_COPY[answer.result] : null;
   return (
-    <section
-      aria-label={`Prompt ${index + 1} of ${total}`}
-      className="space-y-4 rounded-panel border border-rule bg-surface p-4 sm:p-5"
-    >
+    <section aria-label={`Prompt ${index + 1} of ${total}`} className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-sm font-medium text-muted">
           Prompt {index + 1} of {total}
@@ -195,7 +214,7 @@ function PromptCard({
           role="timer"
           aria-label="Time left"
           className={cx(
-            "ml-auto flex items-center gap-1.5 text-md font-medium tabular-nums",
+            "ml-auto flex items-center gap-1.5 font-display text-xl font-semibold tabular-nums",
             timeUp ? "text-warning" : "text-text",
           )}
         >
@@ -208,7 +227,55 @@ function PromptCard({
         label="Time left for this prompt"
         className="h-1"
       />
-      <p className="max-w-[70ch] text-lg leading-relaxed text-text">{item.text}</p>
+      {/* The prompt is a card that turns over to show the pattern and the key insight. */}
+      <div
+        key={answer ? "back" : "front"}
+        className={cx(
+          "flex min-h-44 flex-col justify-center rounded-focal bg-surface-raised px-5 py-6 shadow-focal sm:px-8 sm:py-8",
+          answer && "flashcard-turn",
+        )}
+      >
+        {!answer ? (
+          <>
+            <CardLabel className="mb-2">The problem</CardLabel>
+            <p className="max-w-[64ch] text-xl leading-relaxed text-text">{item.text}</p>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <p className="max-w-[64ch] text-base leading-relaxed text-muted">{item.text}</p>
+            {copy && (
+              <p
+                className={cx("flex items-center gap-2 text-md font-semibold", copy.tone)}
+                role="status"
+              >
+                <copy.icon size={18} aria-hidden="true" />
+                {copy.label}
+              </p>
+            )}
+            <p className="text-lg text-text">
+              The pattern:{" "}
+              {item.answerConceptIds.map((id, i) => (
+                <span key={id}>
+                  {i > 0 && " or "}
+                  <a href={conceptHref(id)} className="font-semibold text-accent hover:underline">
+                    {name(id)}
+                  </a>
+                </span>
+              ))}
+              {answer.picked.length > 0 && answer.result !== "correct" && (
+                <span className="text-base text-muted">
+                  {" "}
+                  (you picked {answer.picked.map(name).join(" and ")})
+                </span>
+              )}
+            </p>
+            <div className="rounded-control bg-surface-sunken px-3 py-2">
+              <p className="text-sm font-medium text-muted">Key insight</p>
+              <p className="text-base text-text">{item.keyInsight}</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {!answer ? (
         <div className="space-y-3">
@@ -237,7 +304,10 @@ function PromptCard({
               Time's up. Pick your best guess and reveal.
             </p>
           )}
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+            <span className="text-sm text-muted max-md:hidden">
+              <Kbd>{MOD_KEY}</Kbd> <Kbd>Enter</Kbd> to reveal
+            </span>
             <Button variant="primary" onClick={reveal}>
               {picked.length ? "Reveal the answer" : "I don't know: reveal it"}
             </Button>
@@ -245,43 +315,13 @@ function PromptCard({
         </div>
       ) : (
         <div className="space-y-3">
-          {copy && (
-            <p
-              className={cx("flex items-center gap-2 text-md font-semibold", copy.tone)}
-              role="status"
-            >
-              <copy.icon size={18} aria-hidden="true" />
-              {copy.label}
-            </p>
-          )}
-          <p className="text-base text-text">
-            The pattern:{" "}
-            {item.answerConceptIds.map((id, i) => (
-              <span key={id}>
-                {i > 0 && " or "}
-                <a href={conceptHref(id)} className="font-medium text-accent hover:underline">
-                  {name(id)}
-                </a>
-              </span>
-            ))}
-            {answer.picked.length > 0 && answer.result !== "correct" && (
-              <span className="text-muted">
-                {" "}
-                (you picked {answer.picked.map(name).join(" and ")})
-              </span>
-            )}
-          </p>
-          <div className="rounded-control bg-surface-sunken px-3 py-2">
-            <p className="text-sm font-medium text-muted">Key insight</p>
-            <p className="text-base text-text">{item.keyInsight}</p>
-          </div>
           {answer.approach && (
             <div className="space-y-2">
               <p className="text-sm text-muted">
                 Your approach: <span className="text-text">{answer.approach}</span>
               </p>
               {answer.grade ? (
-                <div className="rounded-control border border-rule px-3 py-2">
+                <div className="rounded-control bg-surface-sunken px-3 py-2">
                   <p className="flex items-center gap-2 text-sm font-medium text-text">
                     Approach {Math.round(answer.grade.approachScore * 100)}% <ClaudeTag />
                   </p>
@@ -303,7 +343,10 @@ function PromptCard({
               )}
             </div>
           )}
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+            <span className="text-sm text-muted max-md:hidden">
+              <Kbd>Enter</Kbd> to go on
+            </span>
             <Button variant="primary" onClick={onNext}>
               {last ? "See my results" : "Next prompt"}
             </Button>
@@ -333,17 +376,28 @@ function Session({ items, onEnd }: { items: DrillItem[]; onEnd: () => void }) {
     const correct = list.filter((a) => a.result === "correct").length;
     const partial = list.filter((a) => a.result === "partial").length;
     return (
-      <section
-        className="space-y-4 rounded-panel border border-rule bg-surface p-4 sm:p-5"
-        aria-label="Results"
-      >
-        <p className="text-2xl font-semibold text-text tabular-nums" role="status">
-          {correct} of {list.length} correct
-          {partial > 0 && (
-            <span className="text-base font-normal text-muted"> and {partial} close</span>
-          )}
-        </p>
-        <ul className="divide-y divide-rule rounded-control border border-rule">
+      <section className="space-y-4 rounded-panel bg-surface p-4 sm:p-6" aria-label="Results">
+        <div className="flex flex-col items-center text-center">
+          <LineDrawing name="flag" size={64} />
+          <p
+            className="mt-2 font-display text-2xl font-semibold text-text tabular-nums"
+            role="status"
+          >
+            {correct} of {list.length} correct
+            {partial > 0 && (
+              <span className="text-base font-normal text-muted"> and {partial} close</span>
+            )}
+          </p>
+          <p className="mt-1 text-base text-muted">
+            {list.length} {list.length === 1 ? "drill check" : "drill checks"} recorded on{" "}
+            {new Set(list.map((a) => a.item.answerConceptIds[0])).size}{" "}
+            {new Set(list.map((a) => a.item.answerConceptIds[0])).size === 1
+              ? "pattern"
+              : "patterns"}
+            .
+          </p>
+        </div>
+        <ul className="divide-y divide-rule rounded-control bg-surface-sunken">
           {list.map((a, i) => {
             const c = RESULT_COPY[a.result];
             return (
@@ -402,7 +456,7 @@ function Stats({ checks }: { checks: Check[] }) {
   const [all, setAll] = useState(false);
   const shown = all ? accuracy : accuracy.slice(0, 8);
   return (
-    <section aria-labelledby="drill-stats" className="rounded-panel border border-rule bg-surface">
+    <section aria-labelledby="drill-stats" className="rounded-panel bg-surface">
       <h2
         id="drill-stats"
         className="border-b border-rule px-4 py-3 text-md font-semibold text-text"
@@ -518,10 +572,7 @@ function Generate({ checks }: { checks: Check[] }) {
     );
 
   return (
-    <section
-      aria-labelledby="drill-generate"
-      className="rounded-panel border border-rule bg-surface"
-    >
+    <section aria-labelledby="drill-generate" className="rounded-panel bg-surface">
       <h2
         id="drill-generate"
         className="flex items-center gap-2 border-b border-rule px-4 py-3 text-md font-semibold text-text"
@@ -653,7 +704,7 @@ export default function DrillPage() {
           ) : (
             <section
               aria-labelledby="drill-setup"
-              className="space-y-5 rounded-panel border border-rule bg-surface p-4 sm:p-5"
+              className="space-y-5 rounded-panel bg-surface p-4 sm:p-5"
             >
               <h2
                 id="drill-setup"

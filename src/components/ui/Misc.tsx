@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { ContourCanvas } from "./ContourCanvas";
 import { cx } from "./cx";
+import { LineDrawing, type DrawingName } from "./LineDrawing";
 
 /** A keyboard key, for shortcut hints. Uses the interface font (never monospace for labels). */
 export function Kbd({ children, className }: { children: ReactNode; className?: string }) {
@@ -44,6 +45,8 @@ export function CodeSpans({ text }: { text: string }) {
 
 interface EmptyStateProps {
   icon?: LucideIcon;
+  /** A line drawing (compass, trail, flag, tent, telescope) in place of the icon (12.10.7). */
+  drawing?: DrawingName;
   title: ReactNode;
   children?: ReactNode;
   /** Buttons that invite the next step. */
@@ -51,6 +54,8 @@ interface EmptyStateProps {
   className?: string;
   /** Compact version for panels and lists. */
   compact?: boolean;
+  /** No contour texture: for data-heavy screens (the workspace, tables), which stay plain. */
+  plain?: boolean;
 }
 
 /**
@@ -59,11 +64,13 @@ interface EmptyStateProps {
  */
 export function EmptyState({
   icon: Icon,
+  drawing,
   title,
   children,
   actions,
   className,
   compact,
+  plain,
 }: EmptyStateProps) {
   return (
     <div
@@ -73,16 +80,22 @@ export function EmptyState({
         className,
       )}
     >
-      <ContourCanvas
-        seed={typeof title === "string" ? title : "empty"}
-        levels={compact ? 8 : 10}
-        texture="lines"
-        className="-z-10 opacity-80"
-      />
-      {Icon && (
-        <span className="grid size-10 place-items-center rounded-full bg-surface-raised text-accent shadow-pill">
-          <Icon size={20} aria-hidden="true" />
-        </span>
+      {!plain && (
+        <ContourCanvas
+          seed={typeof title === "string" ? title : "empty"}
+          levels={compact ? 8 : 10}
+          texture="lines"
+          className="-z-10 opacity-80"
+        />
+      )}
+      {drawing ? (
+        <LineDrawing name={drawing} size={compact ? 56 : 72} className="-ml-1" />
+      ) : (
+        Icon && (
+          <span className="grid size-10 place-items-center rounded-full bg-surface-raised text-accent shadow-pill">
+            <Icon size={20} aria-hidden="true" />
+          </span>
+        )
       )}
       <div className="max-w-[60ch]">
         <p className={cx("font-display font-semibold text-text", compact ? "text-md" : "text-lg")}>

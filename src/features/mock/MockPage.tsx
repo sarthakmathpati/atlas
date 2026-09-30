@@ -152,10 +152,7 @@ function Setup() {
   const info = MOCK_TYPES[kind];
   const autoPattern = autoProblem ? conceptById.get(autoProblem.patternId)?.name : null;
   return (
-    <section
-      aria-labelledby="mock-setup"
-      className="space-y-5 rounded-panel border border-rule bg-surface p-4 sm:p-5"
-    >
+    <section aria-labelledby="mock-setup" className="space-y-5 rounded-panel bg-surface p-4 sm:p-5">
       <h2 id="mock-setup" className="flex items-center gap-2 text-md font-semibold text-text">
         <MessagesSquare size={18} aria-hidden="true" className="text-accent" />
         Start a mock interview
@@ -362,6 +359,7 @@ function HistoryTab({ sessions }: { sessions: MockSession[] }) {
     return (
       <EmptyState
         icon={History}
+        drawing="tent"
         title="No finished mocks yet"
         actions={<Button href="#/mock">Start a mock interview</Button>}
       >
@@ -373,10 +371,7 @@ function HistoryTab({ sessions }: { sessions: MockSession[] }) {
   const trend = scoreTrend(finished, shown);
   return (
     <div className="space-y-6">
-      <section
-        aria-label="Score trends"
-        className="space-y-3 rounded-panel border border-rule bg-surface p-4"
-      >
+      <section aria-label="Score trends" className="space-y-3 rounded-panel bg-surface p-4">
         {kinds.length > 1 ? (
           <SegmentedControl<MockKind>
             label="Kind of interview"
@@ -398,10 +393,7 @@ function HistoryTab({ sessions }: { sessions: MockSession[] }) {
           </p>
         )}
       </section>
-      <ul
-        className="overflow-hidden rounded-panel border border-rule bg-surface"
-        aria-label="Past interviews"
-      >
+      <ul className="overflow-hidden rounded-panel bg-surface" aria-label="Past interviews">
         {finished.map((s) => (
           <SessionRow key={s.id} session={s} />
         ))}
@@ -454,7 +446,7 @@ export default function MockPage() {
                 <aside aria-label="Interviews in progress" className="space-y-2">
                   <h2 className="text-md font-semibold text-text">In progress</h2>
                   {open.length ? (
-                    <ul className="overflow-hidden rounded-panel border border-rule bg-surface">
+                    <ul className="overflow-hidden rounded-panel bg-surface">
                       {open.map((s) => (
                         <SessionRow key={s.id} session={s} />
                       ))}

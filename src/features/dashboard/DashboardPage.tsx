@@ -1,7 +1,8 @@
-// The readiness dashboard (F17): the readiness ring with its "Why?" breakdown and the projection,
-// subjects weakest first, the DSA pattern grid, problems solved per week and the status mix,
-// memory health, the weakness report with "Add to today", and a year of activity (F29). Every
-// number opens a popover with the data and the formula behind it.
+// The readiness dashboard (F17, 12.10.8): the readiness ring split into subject colors with the
+// projection, the summit profile beside it, subjects weakest first in their colors with emblems,
+// weekly stamps, the DSA pattern field, problems solved per week and the status mix, memory
+// health, the weakness report with "Add to today", and a year of activity (F29). Every number
+// opens a popover with the data and the formula behind it.
 import { CalendarRange, ScrollText } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 import { navigate } from "@/app/router";
@@ -23,7 +24,11 @@ import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { toast } from "@/stores/toastStore";
 import { Heatmap } from "../insight/Heatmap";
+import { StampRow } from "../insight/Stamp";
+import { recentMondays, useStamps } from "../insight/stamps";
 import { useActivityInsight, useReadiness } from "../insight/useInsight";
+import { pointOf } from "../insight/useSummit";
+import { SummitProfile } from "./summit";
 import {
   Card,
   MemoryHealthCard,
@@ -52,6 +57,8 @@ export default function DashboardPage() {
   const problems = useProblemStore((s) => s.states);
   const today = useToday();
   const activity = useActivityInsight();
+  const mondays = useMemo(() => recentMondays(today), [today]);
+  const stamps = useStamps(mondays);
 
   const dash = useMemo(() => {
     if (!profile || !model) return null;
@@ -199,7 +206,25 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
           <ReadinessCard model={model} subjects={dash.subjects} projection={dash.projection} />
+          <SummitProfile
+            live={pointOf(today, model)}
+            today={today}
+            interviewDate={profile.interviewDate}
+          />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
           <SubjectBars subjects={dash.subjects} />
+          <div className="min-w-0 space-y-6">
+            <Card
+              title="Weekly stamps"
+              id="stamps-heading"
+              actions={<span className="text-sm text-muted">The last 12 weeks</span>}
+            >
+              <StampRow stamps={stamps} size={70} />
+            </Card>
+            <MemoryHealthCard memory={dash.memory} />
+          </div>
         </div>
 
         <PatternGrid tiles={dash.patterns} recognition={dash.recognition} />
@@ -213,15 +238,12 @@ export default function DashboardPage() {
           <StatusMix subjects={dash.subjects} />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
-          <MemoryHealthCard memory={dash.memory} />
-          <WeaknessCard
-            weakness={dash.weakness}
-            onAddConcept={addConcept}
-            onAddPattern={addPattern}
-            onAddSubject={addSubject}
-          />
-        </div>
+        <WeaknessCard
+          weakness={dash.weakness}
+          onAddConcept={addConcept}
+          onAddPattern={addPattern}
+          onAddSubject={addSubject}
+        />
 
         <Card title="Activity this year" id="activity-heading">
           <div className="space-y-3">

@@ -197,7 +197,7 @@ function Sprint({
   return (
     <section
       aria-label={`${info.label} sprint`}
-      className="space-y-5 rounded-panel border border-rule bg-surface p-4 sm:p-6"
+      className="space-y-5 rounded-panel bg-surface p-4 sm:p-6"
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <span className="text-sm font-medium text-muted">
@@ -371,10 +371,7 @@ function Results({
   const againRef = useRef<HTMLButtonElement>(null);
   useEffect(() => againRef.current?.focus(), []);
   return (
-    <section
-      aria-label="Sprint results"
-      className="space-y-5 rounded-panel border border-rule bg-surface p-4 sm:p-6"
-    >
+    <section aria-label="Sprint results" className="space-y-5 rounded-panel bg-surface p-4 sm:p-6">
       <div>
         <p className="text-2xl font-semibold text-text tabular-nums" role="status">
           {summary.correct} of {summary.total} correct
@@ -468,7 +465,7 @@ function History({ mode }: { mode: SprintMode }) {
     ? lastFive.reduce((s, r) => s + r.correct / r.total, 0) / lastFive.length
     : 0;
   return (
-    <section aria-labelledby="mm-history" className="rounded-panel border border-rule bg-surface">
+    <section aria-labelledby="mm-history" className="rounded-panel bg-surface">
       <h2
         id="mm-history"
         className="border-b border-rule px-4 py-3 text-md font-semibold text-text"
@@ -583,7 +580,7 @@ export default function MentalMathPage() {
           ) : (
             <section
               aria-labelledby="mm-setup"
-              className="space-y-5 rounded-panel border border-rule bg-surface p-4 sm:p-5"
+              className="space-y-5 rounded-panel bg-surface p-4 sm:p-5"
             >
               <h2 id="mm-setup" className="flex items-center gap-2 text-md font-semibold text-text">
                 <Calculator size={18} aria-hidden="true" className="text-accent" />

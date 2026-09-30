@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Button, IconButton } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
-import { STATUS_LABEL } from "@/components/ui/labels";
+import { INK_CLASS, STATUS_LABEL } from "@/components/ui/labels";
 import { subjectById } from "@/data/syllabus";
 import type { ConceptPath } from "@/lib/path/path";
 import { addPlanItems, removePlanItem, usePlanStore } from "@/stores/planStore";
@@ -80,7 +80,7 @@ export function PathPanel({ path, onPick, onClose, mobile }: PathPanelProps) {
     <section
       aria-labelledby="path-heading"
       className={cx(
-        "map-path flex flex-col overflow-hidden rounded-panel border border-rule bg-surface shadow-float",
+        "map-path flex flex-col overflow-hidden rounded-panel bg-surface shadow-float",
         mobile ? "max-h-[55%]" : "max-h-[calc(100%-24px)] w-[340px]",
       )}
     >
@@ -129,7 +129,7 @@ export function PathPanel({ path, onPick, onClose, mobile }: PathPanelProps) {
                   <span
                     className={cx(
                       "min-w-0 flex-1 truncate text-base",
-                      s.target ? "font-semibold text-text" : "text-text",
+                      s.target ? "font-semibold text-text" : INK_CLASS[s.status],
                     )}
                   >
                     {s.concept.name}

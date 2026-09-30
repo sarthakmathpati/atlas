@@ -9,6 +9,7 @@ import { IconButton } from "@/components/ui/Button";
 import { Chip, ImportanceChip } from "@/components/ui/Chip";
 import { cx } from "@/components/ui/cx";
 import { Menu } from "@/components/ui/Popover";
+import { SubjectEmblem } from "@/components/ui/SubjectEmblem";
 import { Tabs } from "@/components/ui/Tabs";
 import { subjectById, topicById } from "@/data/syllabus";
 import { isCustomConceptId } from "@/lib/concepts/custom";
@@ -205,7 +206,8 @@ export function ConceptSidePanel({
 }: ConceptSidePanelProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 border-b border-rule px-4 pt-2 pb-3">
+      {/* The head in the subject's tint with its emblem (12.10.8). */}
+      <div data-subject={concept.subjectId} className="shrink-0 bg-subject-tint px-4 pt-2 pb-3">
         <div className="flex items-center gap-1">
           <IconButton icon={ArrowLeft} label="Back" size="sm" disabled={!onBack} onClick={onBack} />
           <IconButton
@@ -226,9 +228,12 @@ export function ConceptSidePanel({
           />
           <IconButton icon={X} label="Close panel" size="sm" onClick={onClose} />
         </div>
-        <h2 id={titleId} className="mt-1 text-xl font-semibold text-text">
-          {concept.name}
-        </h2>
+        <div className="mt-1 mb-2 flex items-center gap-3">
+          <SubjectEmblem subjectId={concept.subjectId} size={36} />
+          <h2 id={titleId} className="min-w-0 font-display text-xl font-semibold text-text">
+            {concept.name}
+          </h2>
+        </div>
         <ConceptChips concept={concept} />
       </div>
       {/* Keyed by concept, so a linked concept opens at the top rather than at the old scroll. */}

@@ -19,6 +19,7 @@ import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Chip, DifficultyChip, PatternChip, TagChip } from "@/components/ui/Chip";
+import { SubjectMark } from "@/components/ui/SubjectEmblem";
 import { cx } from "@/components/ui/cx";
 import { BottomSheet } from "@/components/ui/Dialog";
 import { Field, Input, Select, Switch, type SelectOption } from "@/components/ui/Field";
@@ -29,7 +30,7 @@ import { Popover, type TriggerProps } from "@/components/ui/Popover";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { DIFFICULTY_LABEL } from "@/components/ui/labels";
 import { conceptById, subjectById, subjects, topicById, topics } from "@/data/syllabus";
-import { allProblems, problemLabel } from "@/lib/problems/catalog";
+import { allProblems, problemLabel, problemSubjectId } from "@/lib/problems/catalog";
 import {
   activeFilterCount,
   applyFilters,
@@ -111,10 +112,12 @@ function Stat({
   const body = (
     <>
       <span className="block text-sm text-muted">{label}</span>
-      <span className="block text-lg font-semibold text-text tabular-nums sm:text-xl">{value}</span>
+      <span className="block font-display text-xl font-semibold text-text tabular-nums sm:text-2xl">
+        {value}
+      </span>
     </>
   );
-  const classes = cx("block bg-surface px-3 py-2 sm:px-4 sm:py-3", className);
+  const classes = cx("block rounded-panel bg-surface px-3 py-2.5 sm:px-4 sm:py-3", className);
   return href ? (
     <a href={href} className={cx(classes, "hover:bg-surface-sunken")}>
       {body}
@@ -130,10 +133,7 @@ function StatsStrip({ rows, today }: { rows: ProblemRow[]; today: string }) {
     routeHref("/problems", undefined, { status: "solved", difficulty: d });
   // A 1 px gap over a rule-colored background draws the dividers at every width.
   return (
-    <section
-      aria-label="Progress"
-      className="mb-5 grid grid-cols-6 gap-px overflow-hidden rounded-panel border border-rule bg-rule sm:grid-cols-5"
-    >
+    <section aria-label="Progress" className="mb-5 grid grid-cols-6 gap-2 sm:grid-cols-5">
       <Stat
         label="Easy solved"
         value={s.solved.easy}
@@ -470,6 +470,19 @@ function SortHeader({
   );
 }
 
+/** The subject's square mark at the start of a row (its name is in the tooltip and the pattern). */
+function RowSubjectMark({ info }: { info: ProblemRow["info"] }) {
+  const id = problemSubjectId(info);
+  const subject = id ? subjectById.get(id) : undefined;
+  if (!subject) return <span aria-hidden="true" className="inline-block size-2.5 shrink-0" />;
+  return (
+    <span title={subject.name} className="inline-flex">
+      <SubjectMark subjectId={subject.id} />
+      <span className="sr-only">{subject.shortName}</span>
+    </span>
+  );
+}
+
 function openRow(e: React.MouseEvent, href: string) {
   if ((e.target as HTMLElement).closest("a, button")) return;
   navigate(href);
@@ -486,10 +499,13 @@ function TableRows({ rows, today }: { rows: ProblemRow[]; today: string }) {
             onClick={(e) => openRow(e, href)}
             className="cursor-pointer border-t border-rule transition-colors hover:bg-surface-sunken"
           >
-            <td className="w-9 py-2.5 pr-1 pl-4 align-middle">
-              <ProblemStatusGlyph state={row.state} />
+            <td className="w-14 py-3.5 pr-1 pl-4 align-middle">
+              <span className="flex items-center gap-2.5">
+                <RowSubjectMark info={row.info} />
+                <ProblemStatusGlyph state={row.state} />
+              </span>
             </td>
-            <td className="min-w-[200px] px-2 py-2.5">
+            <td className="min-w-[200px] px-2 py-3.5">
               {titleOf(row)}
               {row.info.conceptIds.length > 0 && (
                 <span className="mt-1 block lg:hidden">
@@ -497,23 +513,23 @@ function TableRows({ rows, today }: { rows: ProblemRow[]; today: string }) {
                 </span>
               )}
             </td>
-            <td className="px-2 py-2.5">
+            <td className="px-2 py-3.5">
               <DifficultyChip difficulty={row.info.difficulty} />
             </td>
-            <td className="px-2 py-2.5 max-lg:hidden">
+            <td className="px-2 py-3.5 max-lg:hidden">
               <PatternChips ids={row.info.conceptIds} />
             </td>
-            <td className="px-2 py-2.5 text-sm max-lg:hidden">
+            <td className="px-2 py-3.5 text-sm max-lg:hidden">
               {row.lastResult ? (
-                <ResultLabel result={row.lastResult} short />
+                <ResultLabel result={row.lastResult} short chip />
               ) : (
                 <span className="text-faint">–</span>
               )}
             </td>
-            <td className="px-2 py-2.5 text-sm whitespace-nowrap text-muted max-xl:hidden">
+            <td className="px-2 py-3.5 text-sm whitespace-nowrap text-muted max-xl:hidden">
               {row.lastAt ? relativeDate(localDate(new Date(row.lastAt)), today) : "–"}
             </td>
-            <td className="px-2 py-2.5 text-sm">
+            <td className="px-2 py-3.5 text-sm">
               <ReviewText info={row.review} />
             </td>
             <td className="w-10 py-1 pr-3 pl-1 text-right">
@@ -536,9 +552,12 @@ function Cards({ rows, today }: { rows: ProblemRow[]; today: string }) {
       {rows.map((row) => (
         <li
           key={row.info.id}
-          className="flex gap-3 border-t border-rule px-4 py-3 first:border-t-0"
+          className="flex gap-3 border-t border-rule px-4 py-3.5 first:border-t-0"
         >
-          <ProblemStatusGlyph state={row.state} className="mt-1" />
+          <span className="mt-1 flex h-fit items-center gap-2">
+            <RowSubjectMark info={row.info} />
+            <ProblemStatusGlyph state={row.state} />
+          </span>
           <div className="min-w-0 flex-1 space-y-1.5">
             {titleOf(row)}
             <div className="flex flex-wrap items-center gap-1.5">
@@ -648,7 +667,7 @@ function ProblemList({
 
   if (isMobile) {
     return (
-      <div className="overflow-hidden rounded-panel border border-rule bg-surface">
+      <div className="overflow-hidden rounded-panel bg-surface">
         {groups ? (
           groups.map((g) => (
             <section key={g.topicId} aria-label={groupLabel(g.topicId)}>
@@ -672,7 +691,7 @@ function ProblemList({
   }
 
   return (
-    <div className="overflow-hidden rounded-panel border border-rule bg-surface">
+    <div className="overflow-hidden rounded-panel bg-surface">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-base">
           <caption className="sr-only">Problems</caption>
@@ -683,7 +702,7 @@ function ProblemList({
                 sortKey="status"
                 filters={filters}
                 set={set}
-                className="w-9 pl-3"
+                className="w-14 pl-3"
               />
               <SortHeader label="Problem" sortKey="title" filters={filters} set={set} />
               <SortHeader label="Difficulty" sortKey="difficulty" filters={filters} set={set} />
@@ -911,6 +930,8 @@ export default function ProblemsPage() {
           {shown.length === 0 ? (
             <EmptyState
               icon={X}
+              drawing="telescope"
+              plain
               title="No problems match these filters"
               actions={
                 <>

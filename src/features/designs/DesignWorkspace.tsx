@@ -155,7 +155,7 @@ export function DesignWorkspace({
   return (
     <div className="space-y-6">
       {clock && (
-        <div className="sticky top-2 z-20 flex items-center gap-3 rounded-panel border border-rule bg-surface/95 px-3 py-2 backdrop-blur max-sm:gap-1.5">
+        <div className="sticky top-2 z-20 flex items-center gap-3 rounded-panel bg-surface/95 px-3 py-2 backdrop-blur max-sm:gap-1.5">
           <span
             role="timer"
             aria-label="Time left"

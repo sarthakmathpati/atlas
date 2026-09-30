@@ -13,7 +13,8 @@ import { KitThemes } from "@/features/kit/KitThemes";
 import { DifficultyChip, StatusChip } from "@/components/ui/Chip";
 import { Dialog } from "@/components/ui/Dialog";
 import { Switch } from "@/components/ui/Field";
-import { CodeSpans } from "@/components/ui/Misc";
+import { LineDrawing } from "@/components/ui/LineDrawing";
+import { CodeSpans, EmptyState } from "@/components/ui/Misc";
 import { MultiCombobox } from "@/components/ui/MultiCombobox";
 import { Menu } from "@/components/ui/Popover";
 import { SegmentedBar } from "@/components/ui/Progress";
@@ -293,5 +294,35 @@ describe("Survey parts (12.10)", () => {
     expect(cx("text-page text-muted")).toBe("text-page text-muted");
     expect(cx("rounded-panel rounded-focal")).toBe("rounded-focal");
     expect(cx("shadow-float shadow-focal")).toBe("shadow-focal");
+  });
+});
+
+describe("line drawings and empty states (12.10.7)", () => {
+  it("draws each line drawing as decoration, with an accent detail", () => {
+    for (const name of ["compass", "trail", "flag", "tent", "telescope"] as const) {
+      const { container, unmount } = render(<LineDrawing name={name} size={48} />);
+      const svg = container.querySelector(`svg[data-drawing="${name}"]`)!;
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+      expect(svg.getAttribute("width")).toBe("48");
+      expect(svg.querySelectorAll("path").length).toBeGreaterThan(2);
+      unmount();
+    }
+  });
+
+  it("an empty state shows its drawing instead of the icon, and stays plain on data screens", () => {
+    const { container, rerender } = render(
+      <EmptyState icon={Settings} drawing="tent" title="No stories yet">
+        Write one.
+      </EmptyState>,
+    );
+    expect(container.querySelector('svg[data-drawing="tent"]')).not.toBeNull();
+    expect(container.querySelector("canvas")).not.toBeNull();
+    rerender(
+      <EmptyState icon={Settings} title="No attempts yet" plain>
+        Save one.
+      </EmptyState>,
+    );
+    expect(container.querySelector("canvas")).toBeNull();
+    expect(container.querySelector("[data-drawing]")).toBeNull();
   });
 });

@@ -33,6 +33,7 @@ export function Coverage({ stories }: { stories: Story[] }) {
       {matrix.stories.length === 0 ? (
         <EmptyState
           icon={Plus}
+          drawing="tent"
           title="No stories yet"
           actions={
             <Button
@@ -48,7 +49,7 @@ export function Coverage({ stories }: { stories: Story[] }) {
           questions it answers, and this table fills in.
         </EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-panel border border-rule bg-surface">
+        <div className="overflow-x-auto rounded-panel bg-surface">
           <table className="w-full border-collapse text-sm" aria-label="Questions and your stories">
             <thead>
               <tr className="border-b border-rule">

@@ -55,7 +55,7 @@ export function GenerateContent({ concept }: { concept: Concept }) {
     );
   }
   return (
-    <div className="w-full space-y-3 rounded-panel border border-rule bg-surface p-4 text-left">
+    <div className="w-full space-y-3 rounded-panel bg-surface p-4 text-left">
       <AIRunView
         request={request}
         showStream={false}
@@ -191,10 +191,7 @@ export function ExplainAnotherWay({
     request.reset();
   };
   return (
-    <section
-      aria-label="Explain with Claude"
-      className="space-y-3 rounded-panel border border-rule bg-surface p-4"
-    >
+    <section aria-label="Explain with Claude" className="space-y-3 rounded-panel bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
         <ClaudeTag />
         <span className="flex-1 text-base font-medium text-text">Explain it another way</span>

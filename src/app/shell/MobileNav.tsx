@@ -1,11 +1,13 @@
 // Phone navigation (F1, under 768 px): a bottom tab bar with Today, Map, Problems, Review and
-// More. "More" opens a sheet with every other destination.
+// More. "More" opens a sheet with every other destination and the owner's focus subjects.
 import { Ellipsis, Keyboard } from "lucide-react";
 import { BottomSheet } from "@/components/ui/Dialog";
 import { cx } from "@/components/ui/cx";
+import { SubjectMark } from "@/components/ui/SubjectEmblem";
 import { useUiStore } from "@/stores/uiStore";
 import type { Route } from "../router";
 import { ALL_NAV_ITEMS, NAV_ITEMS, type NavItem } from "./nav";
+import { focusSubjectHref, useFocusSubjects } from "./focusSubjects";
 
 const TABS = NAV_ITEMS.filter((item) => item.tab);
 const MORE = ALL_NAV_ITEMS.filter((item) => !item.tab);
@@ -103,6 +105,7 @@ export function MoreSheet({ route }: { route: Route }) {
   const open = useUiStore((s) => s.moreOpen);
   const setOpen = useUiStore((s) => s.setMoreOpen);
   const setShortcutsOpen = useUiStore((s) => s.setShortcutsOpen);
+  const focus = useFocusSubjects();
   const close = () => setOpen(false);
   return (
     <BottomSheet open={open} onClose={close} title="More">
@@ -112,6 +115,27 @@ export function MoreSheet({ route }: { route: Route }) {
             <SheetLink item={item} active={item.routes.includes(route.name)} onNavigate={close} />
           </li>
         ))}
+        {focus.length > 0 && (
+          <li className="mt-1 border-t border-rule pt-2">
+            <p id="more-focus-heading" className="px-4 pb-1 text-sm font-semibold text-muted">
+              Your focus
+            </p>
+            <ul aria-labelledby="more-focus-heading" className="grid gap-0.5">
+              {focus.map((s) => (
+                <li key={s.id}>
+                  <a
+                    href={focusSubjectHref(s.id)}
+                    onClick={close}
+                    className="flex h-12 items-center gap-3 rounded-full px-4 text-md text-text hover:bg-surface-sunken"
+                  >
+                    <SubjectMark subjectId={s.id} className="size-3" />
+                    {s.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </li>
+        )}
         <li className="mt-1 border-t border-rule pt-1">
           <button
             type="button"

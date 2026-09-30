@@ -112,9 +112,12 @@ function Panel({
   action?: React.ReactNode;
 }) {
   return (
-    <section aria-labelledby={id} className="rounded-panel border border-rule bg-surface">
-      <div className="flex items-center justify-between gap-3 border-b border-rule px-4 py-2.5">
-        <h2 id={id} className="flex items-baseline gap-3 py-0.5 text-md font-semibold text-text">
+    <section aria-labelledby={id} className="overflow-hidden rounded-panel bg-surface">
+      <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2.5">
+        <h2
+          id={id}
+          className="flex items-baseline gap-3 py-0.5 font-display text-lg font-semibold text-text"
+        >
           {title}
           {count !== undefined && (
             <span className="text-sm font-normal text-muted tabular-nums">{count}</span>
@@ -153,6 +156,7 @@ export default function ReviewPage() {
             {queue.problems.length === 0 ? (
               <EmptyState
                 icon={CalendarClock}
+                drawing="flag"
                 title={
                   queue.upcoming.length ? "Nothing to re-solve today" : "Nothing to re-solve yet"
                 }
@@ -204,7 +208,7 @@ export default function ReviewPage() {
                   ))}
                 </ul>
               )}
-              <p className="border-t border-rule px-4 py-3 text-sm text-muted first:border-t-0">
+              <p className="px-4 pb-4 text-sm text-muted">
                 {queue.concepts.length === 0
                   ? "Concepts join the review queue once you study them or take a quick check. "
                   : ""}
@@ -246,7 +250,7 @@ export default function ReviewPage() {
             {queue.mastered > 0 && (
               <a
                 href={routeHref("/problems", undefined, { status: "mastered" })}
-                className="flex items-center gap-3 rounded-panel border border-rule bg-surface px-4 py-3 hover:bg-surface-sunken"
+                className="flex items-center gap-3 rounded-panel bg-surface px-4 py-3 hover:bg-surface-sunken"
               >
                 <Trophy size={18} aria-hidden="true" className="text-success" />
                 <span className="text-base text-text">

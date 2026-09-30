@@ -48,7 +48,7 @@ function PastAttempt({ problem, attempt }: { problem: SeedProblem; attempt: Desi
     [attempt.sections.sketch],
   );
   return (
-    <details className="rounded-panel border border-rule bg-surface">
+    <details className="rounded-panel bg-surface">
       <summary className="flex cursor-pointer flex-wrap items-baseline justify-between gap-2 px-4 py-3 text-base text-text">
         <span className="font-medium">
           {relativeDate(localDate(new Date(attempt.finishedAt!)), today)}
@@ -155,10 +155,7 @@ export default function DesignPage() {
         <PageSkeleton />
       ) : (
         <div className="max-w-4xl space-y-6">
-          <section
-            aria-labelledby="prompt-heading"
-            className="rounded-panel border border-rule bg-surface p-4 sm:p-5"
-          >
+          <section aria-labelledby="prompt-heading" className="rounded-panel bg-surface p-4 sm:p-5">
             <h2 id="prompt-heading" className="text-md font-semibold text-text">
               The prompt
             </h2>

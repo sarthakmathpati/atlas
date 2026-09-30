@@ -57,7 +57,7 @@ export function PracticeTab({ concept }: { concept: Concept }) {
       {suggested && (
         <section
           aria-labelledby={`${concept.id}-next`}
-          className="rounded-panel border border-rule bg-surface-sunken/60 p-3"
+          className="rounded-panel bg-surface-sunken p-3"
         >
           <h3 id={`${concept.id}-next`} className="text-sm font-medium text-muted">
             Suggested next problem
@@ -180,7 +180,7 @@ export function PracticeTab({ concept }: { concept: Concept }) {
           </section>
           <section
             aria-labelledby={`${concept.id}-drill`}
-            className="flex flex-wrap items-center gap-3 rounded-panel border border-rule bg-surface px-4 py-3"
+            className="flex flex-wrap items-center gap-3 rounded-panel bg-surface px-4 py-3"
           >
             <Dumbbell size={18} aria-hidden="true" className="shrink-0 text-accent" />
             <div className="min-w-0 flex-1">

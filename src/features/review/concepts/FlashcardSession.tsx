@@ -4,7 +4,9 @@
 import { ArrowRight, Layers, RotateCcw } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { CardLabel } from "@/components/ui/Card";
 import { cx } from "@/components/ui/cx";
+import { LineDrawing } from "@/components/ui/LineDrawing";
 import { Kbd, Skeleton } from "@/components/ui/Misc";
 import { ProgressBar } from "@/components/ui/Progress";
 import { StatusGlyph } from "@/components/ui/StatusGlyph";
@@ -19,6 +21,7 @@ import {
   type Flashcard,
   type Rating,
 } from "@/lib/review/flashcards";
+import { parseLocalDate } from "@/lib/time";
 import type { Concept, Status } from "@/lib/types";
 import { recordChecks, useConceptStateStore } from "@/stores/conceptStateStore";
 import { studyContent } from "@/lib/concepts/custom";
@@ -38,9 +41,19 @@ const RATING_HINT: Record<Rating, string> = {
 };
 
 export interface SessionSummary {
-  concepts: { concept: Concept; score: number; before: Status; after: Status }[];
+  concepts: {
+    concept: Concept;
+    score: number;
+    before: Status;
+    after: Status;
+    /** The next review date the session set (yyyy-mm-dd), when the concept is in review. */
+    nextReview?: string;
+  }[];
   cards: number;
 }
+
+const shortDate = (day: string) =>
+  parseLocalDate(day).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 
 interface FlashcardSessionProps {
   conceptIds: readonly string[];
@@ -134,6 +147,7 @@ function Session({
         score: r.score,
         before: before.current[r.conceptId] ?? "not_started",
         after: states[r.conceptId]?.status ?? "not_started",
+        nextReview: states[r.conceptId]?.srs.dueAt,
       })),
     };
     setSummary(out);
@@ -190,32 +204,44 @@ function Session({
   if (summary) {
     const avg =
       summary.concepts.reduce((s, c) => s + c.score, 0) / Math.max(1, summary.concepts.length);
+    const changed = summary.concepts.filter((c) => c.before !== c.after);
+    // A calm finish that says what changed (12.10.8).
     return (
-      <div className="space-y-4 px-4 py-5 sm:px-5" role="status">
-        <div>
-          <p className="text-lg font-semibold text-text">Session saved</p>
+      <div className="mx-auto max-w-xl space-y-5 px-4 py-6 sm:px-5" role="status">
+        <div className="flex flex-col items-center text-center">
+          <LineDrawing name="flag" size={64} />
+          <p className="mt-2 font-display text-xl font-semibold text-text">Session saved</p>
           <p className="mt-1 text-base text-muted">
             {summary.cards} {summary.cards === 1 ? "card" : "cards"}, average{" "}
-            {Math.round(avg * 100)}%. Each concept's next review is set from how it went.
+            {Math.round(avg * 100)}%.{" "}
+            {changed.length === 0
+              ? "No status changed this time; the reviews still count."
+              : `${changed.length} ${changed.length === 1 ? "concept changed" : "concepts changed"} status.`}
           </p>
         </div>
-        <ul className="divide-y divide-rule rounded-control border border-rule">
-          {summary.concepts.map(({ concept, score, before: b, after }) => (
-            <li key={concept.id} className="flex items-center gap-3 px-3 py-2">
+        <ul className="space-y-1 rounded-panel bg-surface-sunken p-2">
+          {summary.concepts.map(({ concept, score, before: b, after, nextReview }) => (
+            <li key={concept.id} className="flex items-center gap-3 rounded-control px-2.5 py-2">
               <StatusGlyph status={after} size={16} title={STATUS_LABEL[after]} />
-              <span className="min-w-0 flex-1 truncate text-base text-text">{concept.name}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-base text-text">{concept.name}</span>
+                <span className="block text-sm text-muted">
+                  {b !== after
+                    ? `${STATUS_LABEL[b]} to ${STATUS_LABEL[after].toLowerCase()}`
+                    : STATUS_LABEL[after]}
+                  {nextReview ? `, next review ${shortDate(nextReview)}` : ""}
+                </span>
+              </span>
               <span className="shrink-0 text-sm text-muted tabular-nums">
                 {Math.round(score * 100)}%
               </span>
               {b !== after && (
-                <span className="shrink-0 text-sm font-medium text-text">
-                  Now {STATUS_LABEL[after].toLowerCase()}
-                </span>
+                <span className="sr-only">Now {STATUS_LABEL[after].toLowerCase()}</span>
               )}
             </li>
           ))}
         </ul>
-        <div className="flex justify-end">
+        <div className="flex justify-center">
           <Button variant="primary" onClick={onDone}>
             Done
           </Button>
@@ -226,7 +252,7 @@ function Session({
 
   const concept = findConcept(card!.conceptId);
   return (
-    <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 sm:py-5">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4 sm:px-5 sm:py-5">
       <div className="flex items-center justify-between gap-3 text-sm text-muted">
         <span className="min-w-0 truncate">{concept?.name}</span>
         <span className="shrink-0 tabular-nums">
@@ -234,60 +260,74 @@ function Session({
         </span>
       </div>
       <ProgressBar value={index / deck.length} label={`Card ${index + 1} of ${deck.length}`} />
-      <div className="rounded-panel border border-rule bg-surface px-4 py-4 sm:px-5">
-        <Suspense fallback={<Skeleton className="h-6 w-2/3" />}>
-          <MarkdownView>{card!.front}</MarkdownView>
-        </Suspense>
-        {card!.kind === "recall" && !revealed && (
-          <p className="mt-3 text-sm text-muted">
-            Its written questions arrive with the content. For now, recall what it covers out loud
-            or on paper, then compare.
-          </p>
+      {/* The card turns to show the answer: the back keeps the question small above it. */}
+      <div
+        key={revealed ? `back-${index}` : `front-${index}`}
+        className={cx(
+          "flex min-h-56 flex-col justify-center rounded-focal bg-surface-raised px-5 py-6 shadow-focal sm:px-8 sm:py-8",
+          revealed && "flashcard-turn",
         )}
-      </div>
-      {revealed ? (
-        <>
-          <div
-            className="rounded-panel border border-rule bg-surface-sunken px-4 py-4 sm:px-5"
-            aria-live="polite"
-          >
-            <p className="mb-2 text-sm font-medium text-muted">Answer</p>
+        aria-live={revealed ? "polite" : undefined}
+      >
+        {revealed ? (
+          <>
+            <div className="text-sm text-muted [&_.atlas-prose]:text-base">
+              <Suspense fallback={<Skeleton className="h-5 w-2/3" />}>
+                <MarkdownView>{card!.front}</MarkdownView>
+              </Suspense>
+            </div>
+            <CardLabel className="mt-4 mb-1.5">Answer</CardLabel>
             <Suspense fallback={<Skeleton className="h-6 w-full" />}>
               <MarkdownView>{card!.back}</MarkdownView>
             </Suspense>
+          </>
+        ) : (
+          <>
+            <CardLabel className="mb-1.5">Question</CardLabel>
+            <Suspense fallback={<Skeleton className="h-6 w-2/3" />}>
+              <MarkdownView>{card!.front}</MarkdownView>
+            </Suspense>
+            {card!.kind === "recall" && (
+              <p className="mt-3 text-sm text-muted">
+                Its written questions arrive with the content. For now, recall what it covers out
+                loud or on paper, then compare.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+      {revealed ? (
+        <fieldset>
+          <legend className="mb-2 flex w-full flex-wrap items-baseline justify-between gap-2 text-sm font-medium text-text">
+            How well did you know it?
+            <span className="font-normal text-muted max-md:hidden">
+              Press <Kbd>1</Kbd> to <Kbd>4</Kbd> to rate
+            </span>
+          </legend>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {RATINGS.map((r, i) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => rate(r)}
+                className={cx(
+                  "flex min-h-14 flex-col items-start justify-center rounded-control border border-transparent bg-surface-sunken px-3 py-2 text-left transition-colors hover:bg-rule",
+                  r === "good" && "border-accent/50",
+                )}
+              >
+                <span className="flex w-full items-center justify-between gap-2 font-medium text-text">
+                  {RATING_LABEL[r]}
+                  <Kbd className="max-md:hidden">{i + 1}</Kbd>
+                </span>
+                <span className="text-xs text-muted">
+                  {RATING_HINT[r]} ({Math.round(RATING_SCORE[r] * 100)}%)
+                </span>
+              </button>
+            ))}
           </div>
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium text-text">
-              How well did you know it?
-            </legend>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {RATINGS.map((r, i) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => rate(r)}
-                  className={cx(
-                    "flex min-h-14 flex-col items-start justify-center rounded-control border border-rule bg-surface px-3 py-2 text-left transition-colors hover:border-rule-strong hover:bg-surface-sunken",
-                    r === "good" && "border-accent/60",
-                  )}
-                >
-                  <span className="flex w-full items-center justify-between gap-2 font-medium text-text">
-                    {RATING_LABEL[r]}
-                    <Kbd className="max-md:hidden">{i + 1}</Kbd>
-                  </span>
-                  <span className="text-xs text-muted">
-                    {RATING_HINT[r]} ({Math.round(RATING_SCORE[r] * 100)}%)
-                  </span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        </>
+        </fieldset>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-sm text-muted max-md:hidden">
-            Press <Kbd>Space</Kbd> to show the answer
-          </span>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           <Button
             variant="primary"
             icon={RotateCcw}
@@ -296,6 +336,9 @@ function Session({
           >
             Show answer
           </Button>
+          <span className="text-sm text-muted max-md:hidden">
+            or press <Kbd>Space</Kbd> to turn the card
+          </span>
         </div>
       )}
     </div>

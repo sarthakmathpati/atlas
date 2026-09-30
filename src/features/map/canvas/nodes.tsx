@@ -9,7 +9,7 @@ import { cx } from "@/components/ui/cx";
 import { prefersReducedMotion } from "@/components/ui/hooks";
 import { STATUS_LABEL } from "@/components/ui/labels";
 import { SegmentedBar } from "@/components/ui/Progress";
-import { SubjectIcon } from "@/components/ui/SubjectIcon";
+import { SubjectEmblem } from "@/components/ui/SubjectEmblem";
 import { subjectById, topicById } from "@/data/syllabus";
 import type { StatusCounts } from "@/lib/map/summary";
 import { strongShare, totalOf } from "@/lib/map/summary";
@@ -90,8 +90,8 @@ export const SubjectNode = memo(function SubjectNode({ data }: NodeProps<Subject
           style={{ width: RING, height: RING }}
         >
           <Ring share={share} />
-          <span className="relative text-muted">
-            <SubjectIcon name={subject.icon} size={16} />
+          <span className="map-subject-emblem" data-subject={data.subjectId}>
+            <SubjectEmblem subjectId={data.subjectId} size={24} variant="bare" />
           </span>
           {fading > 0 && (
             <span className="map-badge-fading" aria-hidden="true">
@@ -277,6 +277,7 @@ export const ConceptNode = memo(function ConceptNode({ data }: NodeProps<Concept
       data-soft={emphasis === "soft" || undefined}
       data-faint={data.otherLanguage || undefined}
       data-emphasis={emphasis === "on" || undefined}
+      data-status={status}
       style={{ "--r": data.r } as CSSProperties}
       onClick={() => {
         if (press.consumeLongPress()) return;

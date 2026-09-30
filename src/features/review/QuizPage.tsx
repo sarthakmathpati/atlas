@@ -104,10 +104,7 @@ export default function QuizPage() {
       />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
         <div className="min-w-0 space-y-6">
-          <section
-            aria-labelledby="due-cards"
-            className="rounded-panel border border-rule bg-surface"
-          >
+          <section aria-labelledby="due-cards" className="rounded-panel bg-surface">
             <h2
               id="due-cards"
               className="border-b border-rule px-4 py-3 text-md font-semibold text-text"
@@ -116,7 +113,12 @@ export default function QuizPage() {
             </h2>
             <div className="px-4 py-4">
               {dueIds.length === 0 ? (
-                <EmptyState icon={CalendarClock} title="Nothing is due today" compact>
+                <EmptyState
+                  icon={CalendarClock}
+                  drawing="flag"
+                  title="Nothing is due today"
+                  compact
+                >
                   Concepts come back here a couple of days after you study them or check them, and
                   further apart each time you remember them.
                 </EmptyState>
@@ -148,10 +150,7 @@ export default function QuizPage() {
             </div>
           </section>
 
-          <section
-            aria-labelledby="pick-cards"
-            className="rounded-panel border border-rule bg-surface"
-          >
+          <section aria-labelledby="pick-cards" className="rounded-panel bg-surface">
             <h2
               id="pick-cards"
               className="border-b border-rule px-4 py-3 text-md font-semibold text-text"
@@ -228,10 +227,7 @@ export default function QuizPage() {
         </div>
 
         <aside className="space-y-6" aria-label="Recent checks">
-          <section
-            aria-labelledby="recent-checks"
-            className="rounded-panel border border-rule bg-surface"
-          >
+          <section aria-labelledby="recent-checks" className="rounded-panel bg-surface">
             <h2
               id="recent-checks"
               className="border-b border-rule px-4 py-3 text-md font-semibold text-text"

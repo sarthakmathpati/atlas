@@ -258,6 +258,7 @@ export default function PuzzlesPage() {
           {shown.length === 0 ? (
             <EmptyState
               icon={Puzzle}
+              drawing="telescope"
               title="No puzzles match these filters"
               actions={<Button onClick={() => writeFilters({})}>Clear filters</Button>}
             >
@@ -276,7 +277,7 @@ export default function PuzzlesPage() {
                       {list.length}
                     </span>
                   </h2>
-                  <ul className="overflow-hidden rounded-panel border border-rule bg-surface">
+                  <ul className="overflow-hidden rounded-panel bg-surface">
                     {list.map((p) => (
                       <PuzzleRow key={p.id} info={p} />
                     ))}
