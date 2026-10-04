@@ -3,6 +3,7 @@
 // when the search is empty. Built on cmdk for keyboard handling; results come from MiniSearch.
 import { Command } from "cmdk";
 import {
+  Brain,
   SquareParking,
   Timer,
   Calculator,
@@ -47,6 +48,7 @@ import { loadAllContent } from "@/data/content";
 import { concepts, subjectById } from "@/data/syllabus";
 import type { SearchHit, SearchKind } from "@/lib/search/searchIndex";
 import { openAddConcept, openFlashcards } from "@/stores/conceptDialogStore";
+import { setAdhdOn, useAdhdOn } from "@/stores/adhdStore";
 import { askToStartBlock } from "@/stores/focusTimerStore";
 import { openPark } from "@/stores/parkStore";
 import { useConceptStateStore, useConceptStatus } from "@/stores/conceptStateStore";
@@ -183,6 +185,7 @@ export function CommandPalette() {
   const setShortcutsOpen = useUiStore((s) => s.setShortcutsOpen);
   const setAskOpen = useUiStore((s) => s.setAskOpen);
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
+  const adhdOn = useAdhdOn();
   const setSidebarCollapsed = useUiStore((s) => s.setSidebarCollapsed);
   const setQuickAddOpen = useUiStore((s) => s.setQuickAddOpen);
   const setCsvImportOpen = useUiStore((s) => s.setCsvImportOpen);
@@ -436,6 +439,14 @@ export function CommandPalette() {
         run: () => openPark(),
       },
       {
+        id: "cmd:adhd",
+        label: adhdOn ? "Turn off ADHD mode" : "Turn on ADHD mode",
+        icon: Brain,
+        keywords: "adhd mode calm focus steps now card timer attention",
+        group: "Commands",
+        run: () => setAdhdOn(!adhdOn),
+      },
+      {
         id: "cmd:export",
         label: "Export backup",
         icon: Download,
@@ -485,6 +496,7 @@ export function CommandPalette() {
     setSidebarCollapsed,
     setQuickAddOpen,
     setCsvImportOpen,
+    adhdOn,
   ]);
 
   const q = deferred.trim().toLowerCase();

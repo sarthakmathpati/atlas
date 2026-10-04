@@ -652,6 +652,46 @@ export function fullSolutionPrompt(env: PromptEnv, context: string): PromptSpec 
   };
 }
 
+// ----- 20. study companion (Phase 9, F32 "Study with Claude") ----------------------------------------------
+
+/** What Claude is told at a block's start (prompt 20). */
+export interface StudyStart {
+  minutes: number;
+  /** The block's line: "In this block I will…". */
+  line: string;
+  /** The plan item the block is for ("Re-solve: 69. Sqrt(x)"), if any. */
+  item?: string;
+}
+
+export type StudyOutcome = "Done" | "Partly" | "Moved on";
+
+const STUDY_COMPANION =
+  "You keep the learner company while they study in short focus blocks (an experiment called Study with Claude). Each reply is one or two short sentences of plain text, without markdown.";
+
+/** Prompt 20 at the start of a focus block: name the first concrete step. */
+export function studyStartPrompt(env: PromptEnv, start: StudyStart): PromptSpec {
+  const line = start.line.trim() || "(no line written)";
+  return {
+    task: "study-companion",
+    tier: "quick",
+    instructions: instructions(env, STUDY_COMPANION),
+    input: `The learner is starting a ${start.minutes}-minute focus block. Their intention: "${line}". The task: ${start.item?.trim() || "not on today's plan"}. Reply in one or two short, warm sentences that name the first concrete step. No questions, no lists.`,
+  };
+}
+
+/** Prompt 20 at the end of a focus block: acknowledge it and suggest what comes next. */
+export function studyEndPrompt(
+  env: PromptEnv,
+  end: { outcome: StudyOutcome; note: string },
+): PromptSpec {
+  return {
+    task: "study-companion",
+    tier: "quick",
+    instructions: instructions(env, STUDY_COMPANION),
+    input: `The block ended. The learner says it went: ${end.outcome}. Their note: "${end.note.trim()}". Reply in one or two sentences: acknowledge it plainly and suggest what comes next (a break, the next step, or parking what's left). Never judge.`,
+  };
+}
+
 // ----- chat (F20) --------------------------------------------------------------------------------------------
 
 export function chatInstructions(env: PromptEnv, context: string): string {

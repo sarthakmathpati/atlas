@@ -66,11 +66,15 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
   const attempt = useAttemptSession(info.id, mode, defaultLanguage, templateOn);
   usePageFocusLine(`${mode === "resolve" ? "Re-solve" : "Solve"} ${problemLabel(info)}`, info.id);
   const { session } = attempt;
-  const [panel, setPanel] = useState<WorkspacePanel>(session.hintsUsed > 0 ? "hints" : null);
+  // "I'm stuck" on ADHD mode's Now card (F32) opens the workspace with the hints showing.
+  const askedHints = route.query.get("panel") === "hints";
+  const [panel, setPanel] = useState<WorkspacePanel>(
+    askedHints || session.hintsUsed > 0 ? "hints" : null,
+  );
   const [saveOpen, setSaveOpen] = useState(false);
   const [revealAsk, setRevealAsk] = useState(false);
   const [tab, setTab] = useState<"problem" | "code">(
-    session.code.trim() || mode === "resolve" ? "code" : "problem",
+    askedHints || session.code.trim() || mode === "resolve" ? "code" : "problem",
   );
   const [split, setSplit] = useState(readSplit);
   const splitRef = useRef<HTMLDivElement>(null);

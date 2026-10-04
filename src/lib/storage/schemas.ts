@@ -17,6 +17,7 @@ import type {
   MentalMathRun,
   MistakeTag,
   MockSession,
+  PaceStat,
   ParkedThought,
   ProblemState,
   Profile,
@@ -35,6 +36,44 @@ const difficulty = z.enum(["easy", "medium", "hard"]);
 const importance = z.enum(["must", "important", "advanced"]);
 const language = z.enum(["cpp", "java", "python"]);
 const aiMode = z.enum(["sample", "api", "copy"]);
+const planKind = z.enum([
+  "resolve",
+  "review-concept",
+  "learn-concept",
+  "new-problem",
+  "drill",
+  "mock",
+  "mental-math",
+  "revision",
+  "design",
+  "story",
+  "thought",
+]);
+
+/** ADHD mode (F32): part flags are optional (a missing flag means on). */
+const adhdPrefsSchema = z.object({
+  on: z.boolean(),
+  calm: z.boolean().optional(),
+  nowCard: z.boolean().optional(),
+  time: z.boolean().optional(),
+  place: z.boolean().optional(),
+  rewards: z.boolean().optional(),
+  breaks: z.boolean().optional(),
+  startHelp: z.boolean().optional(),
+  reading: z.boolean().optional(),
+  gentle: z.boolean().optional(),
+  blockMinutes: z.number().int().min(1).max(180),
+  breakMinutes: z.number().int().min(1).max(60),
+  sound: z.enum(["off", "brown", "pink", "white"]),
+  volume: z.number().min(0).max(1),
+  studyWithClaude: z.boolean(),
+  chime: z.boolean().optional(),
+  rewardSound: z.boolean().optional(),
+  lineFocus: z.boolean().optional(),
+  startWhen: z.string().max(200).optional(),
+  startWhenDay: z.object({ date: localDay, text: z.string().max(200) }).optional(),
+  introSeenAt: isoTime.optional(),
+});
 
 export const profileSchema: z.ZodType<Profile> = z.object({
   name: z.string(),
@@ -75,6 +114,7 @@ export const profileSchema: z.ZodType<Profile> = z.object({
       })
       .optional(),
     bedtime: clockTime.optional(),
+    adhd: adhdPrefsSchema.optional(),
   }),
   lastBackupAt: isoTime.optional(),
   backupReminderDismissedAt: isoTime.optional(),
@@ -260,19 +300,7 @@ export const dayPlanSchema: z.ZodType<DayPlan> = z.object({
   items: z.array(
     z.object({
       id: z.string().min(1),
-      kind: z.enum([
-        "resolve",
-        "review-concept",
-        "learn-concept",
-        "new-problem",
-        "drill",
-        "mock",
-        "mental-math",
-        "revision",
-        "design",
-        "story",
-        "thought",
-      ]),
+      kind: planKind,
       refId: z.string().optional(),
       refIds: z.array(z.string()).optional(),
       title: z.string(),
@@ -281,6 +309,8 @@ export const dayPlanSchema: z.ZodType<DayPlan> = z.object({
       done: z.boolean(),
       skipped: z.boolean(),
       origin: z.enum(["planner", "owner"]).optional(),
+      steps: z.array(z.boolean()).max(40).optional(),
+      took: z.number().min(0).optional(),
     }),
   ),
   generatedAt: isoTime,
@@ -315,6 +345,8 @@ export const activityMonthSchema: z.ZodType<ActivityMonth> = z.object({
           movedOn: z.number().int().min(0).optional(),
         })
         .optional(),
+      stepsDone: z.number().int().min(0).optional(),
+      planFinished: z.number().int().min(0).optional(),
     }),
   ),
   streakFreezeUsed: z.array(localDay).optional(),
@@ -448,6 +480,19 @@ export const parkedThoughtSchema: z.ZodType<ParkedThought> = z.object({
   updatedAt: isoTime,
 });
 
+export const paceStatSchema: z.ZodType<PaceStat> = z.object({
+  kind: planKind,
+  samples: z.array(
+    z.object({
+      id: z.string().min(1),
+      planned: z.number().min(0),
+      took: z.number().min(0),
+      at: isoTime,
+    }),
+  ),
+  updatedAt: isoTime,
+});
+
 export const TABLE_SCHEMAS: { [K in TableName]: z.ZodType<TableTypes[K]> } = {
   conceptStates: conceptStateSchema,
   conceptNotes: conceptNoteSchema,
@@ -464,6 +509,7 @@ export const TABLE_SCHEMAS: { [K in TableName]: z.ZodType<TableTypes[K]> } = {
   customConcepts: customConceptSchema,
   generatedDrills: generatedDrillSchema,
   parkedThoughts: parkedThoughtSchema,
+  paceStats: paceStatSchema,
 };
 
 /** The "data" part of a backup file. */
@@ -494,6 +540,7 @@ export const exportDataSchema: z.ZodType<ExportData> = z.object({
   customConcepts: z.array(customConceptSchema),
   generatedDrills: z.array(generatedDrillSchema),
   parkedThoughts: z.array(parkedThoughtSchema),
+  paceStats: z.array(paceStatSchema),
 });
 
 /** The file envelope before migrations: only the fields needed to decide how to read it. */

@@ -119,9 +119,11 @@ interface SidebarProps {
   collapsed: boolean;
   /** Counts shown as small badges (Review due count from Phase 3). */
   badges?: Partial<Record<string, number>>;
+  /** ADHD mode's calm screen keeps it to icons: no expand button. */
+  lockCollapsed?: boolean;
 }
 
-export function Sidebar({ route, collapsed, badges = {} }: SidebarProps) {
+export function Sidebar({ route, collapsed, badges = {}, lockCollapsed }: SidebarProps) {
   const setCollapsed = useUiStore((s) => s.setSidebarCollapsed);
   const isActive = (item: NavItem) => item.routes.includes(route.name);
   const toggle = (
@@ -180,7 +182,7 @@ export function Sidebar({ route, collapsed, badges = {} }: SidebarProps) {
       </div>
       <div className="flex shrink-0 flex-col gap-1 px-3 pt-2 pb-3">
         <NavLink item={SETTINGS_ITEM} active={isActive(SETTINGS_ITEM)} collapsed={collapsed} />
-        {collapsed ? (
+        {lockCollapsed ? null : collapsed ? (
           <Tooltip content="Expand sidebar" placement="right">
             {toggle}
           </Tooltip>

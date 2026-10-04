@@ -1,0 +1,71 @@
+/*
+ * ADHD mode (BUILD_SPEC.md F32). <html data-adhd> lists the parts that are on, separated by
+ * spaces (lib/adhd/prefs.ts), so each rule matches its own part: [data-adhd~="calm"].
+ */
+
+/* ----- Calm screen: text one step larger (interface 16 px, reading 19 px) ---------------------- */
+
+:root[data-adhd~="calm"] {
+  --fs-xs: 13px;
+  --fs-sm: 14px;
+  --fs-base: 16px;
+  --fs-md: 17px;
+  --fs-lg: 19px;
+  --fs-xl: 23px;
+}
+
+:root[data-adhd~="calm"] body {
+  font-size: 16px;
+}
+
+@layer components {
+  :root[data-adhd~="calm"] .atlas-prose {
+    font-size: 19px;
+  }
+}
+
+/* ----- No red: errors and wrong answers use the warning color (calm screen, gentle language) --- */
+
+:root[data-adhd~="calm"],
+:root[data-adhd~="gentle"] {
+  --danger: var(--warning);
+  --danger-hover: color-mix(in srgb, var(--warning) 82%, var(--text));
+  --danger-soft: var(--warning-soft);
+  --code-invalid: var(--warning);
+}
+
+/* ----- Calm screen: motion only as feedback ----------------------------------------------------- */
+
+/* The map's ink moment is decoration: it shows its end state at once. Feedback (the route's ink
+   stroke, a card turning, layers opening) keeps its short motion. */
+:root[data-adhd~="calm"] :is(.map-ink, .map-ink-line, .map-check) {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+}
+
+:root[data-adhd~="calm"] .atlas-thinking > span {
+  animation: none;
+  opacity: 0.6;
+}
+
+/* ----- Rewards right away: a new drop of ink fills in (feedback, 300 ms; instant with reduced
+   motion) ---------------------------------------------------------------------------------------- */
+
+@layer components {
+  .ink-drop-new path {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: ink-drop 300ms var(--ease-out) both;
+  }
+
+  @keyframes ink-drop {
+    from {
+      transform: scale(0.4);
+      opacity: 0.2;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+}

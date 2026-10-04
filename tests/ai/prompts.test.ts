@@ -41,6 +41,8 @@ import {
   weeklyReflectionPrompt,
   type PromptEnv,
   type PromptSpec,
+  studyEndPrompt,
+  studyStartPrompt,
 } from "@/lib/ai/prompts";
 import {
   codeReviewSchema,
@@ -265,6 +267,18 @@ describe("prompt library", () => {
       true,
     ],
     ["19 full solution", fullSolutionPrompt(cpp, ctx), "default", false],
+    [
+      "20 study companion (start)",
+      studyStartPrompt(cpp, { minutes: 15, line: "Re-solve 69. Sqrt(x)", item: "Re-solve: 69" }),
+      "quick",
+      false,
+    ],
+    [
+      "20 study companion (end)",
+      studyEndPrompt(cpp, { outcome: "Partly", note: "Got stuck on the edges" }),
+      "quick",
+      false,
+    ],
     ["chat", chatPrompt(cpp, ctx, [{ role: "user", content: "Hi" }]), "default", false],
   ];
 
@@ -280,6 +294,25 @@ describe("prompt library", () => {
     const input =
       typeof spec.input === "string" ? spec.input : spec.input.map((t) => t.content).join("\n");
     expect(input.trim().length).toBeGreaterThan(0);
+  });
+
+  it("asks for one or two warm sentences at a block's start and end (prompt 20)", () => {
+    const start = studyStartPrompt(cpp, {
+      minutes: 15,
+      line: "Re-solve 69. Sqrt(x)",
+      item: "Re-solve: 69. Sqrt(x)",
+    });
+    expect(start.task).toBe("study-companion");
+    expect(start.input).toBe(
+      'The learner is starting a 15-minute focus block. Their intention: "Re-solve 69. Sqrt(x)". The task: Re-solve: 69. Sqrt(x). Reply in one or two short, warm sentences that name the first concrete step. No questions, no lists.',
+    );
+    expect(studyStartPrompt(cpp, { minutes: 15, line: "" }).input).toContain(
+      "The task: not on today's plan.",
+    );
+    const end = studyEndPrompt(cpp, { outcome: "Moved on", note: "" });
+    expect(end.input).toBe(
+      'The block ended. The learner says it went: Moved on. Their note: "". Reply in one or two sentences: acknowledge it plainly and suggest what comes next (a break, the next step, or parking what\'s left). Never judge.',
+    );
   });
 
   it("uses the owner's language in the preamble", () => {

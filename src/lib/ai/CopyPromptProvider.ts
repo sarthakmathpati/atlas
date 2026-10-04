@@ -39,6 +39,7 @@ export const TASK_TITLE: Record<AITask, string> = {
   "concept-suggest": "Suggested patterns",
   "mistake-advice": "How to avoid these mistakes",
   "full-solution": "The full solution",
+  "study-companion": "A word from Claude",
   chat: "Ask Claude",
   "test-connection": "A connection test",
 };

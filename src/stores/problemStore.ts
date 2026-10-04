@@ -289,7 +289,9 @@ export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAtt
     conceptsTouched: touched,
   });
   if (!input.keepOutOfReview)
-    void markPlanItemDone(repo, today, input.problemId, ["resolve", "new-problem"]);
+    void markPlanItemDone(repo, today, input.problemId, ["resolve", "new-problem"], {
+      took: input.minutes,
+    });
 
   let message = nextReviewMessage(schedule, next.inReview);
   if (trimmed > 0) message += ` The oldest attempt was removed to stay within ${ATTEMPT_CAP}.`;

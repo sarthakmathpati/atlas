@@ -9,6 +9,7 @@ import type { Repository } from "@/lib/storage/Repository";
 import { localDate, nowIso } from "@/lib/time";
 import type { DayPlan, PlanItem } from "@/lib/types";
 import { recordActivity } from "./activityStore";
+import { finishPlanItem, notePlanItemsDone } from "./planDone";
 import { toast } from "./toastStore";
 
 interface PlanState {
@@ -116,12 +117,24 @@ export function setPlanItemDone(date: string, itemId: string, done: boolean): vo
   const plan = usePlanStore.getState().plans[date];
   const item = plan?.items.find((i) => i.id === itemId);
   if (!plan || !item || item.done === done) return;
+  const changed = done ? finishPlanItem(date, { ...item, done }) : { ...item, done };
+  const items = plan.items.map((i) => (i.id === itemId ? changed : i));
+  write({ ...plan, items, updatedAt: nowIso() });
+  recordActivity(date, { planItemsDone: done ? 1 : -1 });
+  if (done) notePlanItemsDone(date, items);
+}
+
+/** Saves an item's step ticks (ADHD mode's Now card, F32). */
+export function setPlanItemSteps(date: string, itemId: string, steps: boolean[]): void {
+  const plan = usePlanStore.getState().plans[date];
+  const item = plan?.items.find((i) => i.id === itemId);
+  if (!plan || !item) return;
+  if (item.steps?.length === steps.length && item.steps.every((t, i) => t === steps[i])) return;
   write({
     ...plan,
-    items: plan.items.map((i) => (i.id === itemId ? { ...i, done } : i)),
+    items: plan.items.map((i) => (i.id === itemId ? { ...i, steps } : i)),
     updatedAt: nowIso(),
   });
-  recordActivity(date, { planItemsDone: done ? 1 : -1 });
 }
 
 /** Removes an item. Returns the plan before, for Undo. */

@@ -6,6 +6,7 @@ import type { Repository } from "@/lib/storage/Repository";
 import { nowIso } from "@/lib/time";
 import type { PlanItem } from "@/lib/types";
 import { recordActivity } from "./activityStore";
+import { finishPlanItem, notePlanItemsDone } from "./planDone";
 import { notePlanWritten, usePlanStore } from "./planStore";
 
 let fallbackRepo: Repository | null = null;
@@ -18,6 +19,8 @@ export function setPlanEffectsRepository(repo: Repository | null): void {
 export interface MarkOptions {
   /** Only items this returns true for (a bundle whose concepts are all checked). */
   isComplete?: (item: PlanItem) => boolean;
+  /** Minutes the work took, when known (a saved attempt's timer). */
+  took?: number;
 }
 
 /**
@@ -43,13 +46,14 @@ export async function markPlanItemDone(
       if (refId !== null && item.refId !== refId && !item.refIds?.includes(refId)) return item;
       if (options.isComplete && !options.isComplete(item)) return item;
       marked++;
-      return { ...item, done: true, skipped: false };
+      return finishPlanItem(date, { ...item, done: true, skipped: false }, { took: options.took });
     });
     if (marked === 0) return 0;
     const next = { ...plan, items, updatedAt: nowIso() };
     // The store first, so a second mark right after this one reads the updated plan.
     notePlanWritten(next);
     recordActivity(date, { planItemsDone: marked });
+    notePlanItemsDone(date, items);
     await store.dayPlans.put(next);
     return marked;
   } catch {

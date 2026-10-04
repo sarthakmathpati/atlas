@@ -76,6 +76,16 @@ What each subject was checked against (session in brackets):
   script; a story bank checked against the app's 30 behavioral questions; resume bullets and the
   Atlas project deep dive; an exact made-up offer under India's FY 2025-26 tax (`needsReview`).
 
+**In progress (session 22, 4 Oct 2026):** Phase 9 session 9.4, ADHD mode. Done so far: the data
+(`Profile.prefs.adhd`, `PlanItem.steps` and `took`, the synced `paceStats` table, activity
+counters for ink and finished days), the pure logic in `src/lib/adhd/` with tests, prompt 20,
+the stores (the Now card's clock and 2-minute start, steps and ink, pace, the 90-minute
+check-in, where you left off), the switch in the top bar with its first-time card, Settings →
+ADHD mode, the palette command, `<html data-adhd>` with the calm screen's styles and pre-paint
+mirror, and the Now card on Today. Still to come in this session: discs on the timed screens,
+reading support, the break view's movement idea, Fresh start, Study with Claude's end reply,
+screen tests, screenshots and the artifact run.
+
 **Next up:** Phase 9 session 9.4, **ADHD mode** (F32, BUILD_SPEC.md F32 and prompt 20): the
 switch at the right of the top bar, the calm screen, the Now card with steps (`PlanItem.steps`),
 time you can see with the learned pace (`paceStats`), where you left off, rewards, breaks with

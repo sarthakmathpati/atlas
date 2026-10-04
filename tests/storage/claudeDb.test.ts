@@ -44,6 +44,7 @@ describe("ClaudeDbRepository document layout", () => {
         "mistakeTags",
         "mock-m1",
         "note-dsa.graph-basics.bfs",
+        "paceStats",
         "parkedThoughts",
         "plan-2026-09-20",
         "problem-custom-Xy_9-k",
