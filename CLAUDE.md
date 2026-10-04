@@ -47,7 +47,7 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   prompt in the right shape (tests and the simulated artifact run; the app never imports it).
 - **Claude** (Phase 6, section 10): `lib/ai/` holds the providers, tolerant JSON with zod
   (`json.ts`), plain error copy (`errors.ts`), `runAI` (one retry for unreadable JSON, a visit
-  cache), mode resolution (`mode.ts`), the context builder (`context.ts`) and all 19 prompts
+  cache), mode resolution (`mode.ts`), the context builder (`context.ts`) and all 20 prompts
   (`prompts.ts`). `stores/aiStore.ts` resolves the mode, keeps the API key presence and the copy
   prompt modal, and exposes `askAI`. Features use `features/ai/` (`useAIRequest`, `AIRunView`,
   `ClaudeTag`, `gather.ts` for context from the stores, `ChatPanel` and `chatStore` for Ask Claude,
@@ -151,12 +151,24 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
   `components/ui/Horizon.tsx` (the line, also on timed rounds); `FullScreenLayer` in
   `components/ui/Dialog.tsx`; interview day in `features/today/InterviewDay.tsx`; the memory walk
   in `features/review/concepts/walkOrder.ts` and `WalkStrip.tsx`.
+- **ADHD mode** (F32, session 9.4): `Profile.prefs.adhd` (`lib/adhd/prefs.ts`: the switch, a flag
+  per part, defaults); pure parts in `lib/adhd/` (`steps.ts` steps per plan kind, `pace.ts`,
+  `time.ts` the disc and chimes, `checkIn.ts`, `startLine.ts`, `freshStart.ts` with Welcome
+  back, `reading.ts` parts and read-aloud text, `noise.ts`). Stores: `adhdStore` (the switch, the
+  first-time card), `nowStore` (the Now card's clock, the 2-minute start, step ticks and ink, what
+  a finished item records), `paceStore` (the synced `paceStats` table), `checkInStore`,
+  `placeStore`; `planDone.ts` lets them hook into an item turning done. Screens in
+  `features/adhd/` (`AdhdLayer` in the shell: `<html data-adhd>`, the watchers, the focus sound,
+  the floating notes; `AdhdSwitch` in the top bar; `NowCard`, `TodayParts`, `ShowMore`,
+  `TimeDisc` and the discs, `PlaceCard`, `ReadingParts` with `readAloud.ts`, `FreshStart`,
+  `sound.ts`, `studyWithClaude.ts`); `components/ui/DiscTimer.tsx`; Settings in
+  `features/settings/AdhdSection.tsx`; styles in `src/styles/adhd.css`.
 - **Dates**: local time; due dates stored as `yyyy-mm-dd` (`src/lib/time.ts`).
 - **Phase 9 design**: BUILD_SPEC.md 12.10 (the Survey look: Day, Dusk and Night themes, subject
   colors, the contour engine, living terrain, emblems, pencil and ink, the route, the summit
   profile, stamps), F31 (focus layer) and F32 (ADHD mode). Session 9.1 built the foundations
   (12.10.1 to 12.10.6); session 9.2 every screen (12.10.7, 12.10.8); session 9.3 the focus layer
-  (F31, 12.10.9). Research with sources and evidence levels:
+  (F31, 12.10.9); session 9.4 ADHD mode (F32, prompt 20). Research with sources and evidence levels:
   `docs/design/phase9-research.md`. Mockups: `docs/design/phase9-plan.html` (open in a browser;
   a reference, the spec wins).
 
@@ -279,8 +291,11 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     `atlas.theme`, `atlas.themeSchedule`, `atlas.sidebar`, `atlas.recent` (palette), `atlas.setup.map|search` (Today
     checklist), `atlas.askWidth` (drawer width), `atlas.split` (workspace split), `atlas.template`
     (start attempts from the starter template), `atlas.mapPanel` (map panel width),
-    `atlas.focusBlock` (a running or paused focus block, so a reload keeps it) and `atlas.wrapUp`
-    (the night the wrap-up note was closed).
+    `atlas.focusBlock` (a running or paused focus block, so a reload keeps it), `atlas.wrapUp`
+    (the night the wrap-up note was closed), and for ADHD mode (9.4) `atlas.adhd` (the parts on,
+    for the pre-paint script), `atlas.nowClock` (the Now card's clock), `atlas.place` (where you
+    left off), `atlas.activityStretch` (minutes toward the check-in), `atlas.startLineShown` (the
+    day the if-then reminder showed) and `atlas.welcomeBack` (the day Welcome back was closed).
 29. **Problem scheduling reading of 11.1**: "first ever attempt" means the problem has never been
     scheduled (`srs.dueAt` unset). Retirement needs a solo solve made *at* step 5 or higher (the
     60-day interval was reached) with `soloStreak ≥ 3` after it; a retired problem that is later
@@ -946,3 +961,98 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     same page took 0.51 to 0.76 s). The focus layer adds one small table read at start and no
     work to the dashboard.
 
+134. **ADHD mode settings** (session 22, 9.4): `Profile.prefs.adhd` is missing until the switch is
+    first turned on, so nothing migrates (data version 2). It holds `on`, a flag per part (calm,
+    nowCard, time, place, rewards, breaks, startHelp, reading, gentle; a missing flag means on),
+    `blockMinutes` 15, `breakMinutes` 5, `sound` off, `volume` 0.5, `studyWithClaude` false, and
+    the optional `chime`, `rewardSound`, `lineFocus` (all off), `startWhen`, `startWhenDay` and
+    `introSeenAt`. Turning the mode off keeps every choice. `<html data-adhd>` lists the parts that
+    are on, separated by spaces, so CSS matches `[data-adhd~="calm"]`; it is mirrored to
+    `atlas.adhd` for the pre-paint script (tested against `lib/adhd/prefs.ts`). The switch sits in
+    the top bar after the focus timer ("ADHD" on phones), in Settings → ADHD mode and in the
+    palette; the card listing what changed opens only the first time (`introSeenAt`).
+135. **Calm screen**: the text sizes are `--fs-*` variables behind Tailwind's `--text-*`, one step
+    larger in calm (interface 14 → 16 px, reading 17 or 18 → 19 px). The sidebar stays icons (no
+    expand button) and drops its badges, as do the bottom tabs; the top bar's search shrinks to
+    its icon and the minutes chip steps aside; Today is one column with a quiet head (no terrain
+    or scale bar) and folds the side cards and setup behind "Show more"; the dashboard folds the
+    pattern grid, charts, weak spots and the year's activity. Motion stays for feedback (the
+    route's ink stroke, turning cards, layers); the theme cross-fade, the map's ink moment and the
+    thinking dots stop. No red: with calm or gentle language on, `--danger`, `--danger-hover`,
+    `--danger-soft` and `--code-invalid` become the warning color (contrast tested per theme).
+136. **The Now card** (part `nowCard`) replaces Up next and the route on Today: the first item not
+    done or skipped, its steps from `lib/adhd/steps.ts` (F32's lists for re-solves, new problems
+    and learning; a flashcard round has a step per concept, ticked as each gets a check; the
+    practice kinds three or four; a parked thought none), ticks kept in `PlanItem.steps` (synced
+    with the plan). The last tick finishes the item; an item finished any other way ticks the
+    rest. "Start with 2 minutes" opens the item's screen and starts the Now clock with a trial;
+    at 2 minutes of counted time a floating note asks "Keep going" or "Stop here" (the clock
+    pauses, the item stays). The Now clock counts like the activity clock (5-second ticks, gaps
+    over 2 minutes not counted, an activity source), is mirrored to `atlas.nowClock` for reloads
+    and dropped on another day. "I'm stuck" opens the workspace with the hint ladder
+    (`?panel=hints`, `mode=resolve` for re-solves), a concept page with Ask Claude for concept
+    items, and Ask Claude otherwise. "Swap this task" is Swap; "Park a thought" opens Park it;
+    "Then: N more stops" unfolds the route.
+137. **Time you can see**: `DiscTimer` is a wide ring that shrinks clockwise from twelve in
+    5-second steps, never animated; past the time it stays empty and says "+N min over" in words,
+    never red. It shows on the Now card (the stop's clock against its estimate at the owner's
+    pace), the workspace (the Now clock when it runs for that problem, else the attempt timer
+    against the planner's estimate), drill prompts, flashcard rounds (40 s a card, at least 2
+    minutes), sprints, story practice, and design and mock rounds. The optional chime is two soft
+    sine notes at half time and at 2 minutes left (when that is after half time), once each per
+    clock. A finished item's time is the Now clock (when it ran 30 s or more), else the attempt's
+    minutes; it is kept as `PlanItem.took` and said as "Planned 15, took 22" on the card and in a
+    toast. Pace per kind: samples `{planned, took}` in one synced `paceStats` document (newest 20
+    per kind; Dexie version 3; merged by sample id on import); the median of took ÷ planned once
+    three are timed, kept within 0.5 to 3. It scales the Now card's chip and the discs and is
+    listed in Settings; the planner keeps 11.4's estimates, so plans are the same with ADHD mode
+    off and on.
+138. **Rewards and the record**: ink drops, `ActivityDay.stepsDone` (one per new tick; unticking
+    takes nothing away; an item without steps drops one), and a finished day,
+    `ActivityDay.planFinished` (every stop not skipped is done; once a day), a flag on Today's week
+    strip beside the week's stamp. Counters, steps and pace are recorded only while ADHD mode (and
+    the part) is on, so finishing an item with ADHD mode off is exactly as before (tested). The
+    optional small sound for a step is off by default.
+139. **Breaks**: with the breaks part on, focus blocks use the ADHD lengths (15 + 5 by default;
+    10 to 30 and 3, 5 or 10 in Settings); the break view adds "And move: …" from
+    `MOVEMENT_PROMPTS` unless its rest idea already is one; Today shows "Break in N minutes: …"
+    while a block runs. The check-in counts activity-clock time; a focus break or a pause as long
+    as a break starts a fresh stretch; at 90 minutes, and at most once per 90 minutes, never during
+    a block, a floating note asks "Time for water and a stretch?" with "Take 5" (a break with its
+    view) or "Not now". The stretch is mirrored to `atlas.activityStretch`.
+140. **Starting help**: the if-then line on Today reads "When ___, I'll start the first stop.",
+    kept "Just for today" (`startWhenDay`) or "Every day" (`startWhen`, also in Settings). A clock
+    time in it (7 pm, 19:30, noon, midnight; a bare number isn't one) brings a floating note at
+    that time for an hour while Atlas is open, once a day (`atlas.startLineShown`).
+141. **Keep your place**: the page, its title, the plan item and its step are kept in
+    `atlas.place` (this browser only) every 30 s in view, when the tab hides and after a page
+    change; 10 minutes or more away (on load or when the tab comes back) shows "Where you left
+    off" above the page with "Go back there"; it goes once the owner moves to another page.
+142. **Reading support**: Simple is one part, Interview points come in groups of up to three
+    (larger groups first), Deep splits at its `####` sub-headings and long stretches at paragraph
+    breaks (about 250 words, more than 450 split), never inside code or a table. After each part
+    one of the concept's questions (simple from the first, interview the second, deep the third,
+    then the next per part) with "Show the answer" and Again, Hard, Good, Easy, recorded as a
+    flashcard check (0, 0.4, 0.8, 1; `detail.source` "reading"); Mark as studied and Check
+    yourself follow the last part. Read aloud uses `speechSynthesis` (a local voice first, rate
+    0.95, whole sentences in chunks; code and tables are named, not read) and is hidden where the
+    browser has none. Line focus (optional) dims every paragraph but the one crossing the middle
+    of the screen or tapped (opacity, never blur).
+143. **Focus sound**: brown, pink or white noise made in the page (a 6-second seeded loop, its
+    seam cross-faded, equally loud in every color), played with Web Audio while a block runs (not
+    paused, not on breaks), fading in over 0.6 s and out over 0.4 s; volume is squared into the
+    gain; "Play a sample" plays 4 s; after a reload it starts on the first tap or key. Off by
+    default even in ADHD mode; no audio files, so it works offline in both runtimes.
+144. **Study with Claude** (prompt 20, quick tier, never cached): off by default; built-in Claude
+    and API key mode only (the switch is hidden in copy prompt mode, and nothing is asked there
+    even if it was turned on before). At a block's start a floating note "A word as you start";
+    at its end an optional "A note for Claude" beside "How did it go?" and the reply in the break
+    view (a floating note when break views are off); it goes when the break is left.
+145. **Gentle language**: Fresh start on Review when more than 30 problems and concepts are
+    overdue (merged by days late, each list keeping its order): item i of n moves to day
+    floor(i × 7 ÷ n) from today; only `srs.dueAt` changes, and the toast's Undo puts the states
+    back. Welcome back on Today after 3 days or more since the last active day, never with a
+    count (closed for the day in `atlas.welcomeBack`), pointing to Fresh start when it applies.
+146. **Floating notes**: the 2-minute question, the check-in, the if-then reminder and Claude's
+    word sit under the top bar in the top layer (above dialogs, like toasts), as polite regions
+    that never take focus.

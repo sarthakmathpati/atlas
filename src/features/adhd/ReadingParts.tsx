@@ -65,7 +65,7 @@ function PartCheck({
       <p className="mt-1 text-base font-medium text-text">{qa.q}</p>
       {!revealed ? (
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Button size="sm" onClick={() => setRevealed(true)}>
+          <Button size="sm" onClick={() => setRevealed(true)} className="bg-surface hover:bg-rule">
             Show the answer
           </Button>
           <span className="text-sm text-muted">Answer in your head first.</span>

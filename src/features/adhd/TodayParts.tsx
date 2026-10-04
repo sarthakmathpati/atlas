@@ -123,7 +123,7 @@ function WeekStrip({ date }: { date: string }) {
             );
           })}
         </ol>
-        {stamp && <Stamp stamp={stamp} size={58} />}
+        {stamp && <Stamp stamp={stamp} size={70} />}
       </div>
       <p className="text-sm text-muted">
         {finished.length === 0
@@ -244,7 +244,9 @@ export function StartLine({ date }: { date: string }) {
               className="min-w-0 flex-1"
               autoComplete="off"
             />
-            <span aria-hidden="true">,</span>
+            <span aria-hidden="true" className="-ml-1.5">
+              ,
+            </span>
           </span>
           <span>I'll start the first stop.</span>
         </div>
