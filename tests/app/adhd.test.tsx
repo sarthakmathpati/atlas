@@ -187,9 +187,13 @@ beforeEach(async () => {
   clearAICache();
   sounds.length = 0;
   document.documentElement.removeAttribute("data-adhd");
+  // Wait for the delete itself: when the last test's connection is still open it is blocked
+  // until that connection closes, and moving on earlier lets the delete close the next app's
+  // connection instead.
   await new Promise((resolve) => {
     const r = indexedDB.deleteDatabase("atlas");
-    r.onsuccess = r.onerror = r.onblocked = () => resolve(null);
+    r.onsuccess = r.onerror = () => resolve(null);
+    setTimeout(() => resolve(null), 3000);
   });
 });
 
@@ -269,7 +273,8 @@ describe("the switch", () => {
     await user.keyboard("{Control>}k{/Control}");
     const input = await screen.findByPlaceholderText("Search concepts, problems and pages");
     await user.type(input, "ADHD");
-    await user.click(await screen.findByText("Turn on ADHD mode"));
+    // The first keystroke builds the search index, which takes seconds on a loaded machine (CI).
+    await user.click(await screen.findByText("Turn on ADHD mode", undefined, { timeout: 12_000 }));
     expect(useProfileStore.getState().profile!.prefs.adhd?.on).toBe(true);
     await user.click(await screen.findByRole("button", { name: "Got it" }));
 
