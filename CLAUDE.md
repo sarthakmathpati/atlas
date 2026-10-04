@@ -1019,9 +1019,12 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     while a block runs. The check-in counts activity-clock time; a focus break or a pause as long
     as a break starts a fresh stretch; at 90 minutes, and at most once per 90 minutes, never during
     a block, a floating note asks "Time for water and a stretch?" with "Take 5" (a break with its
-    view) or "Not now". The stretch is mirrored to `atlas.activityStretch`.
+    view) or "Not now"; starting a block answers it too. The stretch is mirrored to
+    `atlas.activityStretch`.
 140. **Starting help**: the if-then line on Today reads "When ___, I'll start the first stop.",
-    kept "Just for today" (`startWhenDay`) or "Every day" (`startWhen`, also in Settings). A clock
+    kept "Just for today" (`startWhenDay`) or "Every day" (`startWhen`, also in Settings). Until a
+    line is set it is one slim row that opens the form (the open form pushed the Now card below
+    the fold on phones). A clock
     time in it (7 pm, 19:30, noon, midnight; a bare number isn't one) brings a floating note at
     that time for an hour while Atlas is open, once a day (`atlas.startLineShown`).
 141. **Keep your place**: the page, its title, the plan item and its step are kept in
@@ -1054,5 +1057,12 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     back. Welcome back on Today after 3 days or more since the last active day, never with a
     count (closed for the day in `atlas.welcomeBack`), pointing to Fresh start when it applies.
 146. **Floating notes**: the 2-minute question, the check-in, the if-then reminder and Claude's
-    word sit under the top bar in the top layer (above dialogs, like toasts), as polite regions
-    that never take focus.
+    word sit at the bottom right in the top layer (above dialogs), just below the toasts, which
+    move up by the notes' height (`--floating-notes-h`); placed under the top bar they covered
+    page headers and the workspace's clock. They are polite regions that never take focus.
+147. **Performance (9.4)**: the dashboard's cold load with a year of data, the Phase 9.3 build and
+    this one served statically and measured alternately in the same harness (8 runs each, from
+    navigation start until the last card is in the page): 0.80 to 0.91 s before (median 0.84),
+    0.81 to 0.98 s after (median 0.88). ADHD mode adds one small table read at start (`paceStats`)
+    and, while off, only its listeners. Playwright's installed clock slows the app's timers
+    about sixfold, so timing runs don't install it (screenshots do).

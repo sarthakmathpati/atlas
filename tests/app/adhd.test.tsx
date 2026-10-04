@@ -640,6 +640,11 @@ describe("starting help", () => {
     plan();
     await go("#/today");
     await nowCard();
+    // Until there's a line, a slim row asks; it opens the form with the field focused.
+    await user.click(screen.getByRole("button", { name: /^Plan your start: when will you begin/ }));
+    expect(
+      screen.getByLabelText("Plan your start: when will you begin the first stop?"),
+    ).toHaveFocus();
     await user.type(
       screen.getByLabelText("Plan your start: when will you begin the first stop?"),
       "I finish dinner",

@@ -313,8 +313,10 @@ export function ThenMore({ today }: { today: TodayPlan }) {
               </b>{" "}
               today, folded away until you get there.
             </>
-          ) : (
+          ) : today.current ? (
             "No more stops after this one."
+          ) : (
+            `All ${done} ${done === 1 ? "stop" : "stops"} on today's route are done.`
           )}{" "}
           {open ? "Hide the route." : "Show the whole route."}
         </span>

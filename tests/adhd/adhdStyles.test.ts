@@ -62,6 +62,35 @@ describe("the calm screen's sizes", () => {
   });
 });
 
+describe("reduced motion", () => {
+  it("stops ADHD mode's only animation, the new ink drop, like every other", () => {
+    const reduce = index.find((r) => r.selector.startsWith(':root[data-motion="reduce"] *'));
+    expect(reduce?.declarations["animation-duration"]).toBe("0.01ms !important");
+    const system = index.find(
+      (r) =>
+        r.atRules.includes("@media (prefers-reduced-motion: reduce)") &&
+        r.selector.startsWith(':root:not([data-motion="full"]) *'),
+    );
+    expect(system?.declarations["animation-duration"]).toBe("0.01ms !important");
+    // The drop's animation is a plain declaration, so those !important rules win over it.
+    const drop = ruleFor(".ink-drop-new path").declarations.animation!;
+    expect(drop).toMatch(/^ink-drop 300ms/);
+    expect(drop).not.toContain("!important");
+    // Nothing else in ADHD mode's styles moves (the disc steps without animating).
+    const moving = rules
+      .filter((r) =>
+        Object.keys(r.declarations).some((k) => k.startsWith("animation") || k === "transition"),
+      )
+      .map((r) => r.selector);
+    expect(moving).toHaveLength(4);
+    expect(moving).toContain(".ink-drop-new path");
+    // The calm screen's rules stop motion; the line focus fades its opacity (150 ms).
+    expect(moving).toContain(':root[data-adhd~="calm"] .atlas-thinking > span');
+    expect(moving).toContain(':root[data-adhd~="calm"] :is(.map-ink, .map-ink-line, .map-check)');
+    expect(moving.filter((m) => m.startsWith("[data-line-focus]"))).toHaveLength(1);
+  });
+});
+
 describe("no red", () => {
   const noRed = ruleFor(':root[data-adhd~="calm"], :root[data-adhd~="gentle"]').declarations;
 

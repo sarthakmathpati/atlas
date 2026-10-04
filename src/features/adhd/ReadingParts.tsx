@@ -158,15 +158,21 @@ function useLineFocus(ref: RefObject<HTMLDivElement | null>, on: boolean, versio
       current?.setAttribute("data-current", "");
     };
     const units = [...root.querySelectorAll(UNITS)];
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const hit = entries.filter((e) => e.isIntersecting).map((e) => e.target);
-        if (hit.length) mark(hit[hit.length - 1]!);
-      },
-      { rootMargin: "-45% 0px -45% 0px" },
-    );
+    // The paragraph crossing the middle of the screen, else the last one above it (after the
+    // text ends), else the first. Units are in reading order.
+    const pick = () => {
+      const middle = window.innerHeight / 2;
+      let chosen: Element | null = null;
+      for (const u of units) {
+        if (u.getBoundingClientRect().top > middle) break;
+        chosen = u;
+      }
+      mark(chosen ?? units[0] ?? null);
+    };
+    // Called whenever a paragraph enters or leaves the middle band (scrolling, a new part).
+    const observer = new IntersectionObserver(pick, { rootMargin: "-45% 0px -45% 0px" });
     for (const u of units) observer.observe(u);
-    if (!current && units[0]) mark(units[0]);
+    pick();
     const onClick = (e: MouseEvent) => {
       const unit = (e.target as Element | null)?.closest(UNITS);
       if (unit && root.contains(unit)) mark(unit);

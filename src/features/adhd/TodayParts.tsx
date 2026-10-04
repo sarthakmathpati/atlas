@@ -220,6 +220,27 @@ export function StartLine({ date }: { date: string }) {
       </section>
     );
   }
+  // Until there's a line, one slim row asks, so the Now card stays the first thing on the page.
+  if (!when && !editing) {
+    return (
+      <section aria-label="Your start plan" className="rounded-panel bg-surface">
+        <button
+          type="button"
+          onClick={() => {
+            setText("");
+            setEditing(true);
+          }}
+          className="flex w-full items-center gap-3 rounded-panel px-4 py-3 text-left text-base text-text hover:bg-surface-sunken"
+        >
+          <Flag size={18} aria-hidden="true" className="shrink-0 text-accent" />
+          <span className="min-w-0 flex-1">
+            Plan your start: when will you begin the first stop?
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-accent">Add</span>
+        </button>
+      </section>
+    );
+  }
   return (
     <section aria-label="Your start plan" className="rounded-panel bg-surface px-4 py-3">
       <form
@@ -243,6 +264,8 @@ export function StartLine({ date }: { date: string }) {
               onChange={(e) => setText(e.target.value)}
               className="min-w-0 flex-1"
               autoComplete="off"
+              // Opened on purpose (the row above or the pencil), so the field takes focus.
+              autoFocus
             />
             <span aria-hidden="true" className="-ml-1.5">
               ,
@@ -257,11 +280,9 @@ export function StartLine({ date }: { date: string }) {
           <Button type="button" size="sm" disabled={!cleanWhen(text)} onClick={() => save(false)}>
             Every day
           </Button>
-          {editing && (
-            <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
-              Cancel
-            </Button>
-          )}
+          <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
+            Cancel
+          </Button>
         </div>
         <p className="text-sm text-muted">
           A time works too ("it's 7 pm"): Atlas shows the line then, while it's open.

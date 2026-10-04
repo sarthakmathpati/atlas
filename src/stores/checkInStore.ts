@@ -104,11 +104,14 @@ export function watchCheckIn(now = Date.now()): () => void {
   if (stop) return stop;
   useCheckInStore.setState({ stretch: restore(now), due: false });
   const unlisten = onActivityCounted((counted, at) => noteActivity(counted, at));
-  // A focus break is a break: the stretch starts again.
+  // A focus break is a break: the stretch starts again. Starting a block answers the check-in
+  // too (its own break is coming).
   const unsubscribe = useFocusTimerStore.subscribe((s, prev) => {
     if (s.mode === "break" && prev.mode !== "break") {
       useCheckInStore.setState((c) => ({ due: false, stretch: afterBreak(c.stretch, Date.now()) }));
       save();
+    } else if (blockActive(s) && !blockActive(prev) && useCheckInStore.getState().due) {
+      notNow();
     }
   });
   const onHide = () => save();

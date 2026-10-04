@@ -386,6 +386,14 @@ describe("breaks that work", () => {
     expect(useCheckInStore.getState().stretch.ms).toBe(0);
   });
 
+  it("put the check-in away when a block starts (its own break is coming)", () => {
+    adhdOn();
+    watchCheckIn();
+    useCheckInStore.setState({ due: true });
+    startBlock("Re-solve 69");
+    expect(useCheckInStore.getState().due).toBe(false);
+  });
+
   it("stay quiet with ADHD mode's breaks part off", () => {
     adhdOn({ breaks: false });
     watchCheckIn();
