@@ -53,6 +53,7 @@ import { askToStartBlock, blockActive, useFocusTimerStore } from "@/stores/focus
 import { useProblemStore } from "@/stores/problemStore";
 import { toast } from "@/stores/toastStore";
 import { plannerInputNow } from "../insight/useInsight";
+import { ItemMinutes } from "../adhd/ItemMinutes";
 import { itemDifficulty, itemSubject, swappable } from "./planItems";
 import { startTarget } from "./startTarget";
 import type { TodayPlan } from "./useTodayPlan";
@@ -412,7 +413,9 @@ export function UpNextCard({ today }: { today: TodayPlan | null }) {
           </Chip>
         )}
         {difficulty && <DifficultyChip difficulty={difficulty} />}
-        <Chip>{current.estMinutes} min</Chip>
+        <Chip>
+          <ItemMinutes item={current} />
+        </Chip>
       </div>
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 pt-2">
         <StartButton item={current} variant="primary" className="h-12 px-8 text-md max-sm:w-full" />
@@ -521,7 +524,9 @@ function RouteStop({
           >
             {item.title}
           </p>
-          <span className="shrink-0 text-sm text-muted tabular-nums">{item.estMinutes} min</span>
+          <span className="shrink-0 text-sm text-muted tabular-nums">
+            <ItemMinutes item={item} />
+          </span>
         </div>
         <p className="mt-0.5 text-sm text-muted">
           {subject && <SubjectMark subjectId={subject.id} className="mr-1.5 align-[0.05em]" />}

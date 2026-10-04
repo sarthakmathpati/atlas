@@ -8,6 +8,11 @@ export function discFraction(elapsedMs: number, totalMs: number): number {
   return horizonFraction(elapsedMs, totalMs);
 }
 
+/** A flashcard round's planned time: about 40 seconds a card, at least 2 minutes. */
+export function flashcardMinutes(cards: number): number {
+  return Math.max(2, Math.ceil((cards * 40) / 60));
+}
+
 /** Elapsed times at which the chime sounds: half time, and 2 minutes left when that's later. */
 export function timeCues(totalMs: number): number[] {
   if (totalMs <= 0) return [];

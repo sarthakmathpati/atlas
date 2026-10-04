@@ -1,5 +1,6 @@
 // Review (F9): problems due for a re-solve and concepts due for review, most urgent first, with
-// what comes up this week. A re-solve opens the workspace with earlier work hidden.
+// what comes up this week. A re-solve opens the workspace with earlier work hidden. In ADHD mode
+// (F32) a big backlog gets "Fresh start".
 import { ArrowRight, CalendarClock, Layers, RotateCcw, Trophy } from "lucide-react";
 import { conceptHref, routeHref } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
@@ -20,6 +21,7 @@ import { findConcept } from "@/stores/customConceptStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useReviewQueue } from "./useReviewQueue";
 import { usePageFocusLine } from "@/features/focus/hooks";
+import { FreshStart } from "@/features/adhd/FreshStart";
 
 function lateLabel(daysLate: number): string {
   return daysLate <= 0 ? "Due today" : `Overdue ${daysLate} ${daysLate === 1 ? "day" : "days"}`;
@@ -150,6 +152,7 @@ export default function ReviewPage() {
   return (
     <PageFrame>
       <PageHeader title="Review" description={description} />
+      {loaded && <FreshStart queue={queue} today={today} />}
       {!loaded ? (
         <PageSkeleton />
       ) : (

@@ -28,6 +28,7 @@ import { MOD_KEY } from "@/components/ui/platform";
 import { MultiCombobox, type ComboOption } from "@/components/ui/MultiCombobox";
 import { ProgressBar } from "@/components/ui/Progress";
 import { HorizonLine } from "@/components/ui/Horizon";
+import { TimeDisc } from "@/features/adhd/TimeDisc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatClock, useTimer } from "@/components/ui/timer";
 import { DRILL_PROMPTS } from "@/data/drills.seed";
@@ -212,16 +213,27 @@ function PromptCard({
           <span className="text-sm text-muted">From your solved problems</span>
         )}
         {item.id.startsWith("gen-") && <ClaudeTag label="Written by Claude" />}
-        <span
-          role="timer"
-          aria-label="Time left"
-          className={cx(
-            "ml-auto flex items-center gap-1.5 font-display text-xl font-semibold tabular-nums",
-            timeUp ? "text-warning" : "text-text",
-          )}
-        >
-          <TimerIcon size={16} aria-hidden="true" />
-          {formatClock(remaining)}
+        <span className="ml-auto flex items-center gap-2">
+          <TimeDisc
+            elapsedMs={DRILL_SECONDS * 1000 - remaining}
+            totalMs={DRILL_SECONDS * 1000}
+            running={timer.running}
+            label="Time for this prompt"
+            cueKey={`drill:${item.id}`}
+            size="sm"
+            showText={false}
+          />
+          <span
+            role="timer"
+            aria-label="Time left"
+            className={cx(
+              "flex items-center gap-1.5 font-display text-xl font-semibold tabular-nums",
+              timeUp ? "text-warning" : "text-text",
+            )}
+          >
+            <TimerIcon size={16} aria-hidden="true" />
+            {formatClock(remaining)}
+          </span>
         </span>
       </div>
       {/* The round's horizon line (F31): 5-second steps, dotted in the last quarter. */}

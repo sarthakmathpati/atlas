@@ -1,7 +1,13 @@
 // ADHD mode (F32): the switch and its parts, stored in Profile.prefs.adhd (synced with the
 // profile), and the card that lists what changed the first time the mode is turned on.
 import { create } from "zustand";
-import { adhdOn, adhdPartOn, adhdSettings, nextAdhdPrefs, type AdhdSettings } from "@/lib/adhd/prefs";
+import {
+  adhdOn,
+  adhdPartOn,
+  adhdSettings,
+  nextAdhdPrefs,
+  type AdhdSettings,
+} from "@/lib/adhd/prefs";
 import { nowIso } from "@/lib/time";
 import type { AdhdPart, AdhdPrefs } from "@/lib/types";
 import { useProfileStore } from "./profileStore";

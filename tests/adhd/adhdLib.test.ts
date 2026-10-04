@@ -281,7 +281,10 @@ describe("the if-then line", () => {
   });
 
   it("keeps a line for the day or as a default, and reads as one sentence", () => {
-    const adhd = { startWhen: "I finish dinner", startWhenDay: { date: "2026-10-04", text: "7 pm" } };
+    const adhd = {
+      startWhen: "I finish dinner",
+      startWhenDay: { date: "2026-10-04", text: "7 pm" },
+    };
     expect(startWhenFor(adhd, "2026-10-04")).toBe("7 pm");
     expect(startWhenIsToday(adhd, "2026-10-04")).toBe(true);
     expect(startWhenFor(adhd, "2026-10-05")).toBe("I finish dinner");

@@ -16,6 +16,33 @@ export interface OverdueItem {
   dueAt: string;
 }
 
+export interface QueueEntry {
+  key: string;
+  dueAt: string;
+  daysLate: number;
+}
+
+/**
+ * The overdue items of the review queue in one list, most urgent first: the problems and the
+ * concepts (each already in its own urgency order) merged by days late, so each keeps its order.
+ */
+export function mergeOverdue(
+  problems: readonly QueueEntry[],
+  concepts: readonly QueueEntry[],
+): OverdueItem[] {
+  const a = problems.filter((x) => x.daysLate > 0);
+  const b = concepts.filter((x) => x.daysLate > 0);
+  const out: OverdueItem[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    const takeA = j >= b.length || (i < a.length && a[i]!.daysLate >= b[j]!.daysLate);
+    const next = takeA ? a[i++]! : b[j++]!;
+    out.push({ key: next.key, dueAt: next.dueAt });
+  }
+  return out;
+}
+
 /**
  * New due dates for overdue items given most urgent first: an even share per day over
  * `days` days from today, earlier items on earlier days.

@@ -4,7 +4,7 @@
 // health, the weakness report with "Add to today", and a year of activity (F29). Every number
 // opens a popover with the data and the formula behind it.
 import { CalendarRange, ScrollText } from "lucide-react";
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { navigate } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { PageHeader } from "@/app/shell/PageHeader";
@@ -16,6 +16,7 @@ import { bundleMinutes } from "@/lib/planner/planner";
 import { problemLabel } from "@/lib/problems/catalog";
 import { readinessRecord, type ConceptEval } from "@/lib/readiness/model";
 import { rankReady } from "@/lib/recommend/ready";
+import { useAdhdPart } from "@/stores/adhdStore";
 import { useToday } from "@/stores/clockStore";
 import { useConceptStateStore } from "@/stores/conceptStateStore";
 import { useDataReady } from "@/stores/hydrate";
@@ -23,6 +24,7 @@ import { addPlanItems } from "@/stores/planStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { toast } from "@/stores/toastStore";
+import { ShowMore } from "../adhd/ShowMore";
 import { Heatmap } from "../insight/Heatmap";
 import { StampRow } from "../insight/Stamp";
 import { recentMondays, useStamps } from "../insight/stamps";
@@ -59,6 +61,8 @@ export default function DashboardPage() {
   const activity = useActivityInsight();
   const mondays = useMemo(() => recentMondays(today), [today]);
   const stamps = useStamps(mondays);
+  const calm = useAdhdPart("calm");
+  const [more, setMore] = useState(false);
 
   const dash = useMemo(() => {
     if (!profile || !model) return null;
@@ -227,30 +231,47 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <PatternGrid tiles={dash.patterns} recognition={dash.recognition} />
+        {/* ADHD mode's calm screen (F32): the rest folds behind Show more. */}
+        {calm && (
+          <ShowMore
+            open={more}
+            onToggle={() => setMore((v) => !v)}
+            more="patterns, charts, weak spots and the year's activity"
+          />
+        )}
+        {(!calm || more) && (
+          <>
+            <PatternGrid tiles={dash.patterns} recognition={dash.recognition} />
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card id="solved-heading">
-            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-              <SolvedChart weeks={dash.weeks} />
-            </Suspense>
-          </Card>
-          <StatusMix subjects={dash.subjects} />
-        </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card id="solved-heading">
+                <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                  <SolvedChart weeks={dash.weeks} />
+                </Suspense>
+              </Card>
+              <StatusMix subjects={dash.subjects} />
+            </div>
 
-        <WeaknessCard
-          weakness={dash.weakness}
-          onAddConcept={addConcept}
-          onAddPattern={addPattern}
-          onAddSubject={addSubject}
-        />
+            <WeaknessCard
+              weakness={dash.weakness}
+              onAddConcept={addConcept}
+              onAddPattern={addPattern}
+              onAddSubject={addSubject}
+            />
 
-        <Card title="Activity this year" id="activity-heading">
-          <div className="space-y-3">
-            <StreakFacts streak={activity.streak} freezeOn={profile.prefs.streakFreeze} />
-            <Heatmap lookup={activity.lookup} today={today} weeks={53} frozen={activity.frozen} />
-          </div>
-        </Card>
+            <Card title="Activity this year" id="activity-heading">
+              <div className="space-y-3">
+                <StreakFacts streak={activity.streak} freezeOn={profile.prefs.streakFreeze} />
+                <Heatmap
+                  lookup={activity.lookup}
+                  today={today}
+                  weeks={53}
+                  frozen={activity.frozen}
+                />
+              </div>
+            </Card>
+          </>
+        )}
       </div>
     </PageFrame>
   );

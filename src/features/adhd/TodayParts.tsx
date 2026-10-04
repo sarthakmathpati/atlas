@@ -27,7 +27,12 @@ import { isMovement, movementPrompt } from "@/lib/focus/prompts";
 import { addDaysToDate, parseLocalDate } from "@/lib/time";
 import { setAdhd, useAdhd } from "@/stores/adhdStore";
 import { useActivityStore } from "@/stores/activityStore";
-import { blockRunning, focusDurations, focusElapsedMs, useFocusTimerStore } from "@/stores/focusTimerStore";
+import {
+  blockRunning,
+  focusDurations,
+  focusElapsedMs,
+  useFocusTimerStore,
+} from "@/stores/focusTimerStore";
 import { itemSteps, useInkToday } from "@/stores/nowStore";
 import { useTicker } from "../focus/hooks";
 import { Stamp } from "../insight/Stamp";
@@ -227,18 +232,21 @@ export function StartLine({ date }: { date: string }) {
         <label htmlFor="start-when" className="block text-base text-text">
           Plan your start: when will you begin the first stop?
         </label>
-        <div className="flex flex-wrap items-center gap-2 text-base text-text">
-          <span>When</span>
-          <Input
-            id="start-when"
-            value={text}
-            maxLength={START_LINE_MAX}
-            placeholder="I finish dinner"
-            onChange={(e) => setText(e.target.value)}
-            className="w-56 max-w-full flex-1"
-            autoComplete="off"
-          />
-          <span>, I'll start the first stop.</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-base text-text">
+          <span className="flex min-w-0 flex-1 basis-64 items-center gap-2">
+            <span>When</span>
+            <Input
+              id="start-when"
+              value={text}
+              maxLength={START_LINE_MAX}
+              placeholder="I finish dinner"
+              onChange={(e) => setText(e.target.value)}
+              className="min-w-0 flex-1"
+              autoComplete="off"
+            />
+            <span aria-hidden="true">,</span>
+          </span>
+          <span>I'll start the first stop.</span>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="submit" size="sm" variant="primary" disabled={!cleanWhen(text)}>
@@ -339,4 +347,3 @@ export function BreakHint({ date }: { date: string }) {
     </p>
   );
 }
-

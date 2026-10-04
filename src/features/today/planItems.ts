@@ -8,10 +8,7 @@ import { findConcept } from "@/stores/customConceptStore";
 type Problems = Readonly<Record<string, ProblemState>>;
 
 /** The subject an item belongs to (its concept, or its problem's first concept or topic). */
-export function itemSubject(
-  item: PlanItem,
-  problems: Problems,
-): Subject | undefined {
+export function itemSubject(item: PlanItem, problems: Problems): Subject | undefined {
   const ref = item.refIds?.[0] ?? item.refId;
   if (!ref) return item.kind === "story" ? subjectById.get("career") : undefined;
   if (item.kind === "resolve" || item.kind === "new-problem" || item.kind === "design") {
@@ -26,10 +23,7 @@ export function itemSubject(
   return concept ? subjectById.get(concept.subjectId) : undefined;
 }
 
-export function itemDifficulty(
-  item: PlanItem,
-  problems: Problems,
-): Difficulty | undefined {
+export function itemDifficulty(item: PlanItem, problems: Problems): Difficulty | undefined {
   if (item.kind !== "resolve" && item.kind !== "new-problem") return undefined;
   return item.refId ? problemInfo(item.refId, problems[item.refId])?.difficulty : undefined;
 }

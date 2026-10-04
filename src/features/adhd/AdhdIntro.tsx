@@ -18,7 +18,10 @@ const CHANGED: Record<AdhdPart, [string, string]> = {
   breaks: ["Breaks that work", ""],
   startHelp: ["Starting help", "an if-then line on Today for when you'll start."],
   reading: ["Reading support", "lessons one part at a time, with read aloud."],
-  gentle: ["Gentle language", "a fresh start when reviews pile up, and a welcome back after a gap."],
+  gentle: [
+    "Gentle language",
+    "a fresh start when reviews pile up, and a welcome back after a gap.",
+  ],
 };
 
 export function AdhdIntro() {

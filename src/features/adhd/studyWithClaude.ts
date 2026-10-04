@@ -9,7 +9,7 @@ import { studyEndPrompt, studyStartPrompt, type StudyOutcome } from "@/lib/ai/pr
 import { localDate } from "@/lib/time";
 import type { FocusOutcome } from "@/lib/types";
 import { askAI, currentAIMode, useAIMode } from "@/stores/aiStore";
-import { onBlockStart } from "@/stores/focusTimerStore";
+import { onBlockStart, useFocusTimerStore } from "@/stores/focusTimerStore";
 import { usePlanStore } from "@/stores/planStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { promptEnv } from "../ai/gather";
@@ -70,7 +70,8 @@ async function ask(
     noCache: true,
     title: "A word from Claude",
     onText: (text) => {
-      if (!controller.signal.aborted) useStudyStore.setState({ [which]: { status: "thinking", text } });
+      if (!controller.signal.aborted)
+        useStudyStore.setState({ [which]: { status: "thinking", text } });
     },
   });
   if (controller.signal.aborted) return;
@@ -82,7 +83,11 @@ async function ask(
 }
 
 /** Claude's word as a block starts. */
-export function studyAtStart(block: { intention: string; planItemId: string | null; minutes: number }): void {
+export function studyAtStart(block: {
+  intention: string;
+  planItemId: string | null;
+  minutes: number;
+}): void {
   if (!studyActive()) return;
   startRequest?.abort();
   endRequest?.abort();
@@ -110,7 +115,11 @@ export function studyAtEnd(outcome: FocusOutcome, note: string): void {
   const controller = new AbortController();
   endRequest = controller;
   useStudyStore.setState({ start: null });
-  void ask("end", studyEndPrompt(promptEnv(), { outcome: OUTCOME_WORD[outcome], note }), controller);
+  void ask(
+    "end",
+    studyEndPrompt(promptEnv(), { outcome: OUTCOME_WORD[outcome], note }),
+    controller,
+  );
 }
 
 export function dismissStudy(which: "start" | "end"): void {
@@ -126,4 +135,8 @@ export function watchStudy(): void {
   if (listening) return;
   listening = true;
   onBlockStart(studyAtStart);
+  // The reply after a block belongs to its break: leaving the break view puts it away.
+  useFocusTimerStore.subscribe((s, prev) => {
+    if (prev.breakOpen && !s.breakOpen && useStudyStore.getState().end) dismissStudy("end");
+  });
 }

@@ -461,6 +461,27 @@ export function applyCsvPlan(
   return { problems: changed.length, attempts, created, duplicates, snapshot };
 }
 
+/**
+ * Moves problems' review dates (ADHD mode's Fresh start, F32): only `srs.dueAt` changes; the
+ * step, streaks and history stay. Returns the states before, for Undo (restoreSnapshot).
+ */
+export function setProblemDueDates(
+  dates: Readonly<Record<string, string>>,
+): Record<string, ProblemState | null> {
+  const snapshot: Record<string, ProblemState | null> = {};
+  const changed: ProblemState[] = [];
+  const stamp = nowIso();
+  for (const [id, dueAt] of Object.entries(dates)) {
+    const current = getProblemState(id);
+    if (!current || current.srs.dueAt === dueAt) continue;
+    snapshot[id] = current;
+    changed.push({ ...current, srs: { ...current.srs, dueAt }, updatedAt: stamp });
+  }
+  commit(...changed);
+  refreshConcepts([...new Set(changed.flatMap((s) => conceptsOfProblem(s.problemId, s)))]);
+  return snapshot;
+}
+
 /** Undo for a CSV import: puts every touched problem back as it was. */
 export function restoreSnapshot(snapshot: Record<string, ProblemState | null>): void {
   for (const [id, state] of Object.entries(snapshot)) restoreProblem(state, id);

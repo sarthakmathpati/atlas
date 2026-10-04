@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { Select, Textarea } from "@/components/ui/Field";
 import { HorizonLine } from "@/components/ui/Horizon";
+import { TimeDisc } from "@/features/adhd/TimeDisc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatClock, useTimer } from "@/components/ui/timer";
 import { BEHAVIORAL_QUESTIONS } from "@/data/behavioral.seed";
@@ -144,15 +145,26 @@ function Round({
           <p className="text-sm font-medium text-muted">The question</p>
           <p className="text-xl font-semibold text-text">{question.text}</p>
         </div>
-        <span
-          role="timer"
-          aria-label="Time left"
-          className={cx(
-            "flex items-center gap-2 text-lg font-semibold tabular-nums",
-            timeUp ? "text-warning" : "text-text",
-          )}
-        >
-          {formatClock(remaining)}
+        <span className="flex items-center gap-2">
+          <TimeDisc
+            elapsedMs={PRACTICE_SECONDS * 1000 - remaining}
+            totalMs={PRACTICE_SECONDS * 1000}
+            running={timer.running}
+            label="Time for your answer"
+            cueKey={`story:${question.id}`}
+            size="sm"
+            showText={false}
+          />
+          <span
+            role="timer"
+            aria-label="Time left"
+            className={cx(
+              "flex items-center gap-2 text-lg font-semibold tabular-nums",
+              timeUp ? "text-warning" : "text-text",
+            )}
+          >
+            {formatClock(remaining)}
+          </span>
         </span>
       </div>
       {/* The round's horizon line (F31): 5-second steps, dotted in the last quarter. */}

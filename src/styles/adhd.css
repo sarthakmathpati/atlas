@@ -69,3 +69,29 @@
     }
   }
 }
+
+/* ----- Reading support: the optional line focus dims the text outside the paragraph being
+   read (the one in the middle of the screen, or tapped). Never blurred. -------------------------- */
+
+@layer components {
+  [data-line-focus]
+    :is(
+      .atlas-prose > :not(ul):not(ol):not(.atlas-table-wrap),
+      .atlas-prose > ul > li,
+      .atlas-prose > ol > li,
+      .atlas-prose > .atlas-table-wrap
+    ) {
+    opacity: 0.38;
+    transition: opacity 150ms var(--ease-out);
+  }
+
+  [data-line-focus]
+    :is(
+      .atlas-prose > :not(ul):not(ol):not(.atlas-table-wrap),
+      .atlas-prose > ul > li,
+      .atlas-prose > ol > li,
+      .atlas-prose > .atlas-table-wrap
+    )[data-current] {
+    opacity: 1;
+  }
+}

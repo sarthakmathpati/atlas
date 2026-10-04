@@ -6,7 +6,10 @@ import type { AdhdPrefs } from "@/lib/types";
 export const START_LINE_MAX = 120;
 
 /** The "when" for a day: that day's own line, else the default. Empty when there is none. */
-export function startWhenFor(adhd: Pick<AdhdPrefs, "startWhen" | "startWhenDay"> | undefined, date: string): string {
+export function startWhenFor(
+  adhd: Pick<AdhdPrefs, "startWhen" | "startWhenDay"> | undefined,
+  date: string,
+): string {
   if (adhd?.startWhenDay?.date === date && adhd.startWhenDay.text.trim()) {
     return adhd.startWhenDay.text.trim();
   }

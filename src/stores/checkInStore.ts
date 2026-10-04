@@ -63,7 +63,12 @@ export function noteActivity(countedMs: number, now = Date.now()): void {
   let stretch = addActivity(s.stretch, countedMs, now, breakMs());
   let due = s.due;
   const on = adhdPartOn(useProfileStore.getState().profile?.prefs, "breaks");
-  if (!due && on && !blockActive(useFocusTimerStore.getState()) && checkInDue(stretch, now, breakMs())) {
+  if (
+    !due &&
+    on &&
+    !blockActive(useFocusTimerStore.getState()) &&
+    checkInDue(stretch, now, breakMs())
+  ) {
     due = true;
     stretch = { ...stretch, shownAt: now };
     useCheckInStore.setState({ stretch, due });

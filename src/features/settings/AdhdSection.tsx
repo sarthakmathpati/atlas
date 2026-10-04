@@ -31,6 +31,15 @@ const KIND_LABEL: Record<PlanItem["kind"], string> = {
   thought: "Parked thoughts",
 };
 
+/** The parts with options of their own under the switch. */
+const OPTIONS_FOR: ReadonlySet<AdhdPart> = new Set([
+  "time",
+  "rewards",
+  "breaks",
+  "startHelp",
+  "reading",
+]);
+
 const BLOCK_OPTIONS = [10, 15, 20, 25, 30];
 const BREAK_OPTIONS = [3, 5, 10];
 const SOUND_OPTIONS: { value: FocusSound; label: string }[] = [
@@ -199,7 +208,7 @@ export function AdhdSection({ profile }: { profile: Profile }) {
             checked={adhd.parts[part]}
             onChange={(on) => setAdhdPart(part, on)}
           />
-          {adhd.parts[part] && (
+          {adhd.parts[part] && OPTIONS_FOR.has(part) && (
             <div className="pl-0 sm:pl-4">
               <PartOptions part={part} profile={profile} />
             </div>

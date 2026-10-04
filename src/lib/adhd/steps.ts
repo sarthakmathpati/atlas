@@ -13,7 +13,11 @@ const RESOLVE = [
 ];
 const NEW_PROBLEM = ["Read it", "Name the pattern", "Plan", "Code", "Test", "Save"];
 const LEARN = ["Read Simple", "Read Interview", "One quick check", "Mark as studied"];
-const REVIEW_ONE = ["Read the interview points", "Answer the cards one at a time", "Rate each card"];
+const REVIEW_ONE = [
+  "Read the interview points",
+  "Answer the cards one at a time",
+  "Rate each card",
+];
 const DRILL = ["Start the drill", "Name the pattern for each prompt", "Read what you missed"];
 const MENTAL_MATH = ["Start the sprint", "Answer, or skip with Tab", "Look at your score"];
 const MOCK = [

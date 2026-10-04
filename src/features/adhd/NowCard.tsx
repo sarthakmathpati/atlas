@@ -116,7 +116,9 @@ function StepList({ item, date }: { item: PlanItem; date: string }) {
               <span className={cx("min-w-0 flex-1", done && "line-through decoration-faint")}>
                 {text}
               </span>
-              {here && <span className="shrink-0 text-sm font-semibold text-accent">You are here</span>}
+              {here && (
+                <span className="shrink-0 text-sm font-semibold text-accent">You are here</span>
+              )}
             </button>
           </li>
         );
@@ -255,11 +257,7 @@ function NowItem({ item, today }: { item: PlanItem; today: TodayPlan }) {
                 Pause
               </Button>
             ) : (
-              <Button
-                variant="secondary"
-                icon={Play}
-                onClick={() => startNow(plan.date, item)}
-              >
+              <Button variant="secondary" icon={Play} onClick={() => startNow(plan.date, item)}>
                 Continue
               </Button>
             )}
@@ -309,7 +307,10 @@ export function ThenMore({ today }: { today: TodayPlan }) {
         <span>
           {rest.length > 0 ? (
             <>
-              Then: <b className="text-text">{rest.length} more {rest.length === 1 ? "stop" : "stops"}</b>{" "}
+              Then:{" "}
+              <b className="text-text">
+                {rest.length} more {rest.length === 1 ? "stop" : "stops"}
+              </b>{" "}
               today, folded away until you get there.
             </>
           ) : (

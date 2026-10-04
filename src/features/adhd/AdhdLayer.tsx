@@ -170,7 +170,9 @@ function TwoMinuteNote() {
 
 function CheckInNote() {
   const due = useCheckInStore((s) => s.due);
-  const breakMinutes = useProfileStore((s) => Math.round(focusDurations(s.profile?.prefs).break / 60_000));
+  const breakMinutes = useProfileStore((s) =>
+    Math.round(focusDurations(s.profile?.prefs).break / 60_000),
+  );
   if (!due) return null;
   return (
     <Note
@@ -287,6 +289,37 @@ function StudyStartNote() {
   );
 }
 
+/** Claude's reply after a block, when there's no break view to show it in. */
+function StudyEndNote() {
+  const reply = useStudyStore((s) => s.end);
+  const breakOpen = useFocusTimerStore((s) => s.breakOpen);
+  if (!reply || breakOpen) return null;
+  return (
+    <Note
+      label="Claude after your block"
+      title={
+        <span className="flex items-center gap-2">
+          After your block <ClaudeTag />
+        </span>
+      }
+      icon={Sparkles}
+      actions={
+        <Button size="sm" variant="ghost" onClick={() => dismissStudy("end")}>
+          Close
+        </Button>
+      }
+    >
+      {reply.status === "failed" ? (
+        <span>{reply.message}</span>
+      ) : reply.text ? (
+        <span className="text-text">{reply.text}</span>
+      ) : (
+        <span role="status">Thinking…</span>
+      )}
+    </Note>
+  );
+}
+
 function Notes() {
   const asking = useNowStore((s) => s.clock?.trial === "ask");
   const due = useCheckInStore((s) => s.due);
@@ -298,6 +331,7 @@ function Notes() {
       <CheckInNote />
       <StartLineNote />
       <StudyStartNote />
+      <StudyEndNote />
     </FloatingNotes>
   );
 }

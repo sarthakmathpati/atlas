@@ -28,6 +28,7 @@ import { studyContent } from "@/lib/concepts/custom";
 import { useConceptNoteStore } from "@/stores/conceptNoteStore";
 import { useConceptContents } from "@/stores/contentStore";
 import { findConcept } from "@/stores/customConceptStore";
+import { FlashcardDisc } from "@/features/adhd/FlashcardDisc";
 import { sessionConcepts } from "./walkOrder";
 import { WalkStrip } from "./WalkStrip";
 
@@ -272,7 +273,8 @@ function Session({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4 sm:px-5 sm:py-5">
       <div className="flex items-center justify-between gap-3 text-sm text-muted">
         <span className="min-w-0 truncate">{concept?.name}</span>
-        <span className="shrink-0 tabular-nums">
+        <span className="flex shrink-0 items-center gap-2 tabular-nums">
+          <FlashcardDisc cards={deck.length} running />
           Card {index + 1} of {deck.length}
         </span>
       </div>

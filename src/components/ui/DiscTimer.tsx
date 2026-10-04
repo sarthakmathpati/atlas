@@ -1,11 +1,14 @@
-// The shrinking disc (F32 "time you can see"): the time left of a planned stretch as a filled
-// wedge that shrinks clockwise toward twelve o'clock. Like the horizon line it moves in whole
+// The shrinking disc (F32 "time you can see"): the time left of a planned stretch as a wide
+// filled ring that shrinks clockwise toward twelve o'clock. Like the horizon line it moves in whole
 // 5-second steps and never animates; when the time is up it stays empty and says how far over it
 // is, in plain words and never in red (lib/adhd/time.ts).
+import { useId } from "react";
 import { discFraction, discText } from "@/lib/adhd/time";
 import { cx } from "./cx";
 
 const SIZE = { sm: 30, md: 52, lg: 84 } as const;
+/** The hole's radius, as a share of the disc's. */
+const HOLE = 0.4;
 
 function wedge(fraction: number, c: number, r: number): string | null {
   if (fraction <= 0) return null;
@@ -43,7 +46,8 @@ export function DiscTimer({
   const r = c - 1;
   const fraction = discFraction(elapsedMs, totalMs);
   const text = discText(elapsedMs, totalMs);
-  const path = fraction >= 1 ? null : wedge(fraction, c, r - 1);
+  const path = fraction >= 1 ? null : wedge(fraction, c, r);
+  const maskId = `disc-${useId().replace(/:/g, "")}`;
   return (
     <div
       role="timer"
@@ -64,12 +68,20 @@ export function DiscTimer({
         aria-hidden="true"
         className={cx("shrink-0", !running && "opacity-70")}
       >
-        <circle cx={c} cy={c} r={r} fill="var(--surface-sunken)" stroke="var(--rule)" />
-        {fraction >= 1 ? (
-          <circle cx={c} cy={c} r={r - 1} fill="var(--accent)" />
-        ) : (
-          path && <path d={path} fill="var(--accent)" />
-        )}
+        {/* A wide ring rather than a solid disc: calmer, and it sits on any surface. */}
+        <mask id={maskId}>
+          <rect width={px} height={px} fill="white" />
+          <circle cx={c} cy={c} r={r * HOLE} fill="black" />
+        </mask>
+        <g mask={`url(#${maskId})`}>
+          <circle cx={c} cy={c} r={r} fill="var(--surface-sunken)" />
+          {fraction >= 1 ? (
+            <circle cx={c} cy={c} r={r} fill="var(--accent)" />
+          ) : (
+            path && <path d={path} fill="var(--accent)" />
+          )}
+        </g>
+        <circle cx={c} cy={c} r={r - 0.5} fill="none" stroke="var(--rule)" />
       </svg>
       {showText && (
         <span aria-hidden="true" className="flex flex-col leading-tight">

@@ -6,7 +6,7 @@
 // In ADHD mode (F32) the Now card replaces Up next and the route (folded as "Then: 3 more
 // stops"), with the if-then line, Today's ink, the coming break and Welcome back; the calm
 // screen puts everything else behind "Show more".
-import { CalendarRange, Check, ChevronDown, Circle, Search, Sparkles } from "lucide-react";
+import { CalendarRange, Check, Circle, Search, Sparkles } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { routeHref, useRoute } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
@@ -28,6 +28,7 @@ import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useAdhd } from "@/stores/adhdStore";
 import { NowCard, ThenMore } from "../adhd/NowCard";
+import { ShowMore } from "../adhd/ShowMore";
 import { BreakHint, InkCard, StartLine, WelcomeBack } from "../adhd/TodayParts";
 import { useReadiness } from "../insight/useInsight";
 import { useReviewQueue } from "../review/useReviewQueue";
@@ -324,24 +325,18 @@ export default function TodayPage() {
   if (calmScreen) {
     return (
       <PageFrame>
-        <TodayHead profile={profile} model={model} plan={plan} today={today} quiet />
-        {notes}
+        <div className="mx-auto max-w-2xl">
+          <TodayHead profile={profile} model={model} plan={plan} today={today} quiet />
+          {notes}
+        </div>
         <div className="mx-auto max-w-2xl space-y-6">
           {main}
           <div>
-            <button
-              type="button"
-              aria-expanded={more}
-              onClick={() => setMore((v) => !v)}
-              className="flex items-center gap-2 rounded-control px-1 py-2 text-base text-muted hover:text-text"
-            >
-              <ChevronDown
-                size={16}
-                aria-hidden="true"
-                className={more ? "rotate-180 transition-transform" : "transition-transform"}
-              />
-              {more ? "Show less" : "Show more: your streak, what's ready, reviews and your atlas"}
-            </button>
+            <ShowMore
+              open={more}
+              onToggle={() => setMore((v) => !v)}
+              more="your streak, what's ready, reviews and your atlas"
+            />
             {more && (
               <div className="mt-4 grid gap-6 sm:grid-cols-2">
                 <div className="min-w-0 space-y-6">{side}</div>

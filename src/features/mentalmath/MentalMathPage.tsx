@@ -19,6 +19,7 @@ import { cx } from "@/components/ui/cx";
 import { prefersReducedMotion, useLatest } from "@/components/ui/hooks";
 import { Kbd, Skeleton } from "@/components/ui/Misc";
 import { HorizonLine } from "@/components/ui/Horizon";
+import { TimeDisc } from "@/features/adhd/TimeDisc";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatClock, useTimer } from "@/components/ui/timer";
 import { conceptById } from "@/data/syllabus";
@@ -208,16 +209,27 @@ function Sprint({
           Question {Math.min(index + 1, questions.length)} of {questions.length}
         </span>
         <span className="text-sm text-muted tabular-nums">{correct} correct</span>
-        <span
-          role="timer"
-          aria-label="Time left"
-          className={cx(
-            "ml-auto flex items-center gap-1.5 text-lg font-semibold tabular-nums",
-            remaining < 30_000 ? "text-warning" : "text-text",
-          )}
-        >
-          <TimerIcon size={18} aria-hidden="true" />
-          {formatClock(remaining)}
+        <span className="ml-auto flex items-center gap-2">
+          <TimeDisc
+            elapsedMs={info.seconds * 1000 - remaining}
+            totalMs={info.seconds * 1000}
+            running={timer.running}
+            label="Time for the sprint"
+            cueKey={`sprint:${info.label}`}
+            size="sm"
+            showText={false}
+          />
+          <span
+            role="timer"
+            aria-label="Time left"
+            className={cx(
+              "flex items-center gap-1.5 text-lg font-semibold tabular-nums",
+              remaining < 30_000 ? "text-warning" : "text-text",
+            )}
+          >
+            <TimerIcon size={18} aria-hidden="true" />
+            {formatClock(remaining)}
+          </span>
         </span>
       </div>
       {/* The round's horizon line (F31): 5-second steps, dotted near the end. */}
