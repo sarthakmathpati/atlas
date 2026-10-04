@@ -4,15 +4,17 @@
 // sorted by key so the same data always produces the same file.
 // Import: parse → check it is an Atlas backup → run migrations → apply id aliases → validate
 // with zod → then either
-//   merge:   per record, the newer `updatedAt` wins; attempts, saved answers, story practice and
-//            activity days are unioned so nothing recorded on either side is lost;
+//   merge:   per record, the newer `updatedAt` wins; attempts, saved answers, story practice,
+//            activity days and pace samples are unioned so nothing recorded on either side is
+//            lost;
 //   replace: clear everything, then write the backup exactly.
-import { APP_NAME, ATTEMPT_CAP, SCHEMA_VERSION } from "@/lib/constants";
+import { APP_NAME, ATTEMPT_CAP, PACE_SAMPLES, SCHEMA_VERSION } from "@/lib/constants";
 import { nowIso } from "@/lib/time";
 import type {
   ActivityMonth,
   Attempt,
   ConceptNote,
+  PaceStat,
   ProblemState,
   Profile,
   Story,
@@ -242,7 +244,18 @@ function makeMergers(counter: { attemptsTrimmed: number }) {
     else delete merged.weeks;
     return merged;
   };
-  return { mergeProblem, mergeNote, mergeStory, mergeActivity };
+  // Pace samples (F32): the union by id, newest 20 kept, so items timed on either side count.
+  const mergePace: Merger<PaceStat> = (current, incoming) => {
+    const newer = newerWins(current, incoming);
+    const older = newer === current ? incoming : current;
+    const byId = new Map(older.samples.map((x) => [x.id, x]));
+    for (const x of newer.samples) byId.set(x.id, x);
+    const samples = [...byId.values()]
+      .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0))
+      .slice(-PACE_SAMPLES);
+    return { ...newer, samples };
+  };
+  return { mergeProblem, mergeNote, mergeStory, mergeActivity, mergePace };
 }
 
 function mergeTable<K extends TableName>(
@@ -316,7 +329,9 @@ export function mergeExportData(current: ExportData, incoming: ExportData): Merg
             ? m.mergeStory
             : t === "activity"
               ? m.mergeActivity
-              : newerWins
+              : t === "paceStats"
+                ? m.mergePace
+                : newerWins
     ) as Merger<TableTypes[typeof t]>;
     const result = mergeTable(t, current[t], incoming[t], merger);
     (merged as Record<string, unknown>)[t] = result.rows;

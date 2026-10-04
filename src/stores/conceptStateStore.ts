@@ -203,6 +203,33 @@ export function restoreConceptState(conceptId: string, previous: ConceptState | 
   refreshConcepts([conceptId], { now });
 }
 
+/**
+ * Moves concepts' review dates (ADHD mode's Fresh start, F32): only `srs.dueAt` changes, and
+ * statuses follow the new dates. Returns the states before, for Undo (restoreConceptStates).
+ */
+export function setConceptDueDates(dates: Readonly<Record<string, string>>): ConceptState[] {
+  const { states } = useConceptStateStore.getState();
+  const before: ConceptState[] = [];
+  const changed: ConceptState[] = [];
+  const stamp = nowIso();
+  for (const [id, dueAt] of Object.entries(dates)) {
+    const current = states[id];
+    if (!current || current.srs.dueAt === dueAt) continue;
+    before.push(current);
+    changed.push({ ...current, srs: { ...current.srs, dueAt }, updatedAt: stamp });
+  }
+  commitStates(changed);
+  refreshConcepts(changed.map((s) => s.conceptId));
+  return before;
+}
+
+/** Puts several concepts' states back as they were (Undo). */
+export function restoreConceptStates(previous: readonly ConceptState[]): void {
+  const stamp = nowIso();
+  commitStates(previous.map((s) => ({ ...s, updatedAt: stamp })));
+  refreshConcepts(previous.map((s) => s.conceptId));
+}
+
 /** "Mark as studied": knowledge is at least 0.3 and the concept enters review (due in 2 days). */
 export function markStudied(conceptId: string, studied = true): ConceptState | null {
   const today = localDate();

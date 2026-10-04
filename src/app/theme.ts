@@ -67,7 +67,9 @@ export function showTheme(name: ThemeName): void {
   if (root.getAttribute("data-theme") === name) return;
   const update = () => root.setAttribute("data-theme", name);
   const doc = document as TransitionDocument;
-  if (root.hasAttribute("data-theme") && !document.hidden && !prefersReducedMotion()) {
+  // ADHD mode's calm screen keeps motion for feedback only: the theme changes at once.
+  const calm = (root.getAttribute("data-adhd") ?? "").split(" ").includes("calm");
+  if (root.hasAttribute("data-theme") && !document.hidden && !prefersReducedMotion() && !calm) {
     try {
       if (doc.startViewTransition) {
         doc.startViewTransition(update);

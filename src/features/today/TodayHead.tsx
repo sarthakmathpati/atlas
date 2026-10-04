@@ -102,6 +102,7 @@ export function TodayHead({
   plan,
   today,
   calm,
+  quiet,
 }: {
   profile: Profile | null;
   model: ReadinessModel | null;
@@ -109,6 +110,8 @@ export function TodayHead({
   today: string;
   /** Interview day (F31): a calm line instead of the plan's, and no minutes ring. */
   calm?: boolean;
+  /** ADHD mode's calm screen (F32): no terrain and no countdown, only the greeting and ring. */
+  quiet?: boolean;
 }) {
   const now = new Date();
   const name = profile?.name.trim();
@@ -125,7 +128,7 @@ export function TodayHead({
   );
   return (
     <header className="relative isolate mb-6 overflow-hidden rounded-focal bg-sidebar px-5 py-5 sm:mb-8 sm:px-7 sm:py-6">
-      {profile && model && <LivingTerrain subjects={subjects} day={today} />}
+      {profile && model && !quiet && <LivingTerrain subjects={subjects} day={today} />}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm text-muted">{dateLine}</p>
@@ -143,7 +146,7 @@ export function TodayHead({
                 : headLine(profile, plan)}
             </p>
           )}
-          {profile?.interviewDate && (
+          {profile?.interviewDate && !quiet && (
             <ScaleBar interviewDate={profile.interviewDate} today={today} />
           )}
         </div>

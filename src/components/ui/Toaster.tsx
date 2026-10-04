@@ -72,12 +72,13 @@ export function Toaster() {
     if (toasts.length > 0) showInTopLayer(ref.current);
   }, [toasts]);
 
+  // ADHD mode's floating notes share this corner, below the toasts (--floating-notes-h).
   return (
     <div
       ref={ref}
       popover={POPOVER_MANUAL}
       aria-live="polite"
-      className="pointer-events-none fixed top-auto right-4 bottom-4 left-4 z-[70] m-0 flex w-auto flex-col items-stretch gap-2 overflow-visible border-0 bg-transparent p-0 text-text sm:left-auto sm:w-96 max-md:bottom-[calc(72px+env(safe-area-inset-bottom,0px))]"
+      className="pointer-events-none fixed top-auto right-4 bottom-[calc(1rem+var(--floating-notes-h,0px))] left-4 z-[70] m-0 flex w-auto flex-col items-stretch gap-2 overflow-visible border-0 bg-transparent p-0 text-text sm:left-auto sm:w-96 max-md:bottom-[calc(72px+env(safe-area-inset-bottom,0px)+var(--floating-notes-h,0px))]"
     >
       {toasts.map((t) => (
         <ToastView key={t.id} toast={t} />

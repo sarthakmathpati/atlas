@@ -47,6 +47,23 @@ export function demoSampleResponder(input: SampleInput): string {
 
   if (text.includes("Reply with the single word OK")) return "OK";
 
+  // Prompt 20, Study with Claude (F32): one or two sentences at a block's start and end.
+  const starting = /starting a (\d+)-minute focus block\. Their intention: "([^"]*)"/.exec(text);
+  if (starting) {
+    const line = starting[2]!.trim();
+    return line && line !== "(no line written)"
+      ? `Good plan for ${starting[1]} minutes. Start by opening it and writing down the first small step of "${line}".`
+      : `Good, ${starting[1]} minutes it is. Start with the first stop on today's plan and open it now.`;
+  }
+  const ended = /The block ended\. The learner says it went: (Done|Partly|Moved on)\./.exec(text);
+  if (ended) {
+    return ended[1] === "Done"
+      ? "Nicely done: that block did what you planned. Take your break, then pick the next stop."
+      : ended[1] === "Partly"
+        ? "Part of it is done, and that counts. Take your break, then park what's left or carry on with the next step."
+        : "You moved on to something else, which happens. Take the break, then decide whether to come back to it or park it.";
+  }
+
   const hint = /Give ONLY hint level (\d)/.exec(text);
   if (hint) {
     const level = Number(hint[1]);

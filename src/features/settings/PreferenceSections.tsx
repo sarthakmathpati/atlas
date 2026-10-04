@@ -6,6 +6,7 @@ import { Field, Input, Select, Switch } from "@/components/ui/Field";
 import { useShownTheme } from "@/components/ui/hooks";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WRAP_UP_MINUTES } from "@/lib/focus/bedtime";
+import { adhdPartOn } from "@/lib/adhd/prefs";
 import { focusPrefs } from "@/lib/focus/prefs";
 import { parseClock, THEME_LABEL, THEME_NAMES } from "@/lib/theme";
 import type { Profile } from "@/lib/types";
@@ -199,7 +200,14 @@ export function FocusSection({ profile }: { profile: Profile }) {
       title="Focus sessions"
       description="A focus block starts with one line about what you'll do, from the timer in the top bar or the F key. A thin line along the top edge shows the time left."
     >
-      <SettingsRow label="Block and break lengths" description="The focus timer in the top bar.">
+      <SettingsRow
+        label="Block and break lengths"
+        description={
+          adhdPartOn(profile.prefs, "breaks")
+            ? "The focus timer in the top bar. While ADHD mode is on, its own lengths apply (Settings → ADHD mode)."
+            : "The focus timer in the top bar."
+        }
+      >
         <div className="flex flex-wrap items-center gap-3">
           <label htmlFor={`${ids}-focus`} className="sr-only">
             Focus length

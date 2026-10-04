@@ -43,6 +43,7 @@ import { CopyMock } from "./CopyMock";
 import { FeedbackView } from "./FeedbackView";
 import { OPENING, useMockInterview } from "./useMockInterview";
 import { HorizonLine } from "@/components/ui/Horizon";
+import { TimeDisc } from "@/features/adhd/TimeDisc";
 import { usePageFocusLine } from "@/features/focus/hooks";
 
 const CodeEditor = lazy(() => import("@/components/ui/code/CodeEditor"));
@@ -376,6 +377,17 @@ function Live({ session }: { session: MockSession }) {
             totalMs={limitMs(session)}
             label="Interview time left"
             className="absolute inset-x-4 top-0"
+          />
+        )}
+        {!ended && (
+          <TimeDisc
+            elapsedMs={limitMs(session) - interview.remaining}
+            totalMs={limitMs(session)}
+            running={interview.started && !ended}
+            label="Time for the interview"
+            cueKey={`mock:${session.id}`}
+            size="sm"
+            showText={false}
           />
         )}
         <span

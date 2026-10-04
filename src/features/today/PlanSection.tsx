@@ -29,7 +29,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
-import { routeHref } from "@/app/router";
 import { Button, IconButton, type ButtonVariant } from "@/components/ui/Button";
 import { Card, CardLabel } from "@/components/ui/Card";
 import { Chip, DifficultyChip } from "@/components/ui/Chip";
@@ -39,13 +38,10 @@ import { LineDrawing } from "@/components/ui/LineDrawing";
 import { Skeleton } from "@/components/ui/Misc";
 import { Popover } from "@/components/ui/Popover";
 import { SubjectMark } from "@/components/ui/SubjectEmblem";
-import { subjectById, topicById } from "@/data/syllabus";
 import { intentionForItem } from "@/lib/focus/intention";
 import { swapOptions } from "@/lib/planner/planner";
-import { problemInfo } from "@/lib/problems/catalog";
 import { formatMinutes } from "@/lib/time";
-import type { DayPlan, Difficulty, PlanItem, Subject } from "@/lib/types";
-import { openConceptReview, openFlashcards } from "@/stores/conceptDialogStore";
+import type { DayPlan, PlanItem } from "@/lib/types";
 import {
   removePlanItem,
   restorePlan,
@@ -53,16 +49,18 @@ import {
   setPlanItemSkipped,
   swapPlanItem,
 } from "@/stores/planStore";
-import { findConcept } from "@/stores/customConceptStore";
 import { askToStartBlock, blockActive, useFocusTimerStore } from "@/stores/focusTimerStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { toast } from "@/stores/toastStore";
 import { plannerInputNow } from "../insight/useInsight";
+import { ItemMinutes } from "../adhd/ItemMinutes";
+import { itemDifficulty, itemSubject, swappable } from "./planItems";
+import { startTarget } from "./startTarget";
 import type { TodayPlan } from "./useTodayPlan";
 
 const BUDGET_PRESETS = [15, 30, 60, 90, 120] as const;
 
-const KIND_ICON: Record<PlanItem["kind"], LucideIcon> = {
+export const KIND_ICON: Record<PlanItem["kind"], LucideIcon> = {
   resolve: RotateCcw,
   "review-concept": Layers,
   "learn-concept": BookOpen,
@@ -90,43 +88,6 @@ const KIND_LABEL: Record<PlanItem["kind"], string> = {
   thought: "parked thoughts",
 };
 
-/** Where Start goes: a link, or a dialog opened in place (flashcards, a concept review). */
-function startTarget(item: PlanItem): { href: string } | { run: () => void } | null {
-  const ref = item.refId;
-  switch (item.kind) {
-    case "resolve":
-      return ref ? { href: routeHref("/problems", ref, { mode: "resolve" }) } : null;
-    case "new-problem":
-      return ref ? { href: routeHref("/problems", ref) } : null;
-    case "learn-concept":
-      return ref ? { href: routeHref("/map", undefined, { focus: ref }) } : null;
-    case "review-concept": {
-      const ids = item.refIds?.length ? item.refIds : ref ? [ref] : [];
-      if (ids.length === 0) return null;
-      if (ids.length === 1 && item.origin !== "planner")
-        return { run: () => openConceptReview(ids[0]!) };
-      return { run: () => openFlashcards({ conceptIds: ids, title: item.title, session: true }) };
-    }
-    case "drill":
-      return { href: "#/drill" };
-    case "revision":
-      return {
-        href: routeHref("/revision", undefined, { scope: ref === "revision-day" ? "day" : "week" }),
-      };
-    case "mental-math":
-      return { href: routeHref("/mental-math", undefined, { mode: "speed" }) };
-    case "mock":
-      return { href: routeHref("/mock", undefined, { type: "dsa" }) };
-    case "design":
-      return ref ? { href: routeHref("/designs", ref) } : null;
-    case "story":
-      return { href: routeHref("/stories", undefined, ref ? { question: ref } : undefined) };
-    case "thought":
-      // A parked thought is the owner's own note: it has no screen, only Done.
-      return null;
-  }
-}
-
 function StartButton({
   item,
   variant = "secondary",
@@ -150,14 +111,17 @@ function StartButton({
   );
 }
 
-function SwapButton({
+export function SwapButton({
   item,
   plan,
   className,
+  label = "Swap",
 }: {
   item: PlanItem;
   plan: DayPlan;
   className?: string;
+  /** The button's words ("Swap this task" on ADHD mode's Now card). */
+  label?: string;
 }) {
   const [options, setOptions] = useState<PlanItem[] | null>(null);
   return (
@@ -172,7 +136,7 @@ function SwapButton({
       }}
       renderTrigger={(props) => (
         <Button {...props} size="sm" variant="ghost" icon={ArrowLeftRight} className={className}>
-          Swap
+          {label}
         </Button>
       )}
     >
@@ -309,35 +273,8 @@ function BudgetPicker({ plan, onPick }: { plan: DayPlan; onPick: (budget: number
   );
 }
 
-/** The subject an item belongs to (its concept, or its problem's first concept or topic). */
-function itemSubject(
-  item: PlanItem,
-  problems: ReturnType<typeof useProblemStore.getState>["states"],
-): Subject | undefined {
-  const ref = item.refIds?.[0] ?? item.refId;
-  if (!ref) return item.kind === "story" ? subjectById.get("career") : undefined;
-  if (item.kind === "resolve" || item.kind === "new-problem" || item.kind === "design") {
-    const info = problemInfo(ref, problems[ref]);
-    const concept = info?.conceptIds[0] ? findConcept(info.conceptIds[0]) : undefined;
-    const subjectId =
-      concept?.subjectId ?? (info?.topicId ? topicById.get(info.topicId)?.subjectId : undefined);
-    return subjectId ? subjectById.get(subjectId) : undefined;
-  }
-  if (item.kind === "story") return subjectById.get("career");
-  const concept = findConcept(ref);
-  return concept ? subjectById.get(concept.subjectId) : undefined;
-}
-
-function itemDifficulty(
-  item: PlanItem,
-  problems: ReturnType<typeof useProblemStore.getState>["states"],
-): Difficulty | undefined {
-  if (item.kind !== "resolve" && item.kind !== "new-problem") return undefined;
-  return item.refId ? problemInfo(item.refId, problems[item.refId])?.difficulty : undefined;
-}
-
 /** Skip for planned items; Remove for the owner's own (both with Undo). */
-function SkipButton({
+export function SkipButton({
   item,
   date,
   className,
@@ -399,9 +336,6 @@ function FocusBlockButton({ item }: { item: PlanItem }) {
     </Button>
   );
 }
-
-const swappable = (item: PlanItem) =>
-  item.kind !== "drill" && item.kind !== "mental-math" && item.kind !== "thought";
 
 function OwnerNote({ item }: { item: PlanItem }) {
   if (item.origin === "planner" || /Added by you/.test(item.reason)) return null;
@@ -479,7 +413,9 @@ export function UpNextCard({ today }: { today: TodayPlan | null }) {
           </Chip>
         )}
         {difficulty && <DifficultyChip difficulty={difficulty} />}
-        <Chip>{current.estMinutes} min</Chip>
+        <Chip>
+          <ItemMinutes item={current} />
+        </Chip>
       </div>
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 pt-2">
         <StartButton item={current} variant="primary" className="h-12 px-8 text-md max-sm:w-full" />
@@ -588,7 +524,9 @@ function RouteStop({
           >
             {item.title}
           </p>
-          <span className="shrink-0 text-sm text-muted tabular-nums">{item.estMinutes} min</span>
+          <span className="shrink-0 text-sm text-muted tabular-nums">
+            <ItemMinutes item={item} />
+          </span>
         </div>
         <p className="mt-0.5 text-sm text-muted">
           {subject && <SubjectMark subjectId={subject.id} className="mr-1.5 align-[0.05em]" />}

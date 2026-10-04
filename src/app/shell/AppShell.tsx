@@ -6,12 +6,14 @@ import { PageSkeleton } from "@/components/ui/Misc";
 import { CopyPromptModal } from "@/features/ai/CopyPromptModal";
 import { CommandPalette } from "@/features/palette/CommandPalette";
 import { getSearchIndex } from "@/features/palette/docs";
+import { AdhdLayer } from "@/features/adhd/AdhdLayer";
 import { FocusLayer } from "@/features/focus/FocusLayer";
 import { CsvImportDialog } from "@/features/problems/CsvImportDialog";
 import { QuickAddDialog } from "@/features/problems/QuickAddDialog";
 import { useReviewQueue } from "@/features/review/useReviewQueue";
 import { weeklyReviewDue } from "@/lib/insight/weekly";
 import { useConceptDialogs } from "@/stores/conceptDialogStore";
+import { useAdhdPart } from "@/stores/adhdStore";
 import { holdingNotices } from "@/stores/focusTimerStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { toast } from "@/stores/toastStore";
@@ -108,11 +110,13 @@ export function AppShell() {
   const route = useRoute();
   const collapsedPref = useUiStore((s) => s.sidebarCollapsed);
   const wide = useMediaQuery("(min-width: 1024px)");
-  const collapsed = collapsedPref ?? !wide;
+  // ADHD mode's calm screen (F32): the sidebar shrinks to icons, with no badges or counts.
+  const calm = useAdhdPart("calm");
+  const collapsed = calm || (collapsedPref ?? !wide);
   const mainRef = useRef<HTMLElement>(null);
   const Page = PAGES[route.name];
   const reviewCount = useReviewQueue().count;
-  const badges = { review: reviewCount };
+  const badges = calm ? {} : { review: reviewCount };
 
   useGlobalShortcuts();
   usePrebuiltSearchIndex();
@@ -133,7 +137,7 @@ export function AppShell() {
       >
         Skip to content
       </button>
-      <Sidebar route={route} collapsed={collapsed} badges={badges} />
+      <Sidebar route={route} collapsed={collapsed} badges={badges} lockCollapsed={calm} />
       <div className="flex min-w-0 flex-1 flex-col print:block">
         <TopBar />
         <main
@@ -165,6 +169,7 @@ export function AppShell() {
       <CsvImportDialog />
       <FocusTimerController />
       <FocusLayer />
+      <AdhdLayer />
       <ConceptDialogHost />
       <CopyPromptModal />
     </div>

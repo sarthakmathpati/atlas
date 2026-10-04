@@ -8,6 +8,7 @@
 // Focus time counts toward today's activity through the activity clock. A running or paused
 // block is mirrored to localStorage (this browser only), so a reload keeps it; breaks are not.
 import { create } from "zustand";
+import { adhdPartOn, adhdSettings } from "@/lib/adhd/prefs";
 import { cleanIntention, intentionForItem } from "@/lib/focus/intention";
 import { focusPrefs } from "@/lib/focus/prefs";
 import { localDate } from "@/lib/time";
@@ -107,11 +108,18 @@ export function focusElapsedMs(
   return state.accumulatedMs + (state.startedAt === null ? 0 : Math.max(0, now - state.startedAt));
 }
 
-/** Block and break lengths from Settings (25 and 5 minutes by default). */
+/**
+ * Block and break lengths from Settings (25 and 5 minutes by default). In ADHD mode, with its
+ * breaks part on, ADHD mode's own lengths apply (15 and 5 minutes by default, F32).
+ */
 export function focusDurations(prefs = useProfileStore.getState().profile?.prefs): {
   focus: number;
   break: number;
 } {
+  if (prefs && adhdPartOn(prefs, "breaks")) {
+    const adhd = adhdSettings(prefs);
+    return { focus: adhd.blockMinutes * 60_000, break: adhd.breakMinutes * 60_000 };
+  }
   return {
     focus: (prefs?.focusMinutes ?? 25) * 60_000,
     break: (prefs?.breakMinutes ?? 5) * 60_000,
@@ -178,8 +186,29 @@ export function cancelAskToStart(): void {
   useFocusTimerStore.setState({ asking: null });
 }
 
+export interface StartedBlock {
+  intention: string;
+  planItemId: string | null;
+  minutes: number;
+}
+
+const startListeners = new Set<(block: StartedBlock) => void>();
+
+/** Hears each new block as it starts (ADHD mode's Study with Claude, F32). Not on a reload. */
+export function onBlockStart(listener: (block: StartedBlock) => void): () => void {
+  startListeners.add(listener);
+  return () => {
+    startListeners.delete(listener);
+  };
+}
+
 /** Starts a focus block with its line. */
 export function startBlock(intention: string, planItemId: string | null = null, now = Date.now()) {
+  const started: StartedBlock = {
+    intention: cleanIntention(intention),
+    planItemId,
+    minutes: Math.round(focusDurations().focus / 60_000),
+  };
   useFocusTimerStore.setState({
     mode: "focus",
     running: true,
@@ -193,6 +222,13 @@ export function startBlock(intention: string, planItemId: string | null = null, 
     heldShown: false,
   });
   startActivitySource(SOURCE);
+  for (const listener of startListeners) {
+    try {
+      listener(started);
+    } catch (e) {
+      console.error("A block-start listener failed", e);
+    }
+  }
 }
 
 // ----- ending a block and the break ------------------------------------------------------------

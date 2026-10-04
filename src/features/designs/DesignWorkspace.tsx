@@ -9,6 +9,7 @@ import { normalizeLanguage } from "@/components/ui/code/languages";
 import { cx } from "@/components/ui/cx";
 import { Skeleton } from "@/components/ui/Misc";
 import { HorizonLine } from "@/components/ui/Horizon";
+import { TimeDisc } from "@/features/adhd/TimeDisc";
 import { formatClock, useTimer } from "@/components/ui/timer";
 import { DESIGN_MINUTES, designKind, sectionsFor, wordsWritten } from "@/lib/designs/designs";
 import type { DesignAttempt, SeedProblem } from "@/lib/types";
@@ -163,6 +164,15 @@ export function DesignWorkspace({
             totalMs={LIMIT_MS}
             label="Time left for the design"
             className="absolute inset-x-4 top-0"
+          />
+          <TimeDisc
+            elapsedMs={LIMIT_MS - remaining}
+            totalMs={LIMIT_MS}
+            running={timer.running}
+            label="Time for the design"
+            cueKey={`design:${attempt.id}`}
+            size="sm"
+            showText={false}
           />
           <span
             role="timer"

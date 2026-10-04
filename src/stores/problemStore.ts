@@ -289,7 +289,9 @@ export function saveAttempt(input: NewAttempt, now: Date = new Date()): SavedAtt
     conceptsTouched: touched,
   });
   if (!input.keepOutOfReview)
-    void markPlanItemDone(repo, today, input.problemId, ["resolve", "new-problem"]);
+    void markPlanItemDone(repo, today, input.problemId, ["resolve", "new-problem"], {
+      took: input.minutes,
+    });
 
   let message = nextReviewMessage(schedule, next.inReview);
   if (trimmed > 0) message += ` The oldest attempt was removed to stay within ${ATTEMPT_CAP}.`;
@@ -457,6 +459,27 @@ export function applyCsvPlan(
   commit(...changed);
   refreshConcepts([...new Set(changed.flatMap((s) => conceptsOfProblem(s.problemId, s)))]);
   return { problems: changed.length, attempts, created, duplicates, snapshot };
+}
+
+/**
+ * Moves problems' review dates (ADHD mode's Fresh start, F32): only `srs.dueAt` changes; the
+ * step, streaks and history stay. Returns the states before, for Undo (restoreSnapshot).
+ */
+export function setProblemDueDates(
+  dates: Readonly<Record<string, string>>,
+): Record<string, ProblemState | null> {
+  const snapshot: Record<string, ProblemState | null> = {};
+  const changed: ProblemState[] = [];
+  const stamp = nowIso();
+  for (const [id, dueAt] of Object.entries(dates)) {
+    const current = getProblemState(id);
+    if (!current || current.srs.dueAt === dueAt) continue;
+    snapshot[id] = current;
+    changed.push({ ...current, srs: { ...current.srs, dueAt }, updatedAt: stamp });
+  }
+  commit(...changed);
+  refreshConcepts([...new Set(changed.flatMap((s) => conceptsOfProblem(s.problemId, s)))]);
+  return snapshot;
 }
 
 /** Undo for a CSV import: puts every touched problem back as it was. */

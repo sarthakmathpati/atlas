@@ -2,7 +2,8 @@
 // Unlocks, Connected ideas); interview questions with hidden answers; and the ways to check
 // yourself (flashcards, explain it back, a quick quiz from Claude). "Explain with Claude" writes the
 // levels for the owner's own concepts (kept in the note) and explains any concept another way.
-// The text loads with its subject (data/content.ts); a skeleton shows meanwhile.
+// The text loads with its subject (data/content.ts); a skeleton shows meanwhile. In ADHD mode
+// (F32) a level comes one part at a time, each followed by a quick check, with read aloud.
 import {
   BookmarkCheck,
   BookOpenText,
@@ -26,6 +27,8 @@ import { useConceptNoteStore } from "@/stores/conceptNoteStore";
 import { setLastLevel, useConceptState, useConceptStatus } from "@/stores/conceptStateStore";
 import { useConceptContent } from "@/stores/contentStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useAdhdPart } from "@/stores/adhdStore";
+import { ReadingParts } from "../adhd/ReadingParts";
 import { toggleStudied } from "./conceptActions";
 import { ConceptLink } from "./ConceptLink";
 import { ContentUnavailable } from "./ContentUnavailable";
@@ -147,6 +150,19 @@ function Levels({
       : level === "interview"
         ? content.interview.map((b) => `- ${b}`).join("\n")
         : (content.deep ?? "");
+  const reading = useAdhdPart("reading");
+  const studiedNudge = level === "interview" && !state?.studied && (
+    <Callout
+      icon={BookmarkCheck}
+      actions={
+        <Button size="sm" onClick={() => toggleStudied(concept)}>
+          Mark as studied
+        </Button>
+      }
+    >
+      Read the interview points? Mark it as studied and it comes back for a short review.
+    </Callout>
+  );
   return (
     <div className="space-y-4">
       <SegmentedControl<Level>
@@ -159,35 +175,44 @@ function Levels({
           ...(content.deep ? [{ value: "deep" as const, label: "Deep" }] : []),
         ]}
       />
-      <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-        {level === "interview" ? (
-          // The interview points in their own card (12.10.8).
-          <section
-            aria-labelledby={`${concept.id}-points`}
-            className="max-w-[74ch] rounded-panel bg-surface-sunken px-5 py-4"
-          >
-            <CardLabel className="mb-1">
-              <span id={`${concept.id}-points`}>Interview points</span>
-            </CardLabel>
-            <MarkdownView onConceptLink={onOpenConcept}>{text}</MarkdownView>
-          </section>
-        ) : (
-          <MarkdownView onConceptLink={onOpenConcept}>{text}</MarkdownView>
-        )}
-      </Suspense>
-      {level === "interview" && !state?.studied && (
-        <Callout
-          icon={BookmarkCheck}
-          actions={
-            <Button size="sm" onClick={() => toggleStudied(concept)}>
-              Mark as studied
-            </Button>
+      {reading ? (
+        // ADHD mode's reading support (F32): one part at a time, a quick check after each.
+        <ReadingParts
+          key={`${concept.id}:${level}`}
+          concept={concept}
+          level={level}
+          content={content}
+          questions={questions}
+          onOpenConcept={onOpenConcept}
+          after={
+            <>
+              {studiedNudge}
+              <CheckYourself concept={concept} level={level} questions={questions} />
+            </>
           }
-        >
-          Read the interview points? Mark it as studied and it comes back for a short review.
-        </Callout>
+        />
+      ) : (
+        <>
+          <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+            {level === "interview" ? (
+              // The interview points in their own card (12.10.8).
+              <section
+                aria-labelledby={`${concept.id}-points`}
+                className="max-w-[74ch] rounded-panel bg-surface-sunken px-5 py-4"
+              >
+                <CardLabel className="mb-1">
+                  <span id={`${concept.id}-points`}>Interview points</span>
+                </CardLabel>
+                <MarkdownView onConceptLink={onOpenConcept}>{text}</MarkdownView>
+              </section>
+            ) : (
+              <MarkdownView onConceptLink={onOpenConcept}>{text}</MarkdownView>
+            )}
+          </Suspense>
+          {studiedNudge}
+          <CheckYourself concept={concept} level={level} questions={questions} />
+        </>
       )}
-      <CheckYourself concept={concept} level={level} questions={questions} />
     </div>
   );
 }

@@ -52,6 +52,32 @@
         }
         document.documentElement.setAttribute("data-theme", theme);
       })();
+      // ADHD mode (F32): the parts that are on, so the calm screen shows from the first paint.
+      // Mirrors src/lib/adhd/prefs.ts (tested).
+      (function () {
+        var raw = null;
+        try {
+          raw = localStorage.getItem("atlas.adhd");
+        } catch (e) {
+          return;
+        }
+        if (typeof raw !== "string") return;
+        var known = [
+          "calm",
+          "nowCard",
+          "time",
+          "place",
+          "rewards",
+          "breaks",
+          "startHelp",
+          "reading",
+          "gentle",
+        ];
+        var parts = raw.split(/\s+/).filter(function (p) {
+          return known.indexOf(p) >= 0;
+        });
+        document.documentElement.setAttribute("data-adhd", parts.join(" "));
+      })();
     </script>
   </head>
   <body>

@@ -14,6 +14,7 @@ import { cx } from "@/components/ui/cx";
 import { Select } from "@/components/ui/Field";
 import { Skeleton } from "@/components/ui/Misc";
 import { Timer } from "@/components/ui/Timer";
+import { WorkspaceDisc } from "@/features/adhd/WorkspaceDisc";
 import type { ProblemInfo } from "@/lib/problems/catalog";
 import type { ProblemState } from "@/lib/types";
 import { DryRunPanel, ReviewPanel } from "./ClaudePanels";
@@ -107,7 +108,11 @@ export function EditorPane({
         >
           {draftLabel}
         </span>
-        <Timer timer={timer} label="Attempt timer" large className="max-sm:ml-auto" />
+        {/* ADHD mode's disc (F32) beside the clock: the time planned, shrinking. */}
+        <span className="flex items-center gap-1 max-sm:ml-auto">
+          <WorkspaceDisc info={info} timer={timer} />
+          <Timer timer={timer} label="Attempt timer" large />
+        </span>
       </div>
       <div className={cx("min-h-0 bg-code", fill ? "flex-1" : "h-[56vh] min-h-[300px]")}>
         <Suspense fallback={<Skeleton className="h-full w-full rounded-none" />}>

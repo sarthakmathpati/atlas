@@ -58,6 +58,29 @@ export function fullFixture(): ExportData {
     ...profile.prefs,
     focus: { dim: true, holdNotices: false, breakView: true },
     bedtime: "23:15",
+    adhd: {
+      on: true,
+      calm: true,
+      nowCard: true,
+      time: true,
+      place: false,
+      rewards: true,
+      breaks: true,
+      startHelp: true,
+      reading: true,
+      gentle: true,
+      blockMinutes: 15,
+      breakMinutes: 5,
+      sound: "brown",
+      volume: 0.4,
+      studyWithClaude: false,
+      chime: true,
+      rewardSound: false,
+      lineFocus: true,
+      startWhen: "I finish dinner",
+      startWhenDay: { date: "2026-09-20", text: "it's 19:30" },
+      introSeenAt: T1,
+    },
   };
   const reviewed = makeProblem("lc-1", 3);
   reviewed.attempts[2] = {
@@ -230,6 +253,8 @@ export function fullFixture(): ExportData {
             estMinutes: 15,
             done: true,
             skipped: false,
+            steps: [true, true, true, true, true],
+            took: 22,
           },
           {
             id: "p2",
@@ -268,6 +293,8 @@ export function fullFixture(): ExportData {
             reviews: 1,
             conceptsTouched: 1,
             focusBlocks: { done: 2, partly: 1, movedOn: 1 },
+            stepsDone: 7,
+            planFinished: 1,
           },
         },
         streakFreezeUsed: ["2026-09-05"],
@@ -385,6 +412,16 @@ export function fullFixture(): ExportData {
         createdAt: T0,
         doneAt: T1,
         updatedAt: T1,
+      },
+    ],
+    paceStats: [
+      {
+        kind: "resolve",
+        samples: [
+          { id: "2026-09-19:resolve:lc-146", planned: 25, took: 30, at: T1 },
+          { id: "2026-09-20:p1", planned: 15, took: 22, at: T2 },
+        ],
+        updatedAt: T2,
       },
     ],
   };

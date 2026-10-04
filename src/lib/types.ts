@@ -182,6 +182,50 @@ export interface FocusPrefs {
   breakView?: boolean;
 }
 
+/** The focus sound (F32): noise made in the browser, off by default even in ADHD mode. */
+export type FocusSound = "off" | "brown" | "pink" | "white";
+
+/** The parts of ADHD mode (F32) that each have their own switch; a missing flag means on. */
+export type AdhdPart =
+  | "calm" // 1. Calm screen
+  | "nowCard" // 2. The Now card on Today
+  | "time" // 3. Time you can see
+  | "place" // 4. Keep your place
+  | "rewards" // 5. Rewards right away
+  | "breaks" // 6. Breaks that work
+  | "startHelp" // 7. Starting help (the if-then line)
+  | "reading" // 8. Reading support
+  | "gentle"; // 11. Gentle language
+
+/**
+ * ADHD mode (F32), synced with the profile. Parts 9 (focus sound) and 10 (Study with Claude) are
+ * `sound` and `studyWithClaude`; the other parts have a flag each (read with `adhdPrefs`).
+ */
+export type AdhdPrefs = Partial<Record<AdhdPart, boolean>> & {
+  on: boolean;
+  /** Focus block and break lengths while ADHD mode is on (15 and 5 minutes by default). */
+  blockMinutes: number;
+  breakMinutes: number;
+  /** 9. Focus sound during a block. */
+  sound: FocusSound;
+  /** Sound volume, 0 to 1. */
+  volume: number;
+  /** 10. Study with Claude (prompt 20), an experiment. */
+  studyWithClaude: boolean;
+  /** A soft chime at half time and 2 minutes left (part 3), off until chosen. */
+  chime?: boolean;
+  /** A small sound for each finished step (part 5), off until chosen. */
+  rewardSound?: boolean;
+  /** Dims the text outside the current paragraph (part 8), off until chosen. */
+  lineFocus?: boolean;
+  /** The if-then line's "when" (part 7), kept as a default for every day… */
+  startWhen?: string;
+  /** …or for one day only. */
+  startWhenDay?: { date: string; text: string };
+  /** When the card that lists what changed was first shown. */
+  introSeenAt?: string;
+};
+
 export interface Profile {
   name: string;
   track: Track;
@@ -210,6 +254,8 @@ export interface Profile {
     focus?: FocusPrefs;
     /** An optional bedtime ("HH:MM", local): a wrap-up note shows 30 minutes before it (F31). */
     bedtime?: string;
+    /** ADHD mode (F32); missing until it is first turned on. */
+    adhd?: AdhdPrefs;
   };
   lastBackupAt?: string;
   /** When the owner last dismissed the backup banner (it stays hidden for 3 days). */
@@ -435,6 +481,10 @@ export interface PlanItem {
    * Replanning (a new budget, minimum day) keeps the owner's items and every done item.
    */
   origin?: "planner" | "owner";
+  /** ADHD mode (F32): which of the item's steps (lib/adhd/steps.ts) are ticked. */
+  steps?: boolean[];
+  /** Minutes the item took (its clock while it ran, or the attempt's minutes), set when done. */
+  took?: number;
 }
 
 export interface DayPlan {
@@ -475,6 +525,10 @@ export interface ActivityDay {
   mocks?: number;
   /** Focus blocks ended, by how the owner said they went (F31). */
   focusBlocks?: FocusBlockCounts;
+  /** Steps finished in ADHD mode (F32): each drops ink on Today and is never taken away. */
+  stepsDone?: number;
+  /** 1 once every item on the day's plan was done (F32: a flag on the week's strip). */
+  planFinished?: number;
 }
 
 export type FocusOutcome = "done" | "partly" | "movedOn";
@@ -494,6 +548,26 @@ export interface ParkedThought {
   createdAt: string;
   /** Set when the owner marks it done or adds it to a day's plan. */
   doneAt?: string;
+  updatedAt: string;
+}
+
+/** One finished plan item's planned and actual minutes (F32 "time you can see"). */
+export interface PaceSample {
+  /** The day and the plan item ("2026-10-04:resolve:lc-69"), so an item counts once. */
+  id: string;
+  planned: number;
+  took: number;
+  /** When the item was finished (ISO). */
+  at: string;
+}
+
+/**
+ * The owner's pace for one kind of plan item (F32): the latest 20 samples. The median ratio of
+ * took to planned scales estimates in ADHD mode. All kinds sync as one `paceStats` document.
+ */
+export interface PaceStat {
+  kind: PlanItem["kind"];
+  samples: PaceSample[];
   updatedAt: string;
 }
 

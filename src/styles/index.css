@@ -4,6 +4,7 @@
 @import "./subjects.generated.css";
 @import "./components.css";
 @import "./map.css";
+@import "./adhd.css";
 
 /*
  * Tailwind utilities read the design tokens, so `bg-surface`, `text-muted`, `border-rule` etc.
@@ -62,17 +63,18 @@
   --shadow-focal: var(--shadow-focal);
   --shadow-pill: var(--shadow-pill);
 
-  --text-xs: 12px;
+  /* Sizes go through variables so ADHD mode's calm screen can make text one step larger. */
+  --text-xs: var(--fs-xs);
   --text-xs--line-height: 1.45;
-  --text-sm: 13px;
+  --text-sm: var(--fs-sm);
   --text-sm--line-height: 1.5;
-  --text-base: 14px;
+  --text-base: var(--fs-base);
   --text-base--line-height: 1.55;
-  --text-md: 16px;
+  --text-md: var(--fs-md);
   --text-md--line-height: 1.55;
-  --text-lg: 18px;
+  --text-lg: var(--fs-lg);
   --text-lg--line-height: 1.4;
-  --text-xl: 22px;
+  --text-xl: var(--fs-xl);
   --text-xl--line-height: 1.25;
   --text-2xl: 28px;
   --text-2xl--line-height: 1.2;
@@ -82,6 +84,15 @@
   --text-3xl--line-height: 1.15;
   --text-4xl: 40px;
   --text-4xl--line-height: 1.1;
+}
+
+:root {
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
 }
 
 @layer base {

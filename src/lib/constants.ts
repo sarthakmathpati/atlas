@@ -86,6 +86,9 @@ export const ESTIMATES = {
   revision: 20,
 } as const;
 
+/** ADHD mode (F32): the pace is the median over the latest 20 finished items of a kind. */
+export const PACE_SAMPLES = 20;
+
 /** Storage limits for the claude.ai `db` capability (section 4.3). */
 export const DB_LIMITS = {
   maxDocuments: 5000,

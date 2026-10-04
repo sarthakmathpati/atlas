@@ -114,11 +114,26 @@ let lastTick = 0;
  */
 let pendingSeconds = 0;
 
+type CountedListener = (countedMs: number, now: number) => void;
+const countedListeners = new Set<CountedListener>();
+
+/**
+ * Hears every stretch of time the clock counts (ADHD mode's 90-minute check-in, F32). Returns
+ * a function that stops listening.
+ */
+export function onActivityCounted(listener: CountedListener): () => void {
+  countedListeners.add(listener);
+  return () => {
+    countedListeners.delete(listener);
+  };
+}
+
 function tick(): void {
   const now = Date.now();
   const gap = now - lastTick;
   lastTick = now;
   if (gap <= 0 || gap > MAX_TICK_GAP_MS) return;
+  for (const listener of countedListeners) listener(gap, now);
   pendingSeconds += gap / 1000;
   const minutes = Math.floor(pendingSeconds / 60);
   if (minutes <= 0) return;

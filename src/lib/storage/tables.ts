@@ -13,6 +13,7 @@ import type {
   MentalMathRun,
   MistakeTag,
   MockSession,
+  PaceStat,
   ParkedThought,
   ProblemState,
   Story,
@@ -34,6 +35,7 @@ export const TABLE_NAMES = [
   "customConcepts",
   "generatedDrills",
   "parkedThoughts",
+  "paceStats",
 ] as const;
 
 export type TableName = (typeof TABLE_NAMES)[number];
@@ -54,6 +56,7 @@ export interface TableTypes {
   customConcepts: CustomConcept;
   generatedDrills: GeneratedDrill;
   parkedThoughts: ParkedThought;
+  paceStats: PaceStat;
 }
 
 /** The field that identifies each record. */
@@ -73,6 +76,7 @@ export const TABLE_KEY: { [K in TableName]: keyof TableTypes[K] & string } = {
   customConcepts: "id",
   generatedDrills: "id",
   parkedThoughts: "id",
+  paceStats: "kind",
 };
 
 export function keyOf<K extends TableName>(table: K, value: TableTypes[K]): string {
@@ -96,4 +100,5 @@ export const TABLE_LABELS: Record<TableName, string> = {
   customConcepts: "your own concepts",
   generatedDrills: "generated drills",
   parkedThoughts: "parked thoughts",
+  paceStats: "pace records",
 };

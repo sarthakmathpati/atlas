@@ -18,6 +18,7 @@
 //   customConcepts          { [id]: CustomConcept }
 //   generatedDrills         { [id]: GeneratedDrill }
 //   parkedThoughts          { [id]: ParkedThought }, latest 300
+//   paceStats               { [kind]: PaceStat } (latest 20 samples each)
 //
 // Every body is an envelope { kind, key, v, updatedAt, data } where `key` is the document id, so
 // startup can load kind by kind, paging on the key. Reads are served from an in-memory cache.
@@ -102,6 +103,7 @@ const LAYOUT: Record<TableName, DocLayout> = {
     docFor: () => "parkedThoughts",
     cap: DB_LIMITS.parkedThoughts,
   },
+  paceStats: { mode: "grouped", kind: "paceStats", docFor: () => "paceStats" },
 };
 
 const KIND_TO_TABLE = new Map<string, TableName>(TABLE_NAMES.map((t) => [LAYOUT[t].kind, t]));

@@ -30,6 +30,7 @@ export type AITask =
   | "concept-suggest"
   | "mistake-advice"
   | "full-solution"
+  | "study-companion"
   | "chat"
   | "test-connection";
 

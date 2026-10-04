@@ -2,7 +2,8 @@
 // Claude and the theme menu, as pills on the canvas (no dividing line). On phones it also carries
 // the app name, and search becomes an icon. While a focus block runs (F31) the block's line shows
 // here (a second row on phones), held notes are counted, and the extras are marked peripheral so
-// the focus lens dims them.
+// the focus lens dims them. The ADHD mode switch (F32) sits at the right on every page; with its
+// calm screen on, search shrinks to its icon and the minutes and streak counts step aside.
 import { Flame, Search, Settings2, Sparkles, Timer } from "lucide-react";
 import { useMemo } from "react";
 import { BrandMark } from "@/components/ui/BrandMark";
@@ -23,7 +24,9 @@ import { useUiStore } from "@/stores/uiStore";
 import { navigate } from "../router";
 import { readStoredTheme, setTheme, type ThemeChoice } from "../theme";
 import { THEME_ICON, THEME_OPTIONS } from "../themeOptions";
+import { AdhdSwitch } from "@/features/adhd/AdhdSwitch";
 import { FocusLine, HeldNotes } from "@/features/focus/TopBarFocus";
+import { useAdhdPart } from "@/stores/adhdStore";
 import { blockActive, useFocusTimerStore } from "@/stores/focusTimerStore";
 import { FocusTimerButton } from "./FocusTimer";
 
@@ -113,9 +116,12 @@ function ThemeMenu() {
 export function TopBar() {
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const setAskOpen = useUiStore((s) => s.setAskOpen);
-  // During a focus block the search pill narrows to make room for the block's line.
-  const focusing = useFocusTimerStore((s) => blockActive(s) && s.intention !== "");
+  // During a focus block the search pill narrows to make room for the block's line; the calm
+  // screen (ADHD mode) keeps it narrow and drops the counts.
+  const blockFocus = useFocusTimerStore((s) => blockActive(s) && s.intention !== "");
   const blockOn = useFocusTimerStore((s) => blockActive(s));
+  const calm = useAdhdPart("calm");
+  const focusing = blockFocus || calm;
   return (
     <header className="shrink-0 bg-canvas print:hidden">
       <div className="flex h-16 items-center gap-1 px-2 sm:gap-2 sm:px-4 lg:px-6">
@@ -160,6 +166,7 @@ export function TopBar() {
         {!focusing && <ActivityChip />}
         <HeldNotes />
         <FocusTimerButton />
+        <AdhdSwitch />
         <Button
           variant="ghost"
           size="sm"

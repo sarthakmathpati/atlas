@@ -3,8 +3,11 @@
 // the 7-day streak strip, ready-to-learn cards with subject tiles and the review count as one big
 // number; a setup checklist while it isn't finished. On the interview date and the day before,
 // a calm interview day view replaces the plan (F31); `?view=plan` shows the plan anyway.
+// In ADHD mode (F32) the Now card replaces Up next and the route (folded as "Then: 3 more
+// stops"), with the if-then line, Today's ink, the coming break and Welcome back; the calm
+// screen puts everything else behind "Show more".
 import { CalendarRange, Check, Circle, Search, Sparkles } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { routeHref, useRoute } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { Button } from "@/components/ui/Button";
@@ -23,6 +26,10 @@ import { usePlanStore } from "@/stores/planStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useAdhd } from "@/stores/adhdStore";
+import { NowCard, ThenMore } from "../adhd/NowCard";
+import { ShowMore } from "../adhd/ShowMore";
+import { BreakHint, InkCard, StartLine, WelcomeBack } from "../adhd/TodayParts";
 import { useReadiness } from "../insight/useInsight";
 import { useReviewQueue } from "../review/useReviewQueue";
 import { InterviewDayView } from "./InterviewDay";
@@ -184,6 +191,10 @@ export default function TodayPage() {
   const doneCount = steps.filter((s) => s.done).length;
   const calm = interviewDay(today, profile?.interviewDate);
   const showPlan = route.query.get("view") === "plan";
+  const adhd = useAdhd();
+  const nowOn = adhd.on && adhd.parts.nowCard;
+  const calmScreen = adhd.on && adhd.parts.calm;
+  const [more, setMore] = useState(false);
 
   if (calm && !showPlan) {
     return (
@@ -194,9 +205,8 @@ export default function TodayPage() {
     );
   }
 
-  return (
-    <PageFrame>
-      <TodayHead profile={profile} model={model} plan={plan} today={today} />
+  const notes = (
+    <>
       {calm && (
         <p className="-mt-2 mb-4 text-sm">
           <a href={routeHref("/today")} className="text-accent hover:underline">
@@ -204,7 +214,11 @@ export default function TodayPage() {
           </a>
         </p>
       )}
-
+      {adhd.on && adhd.parts.gentle && (
+        <div className="mb-6">
+          <WelcomeBack date={today} />
+        </div>
+      )}
       {profile && !profile.onboardingDone && (
         <Callout
           className="mb-6"
@@ -234,64 +248,121 @@ export default function TodayPage() {
           A short look back at the week, and a focus for the next one.
         </Callout>
       )}
-      {/* On phones the setup checklist comes after the side cards, so the day comes first. */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:gap-x-8">
-        <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
+    </>
+  );
+
+  const main = (
+    <>
+      {adhd.on && adhd.parts.startHelp && <StartLine date={today} />}
+      {nowOn ? (
+        <>
+          <NowCard today={plan} />
+          {plan && <ThenMore today={plan} />}
+        </>
+      ) : (
+        <>
           <UpNextCard today={plan} />
           <RouteCard today={plan} />
+        </>
+      )}
+      {adhd.on && adhd.parts.breaks && <BreakHint date={today} />}
+      {adhd.on && adhd.parts.rewards && <InkCard today={plan} date={today} />}
+    </>
+  );
+
+  const setup = !profile ? (
+    <Card title="Get set up">
+      <div className="space-y-3" role="status" aria-label="Loading">
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-5 w-1/2" />
+        <Skeleton className="h-5 w-3/5" />
+      </div>
+    </Card>
+  ) : (
+    doneCount < steps.length && <SetupChecklist steps={steps} />
+  );
+
+  const side = (
+    <>
+      <StreakStrip />
+      <ReadyCard ready={ready} fading={fading} />
+      <ReviewCount
+        problems={queue.problems.length}
+        concepts={queue.concepts.length}
+        fading={fadingDue}
+      />
+      <Card
+        as="aside"
+        aria-labelledby="atlas-heading"
+        title={<span id="atlas-heading">Your atlas</span>}
+      >
+        <ul className="-mx-2 text-base">
+          {[
+            ["Subjects", syllabus.counts.subjects, "#/map"],
+            ["Concepts", syllabus.counts.concepts, "#/map"],
+            ["Must-know concepts", syllabus.counts.must, "#/map"],
+            ["DSA patterns", syllabus.counts.patterns, "#/map?subject=dsa"],
+            ["LeetCode problems", LEETCODE_PROBLEMS.length, "#/problems"],
+            ["Quant puzzles", QUANT_PUZZLES.length, "#/puzzles"],
+            ["Design prompts", DESIGN_PROBLEMS.length, "#/designs"],
+          ].map(([label, value, href]) => (
+            <li key={label as string}>
+              <a
+                href={href as string}
+                className="flex items-center justify-between gap-3 rounded-control px-2 py-1.5 hover:bg-surface-sunken"
+              >
+                <span className="text-muted">{label}</span>
+                <span className="font-medium text-text tabular-nums">{value}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </>
+  );
+
+  // ADHD mode's calm screen (F32): one column with the task; the rest folds behind Show more.
+  if (calmScreen) {
+    return (
+      <PageFrame>
+        <div className="mx-auto max-w-2xl">
+          <TodayHead profile={profile} model={model} plan={plan} today={today} quiet />
+          {notes}
         </div>
-        <div className="min-w-0 max-lg:order-last lg:col-start-1 lg:row-start-2">
-          {!profile ? (
-            <Card title="Get set up">
-              <div className="space-y-3" role="status" aria-label="Loading">
-                <Skeleton className="h-5 w-2/3" />
-                <Skeleton className="h-5 w-1/2" />
-                <Skeleton className="h-5 w-3/5" />
+        <div className="mx-auto max-w-2xl space-y-6">
+          {main}
+          <div>
+            <ShowMore
+              open={more}
+              onToggle={() => setMore((v) => !v)}
+              more="your streak, what's ready, reviews and your atlas"
+            />
+            {more && (
+              <div className="mt-4 grid gap-6 sm:grid-cols-2">
+                <div className="min-w-0 space-y-6">{side}</div>
+                <div className="min-w-0">{setup}</div>
               </div>
-            </Card>
-          ) : (
-            doneCount < steps.length && <SetupChecklist steps={steps} />
-          )}
+            )}
+          </div>
         </div>
+      </PageFrame>
+    );
+  }
+
+  return (
+    <PageFrame>
+      <TodayHead profile={profile} model={model} plan={plan} today={today} />
+      {notes}
+      {/* On phones the setup checklist comes after the side cards, so the day comes first. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:gap-x-8">
+        <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">{main}</div>
+        <div className="min-w-0 max-lg:order-last lg:col-start-1 lg:row-start-2">{setup}</div>
 
         <div
           data-peripheral
           className="min-w-0 space-y-6 self-start lg:col-start-2 lg:row-span-2 lg:row-start-1"
         >
-          <StreakStrip />
-          <ReadyCard ready={ready} fading={fading} />
-          <ReviewCount
-            problems={queue.problems.length}
-            concepts={queue.concepts.length}
-            fading={fadingDue}
-          />
-          <Card
-            as="aside"
-            aria-labelledby="atlas-heading"
-            title={<span id="atlas-heading">Your atlas</span>}
-          >
-            <ul className="-mx-2 text-base">
-              {[
-                ["Subjects", syllabus.counts.subjects, "#/map"],
-                ["Concepts", syllabus.counts.concepts, "#/map"],
-                ["Must-know concepts", syllabus.counts.must, "#/map"],
-                ["DSA patterns", syllabus.counts.patterns, "#/map?subject=dsa"],
-                ["LeetCode problems", LEETCODE_PROBLEMS.length, "#/problems"],
-                ["Quant puzzles", QUANT_PUZZLES.length, "#/puzzles"],
-                ["Design prompts", DESIGN_PROBLEMS.length, "#/designs"],
-              ].map(([label, value, href]) => (
-                <li key={label as string}>
-                  <a
-                    href={href as string}
-                    className="flex items-center justify-between gap-3 rounded-control px-2 py-1.5 hover:bg-surface-sunken"
-                  >
-                    <span className="text-muted">{label}</span>
-                    <span className="font-medium text-text tabular-nums">{value}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </Card>
+          {side}
         </div>
       </div>
     </PageFrame>

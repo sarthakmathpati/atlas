@@ -39,6 +39,8 @@ export class AtlasDexie extends Dexie {
     });
     // Phase 9 (F31): parked thoughts.
     this.version(2).stores({ parkedThoughts: "id" });
+    // Phase 9 (F32): the owner's pace per kind of plan item.
+    this.version(3).stores({ paceStats: "kind" });
   }
 
   entityTable<K extends TableName>(name: K): DexieTables[K] {

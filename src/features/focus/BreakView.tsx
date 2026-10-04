@@ -4,15 +4,19 @@
 // drink water), the thoughts parked for the break, "Breathe for a minute", and the break's time
 // left as a tide line along the bottom (redrawn every 5 seconds, never animated).
 // Without the break view (Settings), the question opens as a small dialog instead.
-import { ArrowRight, SquareParking } from "lucide-react";
+// In ADHD mode (F32) the break adds a movement idea, and with Study with Claude on, an optional
+// note goes with the answer and Claude replies in a sentence or two (prompt 20).
+import { ArrowRight, Footprints, SquareParking } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { CardLabel } from "@/components/ui/Card";
 import { ContourCanvas } from "@/components/ui/ContourCanvas";
 import { Dialog, FullScreenLayer } from "@/components/ui/Dialog";
+import { Input } from "@/components/ui/Field";
 import { Kbd } from "@/components/ui/Misc";
 import { breakThoughts } from "@/lib/focus/park";
-import { breakPrompt } from "@/lib/focus/prompts";
+import { adhdPartOn } from "@/lib/adhd/prefs";
+import { breakPrompt, isMovement, movementPrompt } from "@/lib/focus/prompts";
 import { horizonFraction } from "@/lib/focus/horizon";
 import { inlineIntention } from "@/lib/focus/intention";
 import { localDate } from "@/lib/time";
@@ -29,6 +33,8 @@ import {
 } from "@/stores/focusTimerStore";
 import { openPark, useParkStore } from "@/stores/parkStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { ClaudeTag } from "../ai/parts";
+import { studyAtEnd, useStudyActive, useStudyStore } from "../adhd/studyWithClaude";
 import { Breathing } from "./Breathing";
 import { useTicker } from "./hooks";
 import { ThoughtRow } from "./Park";
@@ -48,6 +54,13 @@ const OUTCOME_SAID: Record<FocusOutcome, string> = {
 /** "How did it go?" for the block that just ended. */
 function Outcome({ ended, onAnswer }: { ended: EndedBlock; onAnswer: (o: FocusOutcome) => void }) {
   const line = ended.intention ? inlineIntention(ended.intention) : "";
+  // Study with Claude (F32): an optional note goes with the answer.
+  const study = useStudyActive();
+  const [note, setNote] = useState("");
+  const answer = (o: FocusOutcome) => {
+    onAnswer(o);
+    if (study) studyAtEnd(o, note);
+  };
   return (
     <fieldset className="w-full">
       <legend className="w-full text-base text-text">
@@ -60,12 +73,27 @@ function Outcome({ ended, onAnswer }: { ended: EndedBlock; onAnswer: (o: FocusOu
           "How did the block go?"
         )}
       </legend>
+      {study && (
+        <div className="mt-3">
+          <label htmlFor="study-note" className="mb-1 flex items-center gap-2 text-sm text-muted">
+            A note for Claude (optional) <ClaudeTag />
+          </label>
+          <Input
+            id="study-note"
+            value={note}
+            maxLength={200}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Got stuck on the edge cases"
+            autoComplete="off"
+          />
+        </div>
+      )}
       <div className="mt-3 grid grid-cols-3 gap-2">
         {OUTCOMES.map((o) => (
           <button
             key={o.value}
             type="button"
-            onClick={() => onAnswer(o.value)}
+            onClick={() => answer(o.value)}
             className="flex min-h-14 flex-col items-center justify-center rounded-control bg-surface-sunken px-2 py-2 text-center transition-colors hover:bg-rule"
           >
             <span className="font-semibold text-text">{o.label}</span>
@@ -74,6 +102,27 @@ function Outcome({ ended, onAnswer }: { ended: EndedBlock; onAnswer: (o: FocusOu
         ))}
       </div>
     </fieldset>
+  );
+}
+
+/** Claude's reply after the answer (Study with Claude, F32). */
+function StudyReply() {
+  const reply = useStudyStore((s) => s.end);
+  if (!reply) return null;
+  return (
+    <div
+      className="w-full rounded-panel bg-surface/95 px-4 py-3 text-left shadow-pill"
+      role="status"
+    >
+      <p className="mb-1 flex items-center gap-2 text-sm text-muted">
+        <ClaudeTag /> After your block
+      </p>
+      <p className="text-base text-text">
+        {reply.status === "failed"
+          ? reply.message
+          : reply.text || <span className="text-muted">Thinking…</span>}
+      </p>
+    </div>
   );
 }
 
@@ -92,11 +141,18 @@ function BreakContent() {
   const thoughts = useParkStore((s) => s.thoughts);
   const now = useTicker(5_000, running);
   const [answered, setAnswered] = useState<FocusOutcome | null>(null);
-  // The idea and the landscape stay the same for the whole break.
-  const [{ prompt, seed }] = useState(() => {
+  // The idea and the landscape stay the same for the whole break. ADHD mode adds a movement
+  // idea when the break's own idea isn't one (F32).
+  const [{ prompt, seed, move }] = useState(() => {
     const today = localDate();
     const n = blocksOn(today);
-    return { prompt: breakPrompt(today, n), seed: `break:${today}:${n}` };
+    const idea = breakPrompt(today, n);
+    const adhdBreaks = adhdPartOn(useProfileStore.getState().profile?.prefs, "breaks");
+    return {
+      prompt: idea,
+      seed: `break:${today}:${n}`,
+      move: adhdBreaks && !isMovement(idea) ? movementPrompt(today, n, idea) : null,
+    };
   });
 
   const total = focusDurations(prefs).break;
@@ -144,9 +200,20 @@ function BreakContent() {
             )
           )}
 
+          <StudyReply />
+
           <p className="w-full rounded-panel bg-surface/95 px-4 py-3 text-md text-text shadow-pill">
             {prompt}
           </p>
+          {move && (
+            <p className="flex w-full items-center justify-center gap-2 rounded-panel bg-surface/95 px-4 py-3 text-md text-text shadow-pill">
+              <Footprints size={18} aria-hidden="true" className="shrink-0 text-accent" />
+              <span>
+                <span className="text-muted">And move: </span>
+                {move.charAt(0).toLowerCase() + move.slice(1)}
+              </span>
+            </p>
+          )}
 
           <Breathing className="flex justify-center" />
 
