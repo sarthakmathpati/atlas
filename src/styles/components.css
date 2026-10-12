@@ -4,6 +4,31 @@
  */
 
 @layer components {
+  /* A soft accent tint laid over the surface, so it looks and reads the same on any background:
+     the plain translucent tint over a sunken or hovered row darkened enough to take small accent
+     text below 4.5:1 (pattern chips in the problem list). */
+  .tint-accent {
+    background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface);
+  }
+
+  /* On phones a small standalone control gets an invisible tap area of at least 44 × 44 px,
+     centered on it (F30). Not for links inside running text, whose tap areas would cover the
+     lines around them. A utility such as `absolute` still wins over the `relative` here. */
+  @media (max-width: 767.98px) {
+    .tap-target {
+      position: relative;
+    }
+    .tap-target::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+
   /* ----- Dialogs, drawers and sheets (native <dialog>, section 12.6 motion) -------------------- */
 
   /* A modal layer is open: the page behind it must not scroll. */

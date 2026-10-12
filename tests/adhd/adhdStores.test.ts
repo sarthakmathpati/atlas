@@ -30,9 +30,11 @@ import {
 import { hydrateAll } from "@/stores/hydrate";
 import {
   clearNow,
+  continueStop,
   keepGoing,
   MAX_GAP_MS,
   nowElapsedMs,
+  pauseStop,
   plannedFor,
   resetNow,
   restoreNowClock,
@@ -260,6 +262,93 @@ describe("the Now card's clock", () => {
     restoreNowClock(t0 + 40_000);
     expect(useNowStore.getState().clock).toBeNull();
     clearNow();
+  });
+});
+
+describe("one clock with a focus block", () => {
+  const clock = () => useNowStore.getState().clock;
+
+  it("starts the stop's clock with a block for it, and pauses it with the block and the break", () => {
+    adhdOn();
+    plan([item("r1", "resolve"), item("r2", "new-problem")]);
+    startBlock("Re-solve it", "r1", Date.now() - 60_000);
+    expect(clock()).toMatchObject({ itemId: "r1", date: today() });
+    expect(clock()!.lastAt).not.toBeNull();
+
+    useFocusTimerStore.getState().pause();
+    expect(clock()!.lastAt).toBeNull();
+    useFocusTimerStore.getState().start();
+    expect(clock()!.lastAt).not.toBeNull();
+
+    finishBlock();
+    expect(useFocusTimerStore.getState().mode).toBe("break");
+    expect(clock()!.lastAt).toBeNull();
+    leaveBreak();
+    expect(clock()!.lastAt).toBeNull();
+
+    // The next block on the same stop carries on from the work so far.
+    useNowStore.setState({ clock: { ...clock()!, workedMs: 90_000 } });
+    startBlock("Re-solve it", "r1");
+    expect(clock()!.workedMs).toBe(90_000);
+    expect(clock()!.lastAt).not.toBeNull();
+    // Stopping without counting pauses the stop's clock too.
+    useFocusTimerStore.getState().reset();
+    expect(clock()!.lastAt).toBeNull();
+  });
+
+  it("answers the 2-minute question when a block starts for the stop", () => {
+    adhdOn();
+    plan([item("r1", "resolve")]);
+    startNow(today(), planItem("r1"), { trial: true });
+    expect(clock()!.trial).toBe("on");
+    startBlock("Re-solve it", "r1");
+    expect(clock()!.trial).toBeUndefined();
+    expect(clock()!.lastAt).not.toBeNull();
+  });
+
+  it("pauses and resumes the block from the Now card's Pause and Continue", () => {
+    adhdOn();
+    plan([item("r1", "resolve")]);
+    startBlock("Re-solve it", "r1", Date.now() - 60_000);
+    pauseStop("r1");
+    expect(useFocusTimerStore.getState().running).toBe(false);
+    expect(clock()!.lastAt).toBeNull();
+    continueStop(today(), planItem("r1"));
+    expect(useFocusTimerStore.getState().running).toBe(true);
+    expect(clock()!.lastAt).not.toBeNull();
+  });
+
+  it("leaves the block alone for a stop it isn't on, and leaves blocks without a stop alone", () => {
+    adhdOn();
+    plan([item("r1", "resolve"), item("r2", "new-problem")]);
+    startBlock("Something else");
+    expect(clock()).toBeNull();
+    startNow(today(), planItem("r2"));
+    pauseStop("r2");
+    expect(useFocusTimerStore.getState().running).toBe(true);
+    expect(clock()!.lastAt).toBeNull();
+    useFocusTimerStore.getState().reset();
+  });
+
+  it("counts the block's time as the stop's time when it's done", () => {
+    adhdOn();
+    plan([item("r1", "resolve", { estMinutes: 15 })]);
+    startBlock("Re-solve it", "r1");
+    // 20 minutes on the stop's clock by the time it's done.
+    useNowStore.setState({ clock: { ...clock()!, workedMs: 20 * 60_000, lastAt: Date.now() } });
+    setPlanItemDone(today(), "r1", true);
+    expect(planItem("r1").took).toBe(20);
+    expect(clock()).toBeNull();
+    // The block goes on: it is a time box, not the item.
+    expect(useFocusTimerStore.getState().running).toBe(true);
+    useFocusTimerStore.getState().reset();
+  });
+
+  it("starts no clock with ADHD mode off", () => {
+    plan([item("r1", "resolve")]);
+    startBlock("Re-solve it", "r1");
+    expect(clock()).toBeNull();
+    useFocusTimerStore.getState().reset();
   });
 });
 

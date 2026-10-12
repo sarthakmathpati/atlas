@@ -80,7 +80,8 @@ export function Tabs<T extends string>({
               role="tab"
               id={`${base}-tab-${item.value}`}
               aria-selected={active}
-              aria-controls={`${base}-panel-${item.value}`}
+              // Only the active panel is in the page (and only when Tabs renders it).
+              aria-controls={children && active ? `${base}-panel-${item.value}` : undefined}
               tabIndex={active ? 0 : -1}
               onClick={() => onChange(item.value)}
               className={cx(

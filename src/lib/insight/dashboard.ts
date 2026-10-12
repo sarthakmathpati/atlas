@@ -133,6 +133,13 @@ export function practiceLevel(practice: number): 0 | 1 | 2 | 3 | 4 {
   return 3;
 }
 
+/** How much of `--heat-2` is mixed into the sunken surface of a pattern tile, per level. */
+export const PATTERN_TINT = [0, 14, 26, 38, 50] as const;
+
+/** From this level on, a tile's small numbers use `--text`: muted text drops below 4.5:1 on
+ *  the stronger tints (tested in every theme). */
+export const PATTERN_TEXT_FROM_LEVEL = 3;
+
 // ----- pattern recognition (the drill, F10) ------------------------------------------------------
 
 function allChecks(src: DashboardSources): Check[] {

@@ -118,7 +118,7 @@ function BarList({
           <button
             type="button"
             onClick={() => onPick(c.tag.id)}
-            className="flex w-full items-center gap-3 rounded-control px-1 py-1 text-left hover:bg-surface-sunken max-md:py-2"
+            className="flex w-full items-center gap-3 rounded-control px-1 py-1 text-left hover:bg-surface-sunken max-md:min-h-11 max-md:py-2"
           >
             <span className="w-36 shrink-0 truncate text-base text-text sm:w-48">
               {c.tag.label}
@@ -400,7 +400,7 @@ export default function MistakesPage() {
                         shows up most in{" "}
                         <a
                           href={conceptHref(top!.conceptId)}
-                          className="text-accent hover:underline"
+                          className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
                         >
                           {concept?.name ?? top!.conceptId}
                         </a>{" "}

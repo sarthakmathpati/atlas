@@ -118,11 +118,17 @@ export default function CodeEditor({
     const list: Extension[] = [
       ...languageExtension(language),
       syntaxHighlighting(classHighlighter),
-      EditorView.contentAttributes.of({ "aria-label": label }),
+      // A read-only editor isn't editable, so it would drop out of the tab order: keep it
+      // focusable so keyboard users can reach, scroll and select the code.
+      EditorView.contentAttributes.of(
+        readOnly
+          ? { "aria-label": label, "aria-readonly": "true", tabindex: "0" }
+          : { "aria-label": label },
+      ),
     ];
     if (placeholder) list.push(placeholderExt(placeholder));
     return list;
-  }, [language, label, placeholder]);
+  }, [language, label, placeholder, readOnly]);
 
   return (
     <div

@@ -28,7 +28,7 @@ function Code({ side, tokens }: { side: DiffSide; tokens: Token[][] }) {
       {parts.map((p, i) => (
         <span
           key={i}
-          className={cx(p.className, p.marked && "rounded-[2px]")}
+          className={p.className || undefined}
           data-marked={p.marked || undefined}
         >
           {p.text}
@@ -80,8 +80,10 @@ export function DiffView({
   }, [allRows, expanded]);
 
   const changes = allRows.filter((r) => r.kind !== "same").length;
+  // Changed words are underlined in the row's color: a highlight behind them would take code
+  // colors (comments especially) below 4.5:1, and the line marks them by shape, not color alone.
   const markStyle =
-    "[&_[data-marked]]:bg-[var(--diff-del-mark)] [&_.diff-add_[data-marked]]:bg-[var(--diff-add-mark)]";
+    "[&_[data-marked]]:underline [&_[data-marked]]:decoration-2 [&_[data-marked]]:underline-offset-[3px] [&_[data-marked]]:decoration-[var(--diff-del-mark)] [&_.diff-add_[data-marked]]:decoration-[var(--diff-add-mark)]";
 
   const gapRow = (row: Extract<DiffRow, { kind: "gap" }>, cols: number) => (
     <tr key={`gap-${row.from}`}>
@@ -89,7 +91,7 @@ export function DiffView({
         <button
           type="button"
           onClick={() => setExpanded((s) => new Set(s).add(row.from))}
-          className="flex h-8 w-full items-center gap-2 px-3 font-sans text-xs text-muted hover:text-text max-md:h-10"
+          className="flex h-8 w-full items-center gap-2 px-3 font-sans text-xs text-muted hover:text-text max-md:h-11"
         >
           <ChevronsUpDown size={14} aria-hidden="true" />
           Show {row.hidden} unchanged {row.hidden === 1 ? "line" : "lines"}

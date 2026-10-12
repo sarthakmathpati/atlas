@@ -104,7 +104,7 @@ function CheckYourself({
       </h3>
       {qa ? (
         <details className="group mt-1.5">
-          <summary className="cursor-pointer list-none text-base font-medium text-text marker:hidden">
+          <summary className="cursor-pointer list-none text-base font-medium text-text marker:hidden max-md:min-h-11">
             {qa.q}
             <span className="ml-2 text-sm font-normal text-accent group-open:hidden">
               Show the answer
@@ -361,7 +361,7 @@ export function LearnTab({ concept, onOpenConcept, onWriteNotes }: LearnTabProps
             {questions.map((qa, i) => (
               <li key={i}>
                 <details className="group px-3 py-2">
-                  <summary className="cursor-pointer list-none py-0.5 font-medium text-text marker:hidden">
+                  <summary className="cursor-pointer list-none py-0.5 font-medium text-text marker:hidden max-md:py-1">
                     {qa.q}
                     <span className="ml-2 text-sm font-normal text-accent group-open:hidden">
                       Show answer

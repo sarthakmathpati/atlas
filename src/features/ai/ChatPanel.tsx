@@ -307,7 +307,7 @@ export function ChatPanel({
                 type="button"
                 onClick={() => setRemoved(new Set([...removed, c.id]))}
                 aria-label={`Leave out ${c.label}`}
-                className="grid size-5 place-items-center rounded-full text-muted hover:bg-surface hover:text-text max-md:size-7"
+                className="relative grid size-5 place-items-center rounded-full text-muted before:absolute before:-inset-2 before:content-[''] hover:bg-surface hover:text-text max-md:size-7"
               >
                 <X size={12} aria-hidden="true" />
               </button>
@@ -321,7 +321,7 @@ export function ChatPanel({
           <button
             type="button"
             onClick={() => setRemoved(new Set())}
-            className="text-sm text-accent hover:underline"
+            className="text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
           >
             Add back
           </button>

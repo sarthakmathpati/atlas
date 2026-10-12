@@ -181,7 +181,7 @@ export default function StoriesPage() {
               <div className="space-y-4">
                 <a
                   href={routeHref("/stories")}
-                  className="inline-flex items-center gap-1.5 text-sm text-accent hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
                 >
                   <ArrowLeft size={14} aria-hidden="true" />
                   All stories

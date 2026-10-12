@@ -144,7 +144,7 @@ export function AppShell() {
           ref={mainRef}
           id="main"
           tabIndex={-1}
-          className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto outline-none print:overflow-visible"
+          className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-[var(--floating-notes-room,0px)] outline-none print:overflow-visible print:pb-0"
         >
           <ShellNotices />
           <ErrorBoundary key={route.path} inline>

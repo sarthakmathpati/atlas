@@ -60,7 +60,7 @@ describe("app shell", () => {
     await waitFor(() => expect(useProfileStore.getState().profile).not.toBeNull());
     for (const [hash, heading] of ROUTES) {
       await go(hash);
-      const h1 = await screen.findByRole("heading", { level: 1, name: heading }, { timeout: 4000 });
+      const h1 = await screen.findByRole("heading", { level: 1, name: heading });
       expect(h1, hash).toBeInTheDocument();
     }
   }, 30_000);
@@ -106,9 +106,7 @@ describe("app shell", () => {
     await go("#/settings");
     const name = await screen.findByLabelText("Your name");
     await user.type(name, "Asha");
-    await waitFor(() => expect(useProfileStore.getState().profile?.name).toBe("Asha"), {
-      timeout: 3000,
-    });
+    await waitFor(() => expect(useProfileStore.getState().profile?.name).toBe("Asha"));
     await user.click(screen.getByRole("radio", { name: "Quant" }));
     expect(useProfileStore.getState().profile?.track).toBe("quant");
     await user.click(screen.getByRole("radio", { name: "Dusk" }));

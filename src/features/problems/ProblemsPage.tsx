@@ -381,7 +381,7 @@ function ActiveFilters({
             group: filters.group,
           })
         }
-        className="h-6 rounded-control px-1.5 text-sm text-accent hover:underline max-md:h-10"
+        className="h-6 rounded-control px-1.5 text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent max-md:h-11"
       >
         Clear all
       </button>
@@ -391,7 +391,20 @@ function ActiveFilters({
 
 // ----- rows ---------------------------------------------------------------------------------------
 
-function PatternChips({ ids, max = 2 }: { ids: string[]; max?: number }) {
+/**
+ * A problem's patterns. In the table they link to the pattern; on the phone and tablet layouts
+ * (`links` off) they are labels, so a card has one tap target, its title, rather than a row of
+ * 24 px chips next to it (the workspace links each pattern).
+ */
+function PatternChips({
+  ids,
+  max = 2,
+  links = true,
+}: {
+  ids: string[];
+  max?: number;
+  links?: boolean;
+}) {
   const shown = ids.slice(0, max);
   return (
     <span className="flex flex-wrap items-center gap-1">
@@ -399,7 +412,7 @@ function PatternChips({ ids, max = 2 }: { ids: string[]; max?: number }) {
         <PatternChip
           key={id}
           label={conceptName(id)}
-          href={conceptHref(id)}
+          href={links ? conceptHref(id) : undefined}
           className="max-w-[180px] truncate"
         />
       ))}
@@ -408,12 +421,17 @@ function PatternChips({ ids, max = 2 }: { ids: string[]; max?: number }) {
   );
 }
 
-function titleOf(row: ProblemRow): ReactNode {
+/** A problem's title link. In a card (`stretch`) the link covers the whole card, so a tap
+ *  anywhere on it opens the problem; the star sits above it. */
+function titleOf(row: ProblemRow, stretch = false): ReactNode {
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
       <a
         href={problemPageHref(row.info)}
-        className="font-medium text-text hover:text-accent hover:underline"
+        className={cx(
+          "font-medium text-text hover:text-accent hover:underline",
+          stretch && "after:absolute after:inset-0 after:content-['']",
+        )}
       >
         {problemLabel(row.info)}
       </a>
@@ -509,7 +527,7 @@ function TableRows({ rows, today }: { rows: ProblemRow[]; today: string }) {
               {titleOf(row)}
               {row.info.conceptIds.length > 0 && (
                 <span className="mt-1 block lg:hidden">
-                  <PatternChips ids={row.info.conceptIds} max={1} />
+                  <PatternChips ids={row.info.conceptIds} max={1} links={false} />
                 </span>
               )}
             </td>
@@ -552,17 +570,17 @@ function Cards({ rows, today }: { rows: ProblemRow[]; today: string }) {
       {rows.map((row) => (
         <li
           key={row.info.id}
-          className="flex gap-3 border-t border-rule px-4 py-3.5 first:border-t-0"
+          className="relative flex gap-3 border-t border-rule px-4 py-3.5 first:border-t-0"
         >
           <span className="mt-1 flex h-fit items-center gap-2">
             <RowSubjectMark info={row.info} />
             <ProblemStatusGlyph state={row.state} />
           </span>
           <div className="min-w-0 flex-1 space-y-1.5">
-            {titleOf(row)}
+            {titleOf(row, true)}
             <div className="flex flex-wrap items-center gap-1.5">
               <DifficultyChip difficulty={row.info.difficulty} />
-              <PatternChips ids={row.info.conceptIds} max={1} />
+              <PatternChips ids={row.info.conceptIds} max={1} links={false} />
             </div>
             {(row.lastResult || row.review.kind !== "none") && (
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
@@ -580,7 +598,7 @@ function Cards({ rows, today }: { rows: ProblemRow[]; today: string }) {
             starred={row.state?.starred ?? false}
             onToggle={() => toggleStar(row)}
             label={row.info.title}
-            className="-mt-1.5 -mr-2"
+            className="relative z-10 -mt-1.5 -mr-2"
           />
         </li>
       ))}

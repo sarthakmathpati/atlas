@@ -171,7 +171,7 @@ function ChartFrame({
           type="button"
           onClick={() => setTable((t) => !t)}
           aria-pressed={table}
-          className="h-8 shrink-0 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-10"
+          className="h-8 shrink-0 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-11"
         >
           {table ? "Show as chart" : "Show as table"}
         </button>
@@ -210,6 +210,8 @@ function ChartFrame({
       ) : (
         <>
           <Legend series={series} />
+          {/* The table is the accessible view, so the drawing is hidden from screen readers and
+              Recharts' own keyboard layer is off (it would put focus inside hidden content). */}
           <div className="mt-2" aria-hidden="true">
             {children}
           </div>
@@ -258,7 +260,12 @@ export function BarsChart({
       className={className}
     >
       <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -12 }} barGap={2}>
+        <BarChart
+          data={data}
+          margin={{ top: 4, right: 4, bottom: 0, left: -12 }}
+          barGap={2}
+          accessibilityLayer={false}
+        >
           <CartesianGrid
             vertical={false}
             // Recharts computes vertical lines even when they are off, measuring every x label.
@@ -351,7 +358,11 @@ export function LinesChart({
       className={className}
     >
       <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data} margin={{ top: 8, right: 24, bottom: 0, left: -12 }}>
+        <LineChart
+          data={data}
+          margin={{ top: 8, right: 24, bottom: 0, left: -12 }}
+          accessibilityLayer={false}
+        >
           <CartesianGrid
             vertical={false}
             // Recharts computes vertical lines even when they are off, measuring every x label.

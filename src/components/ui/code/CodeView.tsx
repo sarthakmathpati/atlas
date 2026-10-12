@@ -51,7 +51,7 @@ export function CodeView({
           <button
             type="button"
             onClick={copy}
-            className="inline-flex h-7 items-center gap-1.5 rounded-control px-2 text-xs font-medium text-muted hover:bg-surface-sunken hover:text-text max-md:h-9"
+            className="inline-flex h-7 items-center gap-1.5 rounded-control px-2 text-xs font-medium text-muted hover:bg-surface-sunken hover:text-text max-md:h-9 relative before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']"
           >
             {copied === "copied" ? (
               <Check size={13} aria-hidden="true" />
@@ -81,7 +81,11 @@ export function CodeView({
               {lineNumbers && (
                 <span
                   aria-hidden="true"
-                  className="inline-block pr-3 pl-3 text-right text-[var(--code-gutter)] select-none"
+                  className={cx(
+                    "inline-block pr-3 pl-3 text-right select-none",
+                    // On a marked line's tint the faint gutter color drops below 4.5:1 in Night.
+                    marked.has(i + 1) ? "text-muted" : "text-[var(--code-gutter)]",
+                  )}
                   style={{ width: `calc(${gutterWidth} + 24px)` }}
                 >
                   {i + 1}

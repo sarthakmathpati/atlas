@@ -4,6 +4,7 @@
 // and heatmap ramps (decisions 23 and 90). Values are read from the CSS that ships.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { PATTERN_TEXT_FROM_LEVEL, PATTERN_TINT } from "@/lib/insight/dashboard";
 import { composite, contrast, parseColor, rgbToOklch } from "../../scripts/lib/color.mjs";
 import { ruleTheme, themeTokens, TOKEN_FILES, tokenRules, type ThemeName } from "./tokens";
 
@@ -114,6 +115,42 @@ describe.each(THEMES)("%s theme", (theme) => {
       expectContrast(`${theme} --text on ${name}`, color(theme, "--text"), bg, 7);
       for (const fg of CODE_TEXT)
         expectContrast(`${theme} ${fg} on ${name}`, color(theme, fg), bg, 4.5);
+    }
+    // A marked line in a code view (the line a review points at): code colors stay readable,
+    // and its line number switches from the gutter color to muted text.
+    const marked = over(theme, "--warning-soft", "--code-bg");
+    for (const fg of CODE_TEXT.filter((t) => t !== "--code-gutter"))
+      expectContrast(`${theme} ${fg} on a marked line`, color(theme, fg), marked, 4.5);
+    expectContrast(
+      `${theme} line number on a marked line`,
+      color(theme, "--text-muted"),
+      marked,
+      4.5,
+    );
+  });
+
+  it("underlines changed words in diffs in a color that stands out from the row (3:1)", () => {
+    for (const kind of ["add", "del"]) {
+      const row = over(theme, `--diff-${kind}-bg`, "--code-bg");
+      expectContrast(
+        `${theme} --diff-${kind}-mark on its row`,
+        color(theme, `--diff-${kind}-mark`),
+        row,
+        3,
+      );
+    }
+  });
+
+  it("keeps a pattern tile's numbers readable on every practice tint (session 9.5)", () => {
+    for (const [level, percent] of PATTERN_TINT.entries()) {
+      const heat = color(theme, "--heat-2");
+      const sunken = color(theme, "--surface-sunken");
+      const bg = [0, 1, 2]
+        .map((i) => (heat[i]! * percent + sunken[i]! * (100 - percent)) / 100)
+        .concat(1) as Rgba;
+      const ink = level >= PATTERN_TEXT_FROM_LEVEL ? "--text" : "--text-muted";
+      expectContrast(`${theme} ${ink} on a level ${level} tile`, color(theme, ink), bg, 4.5);
+      expectContrast(`${theme} --text on a level ${level} tile`, color(theme, "--text"), bg, 4.5);
     }
   });
 

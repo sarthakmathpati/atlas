@@ -217,7 +217,7 @@ function Round({
               You have no stories yet.{" "}
               <a
                 href={routeHref("/stories", undefined, { tab: "stories" })}
-                className="text-accent hover:underline"
+                className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
               >
                 Write one
               </a>

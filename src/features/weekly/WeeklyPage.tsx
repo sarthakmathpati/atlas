@@ -9,7 +9,6 @@ import { conceptHref, navigate, routeHref, useRoute } from "@/app/router";
 import { PageFrame } from "@/app/shell/PageFrame";
 import { usePageHeading } from "@/app/shell/usePageTitle";
 import { Button, IconButton } from "@/components/ui/Button";
-import { cx } from "@/components/ui/cx";
 import { Skeleton } from "@/components/ui/Misc";
 import { conceptById, subjectById } from "@/data/syllabus";
 import { heatLevel } from "@/lib/activity/heatmap";
@@ -361,18 +360,20 @@ export default function WeeklyPage() {
         <section aria-label="Day by day" className="rounded-panel bg-surface px-4 py-3">
           <ol className="grid grid-cols-7 gap-1.5">
             {s.days.map((d) => (
-              <li key={d.date} className="flex flex-col items-center gap-1 text-center">
+              <li
+                key={d.date}
+                className="flex flex-col items-center gap-1 text-center"
+                title={`${dayName(d.date)}: ${formatMinutes(d.minutes)}`}
+              >
                 <span className="text-xs text-muted">{shortDay(d.date)}</span>
+                {/* The minutes sit under the swatch, not on it: no text color reads at 4.5:1 on
+                    the middle of the ramp in Dusk and Night. */}
                 <span
-                  className={cx(
-                    "grid h-9 w-full max-w-16 place-items-center rounded-control text-sm font-medium tabular-nums",
-                    heatLevel(d.minutes) >= 3 ? "text-[var(--surface)]" : "text-text",
-                  )}
+                  aria-hidden="true"
+                  className="block h-6 w-full max-w-16 rounded-control"
                   style={{ background: `var(--heat-${heatLevel(d.minutes)})` }}
-                  title={`${dayName(d.date)}: ${formatMinutes(d.minutes)}`}
-                >
-                  {d.minutes}
-                </span>
+                />
+                <span className="text-sm font-medium text-text tabular-nums">{d.minutes}</span>
               </li>
             ))}
           </ol>
@@ -447,7 +448,7 @@ export default function WeeklyPage() {
                     <li key={c.id}>
                       <a
                         href={conceptHref(c.id)}
-                        className="inline-flex h-8 items-center rounded-full border border-rule px-3 text-sm text-text hover:border-accent"
+                        className="inline-flex h-8 items-center rounded-full border border-rule px-3 text-sm text-text hover:border-accent max-md:h-11"
                       >
                         {c.name}
                       </a>
@@ -469,7 +470,7 @@ export default function WeeklyPage() {
                     <li key={m.tagId} className="flex items-center justify-between gap-3 py-1.5">
                       <a
                         href={routeHref("/mistakes", undefined, { tag: m.tagId })}
-                        className="text-base text-text hover:underline"
+                        className="tap-target text-base text-text hover:underline"
                       >
                         {m.label}
                       </a>

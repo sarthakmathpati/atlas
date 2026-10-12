@@ -616,7 +616,7 @@ export function CommandPalette() {
           <button
             type="button"
             onClick={close}
-            className="h-8 shrink-0 rounded-control px-2 text-sm text-muted hover:bg-surface-sunken hover:text-text max-md:h-10"
+            className="h-8 shrink-0 rounded-control px-2 text-sm text-muted hover:bg-surface-sunken hover:text-text max-md:h-11"
           >
             Esc
           </button>

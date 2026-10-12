@@ -9,18 +9,25 @@ function subjectOf(title: string): string {
   return title.replace(/^[^:]{1,24}:\s*/, "").trim();
 }
 
+/** "Solve" + "1. Two Sum", without doubling a verb the title already starts with. */
+function lead(verb: string, rest: string): string {
+  return rest.toLowerCase().startsWith(`${verb.toLowerCase()} `) ? rest : `${verb} ${rest}`;
+}
+
 /** A plan item as something to do in a block. */
 export function intentionForItem(item: Pick<PlanItem, "kind" | "title">): string {
   const rest = subjectOf(item.title);
   switch (item.kind) {
     case "resolve":
-      return `Re-solve ${rest}`;
+      return lead("Re-solve", rest);
     case "new-problem":
-      return `Solve ${rest}`;
+      return lead("Solve", rest);
     case "learn-concept":
-      return `Learn ${rest}`;
+      return lead("Learn", rest);
     case "review-concept":
-      return /^Flashcards:/.test(item.title) ? `Review ${rest} with flashcards` : `Review ${rest}`;
+      return /^Flashcards:/.test(item.title)
+        ? `Review ${rest} with flashcards`
+        : lead("Review", rest);
     case "drill":
       return "Finish a pattern drill";
     case "mental-math":
@@ -30,7 +37,7 @@ export function intentionForItem(item: Pick<PlanItem, "kind" | "title">): string
     case "mock":
       return `Do a ${rest} mock interview`;
     case "design":
-      return `Design ${rest}`;
+      return lead("Design", rest);
     case "story":
       return "Practice one behavioral answer";
     case "thought":

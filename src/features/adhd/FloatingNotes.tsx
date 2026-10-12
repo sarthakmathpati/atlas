@@ -1,9 +1,11 @@
 // Small notes that float at the bottom right (F32): the question at the end of a 2-minute start,
 // the 90-minute check-in, the if-then reminder and Claude's word at a block's start. They sit in
 // the toasts' corner, just above them (their height lifts the toasts through
-// `--floating-notes-h`), so they never cover a page's header or toolbar. They stay in the
-// browser's top layer, so they can be answered above an open dialog, and they never take focus:
-// each is a polite live region.
+// `--floating-notes-h`), so they never cover a page's header or toolbar. While a note is up the
+// page keeps that much room at its bottom (`--floating-notes-room`, the main area's bottom
+// padding), so the end of a page, the workspace's editor footer or the Now card can always be
+// scrolled out from under it. They stay in the browser's top layer, so they can be answered
+// above an open dialog, and they never take focus: each is a polite live region.
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { cx } from "@/components/ui/cx";
@@ -23,11 +25,14 @@ export function FloatingNotes({ children, count }: { children: ReactNode; count:
     const observer = new ResizeObserver(() => {
       const h = el.offsetHeight;
       root.style.setProperty("--floating-notes-h", h > 0 ? `${h + 8}px` : "0px");
+      // The notes sit 16 px above the main area's bottom edge; keep 8 px more above them.
+      root.style.setProperty("--floating-notes-room", h > 0 ? `${h + 24}px` : "0px");
     });
     observer.observe(el);
     return () => {
       observer.disconnect();
       root.style.removeProperty("--floating-notes-h");
+      root.style.removeProperty("--floating-notes-room");
     };
   }, []);
   return (

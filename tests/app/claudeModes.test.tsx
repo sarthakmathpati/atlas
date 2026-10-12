@@ -81,7 +81,7 @@ async function setup(mode: AIMode) {
 /** In copy prompt mode, answers the modal with what the stand-in Claude says to its prompt. */
 async function answer(mode: AIMode, user: User) {
   if (mode !== "copy") return;
-  const box = await screen.findByRole("textbox", { name: "Claude's reply" }, { timeout: 4000 });
+  const box = await screen.findByRole("textbox", { name: "Claude's reply" });
   const modal = box.closest("dialog")!;
   const prompt = (
     within(modal).getByRole("textbox", { name: "The prompt for Claude" }) as HTMLTextAreaElement
@@ -123,11 +123,9 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
       });
     });
     await go(`#/concept/${id}`);
-    await user.click(
-      await screen.findByRole("button", { name: "Explain with Claude" }, { timeout: 4000 }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Explain with Claude" }));
     await answer(mode, user);
-    await user.click(await screen.findByRole("button", { name: "Keep it" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("button", { name: "Keep it" }));
     await waitFor(() =>
       expect(useConceptNoteStore.getState().notes[id]?.generated?.questions).toHaveLength(3),
     );
@@ -139,17 +137,15 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
     await setup(mode);
     const concept = conceptById.get("dsa.graph-basics.bfs")!;
     await go(`#/concept/${concept.id}`);
-    await screen.findByRole("heading", { level: 1, name: concept.name }, { timeout: 4000 });
+    await screen.findByRole("heading", { level: 1, name: concept.name });
     await user.click(screen.getByRole("button", { name: "Explain with Claude" }));
     const panel = screen.getByRole("region", { name: "Explain with Claude" });
     await user.click(within(panel).getByRole("radio", { name: "Simple" }));
     await user.click(within(panel).getByRole("button", { name: "Explain at the simple level" }));
     await answer(mode, user);
-    await within(panel).findByText(/ticket counter/, {}, { timeout: 4000 });
+    await within(panel).findByText(/ticket counter/);
     // The answer streams first; the actions appear once it is complete.
-    await user.click(
-      await within(panel).findByRole("button", { name: "Save to notes" }, { timeout: 4000 }),
-    );
+    await user.click(await within(panel).findByRole("button", { name: "Save to notes" }));
     await waitFor(() =>
       expect(useConceptNoteStore.getState().notes[concept.id]?.savedAnswers.at(-1)?.source).toBe(
         mode,
@@ -170,18 +166,15 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
       }),
     );
     await go(`#/problems/${id}`);
-    await user.click(await screen.findByRole("button", { name: "Dry run" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("button", { name: "Dry run" }));
     const panel = await screen.findByRole("region", { name: "Dry run" });
     await user.click(
       within(panel).getByRole("button", { name: "Dry run on an input Claude picks" }),
     );
     await answer(mode, user);
-    await within(panel).findByText(/This matches the expected answer/, {}, { timeout: 4000 });
-    await waitFor(
-      () => expect(useProblemStore.getState().states[id]!.draft?.dryRuns).toHaveLength(1),
-      {
-        timeout: 5000,
-      },
+    await within(panel).findByText(/This matches the expected answer/);
+    await waitFor(() =>
+      expect(useProblemStore.getState().states[id]!.draft?.dryRuns).toHaveLength(1),
     );
   }, 20_000);
 
@@ -199,17 +192,14 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
       }),
     );
     await go(`#/problems/${id}`);
-    await user.click(await screen.findByRole("button", { name: "I'm stuck" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("button", { name: "I'm stuck" }));
     const hints = await screen.findByRole("region", { name: "Hints" });
     await user.click(within(hints).getByRole("button", { name: "Show full solution" }));
     await user.click(await screen.findByRole("button", { name: "Explain it with Claude" }));
     await answer(mode, user);
-    await within(hints).findByText(/store what you've seen in a hash map/, {}, { timeout: 4000 });
-    await waitFor(
-      () => expect(useProblemStore.getState().states[id]!.draft?.sawSolution).toBe(true),
-      {
-        timeout: 5000,
-      },
+    await within(hints).findByText(/store what you've seen in a hash map/);
+    await waitFor(() =>
+      expect(useProblemStore.getState().states[id]!.draft?.sawSolution).toBe(true),
     );
   }, 20_000);
 
@@ -223,11 +213,7 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
     await user.click(within(dialog).getByRole("button", { name: "Ask Claude for patterns" }));
     await answer(mode, user);
     const ids = new Set(patternConcepts.map((c) => c.name));
-    const chips = await within(dialog).findAllByRole(
-      "button",
-      { name: /window/i },
-      { timeout: 4000 },
-    );
+    const chips = await within(dialog).findAllByRole("button", { name: /window/i });
     expect(chips.some((c) => ids.has(c.textContent!.trim()))).toBe(true);
     expect(within(dialog).getByText(/Claude thinks it's medium/)).toBeInTheDocument();
   }, 20_000);
@@ -248,12 +234,10 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
       });
     });
     await go("#/mistakes");
-    await user.click(
-      await screen.findByRole("button", { name: "Suggest with Claude" }, { timeout: 4000 }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Suggest with Claude" }));
     await user.click(await screen.findByRole("button", { name: "Suggest how to avoid them" }));
     await answer(mode, user);
-    const use = await screen.findAllByRole("button", { name: /Use this/ }, { timeout: 4000 });
+    const use = await screen.findAllByRole("button", { name: /Use this/ });
     await user.click(use[0]!);
     await waitFor(() =>
       expect(useMistakeTagStore.getState().tags["mt-off-by-one"]?.howToAvoid).toMatch(/tiny input/),
@@ -264,7 +248,7 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
     const user = userEvent.setup();
     await setup(mode);
     await go("#/drill");
-    await user.click(await screen.findByRole("button", { name: "Start drill" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("button", { name: "Start drill" }));
     const card = await screen.findByRole("region", { name: /Prompt 1 of 5/ });
     await user.type(
       within(card).getByRole("textbox", { name: /Your approach/ }),
@@ -273,7 +257,7 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
     await user.click(within(card).getByRole("button", { name: /reveal/i }));
     await user.click(within(card).getByRole("button", { name: "Grade my approach with Claude" }));
     await answer(mode, user);
-    await within(card).findByText(/Right pattern and a clear plan/, {}, { timeout: 4000 });
+    await within(card).findByText(/Right pattern and a clear plan/);
     expect(within(card).getByText(/Approach 80%/)).toBeInTheDocument();
   }, 20_000);
 
@@ -282,12 +266,10 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude features in %s mode
     await setup(mode);
     const concept = conceptById.get("dsa.graph-basics.bfs")!;
     await go(`#/concept/${concept.id}`);
-    await screen.findByRole("heading", { level: 1, name: concept.name }, { timeout: 4000 });
+    await screen.findByRole("heading", { level: 1, name: concept.name });
     await user.click(screen.getByRole("tab", { name: "Ask" }));
     await user.click(await screen.findByRole("button", { name: "Quiz me" }));
     await answer(mode, user);
-    expect(
-      await screen.findByText(/Here's the first question/, {}, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Here's the first question/)).toBeInTheDocument();
   }, 20_000);
 });

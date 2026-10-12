@@ -195,7 +195,7 @@ export function StatusChipButton({ conceptId, status }: { conceptId: string; sta
         <button
           type="button"
           {...props}
-          className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border border-rule bg-surface px-2 text-xs font-medium whitespace-nowrap text-text hover:border-rule-strong max-md:h-8"
+          className="tap-target inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border border-rule bg-surface px-2 text-xs font-medium whitespace-nowrap text-text hover:border-rule-strong max-md:h-8"
           title="Why this color?"
         >
           <StatusGlyph status={status} size={12} />

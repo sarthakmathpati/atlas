@@ -18,6 +18,7 @@ import { usePlanStore } from "@/stores/planStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
+import { freshDatabase } from "./freshDb";
 
 async function go(hash: string) {
   await act(async () => {
@@ -53,10 +54,8 @@ beforeEach(async () => {
   window.location.hash = "#/settings";
   localStorage.clear();
   document.documentElement.removeAttribute("data-motion");
-  await new Promise((resolve) => {
-    const r = indexedDB.deleteDatabase("atlas");
-    r.onsuccess = r.onerror = r.onblocked = () => resolve(null);
-  });
+  // A fresh owner for every test (see freshDb.ts).
+  await freshDatabase();
 });
 
 afterEach(() => {
@@ -76,7 +75,7 @@ describe("focus blocks", () => {
     const user = userEvent.setup();
     await start();
     await go("#/today");
-    await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    await screen.findByRole("list", { name: "Plan items" });
     const first = planNow()!.items[0]!;
     await user.keyboard("f");
     const dialog = await screen.findByRole("dialog", { name: "Start a focus block" });
@@ -113,7 +112,7 @@ describe("focus blocks", () => {
     await start();
     act(() => useProfileStore.getState().updatePrefs({ focus: { dim: false } }));
     await go("#/today");
-    await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    await screen.findByRole("list", { name: "Plan items" });
     const first = planNow()!.items[0]!;
     const upNext = screen.getByRole("region", { name: `Up next: ${first.title}` });
     await user.click(within(upNext).getByRole("button", { name: "Start a focus block" }));
@@ -131,7 +130,7 @@ describe("focus blocks", () => {
     const dialog = await screen.findByRole("dialog", { name: "Start a focus block" });
     await user.type(within(dialog).getByLabelText("In this block I will…"), "Learn paging{Enter}");
     pass(25 * 60_000);
-    const view = await screen.findByRole("dialog", { name: "Break" }, { timeout: 3000 });
+    const view = await screen.findByRole("dialog", { name: "Break" });
     // The horizon line stops at the break; the tide line shows the break's time instead.
     expect(screen.queryByTestId("window-horizon")).toBeNull();
     expect(within(view).getByTestId("tide-line")).toBeInTheDocument();
@@ -182,7 +181,7 @@ describe("focus blocks", () => {
     await waitFor(() => expect(screen.queryByText("Time for a backup")).toBeNull());
     expect(screen.getByRole("button", { name: "1 note held for your break" })).toBeInTheDocument();
     pass(25 * 60_000);
-    await screen.findByRole("dialog", { name: "Break" }, { timeout: 3000 });
+    await screen.findByRole("dialog", { name: "Break" });
     act(() => leaveBreak());
     expect(await screen.findByText("Time for a backup")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /held for your break/ })).toBeNull();
@@ -249,9 +248,7 @@ describe("interview day", () => {
     expect(screen.getByRole("heading", { name: "Park a worry" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Breathe for a minute" })).toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "Show today's plan" }));
-    expect(
-      await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("list", { name: "Plan items" })).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Back to the interview day view" }),
     ).toBeInTheDocument();
@@ -266,9 +263,7 @@ describe("interview day", () => {
     await waitFor(() =>
       expect(screen.queryByRole("heading", { name: /Your interview is/ })).toBeNull(),
     );
-    expect(
-      await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("list", { name: "Plan items" })).toBeInTheDocument();
   });
 });
 
@@ -301,11 +296,7 @@ describe("the memory walk", () => {
     await user.click(buttons[buttons.length - 1]!);
     const dialog = await screen.findByRole("dialog", { name: "Flashcards: Memory management" });
     await user.click(within(dialog).getByRole("button", { name: "Start" }));
-    const walk = await within(dialog).findByRole(
-      "list",
-      { name: "Memory walk" },
-      { timeout: 5000 },
-    );
+    const walk = await within(dialog).findByRole("list", { name: "Memory walk" });
     expect(within(walk).getAllByRole("listitem").length).toBeGreaterThan(5);
     expect(within(walk).getByText(/, here$/)).toBeInTheDocument();
   });

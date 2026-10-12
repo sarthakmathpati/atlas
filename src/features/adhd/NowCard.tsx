@@ -2,7 +2,9 @@
 // card), with its steps to tick (kept on the item). "Start with 2 minutes" opens the task with a
 // 2-minute clock and then asks "Keep going" or "Stop here"; "I'm stuck" opens the hint ladder
 // for a problem and Ask Claude for everything else; "Swap this task" works like Swap; "Park a
-// thought" opens Park it (F31). The rest of the day is folded: "Then: 3 more stops".
+// thought" opens Park it (F31); "Start a focus block" starts a block for the stop, whose clock
+// then runs with the block (Pause and Continue work on both). The rest of the day is folded:
+// "Then: 3 more stops".
 // With "time you can see" on, a shrinking disc shows the item's clock against its estimate at
 // the owner's pace, and the last finished item says "Planned 15, took 22".
 import {
@@ -29,9 +31,11 @@ import { plannedTook } from "@/lib/adhd/pace";
 import { currentStep, ticksOf } from "@/lib/adhd/steps";
 import type { DayPlan, PlanItem } from "@/lib/types";
 import { useAdhdPart } from "@/stores/adhdStore";
+import { blockActive, useFocusTimerStore } from "@/stores/focusTimerStore";
 import {
+  continueStop,
   nowElapsedMs,
-  pauseNow,
+  pauseStop,
   plannedFor,
   startNow,
   tickNextStep,
@@ -45,7 +49,13 @@ import { setPlanItemDone } from "@/stores/planStore";
 import { useProblemStore } from "@/stores/problemStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useTicker } from "../focus/hooks";
-import { KIND_ICON, RouteCard, SkipButton, SwapButton } from "../today/PlanSection";
+import {
+  FocusBlockButton,
+  KIND_ICON,
+  RouteCard,
+  SkipButton,
+  SwapButton,
+} from "../today/PlanSection";
 import { itemDifficulty, itemSubject, swappable } from "../today/planItems";
 import { startTarget } from "../today/startTarget";
 import type { TodayPlan } from "../today/useTodayPlan";
@@ -161,6 +171,7 @@ function NowItem({ item, today }: { item: PlanItem; today: TodayPlan }) {
   const steps = itemSteps(item);
   const started = clock !== null && (running || clock.workedMs > 0);
   const hasTarget = startTarget(item) !== null;
+  const inBlock = useFocusTimerStore((s) => blockActive(s) && s.planItemId === item.id);
 
   const start = (trial: boolean) => {
     startNow(plan.date, item, { trial });
@@ -253,11 +264,11 @@ function NowItem({ item, today }: { item: PlanItem; today: TodayPlan }) {
               {steps.length > 0 ? "Done with this step" : "Done"}
             </Button>
             {running ? (
-              <Button variant="secondary" icon={Pause} onClick={() => pauseNow()}>
+              <Button variant="secondary" icon={Pause} onClick={() => pauseStop(item.id)}>
                 Pause
               </Button>
             ) : (
-              <Button variant="secondary" icon={Play} onClick={() => startNow(plan.date, item)}>
+              <Button variant="secondary" icon={Play} onClick={() => continueStop(plan.date, item)}>
                 Continue
               </Button>
             )}
@@ -269,7 +280,13 @@ function NowItem({ item, today }: { item: PlanItem; today: TodayPlan }) {
           </>
         )}
       </div>
+      {inBlock && (
+        <p className="mt-2 text-sm text-muted">
+          Your focus block is on this stop, so its clock runs with the block.
+        </p>
+      )}
       <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1">
+        <FocusBlockButton item={item} />
         {item.kind !== "thought" && (
           <Button size="sm" variant="ghost" icon={LifeBuoy} onClick={() => stuck(item)}>
             I'm stuck

@@ -36,6 +36,24 @@ const components: Components = {
       </div>
     );
   },
+  li({ node: _node, className, children, ...props }) {
+    // A task list item ("- [ ] …", the mistake checklist): its text labels its checkbox.
+    if (
+      String(className ?? "")
+        .split(" ")
+        .includes("task-list-item")
+    )
+      return (
+        <li className={className} {...props}>
+          <label className="contents">{children}</label>
+        </li>
+      );
+    return (
+      <li className={className} {...props}>
+        {children}
+      </li>
+    );
+  },
   img({ node: _node, alt }) {
     // Remote images can't load inside the artifact; show the description instead.
     return <span className="text-muted">[{alt || "image"}]</span>;

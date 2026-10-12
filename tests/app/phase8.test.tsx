@@ -48,7 +48,7 @@ describe("quant puzzles", () => {
     await ready();
     await go("#/puzzles?topic=puzzles.logic&kind=open");
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Quant puzzles" }, { timeout: 4000 }),
+      await screen.findByRole("heading", { level: 1, name: "Quant puzzles" }),
     ).toBeInTheDocument();
     const list = await screen.findByRole("region", { name: "Logic and strategy puzzles" });
     expect(within(list).getByRole("link", { name: /Two burning ropes/ })).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe("quant puzzles", () => {
     const user = userEvent.setup();
     await ready();
     await go("#/problems/q-monty");
-    const box = await screen.findByRole("textbox", { name: "Your answer" }, { timeout: 4000 });
+    const box = await screen.findByRole("textbox", { name: "Your answer" });
     await user.type(box, "0.5{Enter}");
     expect(await screen.findByText("Not quite. Try again, or take a hint.")).toBeInTheDocument();
     await user.clear(box);
@@ -68,12 +68,8 @@ describe("quant puzzles", () => {
     expect(await screen.findByText("Correct on the second try.")).toBeInTheDocument();
     expect(screen.getByText(/The answer: 2\/3/)).toBeInTheDocument();
     // The draft keeps the checked answer.
-    await waitFor(
-      () =>
-        expect(useProblemStore.getState().states["q-monty"]?.draft?.puzzle?.verdict).toBe(
-          "correct",
-        ),
-      { timeout: 4000 },
+    await waitFor(() =>
+      expect(useProblemStore.getState().states["q-monty"]?.draft?.puzzle?.verdict).toBe("correct"),
     );
     await user.click(screen.getByRole("button", { name: "Save attempt" }));
     const dialog = await screen.findByRole("dialog", { name: "Save attempt" });
@@ -103,7 +99,7 @@ describe("quant puzzles", () => {
     const user = userEvent.setup();
     await ready();
     await go("#/problems/q-hh");
-    const box = await screen.findByRole("textbox", { name: "Your answer" }, { timeout: 4000 });
+    const box = await screen.findByRole("textbox", { name: "Your answer" });
     await user.type(box, "5{Enter}");
     await screen.findByText("Not quite. Try again, or take a hint.");
     const saveButtons = screen.getAllByRole("button", { name: "Save attempt" });
@@ -118,11 +114,7 @@ describe("quant puzzles", () => {
     const user = userEvent.setup();
     await ready();
     await go("#/problems/q-ropes");
-    const box = await screen.findByRole(
-      "textbox",
-      { name: "Your answer and reasoning" },
-      { timeout: 4000 },
-    );
+    const box = await screen.findByRole("textbox", { name: "Your answer and reasoning" });
     await user.type(box, "Light one rope at both ends and the other at one end.");
     await user.click(screen.getByRole("button", { name: "Compare with the answer note" }));
     expect(screen.getByText("The answer note")).toBeInTheDocument();
@@ -151,7 +143,7 @@ describe("mental math sprint", () => {
   it("runs a sequences sprint by keyboard, saves the run and records a check", async () => {
     await ready();
     await go("#/mental-math?mode=sequences&tier=easy");
-    fireEvent.click(await screen.findByRole("button", { name: "Start sprint" }, { timeout: 4000 }));
+    fireEvent.click(await screen.findByRole("button", { name: "Start sprint" }));
     const input = await screen.findByRole("textbox", { name: /Your answer to/ });
     expect(input).toHaveFocus();
     // Skip the first with Tab, then answer the other 19 by working out the next term.
@@ -191,9 +183,7 @@ describe("mental math sprint", () => {
     await ready();
     await go("#/mental-math?mode=speed&tier=medium");
     const before = Object.values(useMentalMathStore.getState().runs).length;
-    await user.click(
-      await screen.findByRole("button", { name: "Start sprint" }, { timeout: 4000 }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Start sprint" }));
     const input = await screen.findByRole("textbox", { name: /Your answer to/ });
     await user.type(input, "abc{Enter}");
     expect(screen.getByText(/Type a number, such as 282/)).toBeInTheDocument();
@@ -216,9 +206,7 @@ describe("story bank", () => {
     await ready();
     await waitFor(() => expect(useStoryStore.getState().loaded).toBe(true));
     await go("#/stories");
-    await user.click(
-      await screen.findByRole("button", { name: "Write your first story" }, { timeout: 4000 }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Write your first story" }));
     await waitFor(() => expect(window.location.hash).toMatch(/story=story-/));
     const id = new URLSearchParams(window.location.hash.split("?")[1]).get("story")!;
     const title = await screen.findByRole("textbox", { name: "Title" });
@@ -264,9 +252,7 @@ describe("story bank", () => {
     const user = userEvent.setup();
     await ready();
     await go("#/stories?question=bq-why-this-role");
-    expect(
-      await screen.findByText("Why this role?", { selector: "p" }, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Why this role?", { selector: "p" })).toBeInTheDocument();
     await user.type(
       screen.getByRole("textbox", { name: "Your answer, as you'd say it" }),
       "I like building systems that many people rely on, and this team does exactly that.",
@@ -298,11 +284,7 @@ describe("story bank", () => {
   it("builds a 90-second script with a word count and speaking time", async () => {
     await ready();
     await go("#/stories?tab=intro");
-    const present = await screen.findByRole(
-      "textbox",
-      { name: "Present: who you are now" },
-      { timeout: 4000 },
-    );
+    const present = await screen.findByRole("textbox", { name: "Present: who you are now" });
     const words = (n: number, w: string) => Array.from({ length: n }, () => w).join(" ");
     fireEvent.change(present, { target: { value: words(40, "now") } });
     fireEvent.change(screen.getByRole("textbox", { name: "Past: what brought you here" }), {
@@ -334,9 +316,7 @@ describe("design practice", () => {
   it("lists the 46 prompts with their status", async () => {
     await ready();
     await go("#/designs?kind=hld");
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Designs" }, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Designs" })).toBeInTheDocument();
     expect(screen.getByText(/of 46 done/)).toBeInTheDocument();
     const list = screen.getByRole("region", { name: "System design" });
     expect(within(list).getByRole("link", { name: /URL shortener/ })).toBeInTheDocument();
@@ -348,9 +328,7 @@ describe("design practice", () => {
     await ready();
     await waitFor(() => expect(useDesignStore.getState().loaded).toBe(true));
     await go("#/designs/hld-url-shortener");
-    await user.click(
-      await screen.findByRole("button", { name: "Start the design" }, { timeout: 4000 }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Start the design" }));
     const api = await screen.findByRole("textbox", { name: "API" });
     await user.type(api, "POST /links returns a short code");
     await user.tab();
@@ -365,18 +343,15 @@ describe("design practice", () => {
     expect(within(errors).getByRole("button", { name: "Line 2" })).toBeInTheDocument();
     expect(errors.textContent).toMatch(/Write it as “->”/);
     expect(await screen.findByText("3 boxes, 2 arrows")).toBeInTheDocument();
-    await waitFor(
-      () => {
-        const open = Object.values(useDesignStore.getState().attempts).find(
-          (a) => a.problemId === "hld-url-shortener" && !a.finishedAt,
-        );
-        expect(open?.sections).toMatchObject({
-          api: "POST /links returns a short code",
-          sketch: expect.stringContaining("Client -> API Gateway"),
-        });
-      },
-      { timeout: 4000 },
-    );
+    await waitFor(() => {
+      const open = Object.values(useDesignStore.getState().attempts).find(
+        (a) => a.problemId === "hld-url-shortener" && !a.finishedAt,
+      );
+      expect(open?.sections).toMatchObject({
+        api: "POST /links returns a short code",
+        sketch: expect.stringContaining("Client -> API Gateway"),
+      });
+    });
     await user.click(screen.getByRole("button", { name: "Finish and review" }));
     const save = screen.getByRole("button", { name: "Save attempt" });
     expect(save).toBeDisabled();
@@ -417,9 +392,7 @@ describe("practice hub", () => {
   it("links every kind of practice with where the owner stands", async () => {
     await ready();
     await go("#/practice");
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Practice" }, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Practice" })).toBeInTheDocument();
     const main = within(screen.getByRole("main"));
     const links = [
       ["Pattern drill", "#/drill"],
@@ -477,7 +450,7 @@ describe("practice hub", () => {
       ]);
     });
     await go("#/today");
-    const list = await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    const list = await screen.findByRole("list", { name: "Plan items" });
     // The next stop's Start is on the Up next card; the other stops keep theirs on the route.
     const startOf = (title: string) =>
       within(

@@ -47,7 +47,7 @@ function ScaleBar({ interviewDate, today }: { interviewDate: string; today: stri
     <a
       href="#/settings?section=profile"
       title="Interview date (change it in Settings)"
-      className="mt-4 inline-flex items-center gap-2.5 rounded-[4px] text-sm text-text hover:underline"
+      className="mt-4 inline-flex items-center gap-2.5 rounded-[4px] text-sm text-text hover:underline max-md:min-h-11"
     >
       <svg width={82} height={8} viewBox="0 0 82 8" aria-hidden="true" className="shrink-0">
         {[0, 1, 2, 3].map((i) => (

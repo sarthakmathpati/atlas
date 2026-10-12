@@ -94,7 +94,7 @@ export function Heatmap({ lookup, today, weeks, frozen, compact, className }: He
             type="button"
             onClick={() => setTable((t) => !t)}
             aria-pressed={table}
-            className="h-8 shrink-0 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-10"
+            className="h-8 shrink-0 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-11"
           >
             {table ? "Show as chart" : "Show as table"}
           </button>
@@ -143,7 +143,13 @@ export function Heatmap({ lookup, today, weeks, frozen, compact, className }: He
           </table>
         </div>
       ) : (
-        <div className="relative overflow-x-auto pb-1">
+        // On a phone the year scrolls sideways: the scroll area takes focus so arrow keys move it.
+        <div
+          className="relative overflow-x-auto pb-1 outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          tabIndex={0}
+          role="region"
+          aria-label={`${label} (scrolls sideways)`}
+        >
           <svg
             width={width}
             height={height}

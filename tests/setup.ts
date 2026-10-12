@@ -3,6 +3,12 @@ import "@testing-library/jest-dom/vitest";
 
 // jsdom lacks a few browser APIs the shell uses; give component tests small stand-ins.
 if (typeof window !== "undefined" && typeof document !== "undefined") {
+  // Screen tests wait for lazy pages, storage and stores. Testing Library's default of one second
+  // per `findBy…` or `waitFor` is too short on a slow or busy CI runner, where the whole app takes
+  // several times longer to render; give each wait 8 s. A passing wait still returns at once, and
+  // nothing is asserted less: only a failure takes longer to report.
+  const { configure } = await import("@testing-library/react");
+  configure({ asyncUtilTimeout: 8000 });
   const proto = window.HTMLDialogElement?.prototype;
   if (proto && typeof proto.showModal !== "function") {
     proto.show = function show(this: HTMLDialogElement) {

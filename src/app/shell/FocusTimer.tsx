@@ -246,7 +246,10 @@ export function FocusTimerButton() {
                 </Button>
               </div>
               <p className="text-sm text-muted">
-                <a href="#/settings?section=focus" className="text-accent hover:underline">
+                <a
+                  href="#/settings?section=focus"
+                  className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+                >
                   Focus settings
                 </a>
               </p>

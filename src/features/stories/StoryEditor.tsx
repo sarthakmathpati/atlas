@@ -148,7 +148,7 @@ export function StoryEditor({ story }: { story: Story }) {
                 key={q.id}
                 type="button"
                 onClick={() => updateStory(story.id, { questionIds: [...story.questionIds, q.id] })}
-                className="inline-flex h-7 items-center rounded-full border border-dashed border-rule-strong px-2.5 text-sm text-text hover:border-accent hover:text-accent max-md:h-9"
+                className="inline-flex h-7 items-center rounded-full border border-dashed border-rule-strong px-2.5 text-sm text-text hover:border-accent hover:text-accent max-md:h-9 relative before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']"
               >
                 + {q.text}
               </button>

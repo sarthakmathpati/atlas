@@ -10,8 +10,9 @@ import { ThoughtRow } from "./Park";
 export function ParkedBack() {
   const thoughts = useParkStore((s) => s.thoughts);
   const holding = useHoldingNotices();
-  const now = useTicker(30_000);
-  const back = useMemo(() => thoughtsBack(Object.values(thoughts), new Date(now)), [thoughts, now]);
+  const changedAt = useParkStore((s) => s.changedAt);
+  const at = Math.max(useTicker(30_000), changedAt);
+  const back = useMemo(() => thoughtsBack(Object.values(thoughts), new Date(at)), [thoughts, at]);
   if (holding || back.length === 0) return null;
   return (
     <section aria-labelledby="parked-back-heading" className="rounded-panel bg-info-soft px-4 py-3">

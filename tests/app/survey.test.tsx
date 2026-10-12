@@ -14,6 +14,7 @@ import { useDataReady } from "@/stores/hydrate";
 import { usePlanStore } from "@/stores/planStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
+import { freshDatabase } from "./freshDb";
 
 async function go(hash: string) {
   await act(async () => {
@@ -38,10 +39,8 @@ const planNow = () => usePlanStore.getState().plans[localDate()];
 beforeEach(async () => {
   window.location.hash = "#/settings";
   localStorage.clear();
-  await new Promise((resolve) => {
-    const r = indexedDB.deleteDatabase("atlas");
-    r.onsuccess = r.onerror = r.onblocked = () => resolve(null);
-  });
+  // A fresh owner for every test (see freshDb.ts).
+  await freshDatabase();
 });
 
 afterEach(() => {
@@ -71,7 +70,7 @@ describe("Today", () => {
     const user = userEvent.setup();
     await start();
     await go("#/today");
-    const route = await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    const route = await screen.findByRole("list", { name: "Plan items" });
     const plan = planNow()!;
     const [first, second] = plan.items;
     const upNext = screen.getByRole("region", { name: `Up next: ${first!.title}` });
@@ -99,7 +98,7 @@ describe("Today", () => {
   it("shows the last 7 days and the review count", async () => {
     await start();
     await go("#/today");
-    const days = await screen.findByRole("list", { name: "The last 7 days" }, { timeout: 4000 });
+    const days = await screen.findByRole("list", { name: "The last 7 days" });
     expect(within(days).getAllByRole("listitem")).toHaveLength(7);
     expect(within(days).getByText(/\(today\)/)).toBeInTheDocument();
     const review = screen.getByRole("link", { name: /Nothing is due for review/ });
@@ -111,13 +110,9 @@ describe("the dashboard", () => {
   it("starts the summit profile with the first week of study", async () => {
     await start();
     await go("#/dashboard");
-    const summit = await screen.findByRole("region", { name: "Summit profile" }, { timeout: 4000 });
+    const summit = await screen.findByRole("region", { name: "Summit profile" });
     expect(
-      await within(summit).findByText(
-        /starts with your first week of study/,
-        {},
-        { timeout: 4000 },
-      ),
+      await within(summit).findByText(/starts with your first week of study/),
     ).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Weekly stamps" })).toHaveTextContent(
       /5 or more active days earns a stamp/,
@@ -129,12 +124,10 @@ describe("the dashboard", () => {
     await start();
     act(() => useProfileStore.getState().update({ interviewDate: addDaysToDate(localDate(), 30) }));
     await go("#/dashboard");
-    const summit = await screen.findByRole("region", { name: "Summit profile" }, { timeout: 4000 });
-    const today = await within(summit).findByRole(
-      "button",
-      { name: /^Readiness today: 0 out of 100/ },
-      { timeout: 4000 },
-    );
+    const summit = await screen.findByRole("region", { name: "Summit profile" });
+    const today = await within(summit).findByRole("button", {
+      name: /^Readiness today: 0 out of 100/,
+    });
     expect(today).toHaveAttribute("tabindex", "0");
     expect(within(summit).getByText("Interview")).toBeInTheDocument();
     await user.click(within(summit).getByRole("button", { name: "Show as table" }));
@@ -148,8 +141,8 @@ describe("the concept page", () => {
     await start();
     const concept = conceptById.get("dsa.arrays.kadanes-algorithm")!;
     await go(`#/concept/${concept.id}`);
-    await screen.findByRole("heading", { level: 1, name: concept.name }, { timeout: 4000 });
-    const check = await screen.findByRole("region", { name: "Check yourself" }, { timeout: 4000 });
+    await screen.findByRole("heading", { level: 1, name: concept.name });
+    const check = await screen.findByRole("region", { name: "Check yourself" });
     expect(within(check).getByRole("button", { name: "Check by explaining it" })).toBeVisible();
     await user.click(screen.getByRole("radio", { name: "Interview" }));
     expect(await screen.findByRole("region", { name: "Interview points" })).toBeInTheDocument();
@@ -166,7 +159,7 @@ describe("the weekly review", () => {
     await start();
     await go("#/weekly");
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Weekly review" }, { timeout: 4000 }),
+      await screen.findByRole("heading", { level: 1, name: "Weekly review" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "The week before" })).toBeInTheDocument();
   });

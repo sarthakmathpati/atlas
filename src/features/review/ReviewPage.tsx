@@ -30,10 +30,14 @@ function lateLabel(daysLate: number): string {
 function ProblemRow({ item, today }: { item: DueProblem; today: string }) {
   const href = routeHref("/problems", item.info.id, { mode: "resolve" });
   return (
-    <li className="flex flex-col gap-2 border-t border-rule px-4 py-3 first:border-t-0 sm:flex-row sm:items-center sm:gap-4">
+    // The title link covers the row (a tap anywhere opens the re-solve); Re-solve sits above it.
+    <li className="relative flex flex-col gap-2 border-t border-rule px-4 py-3 first:border-t-0 sm:flex-row sm:items-center sm:gap-4">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <a href={href} className="font-medium text-text hover:text-accent hover:underline">
+          <a
+            href={href}
+            className="font-medium text-text hover:text-accent hover:underline after:absolute after:inset-0 after:content-['']"
+          >
             {problemLabel(item.info)}
           </a>
           <DifficultyChip difficulty={item.info.difficulty} />
@@ -58,7 +62,7 @@ function ProblemRow({ item, today }: { item: DueProblem; today: string }) {
         <span className="text-sm text-muted tabular-nums">
           {ESTIMATES.resolve[item.info.difficulty]} min
         </span>
-        <Button size="sm" href={href} icon={RotateCcw}>
+        <Button size="sm" href={href} icon={RotateCcw} className="relative z-10">
           Re-solve
         </Button>
       </div>
@@ -231,11 +235,11 @@ export default function ReviewPage() {
                   {queue.upcoming.slice(0, 12).map((u) => (
                     <li
                       key={u.info.id}
-                      className="flex items-baseline justify-between gap-3 border-t border-rule px-4 py-2 first:border-t-0"
+                      className="relative flex items-baseline justify-between gap-3 border-t border-rule px-4 py-2 first:border-t-0"
                     >
                       <a
                         href={routeHref("/problems", u.info.id)}
-                        className="min-w-0 truncate text-base text-text hover:underline"
+                        className="min-w-0 truncate text-base text-text hover:underline after:absolute after:inset-0 after:content-['']"
                       >
                         {problemLabel(u.info)}
                       </a>

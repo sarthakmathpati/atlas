@@ -88,9 +88,14 @@ What each subject was checked against (session in brackets):
   script; a story bank checked against the app's 30 behavioral questions; resume bullets and the
   Atlas project deep dive; an exact made-up offer under India's FY 2025-26 tax (`needsReview`).
 
-**Next up:** Phase 9 session 9.5, **polish and ship** (BUILD_SPEC.md section 13): the full
-accessibility audit (F30), the gaps listed under "Known issues and notes", performance and the
-final release. Start it in a new session once this branch is merged.
+**Session 9.5, "Polish and ship", is in progress (session 23, 12 Oct 2026).** Done so far: the
+Now card's clock runs with a focus block for its stop (decision 148); the floating notes leave
+room at the page's bottom (149); screen tests hold up on a slow machine (150); the F30 audit
+with axe-core and a Tab walk of every page in Day, Dusk and Night with ADHD mode on and off at
+1440 and 390 px, and its fixes (151, 152); `n` and Ctrl or Cmd + S in the workspace (153).
+Still to do in this session: the performance comparison with the 9.4 build, the visual review
+at 390, 768 and 1440 px, the strict syllabus build, DEPLOY.md and README.md, the release zip and
+the definition of done.
 
 ## Phases (BUILD_SPEC.md section 13)
 

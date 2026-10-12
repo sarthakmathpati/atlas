@@ -184,7 +184,7 @@ function MistakesHere({ state }: { state: ProblemState | undefined }) {
         <a
           key={id}
           href={routeHref("/mistakes", undefined, { tag: id })}
-          className="inline-flex h-6 items-center gap-1.5 rounded-full border border-rule bg-surface-sunken px-2 text-xs font-medium text-text hover:border-rule-strong max-md:h-9"
+          className="inline-flex h-6 items-center gap-1.5 rounded-full border border-rule bg-surface-sunken px-2 text-xs font-medium text-text hover:border-rule-strong max-md:h-9 relative before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']"
         >
           {tags[id]?.label ?? id}
           {n > 1 && <span className="text-muted tabular-nums">×{n}</span>}
@@ -447,7 +447,7 @@ export function InfoPane({
       </Section>
 
       <details className="group" open={Boolean(state?.myNotes) && !hidden}>
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-md font-semibold text-text marker:hidden">
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-md font-semibold text-text marker:hidden max-md:min-h-11">
           <span
             className="inline-block transition-transform group-open:rotate-90"
             aria-hidden="true"

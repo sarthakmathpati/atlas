@@ -322,7 +322,7 @@ export function SkipButton({
 }
 
 /** "Start a focus block" for a plan item (F31): the block's line comes from the item. */
-function FocusBlockButton({ item }: { item: PlanItem }) {
+export function FocusBlockButton({ item }: { item: PlanItem }) {
   const busy = useFocusTimerStore((s) => blockActive(s));
   if (busy) return null;
   return (
@@ -456,7 +456,7 @@ function StopMarker({
       aria-label={`Done: ${item.title}`}
       onClick={onToggle}
       className={cx(
-        "relative z-10 grid size-7 shrink-0 place-items-center rounded-full border-2 transition-colors",
+        "tap-target relative z-10 grid size-7 shrink-0 place-items-center rounded-full border-2 transition-colors",
         item.done
           ? "border-accent bg-accent text-on-accent"
           : current
@@ -619,7 +619,7 @@ export function RouteCard({ today }: { today: TodayPlan | null }) {
             type="button"
             onClick={() => setShowSkipped((v) => !v)}
             aria-expanded={showSkipped}
-            className="text-sm text-accent hover:underline"
+            className="text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
           >
             {showSkipped ? "Hide skipped" : `Skipped today (${skipped.length})`}
           </button>

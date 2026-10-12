@@ -73,9 +73,9 @@
 
   /* Diff view */
   --diff-add-bg: rgb(93 187 138 / 0.16);
-  --diff-add-mark: rgb(93 187 138 / 0.42);
+  --diff-add-mark: #1e6b45;
   --diff-del-bg: rgb(238 143 124 / 0.16);
-  --diff-del-mark: rgb(238 143 124 / 0.45);
+  --diff-del-mark: #a8452c;
 
   /* Charts: an ordinal ramp on the accent's hue (easy, medium, hard), validated with the
      dataviz ordinal checks (monotone lightness, steps of 0.06 or more, light end 2:1 or more on
@@ -166,9 +166,9 @@
     --code-invalid: #df929d;
 
     --diff-add-bg: rgb(111 185 142 / 0.13);
-    --diff-add-mark: rgb(111 185 142 / 0.32);
+    --diff-add-mark: rgb(111 185 142);
     --diff-del-bg: rgb(224 141 122 / 0.13);
-    --diff-del-mark: rgb(224 141 122 / 0.34);
+    --diff-del-mark: rgb(224 141 122);
 
     /* In the dark the ramps flip: the most salient step is the lightest. */
     --chart-1: #355f82;
@@ -252,9 +252,9 @@
     --code-invalid: #f091a0;
 
     --diff-add-bg: rgb(92 194 142 / 0.13);
-    --diff-add-mark: rgb(92 194 142 / 0.34);
+    --diff-add-mark: rgb(92 194 142);
     --diff-del-bg: rgb(238 138 118 / 0.13);
-    --diff-del-mark: rgb(238 138 118 / 0.36);
+    --diff-del-mark: rgb(238 138 118);
 
     --chart-1: #286595;
     --chart-2: #5995c9;

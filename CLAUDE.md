@@ -1066,3 +1066,54 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     0.81 to 0.98 s after (median 0.88). ADHD mode adds one small table read at start (`paceStats`)
     and, while off, only its listeners. Playwright's installed clock slows the app's timers
     about sixfold, so timing runs don't install it (screenshots do).
+
+148. **One clock with a focus block** (session 23, 9.5): a focus block started for a plan item
+    runs that item's Now clock (ADHD mode on), so the disc, "Planned 15, took 22" and the pace
+    count the block's time; starting such a block answers the 2-minute question (keep going).
+    Pausing, ending or stopping the block (or moving it to another item) pauses the clock; the
+    break isn't time on the item. The Now card's Pause and Continue pause and resume the block
+    with the clock, and the card has "Start a focus block". A block without an item, or for
+    another item, leaves the clock alone; starting the Now clock never starts a block (a
+    2-minute start stays small). `intentionForItem` no longer doubles a verb a title starts with.
+149. **Room under the floating notes**: while an ADHD floating note is up, the main area keeps
+    `--floating-notes-room` (the notes' height + 24 px) as bottom padding at every width, so
+    the end of a page, the workspace's editor footer and the Now card can always be scrolled
+    (or on wide screens laid out) clear of it.
+150. **Tests on slow machines**: screen tests wait up to 8 s per `findBy…`/`waitFor`
+    (`asyncUtilTimeout` in `tests/setup.ts`; a passing wait returns at once, nothing is asserted
+    less), so the per-call 3 to 6 s timeouts were removed. Screen tests that start from an empty
+    database wait for the delete to succeed (`tests/app/freshDb.ts`; moving on at "blocked" let
+    the pending delete close the next test's connection). The "Park it" test failed under load
+    because thoughts were checked against a 30-second ticker: the park store now stamps
+    `changedAt` whenever the thoughts change, and screens check against the later of the two, so
+    a thought made due by a change (a break, a sync, Undo) shows at once.
+151. **F30 audit fixes** (axe-core 4.10 on 28 screens × Day, Dusk, Night × ADHD on and off ×
+    1440 and 390 px, plus a Tab walk of every page): links inside text are underlined (a 40%
+    accent line, full on hover); pattern chips use `.tint-accent` (the soft tint laid over the
+    surface, so a hovered row can't darken it below 4.5:1); a pattern tile's numbers switch to
+    `--text` from level 3 (`PATTERN_TEXT_FROM_LEVEL`, tested per theme); changed words in diffs
+    are underlined 2 px in `--diff-*-mark` (now opaque, 3:1 on the row) instead of a highlight
+    that took code colors below 4.5:1; a marked code line's number is muted text; each concept
+    tab has a screen-reader h2 and the 1-day sheet's concepts are h3 (no sheet skips a level,
+    tested); task-list boxes are labelled by their text; Recharts' keyboard layer is off (the
+    table is the accessible view); resize separators carry their values; tabs point
+    `aria-controls` only at a panel that exists; the heatmap's sideways scroll and read-only
+    editors take focus; the weekly strip's minutes sit under the swatch (no text color reads on
+    the middle of the ramp in Dusk and Night).
+152. **Phones** (390 px): a `.grid` without a column rule gets `minmax(0, 1fr)` in the base
+    layer (implicit auto columns grew to their widest item and pushed Review and the drill past
+    the edge); the drill's length options read 3, 5, 8, 10 under "Number of prompts"; with the
+    calm screen the app name in the top bar steps aside on phones, as during a block. Controls
+    are 44 px on phones: segmented controls, chart and heatmap table switches, toast buttons and
+    similar text buttons grow to `h-11`; small standalone links and buttons get `.tap-target`
+    (an invisible tap area of at least 44 × 44 px centered on them, phones only); chip toggles
+    get a 4 px tap margin; problem cards and review rows are one tap target (the title link is
+    stretched over the row, the star and Re-solve sit above it), and pattern chips in the card
+    layout are labels. Exceptions: links inside running text (WCAG's inline exception), the
+    summit profile's points (closer than 44 px; the table and arrow keys reach every week) and
+    the map canvas (it zooms, and the list view is the accessible alternative).
+153. **Workspace keys** (F30): `n` opens the Code tab with the cursor in the editor (the
+    editor loads on demand, so focus is retried for about 2 s), Ctrl or Cmd + S opens the save
+    dialog, even inside the editor, and never the browser's own save. Tab indents inside the
+    editor and Esc then Tab leaves it (CodeMirror's tab focus mode); the shortcuts dialog lists
+    all three under "In a problem".

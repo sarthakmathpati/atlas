@@ -50,6 +50,8 @@ import { usePageFocusLine } from "@/features/focus/hooks";
 const SUBJECT_IDS = subjects.map((s) => s.id);
 const PANEL_KEY = "atlas.mapPanel";
 const MIN_PANEL = 340;
+/** The panel leaves at least 360 px of map beside it. */
+const maxPanelWidth = () => Math.max(MIN_PANEL, window.innerWidth - 360);
 
 function readPanelWidth(): number {
   try {
@@ -344,10 +346,7 @@ function MapScreen() {
     handle.setPointerCapture(e.pointerId);
     let width = panelWidth;
     const move = (ev: PointerEvent) => {
-      width = Math.min(
-        Math.max(MIN_PANEL, window.innerWidth - ev.clientX),
-        Math.max(MIN_PANEL, window.innerWidth - 360),
-      );
+      width = Math.min(Math.max(MIN_PANEL, window.innerWidth - ev.clientX), maxPanelWidth());
       setPanelWidth(width);
     };
     const up = () => {
@@ -469,12 +468,16 @@ function MapScreen() {
               role="separator"
               aria-orientation="vertical"
               aria-label="Resize panel"
+              aria-valuenow={Math.round(panelWidth)}
+              aria-valuemin={MIN_PANEL}
+              aria-valuemax={maxPanelWidth()}
               tabIndex={0}
               onPointerDown={startResize}
               onKeyDown={(e) => {
                 if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
                 e.preventDefault();
-                setPanelWidth((w) => Math.max(MIN_PANEL, w + (e.key === "ArrowLeft" ? 24 : -24)));
+                const delta = e.key === "ArrowLeft" ? 24 : -24;
+                setPanelWidth((w) => Math.min(maxPanelWidth(), Math.max(MIN_PANEL, w + delta)));
               }}
               className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize outline-none hover:bg-accent-soft focus-visible:bg-accent-soft"
             />

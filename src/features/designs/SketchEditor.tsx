@@ -149,7 +149,7 @@ export function SketchEditor({
                   <button
                     type="button"
                     onClick={() => selectLine(e.line)}
-                    className="font-medium text-accent hover:underline"
+                    className="font-medium text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
                   >
                     Line {e.line}
                   </button>
