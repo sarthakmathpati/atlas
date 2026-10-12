@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // MarkdownView: links to concepts in content open in place when a handler is given (the map's
-// panel), and stay ordinary links to the concept page otherwise.
+// panel), and stay ordinary links to the concept page otherwise. Task list boxes are labelled.
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import MarkdownView from "@/components/ui/MarkdownView";
@@ -29,5 +29,17 @@ describe("MarkdownView concept links", () => {
     const link = screen.getByRole("link", { name: "strategy" });
     expect(fireEvent.click(link)).toBe(true);
     expect(screen.getByRole("link", { name: "docs" }).getAttribute("target")).toBe("_blank");
+  });
+});
+
+describe("MarkdownView task lists", () => {
+  it("labels each checklist box with its item's text (F30)", () => {
+    render(
+      <MarkdownView>{"- [ ] **Off by one**: check the loop bounds\n- [x] Overflow"}</MarkdownView>,
+    );
+    expect(
+      screen.getByRole("checkbox", { name: "Off by one: check the loop bounds" }),
+    ).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Overflow" })).toBeChecked();
   });
 });

@@ -203,6 +203,10 @@ describe("a block's line", () => {
     expect(item("review-concept", "Review: Paging")).toBe("Review Paging");
     expect(item("mock", "Mock interview: coding")).toBe("Do a coding mock interview");
     expect(item("thought", "Email the recruiter")).toBe("Email the recruiter");
+    // A title without a label that already starts with the verb keeps it once.
+    expect(item("new-problem", "Solve 1. Two Sum")).toBe("Solve 1. Two Sum");
+    expect(item("resolve", "Re-solve 69. Sqrt(x)")).toBe("Re-solve 69. Sqrt(x)");
+    expect(item("learn-concept", "Learning curves")).toBe("Learn Learning curves");
   });
 
   it("reads inside a sentence without changing names", () => {

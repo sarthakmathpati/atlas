@@ -126,7 +126,7 @@ export function PracticeTab({ concept }: { concept: Concept }) {
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
+                      className="inline-flex items-center gap-1 text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
                     >
                       LeetCode
                       <ArrowUpRight size={14} aria-hidden="true" />

@@ -9,6 +9,10 @@
 // leaves a flag on the week's strip. With ADHD mode off, finishing an item is unchanged.
 //
 // The running clock is mirrored to localStorage (this browser only), so a reload keeps it.
+//
+// A focus block started for a plan item runs that item's clock too, so the two never disagree:
+// pausing, ending or stopping the block pauses the item's clock, and Pause or Continue on the
+// Now card pauses or resumes the block with it.
 import { create } from "zustand";
 import { scaleMinutes, sampleId, tookMinutes, plannedTook } from "@/lib/adhd/pace";
 import { adhdOn, adhdPartOn } from "@/lib/adhd/prefs";
@@ -23,6 +27,7 @@ import {
 } from "./activityStore";
 import { useConceptStateStore } from "./conceptStateStore";
 import { findConcept } from "./customConceptStore";
+import { blockActive, blockRunning, useFocusTimerStore } from "./focusTimerStore";
 import { paceFor, recordPace } from "./paceStore";
 import { setPlanDoneListener, setPlanItemFinisher } from "./planDone";
 import { setPlanItemDone, setPlanItemSteps, usePlanStore } from "./planStore";
@@ -162,6 +167,48 @@ export function stopHere(now = Date.now()): void {
 export function clearNow(): void {
   useNowStore.setState({ clock: null });
   syncTimer();
+}
+
+// ----- one clock with a focus block ------------------------------------------------------------
+
+/** The plan item a running focus block is for, or null. */
+const blockItemId = (s: ReturnType<typeof useFocusTimerStore.getState>) =>
+  blockRunning(s) ? s.planItemId : null;
+
+// A block for a plan item starts (or resumes) that item's clock in ADHD mode, and answers the
+// 2-minute question (the owner chose a whole block). When the block pauses, ends or stops, or
+// moves to another item, the item's clock pauses: the break isn't time on the item.
+useFocusTimerStore.subscribe((s, prev) => {
+  const on = blockItemId(s);
+  const was = blockItemId(prev);
+  if (on === was) return;
+  if (was) {
+    const clock = useNowStore.getState().clock;
+    if (clock && clock.itemId === was && clock.lastAt !== null) pauseNow();
+  }
+  if (on && adhdOn(prefs())) {
+    const date = localDate();
+    const item = usePlanStore.getState().plans[date]?.items.find((i) => i.id === on);
+    if (item && !item.done && !item.skipped) startNow(date, item);
+  }
+});
+
+/** Pause on the Now card: a focus block on this stop pauses too (and with it the clock). */
+export function pauseStop(itemId: string, now = Date.now()): void {
+  const block = useFocusTimerStore.getState();
+  if (blockRunning(block) && block.planItemId === itemId) block.pause();
+  else pauseNow(now);
+}
+
+/** Continue on the Now card: a paused focus block on this stop resumes too. */
+export function continueStop(
+  date: string,
+  item: Pick<PlanItem, "id" | "kind" | "estMinutes">,
+  now = Date.now(),
+): void {
+  const block = useFocusTimerStore.getState();
+  if (blockActive(block) && !block.running && block.planItemId === item.id) block.start();
+  else startNow(date, item, { now });
 }
 
 /** Takes the clock's work for an item that just finished (and clears the clock). */

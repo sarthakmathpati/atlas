@@ -419,7 +419,7 @@ function Results({
           {info.conceptIds.map((id, i) => (
             <span key={id}>
               {i > 0 && " and "}
-              <a href={conceptHref(id)} className="text-accent hover:underline">
+              <a href={conceptHref(id)} className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent">
                 {conceptName(id)}
               </a>
             </span>

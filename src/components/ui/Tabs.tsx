@@ -1,5 +1,5 @@
 // Tabs (section 12.7): an underlined tab list with arrow-key navigation (automatic activation).
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { cx } from "./cx";
 
 export interface TabItem<T extends string> {
@@ -31,6 +31,27 @@ export function Tabs<T extends string>({
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
   const activeIndex = items.findIndex((t) => t.value === value);
+
+  // When tabs run past the edge (phones), the list fades out at that end so the cut-off tab
+  // reads as "scroll for more" rather than a mistake.
+  const [more, setMore] = useState<{ start: boolean; end: boolean }>({ start: false, end: false });
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const update = () => {
+      const start = list.scrollLeft > 1;
+      const end = list.scrollLeft + list.clientWidth < list.scrollWidth - 1;
+      setMore((m) => (m.start === start && m.end === end ? m : { start, end }));
+    };
+    update();
+    list.addEventListener("scroll", update, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(list);
+    return () => {
+      list.removeEventListener("scroll", update);
+      observer?.disconnect();
+    };
+  }, [items.length]);
 
   // On narrow screens the tab list scrolls sideways: keep the active tab in view.
   useEffect(() => {
@@ -66,7 +87,18 @@ export function Tabs<T extends string>({
         role="tablist"
         aria-label={label}
         onKeyDown={onKeyDown}
-        className="relative flex gap-1 overflow-x-auto border-b border-rule [scrollbar-width:none]"
+        className={cx(
+          "relative flex gap-1 overflow-x-auto border-b border-rule [scrollbar-width:none]",
+          more.end &&
+            !more.start &&
+            "[mask-image:linear-gradient(to_right,#000_calc(100%-40px),transparent)]",
+          more.start &&
+            !more.end &&
+            "[mask-image:linear-gradient(to_left,#000_calc(100%-40px),transparent)]",
+          more.start &&
+            more.end &&
+            "[mask-image:linear-gradient(to_right,transparent,#000_40px,#000_calc(100%-40px),transparent)]",
+        )}
       >
         {items.map((item, i) => {
           const active = item.value === value;
@@ -80,7 +112,8 @@ export function Tabs<T extends string>({
               role="tab"
               id={`${base}-tab-${item.value}`}
               aria-selected={active}
-              aria-controls={`${base}-panel-${item.value}`}
+              // Only the active panel is in the page (and only when Tabs renders it).
+              aria-controls={children && active ? `${base}-panel-${item.value}` : undefined}
               tabIndex={active ? 0 : -1}
               onClick={() => onChange(item.value)}
               className={cx(

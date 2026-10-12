@@ -132,9 +132,16 @@ function checklistMarkdown(list: readonly TagCount[], heading: string): string {
   return `${heading}\n\n${lines.join("\n")}`;
 }
 
-function conceptBlock(e: ConceptEval, content: ConceptContent | undefined, limit?: number): string {
+/** A concept with its interview points. `level` is its heading level: 3 under a section of the
+ *  1-day sheet, 4 under a subject's section of the 1-week sheet (headings never skip a level). */
+function conceptBlock(
+  e: ConceptEval,
+  content: ConceptContent | undefined,
+  level: 3 | 4,
+  limit?: number,
+): string {
   const bullets = (content?.interview ?? []).slice(0, limit ?? Infinity);
-  const head = `#### ${inline(e.concept.name)} (${statusWord(e)})`;
+  const head = `${"#".repeat(level)} ${inline(e.concept.name)} (${statusWord(e)})`;
   if (bullets.length === 0) return `${head}\n\n${inline(e.concept.scope)}`;
   return `${head}\n\n${bullets.map((b) => `- ${inline(b)}`).join("\n")}`;
 }
@@ -249,7 +256,7 @@ function daySheet(src: SheetSources): {
       "## Fading and weak must-know concepts",
       weak.length
         ? weak
-            .map((e) => conceptBlock(e, src.contentOf(e.concept), DAY_LIMITS.bullets))
+            .map((e) => conceptBlock(e, src.contentOf(e.concept), 3, DAY_LIMITS.bullets))
             .join("\n\n")
         : "Nothing is fading, and every must-know concept you've started is strong.",
     ].join("\n\n"),
@@ -322,7 +329,7 @@ function subjectSections(
       subjectId,
       [
         `### ${pick.conceptHeading}`,
-        ...list.map((e) => conceptBlock(e, src.contentOf(e.concept))),
+        ...list.map((e) => conceptBlock(e, src.contentOf(e.concept), 4)),
       ].join("\n\n"),
     );
   }

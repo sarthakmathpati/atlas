@@ -334,6 +334,7 @@ export function Drawer({
       const next = Math.min(max, Math.max(MIN_DRAWER, window.innerWidth - ev.clientX));
       widthRef.current = next;
       dialog.style.width = `${next}px`;
+      handle.setAttribute("aria-valuenow", String(Math.round(next)));
     };
     const up = () => {
       handle.removeEventListener("pointermove", move);
@@ -360,6 +361,7 @@ export function Drawer({
     const max = Math.max(MIN_DRAWER, window.innerWidth - 240);
     widthRef.current = Math.min(max, Math.max(MIN_DRAWER, widthRef.current + delta));
     dialog.style.width = `${widthRef.current}px`;
+    e.currentTarget.setAttribute("aria-valuenow", String(Math.round(widthRef.current)));
   };
 
   return (
@@ -379,6 +381,13 @@ export function Drawer({
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize panel"
+            aria-valuenow={Math.round(initialWidth)}
+            aria-valuemin={MIN_DRAWER}
+            aria-valuemax={
+              typeof window === "undefined"
+                ? undefined
+                : Math.max(MIN_DRAWER, window.innerWidth - 240)
+            }
             tabIndex={0}
             onPointerDown={startResize}
             onKeyDown={onResizeKey}

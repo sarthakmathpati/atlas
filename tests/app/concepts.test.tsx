@@ -45,7 +45,7 @@ describe("map and concept screens", () => {
     await ready();
     // The first visit to Today hands over to the welcome questions.
     await waitFor(() => expect(window.location.hash).toBe("#/welcome"));
-    await screen.findByRole("heading", { level: 1, name: "Welcome to Atlas" }, { timeout: 4000 });
+    await screen.findByRole("heading", { level: 1, name: "Welcome to Atlas" });
     await user.type(screen.getByLabelText("Your name"), "Asha");
     await user.click(screen.getByRole("radio", { name: /^SDE/ }));
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -82,11 +82,7 @@ describe("map and concept screens", () => {
     await ready();
     await go(`#/concept/${DB_CONCEPT}`);
     // The concept page is a lazy route, slow to load under a busy suite.
-    await screen.findByRole(
-      "heading",
-      { level: 1, name: "DBMS vs file systems" },
-      { timeout: 4000 },
-    );
+    await screen.findByRole("heading", { level: 1, name: "DBMS vs file systems" });
     await user.click(screen.getByRole("button", { name: "Mark as studied" }));
     expect(useConceptStateStore.getState().states[DB_CONCEPT]).toMatchObject({
       studied: true,
@@ -104,18 +100,12 @@ describe("map and concept screens", () => {
 
     await user.click(screen.getByRole("button", { name: "Flashcards" }));
     // The dialog waits for the subject's text chunk, which is lazy loaded (slow under a busy suite).
-    const dialog = await screen.findByRole(
-      "dialog",
-      { name: "Flashcards: DBMS vs file systems" },
-      { timeout: 4000 },
-    );
+    const dialog = await screen.findByRole("dialog", { name: "Flashcards: DBMS vs file systems" });
     // One card per written question; rate every card Easy to finish the session.
     const cards = conceptById.get(DB_CONCEPT)!.written.questions;
     expect(cards).toBeGreaterThan(0);
     for (let i = 0; i < cards; i++) {
-      await user.click(
-        await within(dialog).findByRole("button", { name: "Show answer" }, { timeout: 4000 }),
-      );
+      await user.click(await within(dialog).findByRole("button", { name: "Show answer" }));
       await user.click(within(dialog).getByRole("button", { name: /^Easy/ }));
     }
     expect(await within(dialog).findByText("Session saved")).toBeInTheDocument();
@@ -129,7 +119,7 @@ describe("map and concept screens", () => {
     const user = userEvent.setup();
     await ready();
     await go(`#/concept/${DB_CONCEPT_2}`);
-    await screen.findByRole("heading", { level: 1, name: "Data models" }, { timeout: 4000 });
+    await screen.findByRole("heading", { level: 1, name: "Data models" });
     await user.click(screen.getByRole("button", { name: "Explain it back" }));
     const dialog = await screen.findByRole("dialog", { name: /Explain it back/ });
     const check = within(dialog).getByRole("button", { name: "Check it myself" });

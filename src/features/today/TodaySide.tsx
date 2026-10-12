@@ -99,7 +99,10 @@ export function StreakStrip() {
           );
         })}
       </ol>
-      <a href="#/dashboard" className="mt-3 inline-block text-sm text-accent hover:underline">
+      <a
+        href="#/dashboard"
+        className="tap-target mt-3 inline-block text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+      >
         The whole year on the dashboard
       </a>
     </Card>
@@ -142,7 +145,7 @@ export function ReadyCard({ ready, fading }: { ready: Concept[]; fading: number 
       aside={
         <a
           href={routeHref("/map", undefined, { ready: "1" })}
-          className="text-accent hover:underline"
+          className="tap-target text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
         >
           See all on the map
         </a>

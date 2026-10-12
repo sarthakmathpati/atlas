@@ -62,7 +62,7 @@ function PhaseStepper({ session, disabled }: { session: MockSession; disabled: b
             aria-current={p === current ? "step" : undefined}
             onClick={() => setMockPhase(session.id, p)}
             className={cx(
-              "inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-sm transition-colors max-md:h-9",
+              "inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-sm transition-colors max-md:h-9 relative before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']",
               p === current
                 ? "border-accent bg-accent-soft font-medium text-text"
                 : i < at
@@ -489,7 +489,10 @@ function Finished({ session }: { session: MockSession }) {
         {session.kind === "dsa" && info && (
           <span>
             The problem:{" "}
-            <a href={routeHref("/problems", info.id)} className="text-accent hover:underline">
+            <a
+              href={routeHref("/problems", info.id)}
+              className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+            >
               {problemLabel(info)}
             </a>
             {attempt?.result &&
@@ -499,7 +502,10 @@ function Finished({ session }: { session: MockSession }) {
         {session.kind === "design" && info && (
           <span>
             Your design is kept with{" "}
-            <a href={routeHref("/designs", info.id)} className="text-accent hover:underline">
+            <a
+              href={routeHref("/designs", info.id)}
+              className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+            >
               {info.title}
             </a>
             .

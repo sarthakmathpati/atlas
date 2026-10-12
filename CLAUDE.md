@@ -1066,3 +1066,92 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     0.81 to 0.98 s after (median 0.88). ADHD mode adds one small table read at start (`paceStats`)
     and, while off, only its listeners. Playwright's installed clock slows the app's timers
     about sixfold, so timing runs don't install it (screenshots do).
+
+148. **One clock with a focus block** (session 23, 9.5): a focus block started for a plan item
+    runs that item's Now clock (ADHD mode on), so the disc, "Planned 15, took 22" and the pace
+    count the block's time; starting such a block answers the 2-minute question (keep going).
+    Pausing, ending or stopping the block (or moving it to another item) pauses the clock; the
+    break isn't time on the item. The Now card's Pause and Continue pause and resume the block
+    with the clock, and the card has "Start a focus block". A block without an item, or for
+    another item, leaves the clock alone; starting the Now clock never starts a block (a
+    2-minute start stays small). `intentionForItem` no longer doubles a verb a title starts with.
+149. **Room under the floating notes**: while an ADHD floating note is up, the main area keeps
+    `--floating-notes-room` (the notes' height + 24 px) as bottom padding at every width, so
+    the end of a page, the workspace's editor footer and the Now card can always be scrolled
+    (or on wide screens laid out) clear of it.
+150. **Tests on slow machines**: screen tests wait up to 8 s per `findBy…`/`waitFor`
+    (`asyncUtilTimeout` in `tests/setup.ts`; a passing wait returns at once, nothing is asserted
+    less), so the per-call 3 to 6 s timeouts were removed. Screen tests that start from an empty
+    database wait for the delete to succeed (`tests/app/freshDb.ts`; moving on at "blocked" let
+    the pending delete close the next test's connection). The "Park it" test failed under load
+    because thoughts were checked against a 30-second ticker: the park store now stamps
+    `changedAt` whenever the thoughts change, and screens check against the later of the two, so
+    a thought made due by a change (a break, a sync, Undo) shows at once.
+151. **F30 audit fixes** (axe-core 4.10 on 28 screens × Day, Dusk, Night × ADHD on and off ×
+    1440 and 390 px, plus a Tab walk of every page): links inside text are underlined (a 40%
+    accent line, full on hover); pattern chips use `.tint-accent` (the soft tint laid over the
+    surface, so a hovered row can't darken it below 4.5:1); a pattern tile's numbers switch to
+    `--text` from level 3 (`PATTERN_TEXT_FROM_LEVEL`, tested per theme); changed words in diffs
+    are underlined 2 px in `--diff-*-mark` (now opaque, 3:1 on the row) instead of a highlight
+    that took code colors below 4.5:1; a marked code line's number is muted text; each concept
+    tab has a screen-reader h2 and the 1-day sheet's concepts are h3 (no sheet skips a level,
+    tested); task-list boxes are labelled by their text; Recharts' keyboard layer is off (the
+    table is the accessible view); resize separators carry their values; tabs point
+    `aria-controls` only at a panel that exists; the heatmap's sideways scroll and read-only
+    editors take focus; the weekly strip's minutes sit under the swatch (no text color reads on
+    the middle of the ramp in Dusk and Night).
+152. **Phones** (390 px): a `.grid` without a column rule gets `minmax(0, 1fr)` in the base
+    layer (implicit auto columns grew to their widest item and pushed Review and the drill past
+    the edge); the drill's length options read 3, 5, 8, 10 under "Number of prompts"; with the
+    calm screen the app name in the top bar steps aside on phones, as during a block. Controls
+    are 44 px on phones: segmented controls, chart and heatmap table switches, toast buttons and
+    similar text buttons grow to `h-11`; small standalone links and buttons get `.tap-target`
+    (an invisible tap area of at least 44 × 44 px centered on them, phones only); chip toggles
+    get a 4 px tap margin; problem cards and review rows are one tap target (the title link is
+    stretched over the row, the star and Re-solve sit above it), and pattern chips in the card
+    layout are labels. Exceptions: links inside running text (WCAG's inline exception), the
+    summit profile's points (closer than 44 px; the table and arrow keys reach every week) and
+    the map canvas (it zooms, and the list view is the accessible alternative).
+153. **Workspace keys** (F30): `n` opens the Code tab with the cursor in the editor (the
+    editor loads on demand, so focus is retried for about 2 s), Ctrl or Cmd + S opens the save
+    dialog, even inside the editor, and never the browser's own save. Tab indents inside the
+    editor and Esc then Tab leaves it (CodeMirror's tab focus mode); the shortcuts dialog lists
+    all three under "In a problem".
+154. **Performance (9.5)**, measured on a quiet machine with the 9.4 build and this one served
+    statically and alternated in the same harness (8 runs each, cache off, no installed clock):
+    the dashboard's cold load with a year of data until the last card is in the page took 0.58
+    to 0.76 s (median 0.61; 9.4: 0.59 to 0.80, median 0.62); its lazily loaded chart is drawn
+    at about 1.0 s in both. Loading the chart's code with the page instead made both slower
+    (parsing Recharts competes with the first render), so it still loads with its card. On a
+    390 px phone with the CPU slowed 4×, the shell renders in 0.80 to 1.13 s (median 1.07;
+    budget 1.5 s). Every interaction in a scripted session (palette, navigation, typing in the
+    editor, the dashboard's popovers, the ADHD switch, a focus block) paints within 100 ms by
+    the Event Timing API: switching a concept to Deep took 112 ms, so the level's text now
+    renders from `useDeferredValue` (the Depth control answers at once). Panning the map runs
+    at 60 fps at far and near zoom (no frame over 25 ms). Runs on a loaded machine read about
+    0.4 s slower for both builds alike, so timings are taken with nothing else running.
+155. **How F30 was checked** (the scripts live outside the repository): axe-core 4.10 with
+    WCAG 2.0, 2.1 and 2.2 A and AA plus best practices on 28 screens, in Day, Dusk and Night,
+    ADHD mode off and on, at 1440 and 390 px; horizontal overflow and tap areas under 44 px at
+    390 px; a Tab walk of every page (every stop visible and visibly focused, no trap: Tab in
+    the editor indents and Esc then Tab leaves); reduced motion (no animation or transition
+    over 50 ms in Dusk and in Night with ADHD mode on). Findings left on purpose: axe's
+    "scrollable region must be focusable" on CodeMirror's scroller (its editable content is
+    focusable), "content outside landmarks" for a tooltip left open by the pointer over the map,
+    and "partly obscured" on the map's Filters button (a click-through layer; clicks land on
+    the button at both edges). The screen tests run reliably under five busy loops on four
+    cores (two full runs, 1,011 tests each).
+156. **Notes and stories in search** (F23, finished in 9.5): the palette also finds the owner's
+    notes (a concept note's Markdown and saved answers, opening `#/concept/<id>?tab=notes`; a
+    problem's summary, insight and notes, opening the problem) under "Your notes", and stories
+    (title, STAR text and tags; "Tell me about yourself" opens the intro tab; the hidden
+    unsorted practice story never shows) under "Your stories". Both are rebuilt from the stores
+    each time the palette opens (`replaceKind`), like mistake tags. The concept page takes
+    `?tab=` to open on a tab.
+157. **Visual review (9.5)**: every route in Day, Dusk and Night at 390, 768 and 1440 px for the
+    mid-way owner (252 screenshots), the empty states of a new owner, ADHD mode on, and the
+    dialogs and layers (palette, shortcuts, Ask Claude, Park it, focus start and running, the
+    break view, flashcards, save attempt, the More sheet), with no page wider than the screen and
+    no console errors anywhere. Fixed: Today's scale bar now sits below the head row, so its label
+    fits on one line beside the bar on a phone; a tab row that runs past the edge fades out at
+    that end (a mask, updated on scroll and resize) so the cut-off tab reads as "scroll for more".

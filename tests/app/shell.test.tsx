@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { App } from "@/app/App";
+import { useConceptNoteStore } from "@/stores/conceptNoteStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -60,7 +61,7 @@ describe("app shell", () => {
     await waitFor(() => expect(useProfileStore.getState().profile).not.toBeNull());
     for (const [hash, heading] of ROUTES) {
       await go(hash);
-      const h1 = await screen.findByRole("heading", { level: 1, name: heading }, { timeout: 4000 });
+      const h1 = await screen.findByRole("heading", { level: 1, name: heading });
       expect(h1, hash).toBeInTheDocument();
     }
   }, 30_000);
@@ -85,6 +86,38 @@ describe("app shell", () => {
     expect(useUiStore.getState().paletteOpen).toBe(false);
   });
 
+  it("finds the owner's own notes, opening a concept's note on its Notes tab (F23)", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(useProfileStore.getState().profile).not.toBeNull());
+    act(() =>
+      useConceptNoteStore.setState((s) => ({
+        notes: {
+          ...s.notes,
+          "dsa.graph-basics.bfs": {
+            conceptId: "dsa.graph-basics.bfs",
+            markdown: "Mark visited when pushing: no quokka duplicates.",
+            savedAnswers: [],
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      })),
+    );
+    await user.keyboard("{Control>}k{/Control}");
+    const input = await screen.findByPlaceholderText("Search concepts, problems and pages");
+    await user.type(input, "quokka");
+    expect(await screen.findByText("Your notes")).toBeInTheDocument();
+    await screen.findByText("Notes on BFS");
+    await user.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/concept/dsa.graph-basics.bfs?tab=notes"),
+    );
+    expect(await screen.findByRole("tab", { name: "Notes" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
   it("follows g-then-letter shortcuts, but not while typing", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -106,9 +139,7 @@ describe("app shell", () => {
     await go("#/settings");
     const name = await screen.findByLabelText("Your name");
     await user.type(name, "Asha");
-    await waitFor(() => expect(useProfileStore.getState().profile?.name).toBe("Asha"), {
-      timeout: 3000,
-    });
+    await waitFor(() => expect(useProfileStore.getState().profile?.name).toBe("Asha"));
     await user.click(screen.getByRole("radio", { name: "Quant" }));
     expect(useProfileStore.getState().profile?.track).toBe("quant");
     await user.click(screen.getByRole("radio", { name: "Dusk" }));

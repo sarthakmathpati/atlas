@@ -131,8 +131,11 @@ export function TopBar() {
           aria-label={`${APP_NAME}, go to Today`}
         >
           <BrandMark size={22} className="text-accent" />
-          {/* During a block the name steps aside on phones: the line has its own row below. */}
-          <span className={cx("font-display text-lg font-bold", blockOn && "max-sm:sr-only")}>
+          {/* During a block the name steps aside on phones: the line has its own row below. With
+              the calm screen's larger text it steps aside too, so the bar fits a phone. */}
+          <span
+            className={cx("font-display text-lg font-bold", (blockOn || calm) && "max-sm:sr-only")}
+          >
             {APP_NAME}
           </span>
         </a>

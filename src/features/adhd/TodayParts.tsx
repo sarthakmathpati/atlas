@@ -338,7 +338,7 @@ export function WelcomeBack({ date }: { date: string }) {
         <>
           {" "}
           Reviews piled up for a while;{" "}
-          <a href={routeHref("/review")} className="text-accent hover:underline">
+          <a href={routeHref("/review")} className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent">
             Fresh start on Review
           </a>{" "}
           spreads them over the next week.

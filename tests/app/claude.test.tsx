@@ -57,7 +57,7 @@ function withSample(responder?: (input: SampleInput) => string): FakeSample {
 
 /** Answers the copy prompt modal with `reply`. */
 async function pasteReply(user: ReturnType<typeof userEvent.setup>, reply: string) {
-  const box = await screen.findByRole("textbox", { name: "Claude's reply" }, { timeout: 4000 });
+  const box = await screen.findByRole("textbox", { name: "Claude's reply" });
   const modal = box.closest("dialog")!;
   expect(within(modal).getByRole("textbox", { name: "The prompt for Claude" })).toHaveValue();
   await user.click(box);
@@ -99,12 +99,12 @@ describe("Claude in the app", () => {
     const sample = withSample();
     await ready("sample");
     await go(`#/concept/${CONCEPT}`);
-    await screen.findByRole("heading", { level: 1, name: CONCEPT_NAME }, { timeout: 4000 });
+    await screen.findByRole("heading", { level: 1, name: CONCEPT_NAME });
     act(() => useUiStore.getState().setAskOpen(true));
-    const drawer = await screen.findByRole("dialog", { name: "Ask Claude" }, { timeout: 4000 });
+    const drawer = await screen.findByRole("dialog", { name: "Ask Claude" });
     expect(within(drawer).getByText(CONCEPT_NAME)).toBeInTheDocument();
     await user.click(within(drawer).getByRole("button", { name: "Explain it simply" }));
-    await within(drawer).findByText(/ripples/, {}, { timeout: 4000 });
+    await within(drawer).findByText(/ripples/);
     // Built-in Claude gets the instructions in the first user turn, then the conversation.
     const input = sample.calls[0]!.input as { role: string; content: string }[];
     expect(input[0]!.content).toContain("## Concept");
@@ -113,22 +113,18 @@ describe("Claude in the app", () => {
     expect(sample.calls[0]!.options.cache).toBe(false);
 
     // Quick actions appear once the answer has finished streaming.
-    await user.click(
-      await within(drawer).findByRole("button", { name: "Give an example" }, { timeout: 4000 }),
-    );
-    await within(drawer).findByText(/shortest way there/, {}, { timeout: 4000 });
+    await user.click(await within(drawer).findByRole("button", { name: "Give an example" }));
+    await within(drawer).findByText(/shortest way there/);
     expect(sample.calls).toHaveLength(2);
 
-    await within(drawer).findAllByRole("button", { name: "Save to concept" }, { timeout: 4000 });
+    await within(drawer).findAllByRole("button", { name: "Save to concept" });
     const saves = within(drawer).getAllByRole("button", { name: "Save to concept" });
     await user.click(saves.at(-1)!);
     await user.click(within(drawer).getByRole("button", { name: "Save answer" }));
-    await waitFor(
-      () =>
-        expect(useConceptNoteStore.getState().notes[CONCEPT]?.savedAnswers.at(-1)?.source).toBe(
-          "sample",
-        ),
-      { timeout: 4000 },
+    await waitFor(() =>
+      expect(useConceptNoteStore.getState().notes[CONCEPT]?.savedAnswers.at(-1)?.source).toBe(
+        "sample",
+      ),
     );
   }, 20_000);
 
@@ -144,7 +140,7 @@ describe("Claude in the app", () => {
       within(drawer).getByRole("textbox", { name: "Message to Claude" }),
       "Hello{Enter}",
     );
-    await within(drawer).findByText(/switched to copy-prompt mode/, {}, { timeout: 4000 });
+    await within(drawer).findByText(/switched to copy-prompt mode/);
     expect(useAIStore.getState().sampleBlocked).toBe(true);
     await user.click(within(drawer).getByRole("button", { name: "Try again" }));
     await pasteReply(user, "A pasted answer from claude.ai.");
@@ -163,11 +159,7 @@ describe("Claude in the app", () => {
         scope: concept.name,
       }),
     );
-    const dialog = await screen.findByRole(
-      "dialog",
-      { name: `Quick quiz: ${concept.name}` },
-      { timeout: 4000 },
-    );
+    const dialog = await screen.findByRole("dialog", { name: `Quick quiz: ${concept.name}` });
     await user.click(within(dialog).getByRole("button", { name: "Write my quiz" }));
     const quiz = demoSampleResponder(
       `Write a quick quiz of 5\nConcept ids to use:\n- ${CONCEPT}: ${concept.name}\n`,
@@ -179,7 +171,7 @@ describe("Claude in the app", () => {
     await user.type(shorts[0]!, "Keep earlier results so later steps don't redo them.");
     await user.click(within(dialog).getByRole("button", { name: "Check my answers" }));
     await pasteReply(user, '[{ "index": 2, "score": 1, "feedback": "Spot on." }]');
-    await within(dialog).findByText(/Spot on\./, {}, { timeout: 4000 });
+    await within(dialog).findByText(/Spot on\./);
     const checks = useConceptStateStore.getState().checks[CONCEPT] ?? [];
     expect(checks.at(-1)).toMatchObject({ kind: "quiz" });
     expect(checks.at(-1)!.score).toBeGreaterThan(0);
@@ -189,14 +181,10 @@ describe("Claude in the app", () => {
     const user = userEvent.setup();
     await ready("copy");
     act(() => openQuickQuiz({ conceptIds: [CONCEPT], title: "Quick quiz: test", scope: "test" }));
-    const dialog = await screen.findByRole(
-      "dialog",
-      { name: "Quick quiz: test" },
-      { timeout: 4000 },
-    );
+    const dialog = await screen.findByRole("dialog", { name: "Quick quiz: test" });
     await user.click(within(dialog).getByRole("button", { name: "Write my quiz" }));
     await pasteReply(user, "Sorry, I can't write a quiz right now.");
-    await within(dialog).findByText(/couldn't read that reply/, {}, { timeout: 4000 });
+    await within(dialog).findByText(/couldn't read that reply/);
     expect(within(dialog).getByText("Claude's reply as it came")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Try again" })).toBeInTheDocument();
   }, 20_000);
@@ -217,12 +205,10 @@ describe("Claude in the app", () => {
       }),
     );
     await go(`#/problems/${PROBLEM}`);
-    await user.click(
-      await screen.findByRole("button", { name: "Review my code" }, { timeout: 4000 }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Review my code" }));
     const panel = await screen.findByRole("region", { name: "Code review" });
     await user.click(within(panel).getByRole("button", { name: "Review my code" }));
-    await within(panel).findByText("Has bugs", {}, { timeout: 4000 });
+    await within(panel).findByText("Has bugs");
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.anthropic.com/v1/messages");
     expect((init.headers as Record<string, string>)["x-api-key"]).toBe("sk-ant-test-0000");
@@ -236,15 +222,12 @@ describe("Claude in the app", () => {
     await user.click(within(panel).getByRole("button", { name: /Off-by-one/ }));
     await user.click(within(panel).getByRole("button", { name: "Use as insight" }));
     // The draft autosaves 2 seconds after the last change.
-    await waitFor(
-      () => {
-        const state = useProblemStore.getState().states[PROBLEM]!;
-        expect(state.insight).toMatch(/Grow the window/);
-        expect(state.draft?.review?.verdict).toBe("has bugs");
-        expect(state.draft?.pendingTagIds).toContain("mt-off-by-one");
-      },
-      { timeout: 5000 },
-    );
+    await waitFor(() => {
+      const state = useProblemStore.getState().states[PROBLEM]!;
+      expect(state.insight).toMatch(/Grow the window/);
+      expect(state.draft?.review?.verdict).toBe("has bugs");
+      expect(state.draft?.pendingTagIds).toContain("mt-off-by-one");
+    });
   }, 20_000);
 
   it("says plainly when the API key is wrong, and Test connection reports each model", async () => {
@@ -270,7 +253,7 @@ describe("Claude in the app", () => {
       within(drawer).getByRole("textbox", { name: "Message to Claude" }),
       "Hi{Enter}",
     );
-    await within(drawer).findByText(/didn't accept your API key/, {}, { timeout: 4000 });
+    await within(drawer).findByText(/didn't accept your API key/);
     expect(within(drawer).getByRole("link", { name: "Open Settings" })).toBeInTheDocument();
 
     const results = await testApiConnection();
@@ -301,10 +284,10 @@ describe("Claude in the app", () => {
     const sample = withSample();
     await ready("sample");
     await go(`#/problems/${PROBLEM}`);
-    await user.click(await screen.findByRole("button", { name: "I'm stuck" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("button", { name: "I'm stuck" }));
     const hints = await screen.findByRole("region", { name: "Hints" });
     await user.click(within(hints).getByRole("button", { name: "Get hint 1" }));
-    await within(hints).findByText(/remember as you go/, {}, { timeout: 4000 });
+    await within(hints).findByText(/remember as you go/);
     expect(useProblemStore.getState().states[PROBLEM]!.hints?.[0]?.level).toBe(1);
     const calls = sample.calls.length;
     // Switching sources and back shows the saved hint without asking again.
@@ -312,9 +295,8 @@ describe("Claude in the app", () => {
     await user.click(within(hints).getByRole("radio", { name: "Claude" }));
     expect(within(hints).getByText(/remember as you go/)).toBeInTheDocument();
     expect(sample.calls.length).toBe(calls);
-    await waitFor(
-      () => expect(useProblemStore.getState().states[PROBLEM]!.draft?.hintsUsed).toBe(1),
-      { timeout: 5000 },
+    await waitFor(() =>
+      expect(useProblemStore.getState().states[PROBLEM]!.draft?.hintsUsed).toBe(1),
     );
   }, 20_000);
 
@@ -323,14 +305,14 @@ describe("Claude in the app", () => {
     withSample();
     await ready("sample");
     await go(`#/concept/${CONCEPT}`);
-    await screen.findByRole("heading", { level: 1, name: CONCEPT_NAME }, { timeout: 4000 });
+    await screen.findByRole("heading", { level: 1, name: CONCEPT_NAME });
     await user.click(screen.getByRole("button", { name: "Explain it back" }));
     const dialog = await screen.findByRole("dialog", { name: /Explain it back/ });
     await user.type(within(dialog).getByRole("textbox"), "word ".repeat(40));
     const grade = within(dialog).getByRole("button", { name: "Grade with Claude" });
-    await waitFor(() => expect(grade).toBeEnabled(), { timeout: 4000 });
+    await waitFor(() => expect(grade).toBeEnabled());
     await user.click(grade);
-    await within(dialog).findByText("4 / 5", {}, { timeout: 4000 });
+    await within(dialog).findByText("4 / 5");
     let checks = useConceptStateStore.getState().checks[CONCEPT]!;
     expect(checks.at(-1)).toMatchObject({ kind: "explain", score: 0.8 });
     expect((checks.at(-1)!.detail as { mode: string }).mode).toBe("claude");
@@ -342,7 +324,7 @@ describe("Claude in the app", () => {
       "Linear time because every item is handled once.",
     );
     await user.click(within(dialog).getByRole("button", { name: "Grade my answer" }));
-    await within(dialog).findByText("5 / 5", {}, { timeout: 4000 });
+    await within(dialog).findByText("5 / 5");
     checks = useConceptStateStore.getState().checks[CONCEPT]!;
     expect(checks.at(-1)!.score).toBe(1);
   }, 20_000);
@@ -358,10 +340,8 @@ describe("Claude in the app", () => {
     });
     await ready("sample");
     await go("#/drill");
-    await user.click(
-      await screen.findByRole("button", { name: "Write 5 new prompts" }, { timeout: 4000 }),
-    );
-    await screen.findByText(/4 new prompts added to your bank \(1 left out/, {}, { timeout: 4000 });
+    await user.click(await screen.findByRole("button", { name: "Write 5 new prompts" }));
+    await screen.findByText(/4 new prompts added to your bank \(1 left out/);
     expect(screen.getByText("Your 4 prompts from Claude")).toBeInTheDocument();
   }, 20_000);
 });

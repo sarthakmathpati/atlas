@@ -22,6 +22,7 @@ import { saveAttempt, useProblemStore } from "@/stores/problemStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useTightenStore } from "@/features/revision/tightenStore";
 import { useUiStore } from "@/stores/uiStore";
+import { freshDatabase } from "./freshDb";
 
 type Global = { claude?: unknown };
 type User = ReturnType<typeof userEvent.setup>;
@@ -90,7 +91,7 @@ async function start(mode: AIMode = "copy", extra: { downloads?: FakeClaudeDownl
 /** In copy prompt mode, answers the modal with what the stand-in Claude says to its prompt. */
 async function answer(mode: AIMode, user: User) {
   if (mode !== "copy") return;
-  const box = await screen.findByRole("textbox", { name: "Claude's reply" }, { timeout: 4000 });
+  const box = await screen.findByRole("textbox", { name: "Claude's reply" });
   const modal = box.closest("dialog")!;
   const prompt = (
     within(modal).getByRole("textbox", { name: "The prompt for Claude" }) as HTMLTextAreaElement
@@ -111,11 +112,8 @@ beforeEach(async () => {
   window.location.hash = "#/settings";
   localStorage.clear();
   clearAICache();
-  // A fresh owner for every test: the fake IndexedDB would otherwise keep the last test's data.
-  await new Promise((resolve) => {
-    const r = indexedDB.deleteDatabase("atlas");
-    r.onsuccess = r.onerror = r.onblocked = () => resolve(null);
-  });
+  // A fresh owner for every test (see freshDb.ts).
+  await freshDatabase();
 });
 
 afterEach(() => {
@@ -133,7 +131,7 @@ describe("the Today plan", () => {
     const user = userEvent.setup();
     await start();
     await go("#/today");
-    const list = await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    const list = await screen.findByRole("list", { name: "Plan items" });
     expect(within(list).getAllByRole("listitem").length).toBeGreaterThanOrEqual(3);
     const plan = planNow()!;
     expect(plan.plannedAt).toBeTruthy();
@@ -167,7 +165,7 @@ describe("the Today plan", () => {
     const user = userEvent.setup();
     await start();
     await go("#/today");
-    await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    await screen.findByRole("list", { name: "Plan items" });
     const learn = planNow()!.items.find((i) => i.kind === "learn-concept")!;
     await user.click(within(controlsOf(learn.title)).getByRole("button", { name: "Swap" }));
     const panel = await screen.findByRole("dialog", { name: `Swap ${learn.title}` });
@@ -204,7 +202,7 @@ describe("the Today plan", () => {
       ]);
     });
     await go("#/today");
-    await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    await screen.findByRole("list", { name: "Plan items" });
     const plan = planNow()!;
     expect(plan.items[0]!.origin).toBe("owner");
     expect(plan.items.filter((i) => i.origin === "planner").length).toBeGreaterThan(0);
@@ -232,7 +230,7 @@ describe("the dashboard", () => {
     const user = userEvent.setup();
     await start();
     await go("#/dashboard");
-    await screen.findByRole("heading", { name: "DSA patterns" }, { timeout: 4000 });
+    await screen.findByRole("heading", { name: "DSA patterns" });
     await user.click(
       screen.getByRole("button", { name: /^Overall readiness: 0 out of 100\. Show how/ }),
     );
@@ -248,13 +246,9 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude in %s mode", (mode)
     const user = userEvent.setup();
     await start(mode);
     await go("#/weekly");
-    await user.click(
-      await screen.findByRole("button", { name: "Write my reflection" }, { timeout: 4000 }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Write my reflection" }));
     await answer(mode, user);
-    const section = (await screen.findByText(/What went well/, {}, { timeout: 4000 })).closest(
-      "section",
-    )!;
+    const section = (await screen.findByText(/What went well/)).closest("section")!;
     expect(within(section).getByText("Claude")).toBeInTheDocument();
     await user.click(within(section).getByRole("button", { name: "Use as my focus" }));
     const focus = useProfileStore.getState().profile!.focusSubjects;
@@ -267,10 +261,10 @@ describe.each(["sample", "api", "copy"] as AIMode[])("Claude in %s mode", (mode)
     const user = userEvent.setup();
     await start(mode);
     await go("#/revision?scope=day");
-    await screen.findByText("Before you walk in: your mistake checklist", {}, { timeout: 4000 });
+    await screen.findByText("Before you walk in: your mistake checklist");
     await user.click(screen.getByRole("button", { name: "Tighten with Claude" }));
     await answer(mode, user);
-    expect(await screen.findByText("Edited by Claude", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText("Edited by Claude")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Tightened by Claude" })).toBeChecked();
     await user.click(screen.getByRole("radio", { name: "Your sheet" }));
     expect(screen.queryByText("Edited by Claude")).toBeNull();
@@ -290,7 +284,7 @@ describe("revision sheet files and printing", () => {
     const clicks = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     await start();
     await go("#/revision?scope=day");
-    await screen.findByText("Before you walk in: your mistake checklist", {}, { timeout: 4000 });
+    await screen.findByText("Before you walk in: your mistake checklist");
     await user.click(screen.getByRole("button", { name: "Export as Markdown" }));
     await screen.findByText("Sheet exported as Markdown.");
     await user.click(screen.getByRole("button", { name: "Export as HTML" }));
@@ -333,16 +327,14 @@ describe("revision sheet files and printing", () => {
       ]);
     });
     await go("#/revision?scope=day");
-    await screen.findByText("Before you walk in: your mistake checklist", {}, { timeout: 4000 });
+    await screen.findByText("Before you walk in: your mistake checklist");
     window.print = vi.fn(); // blocked: nothing happens, beforeprint never fires
     await user.click(screen.getByRole("button", { name: "Print" }));
-    expect(
-      await screen.findByText("Printing is blocked in this view", {}, { timeout: 3000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Printing is blocked in this view")).toBeInTheDocument();
     expect(planNow()!.items[0]!.done).toBe(false);
     window.print = vi.fn(() => window.dispatchEvent(new Event("beforeprint")));
     await user.click(screen.getByRole("button", { name: "Print" }));
-    await waitFor(() => expect(planNow()!.items[0]!.done).toBe(true), { timeout: 3000 });
+    await waitFor(() => expect(planNow()!.items[0]!.done).toBe(true));
     expect(screen.queryByText("Printing is blocked in this view")).toBeNull();
   });
 

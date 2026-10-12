@@ -209,7 +209,10 @@ export default function TodayPage() {
     <>
       {calm && (
         <p className="-mt-2 mb-4 text-sm">
-          <a href={routeHref("/today")} className="text-accent hover:underline">
+          <a
+            href={routeHref("/today")}
+            className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+          >
             Back to the interview day view
           </a>
         </p>
@@ -309,7 +312,7 @@ export default function TodayPage() {
             <li key={label as string}>
               <a
                 href={href as string}
-                className="flex items-center justify-between gap-3 rounded-control px-2 py-1.5 hover:bg-surface-sunken"
+                className="flex items-center justify-between gap-3 rounded-control px-2 py-1.5 hover:bg-surface-sunken max-md:min-h-11"
               >
                 <span className="text-muted">{label}</span>
                 <span className="font-medium text-text tabular-nums">{value}</span>

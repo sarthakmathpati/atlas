@@ -247,13 +247,13 @@ export default function QuizPage() {
                   return (
                     <li
                       key={c.id}
-                      className="flex items-center gap-2.5 border-t border-rule px-4 py-2 first:border-t-0"
+                      className="relative flex items-center gap-2.5 border-t border-rule px-4 py-2 first:border-t-0"
                     >
                       <StatusGlyph status={status} size={14} title={STATUS_LABEL[status]} />
                       <span className="min-w-0 flex-1">
                         <a
                           href={conceptHref(c.conceptId)}
-                          className="block truncate text-base text-text hover:underline"
+                          className="block truncate text-base text-text hover:underline after:absolute after:inset-0 after:content-['']"
                         >
                           {concept?.name ?? c.conceptId}
                         </a>

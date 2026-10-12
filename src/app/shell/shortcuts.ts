@@ -13,6 +13,9 @@ export interface ShortcutInfo {
   label: string;
 }
 
+/** Keys pressed one after the other ("G then T"), not together. */
+export const isSequence = (keys: string[]) => keys[0] === "G" || keys[0] === "Esc";
+
 export const SHORTCUT_GROUPS: { title: string; items: ShortcutInfo[] }[] = [
   {
     title: "Anywhere",
@@ -24,6 +27,14 @@ export const SHORTCUT_GROUPS: { title: string; items: ShortcutInfo[] }[] = [
       { keys: ["P"], label: "Park a thought for later" },
       { keys: ["?"], label: "Show keyboard shortcuts" },
       { keys: ["Esc"], label: "Close a panel or dialog" },
+    ],
+  },
+  {
+    title: "In a problem",
+    items: [
+      { keys: ["N"], label: "Write a new attempt (opens the code)" },
+      { keys: ["Mod", "S"], label: "Save the attempt" },
+      { keys: ["Esc", "Tab"], label: "Leave the code editor (Tab indents inside it)" },
     ],
   },
   {

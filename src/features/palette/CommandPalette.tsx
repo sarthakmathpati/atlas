@@ -21,6 +21,7 @@ import {
   Layers,
   ListChecks,
   MessageSquareQuote,
+  NotebookPen,
   MessagesSquare,
   PanelLeft,
   Puzzle,
@@ -52,7 +53,9 @@ import { setAdhdOn, useAdhdOn } from "@/stores/adhdStore";
 import { askToStartBlock } from "@/stores/focusTimerStore";
 import { openPark } from "@/stores/parkStore";
 import { useConceptStateStore, useConceptStatus } from "@/stores/conceptStateStore";
-import { useCustomConceptStore } from "@/stores/customConceptStore";
+import { useConceptNoteStore } from "@/stores/conceptNoteStore";
+import { findConcept, useCustomConceptStore } from "@/stores/customConceptStore";
+import { useStoryStore } from "@/stores/storyStore";
 import { isDue } from "@/lib/srs/intervals";
 import { localDate } from "@/lib/time";
 import { toast } from "@/stores/toastStore";
@@ -66,6 +69,8 @@ import {
   customProblemDocs,
   getSearchIndex,
   mistakeTagDocs,
+  noteDocs,
+  storyDocs,
 } from "./docs";
 import { pushRecent, readRecents, type RecentItem } from "./recents";
 
@@ -81,6 +86,8 @@ const GROUP_LABEL: Record<SearchKind, string> = {
   puzzle: "Quant puzzles",
   design: "Design prompts",
   mistake: "Mistake tags",
+  note: "Your notes",
+  story: "Your stories",
 };
 
 const KIND_ICON: Partial<Record<SearchKind, LucideIcon>> = {
@@ -89,6 +96,8 @@ const KIND_ICON: Partial<Record<SearchKind, LucideIcon>> = {
   puzzle: Puzzle,
   design: DraftingCompass,
   mistake: Tag,
+  note: NotebookPen,
+  story: MessageSquareQuote,
 };
 
 function ConceptGlyph({ conceptId }: { conceptId: string }) {
@@ -219,6 +228,16 @@ export function CommandPalette() {
       "custom-concepts",
       customConceptDocs(Object.values(useCustomConceptStore.getState().concepts)),
     );
+    // Notes and stories change as the owner writes (F23): refreshed on every open.
+    getSearchIndex().replaceKind(
+      "note",
+      noteDocs(
+        useConceptNoteStore.getState().notes,
+        useProblemStore.getState().states,
+        findConcept,
+      ),
+    );
+    getSearchIndex().replaceKind("story", storyDocs(useStoryStore.getState().stories));
     let cancelled = false;
     // Concept text loads per subject; once it's here, search also matches each simple level.
     loadAllContent(SUBJECTS_WITH_TEXT)
@@ -616,7 +635,7 @@ export function CommandPalette() {
           <button
             type="button"
             onClick={close}
-            className="h-8 shrink-0 rounded-control px-2 text-sm text-muted hover:bg-surface-sunken hover:text-text max-md:h-10"
+            className="h-8 shrink-0 rounded-control px-2 text-sm text-muted hover:bg-surface-sunken hover:text-text max-md:h-11"
           >
             Esc
           </button>

@@ -102,6 +102,13 @@
     height: 100%;
   }
 
+  /* A grid without a column rule gets one column as wide as its container, not as wide as its
+     widest item: with an implicit auto column, a long row or a segmented control pushed pages
+     past the edge of a phone (session 9.5). Column utilities, responsive ones too, override it. */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   body {
     margin: 0;
     background: var(--canvas);

@@ -88,7 +88,7 @@ export default function ApiKeySettings() {
             type="button"
             onClick={() => setShow((v) => !v)}
             aria-label={show ? "Hide the key" : "Show the key"}
-            className="absolute top-1/2 right-1 grid size-8 -translate-y-1/2 place-items-center rounded-control text-muted hover:bg-surface-sunken hover:text-text max-md:size-10"
+            className="absolute top-1/2 right-1 grid size-8 -translate-y-1/2 place-items-center rounded-control text-muted before:absolute before:-inset-0.5 before:content-[''] hover:bg-surface-sunken hover:text-text max-md:size-10"
           >
             {show ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
           </button>
@@ -113,7 +113,7 @@ export default function ApiKeySettings() {
           href={CONSOLE_KEYS}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-accent underline-offset-2 hover:underline"
+          className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
         >
           Anthropic Console
         </a>

@@ -32,13 +32,23 @@ interface ParkState {
   thoughts: Record<string, ParkedThought>;
   loaded: boolean;
   dialog: ParkRequest | null;
+  /** When the thoughts last changed (ms since epoch). Screens check which thoughts are back
+   *  against the later of this and their ticker, so a change shows at once. */
+  changedAt: number;
 }
 
 export const useParkStore = create<ParkState>(() => ({
   thoughts: {},
   loaded: false,
   dialog: null,
+  changedAt: 0,
 }));
+
+// Whatever changed the thoughts (parking, a break making break thoughts due, a sync, Undo), the
+// time of the change counts as "now" for which ones are back.
+useParkStore.subscribe((s, prev) => {
+  if (s.thoughts !== prev.thoughts) useParkStore.setState({ changedAt: Date.now() });
+});
 
 let repo: Repository | null = null;
 

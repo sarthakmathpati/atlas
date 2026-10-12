@@ -6,7 +6,7 @@ import { navigate, routeHref, useRoute } from "@/app/router";
 import { Button } from "@/components/ui/Button";
 import { normalizeLanguage, type CodeLanguage } from "@/components/ui/code/languages";
 import { Dialog } from "@/components/ui/Dialog";
-import { useMediaQuery } from "@/components/ui/hooks";
+import { isEditableTarget, useLatest, useMediaQuery } from "@/components/ui/hooks";
 import { Callout, PageSkeleton } from "@/components/ui/Misc";
 import { Tabs } from "@/components/ui/Tabs";
 import {
@@ -101,6 +101,45 @@ function Workspace({ info, mode }: { info: ProblemInfo; mode: SessionMode }) {
     setTemplateOn(on);
     writeTemplatePref(on);
   };
+
+  // Keyboard (F30): Ctrl or Cmd + S saves the attempt (never the browser's own "save page"), and
+  // `n` starts writing an attempt: the Code tab with the cursor in the editor.
+  const keys = useLatest({
+    save: () => {
+      if (!attempt.conflict) setSaveOpen(true);
+    },
+    write: () => {
+      setTab("code");
+      // The editor loads on demand: look for it for up to about two seconds.
+      const label = `Code for ${info.title}`;
+      let tries = 0;
+      const focusEditor = () => {
+        const editor = [...document.querySelectorAll<HTMLElement>(".cm-content")].find(
+          (el) => el.getAttribute("aria-label") === label,
+        );
+        if (editor) editor.focus();
+        else if (++tries < 40) setTimeout(focusEditor, 50);
+      };
+      setTimeout(focusEditor, 0);
+    },
+  });
+  useEffect(() => {
+    const modalOpen = () => Boolean(document.querySelector("dialog[open].atlas-modal"));
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (!modalOpen()) keys.current.save();
+        return;
+      }
+      if (mod || e.altKey || e.defaultPrevented || e.key !== "n") return;
+      if (isEditableTarget(e.target) || modalOpen()) return;
+      e.preventDefault();
+      keys.current.write();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [keys]);
 
   const discard = () => {
     const undo = attempt.discard(templateOn);

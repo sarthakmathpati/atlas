@@ -328,7 +328,7 @@ export function QuickAddDialog() {
                       setConceptIds((v) => (v.includes(id) ? v : [...v, id].slice(0, 3)));
                       setSuggested((s) => s?.filter((x) => x !== id) ?? null);
                     }}
-                    className="inline-flex h-6 items-center gap-1 rounded-full border border-dashed border-accent px-2 text-xs font-medium text-accent hover:bg-accent-soft disabled:opacity-50 max-md:h-9"
+                    className="inline-flex h-6 items-center gap-1 rounded-full border border-dashed border-accent px-2 text-xs font-medium text-accent hover:bg-accent-soft disabled:opacity-50 max-md:h-9 relative before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']"
                   >
                     <Plus size={12} aria-hidden="true" />
                     {conceptName(id)}

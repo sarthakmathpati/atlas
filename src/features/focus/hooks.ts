@@ -48,9 +48,10 @@ export function useHeldCount(): number {
   const toasts = useFocusTimerStore((s) => s.held.length);
   const profile = useProfileStore((s) => s.profile);
   const thoughts = useParkStore((s) => s.thoughts);
+  const changedAt = useParkStore((s) => s.changedAt);
   const now = useTicker(30_000, holding);
   if (!holding) return 0;
-  const date = new Date(now);
+  const date = new Date(Math.max(now, changedAt));
   const back = thoughtsBack(Object.values(thoughts), date).length;
   const backup = profile && backupReminderDue(profile) ? 1 : 0;
   const bedtime = profile?.prefs.bedtime;

@@ -238,7 +238,7 @@ export function SummitProfile({
           type="button"
           onClick={() => setTable((t) => !t)}
           aria-pressed={table}
-          className="h-8 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-10"
+          className="h-8 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-11"
         >
           {table ? "Show as chart" : "Show as table"}
         </button>
@@ -457,7 +457,9 @@ export function SummitProfile({
                   onFocus={() => setActive(i)}
                   dataPoint={i}
                   className={cx(
-                    "grid place-items-center rounded-full no-underline",
+                    // Weeks sit closer than 44 px, so points keep their own size (the table and
+                    // the arrow keys reach every week); no wider tap area that would overlap.
+                    "grid place-items-center rounded-full no-underline before:hidden",
                     isLive ? "size-6" : "size-4",
                   )}
                 >

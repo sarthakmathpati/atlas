@@ -157,7 +157,7 @@ export function ReviewResult({
                   disabled={added}
                   onClick={() => onAddTag(tag.id)}
                   className={cx(
-                    "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-sm max-md:h-9",
+                    "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-sm max-md:h-9 relative before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']",
                     added
                       ? "border-rule bg-surface-sunken text-muted"
                       : "border-dashed border-accent text-accent hover:bg-accent-soft",

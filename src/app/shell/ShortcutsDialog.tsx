@@ -4,7 +4,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Kbd } from "@/components/ui/Misc";
 import { MOD_KEY } from "@/components/ui/platform";
 import { useUiStore } from "@/stores/uiStore";
-import { SHORTCUT_GROUPS } from "./shortcuts";
+import { isSequence, SHORTCUT_GROUPS } from "./shortcuts";
 
 export function ShortcutsDialog() {
   const open = useUiStore((s) => s.shortcutsOpen);
@@ -22,7 +22,7 @@ export function ShortcutsDialog() {
                   <dd className="flex shrink-0 items-center gap-1">
                     {item.keys.map((k, i) => (
                       <Fragment key={i}>
-                        {i > 0 && item.keys[0] === "G" && (
+                        {i > 0 && isSequence(item.keys) && (
                           <span className="text-xs text-faint">then</span>
                         )}
                         <Kbd>{k === "Mod" ? MOD_KEY : k}</Kbd>

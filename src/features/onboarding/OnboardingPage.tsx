@@ -299,7 +299,11 @@ function Wizard({ profile }: { profile: Profile }) {
           <span>
             Step {step + 1} of {STEPS.length}: {STEPS[step]}
           </span>
-          <button type="button" onClick={skip} className="text-accent hover:underline">
+          <button
+            type="button"
+            onClick={skip}
+            className="tap-target text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+          >
             Skip for now
           </button>
         </div>

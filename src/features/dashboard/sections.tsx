@@ -15,6 +15,8 @@ import {
   practiceLevel,
   PACE_DAYS,
   PROJECTION_SPREAD,
+  PATTERN_TEXT_FROM_LEVEL,
+  PATTERN_TINT,
   RETENTION_DAYS,
   UNTOUCHED_DAYS,
   type MemoryHealth,
@@ -228,13 +230,13 @@ export function SubjectBars({ subjects }: { subjects: SubjectRow[] }) {
         />
       }
     >
-      <ul className="space-y-1.5">
+      <ul className="space-y-1.5 max-md:space-y-0">
         {rows.map((s) => (
           <li key={s.subjectId} data-subject={s.subjectId} className="flex items-center gap-3">
             <a
               href={routeHref("/map", undefined, { subject: s.subjectId })}
               title={s.name}
-              className="flex w-32 shrink-0 items-center gap-2 text-sm text-text hover:underline sm:w-40"
+              className="flex w-32 shrink-0 items-center gap-2 text-sm text-text hover:underline max-md:min-h-11 sm:w-40"
             >
               <SubjectEmblem subjectId={s.subjectId} size={26} />
               <span className="truncate">{s.shortName}</span>
@@ -290,7 +292,7 @@ export function SubjectBars({ subjects }: { subjects: SubjectRow[] }) {
         <button
           type="button"
           onClick={() => setAll((v) => !v)}
-          className="mt-3 text-sm text-accent hover:underline"
+          className="tap-target mt-3 text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
         >
           {all
             ? "Hide subjects outside the track's weights"
@@ -302,8 +304,6 @@ export function SubjectBars({ subjects }: { subjects: SubjectRow[] }) {
 }
 
 // ----- pattern grid ------------------------------------------------------------------------------
-
-const TINT = [0, 14, 26, 38, 50];
 
 function PatternTileView({ t }: { t: PatternTile }) {
   const level = practiceLevel(t.practice);
@@ -356,11 +356,16 @@ function PatternTileView({ t }: { t: PatternTile }) {
           t.noHard ? "border-dashed border-rule-strong" : "border-transparent",
         )}
         style={{
-          background: `color-mix(in srgb, var(--heat-2) ${TINT[level]}%, var(--surface-sunken))`,
+          background: `color-mix(in srgb, var(--heat-2) ${PATTERN_TINT[level]}%, var(--surface-sunken))`,
         }}
       >
         <span className="line-clamp-2 text-sm font-medium text-text">{t.name}</span>
-        <span className="mt-auto flex items-baseline justify-between gap-2 text-xs text-muted tabular-nums">
+        <span
+          className={cx(
+            "mt-auto flex items-baseline justify-between gap-2 text-xs tabular-nums",
+            level >= PATTERN_TEXT_FROM_LEVEL ? "text-text" : "text-muted",
+          )}
+        >
           <span>{counts}</span>
           <span>{Math.round(t.practice * 100)}%</span>
         </span>
@@ -378,7 +383,10 @@ function RecognitionSummary({ r }: { r: Recognition }) {
     return (
       <p className="text-sm text-muted">
         No pattern drill answers in the last {r.days} days.{" "}
-        <a href="#/drill" className="text-accent hover:underline">
+        <a
+          href="#/drill"
+          className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+        >
           Start a drill
         </a>{" "}
         to see how quickly you recognize each pattern.
@@ -408,7 +416,10 @@ function RecognitionSummary({ r }: { r: Recognition }) {
         <span className="text-muted">
           of {plural(r.answered, "drill prompt")} recognized in the last {r.days} days.
         </span>{" "}
-        <a href="#/drill" className="text-accent hover:underline">
+        <a
+          href="#/drill"
+          className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+        >
           Open the drill
         </a>
       </p>
@@ -420,7 +431,7 @@ function RecognitionSummary({ r }: { r: Recognition }) {
               {i > 0 && ", "}
               <a
                 href={routeHref("/drill", undefined, { pattern: w.conceptId })}
-                className="text-accent hover:underline"
+                className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
               >
                 {conceptName(w.conceptId)}
               </a>{" "}
@@ -437,7 +448,7 @@ function RecognitionSummary({ r }: { r: Recognition }) {
               You picked {conceptName(c.picked)} when it was{" "}
               <a
                 href={routeHref("/drill", undefined, { pattern: c.correct })}
-                className="text-accent hover:underline"
+                className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
               >
                 {conceptName(c.correct)}
               </a>{" "}
@@ -494,7 +505,7 @@ export function PatternGrid({
                   aria-hidden="true"
                   className="inline-block size-3 rounded-[3px]"
                   style={{
-                    background: `color-mix(in srgb, var(--heat-2) ${TINT[i]}%, var(--surface-sunken))`,
+                    background: `color-mix(in srgb, var(--heat-2) ${PATTERN_TINT[i]}%, var(--surface-sunken))`,
                   }}
                 />
                 {l}
@@ -532,7 +543,7 @@ export function StatusMix({ subjects }: { subjects: SubjectRow[] }) {
           type="button"
           onClick={() => setTable((t) => !t)}
           aria-pressed={table}
-          className="h-8 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-10"
+          className="h-8 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-11"
         >
           {table ? "Show as chart" : "Show as table"}
         </button>
@@ -597,7 +608,10 @@ export function MemoryHealthCard({ memory }: { memory: MemoryHealth }) {
       title="Memory health"
       id="memory-heading"
       actions={
-        <a href="#/review" className="text-sm text-accent hover:underline">
+        <a
+          href="#/review"
+          className="tap-target text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+        >
           Open Review
         </a>
       }
@@ -711,7 +725,7 @@ export function WeaknessCard({
                     <StatusGlyph status={e.status} size={14} />
                     <a
                       href={conceptHref(e.concept.id)}
-                      className="min-w-0 flex-1 text-base text-text hover:underline"
+                      className="min-w-0 flex-1 text-base text-text hover:underline max-md:flex max-md:min-h-11 max-md:items-center"
                     >
                       {e.concept.name}
                     </a>
@@ -743,7 +757,7 @@ export function WeaknessCard({
                     <span className="min-w-0 flex-1">
                       <a
                         href={conceptHref(t.conceptId)}
-                        className="text-base text-text hover:underline"
+                        className="tap-target text-base text-text hover:underline"
                       >
                         {t.name}
                       </a>

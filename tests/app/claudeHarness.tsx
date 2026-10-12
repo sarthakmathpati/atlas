@@ -90,7 +90,7 @@ export async function setupMode(mode: AIMode, extra?: (repoReady: void) => void)
 /** In copy prompt mode, answers the modal with what the stand-in Claude says to its prompt. */
 export async function answerCopy(mode: AIMode, user: User) {
   if (mode !== "copy") return;
-  const box = await screen.findByRole("textbox", { name: "Claude's reply" }, { timeout: 4000 });
+  const box = await screen.findByRole("textbox", { name: "Claude's reply" });
   const modal = box.closest("dialog")!;
   const prompt = (
     within(modal).getByRole("textbox", { name: "The prompt for Claude" }) as HTMLTextAreaElement

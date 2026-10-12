@@ -236,17 +236,20 @@ export function AttemptsTimeline({ state, onOpen }: TimelineProps) {
                 checked && "bg-accent-soft",
               )}
             >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => toggle(a.id)}
-                aria-label={`Select ${attemptTitle(a, n)} to compare`}
-                className="size-4 shrink-0 accent-[var(--accent)] max-md:size-5"
-              />
+              {/* The label widens the tap area to 44 px on phones without moving the row. */}
+              <label className="grid shrink-0 place-items-center max-md:-my-2 max-md:-ml-3 max-md:size-11">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggle(a.id)}
+                  aria-label={`Select ${attemptTitle(a, n)} to compare`}
+                  className="size-4 accent-[var(--accent)] max-md:size-5"
+                />
+              </label>
               <button
                 type="button"
                 onClick={() => onOpen(a.id)}
-                className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5 text-left text-sm"
+                className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5 text-left text-sm max-md:min-h-11"
               >
                 <span className="w-14 shrink-0 font-medium text-text tabular-nums">
                   {shortDate(attemptDate(a))}

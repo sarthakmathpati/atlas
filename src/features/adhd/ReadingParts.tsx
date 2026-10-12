@@ -227,7 +227,7 @@ export function ReadingParts({
           <button
             type="button"
             onClick={() => setShown(parts.length)}
-            className="text-sm text-accent hover:underline"
+            className="tap-target text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
           >
             Show the whole level
           </button>

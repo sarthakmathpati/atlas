@@ -43,6 +43,7 @@ import { useProfileStore } from "@/stores/profileStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { apiRequests, go, resetClaude, setupMode } from "./claudeHarness";
+import { freshDatabase } from "./freshDb";
 
 const CONCEPT = "dsa.sliding-window.variable-size-window";
 const ALL_PARTS = "calm nowCard time place rewards breaks startHelp reading gentle";
@@ -103,7 +104,7 @@ const planItem = (id: string) =>
   usePlanStore.getState().plans[localDate()]!.items.find((i) => i.id === id)!;
 
 async function nowCard(title = "Solve 1. Two Sum") {
-  return screen.findByRole("region", { name: `Now: ${title}` }, { timeout: 4000 });
+  return screen.findByRole("region", { name: `Now: ${title}` });
 }
 
 /** Moves the running block's start back, as if `ms` had passed. */
@@ -131,7 +132,7 @@ const topSwitch = () =>
 
 /** A callout's box, found by its title. */
 const calloutOf = async (title: string) =>
-  (await screen.findByText(title, undefined, { timeout: 4000 })).closest(".rounded-panel")!;
+  (await screen.findByText(title)).closest(".rounded-panel")!;
 
 const clockText = (d: Date) =>
   `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -187,14 +188,8 @@ beforeEach(async () => {
   clearAICache();
   sounds.length = 0;
   document.documentElement.removeAttribute("data-adhd");
-  // Wait for the delete itself: when the last test's connection is still open it is blocked
-  // until that connection closes, and moving on earlier lets the delete close the next app's
-  // connection instead.
-  await new Promise((resolve) => {
-    const r = indexedDB.deleteDatabase("atlas");
-    r.onsuccess = r.onerror = () => resolve(null);
-    setTimeout(() => resolve(null), 3000);
-  });
+  // A fresh owner for every test (see freshDb.ts).
+  await freshDatabase();
 });
 
 afterEach(() => {
@@ -216,6 +211,7 @@ afterEach(() => {
   useUiStore.setState({ paletteOpen: false, askOpen: false });
   resetClaude();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("the switch", () => {
@@ -230,7 +226,7 @@ describe("the switch", () => {
 
     await go("#/today");
     // With ADHD mode off, Today is as it was: Up next and the route, no Now card.
-    await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    await screen.findByRole("list", { name: "Plan items" });
     expect(screen.queryByRole("region", { name: /^Now/ })).toBeNull();
     expect(screen.queryByText("Today's ink")).toBeNull();
 
@@ -323,14 +319,14 @@ describe("the calm screen", () => {
     const { setProblemDueDates } = await import("@/stores/problemStore");
     act(() => void setProblemDueDates({ "lc-1": localDate() }));
     await go("#/today");
-    await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    await screen.findByRole("list", { name: "Plan items" });
     const nav = screen.getAllByRole("navigation", { name: "Main" })[0]!;
     expect(within(nav).getByText(/^1/, { selector: "span" })).toHaveTextContent("1 due");
     expect(within(nav).getByRole("button", { name: /(Collapse|Expand) sidebar/ })).toBeTruthy();
     expect(screen.getByText("Your atlas")).toBeInTheDocument();
 
     adhdOn();
-    await screen.findByRole("region", { name: /^Now/ }, { timeout: 4000 });
+    await screen.findByRole("region", { name: /^Now/ });
     expect(within(nav).queryByText(/due$/)).toBeNull();
     expect(within(nav).queryByRole("button", { name: /(Collapse|Expand) sidebar/ })).toBeNull();
     expect(within(nav).getByRole("link", { name: "Review" })).toBeInTheDocument();
@@ -339,11 +335,7 @@ describe("the calm screen", () => {
     expect(screen.getByText("Your atlas")).toBeInTheDocument();
 
     await go("#/dashboard");
-    const more = await screen.findByRole(
-      "button",
-      { name: /^Show more: patterns, charts/ },
-      { timeout: 6000 },
-    );
+    const more = await screen.findByRole("button", { name: /^Show more: patterns, charts/ });
     expect(screen.queryByText("Activity this year")).toBeNull();
     await user.click(more);
     expect(await screen.findByText("Activity this year")).toBeInTheDocument();
@@ -423,6 +415,72 @@ describe("the Now card", () => {
     expect(screen.queryByRole("region", { name: "Two minutes done" })).toBeNull();
   });
 
+  it("starts a focus block for the stop, whose clock runs and pauses with the block", async () => {
+    const user = userEvent.setup();
+    await start();
+    plan();
+    await go("#/today");
+    await user.click(within(await nowCard()).getByRole("button", { name: "Start a focus block" }));
+    const dialog = await screen.findByRole("dialog", { name: "Start a focus block" });
+    expect(within(dialog).getByRole("textbox")).toHaveValue("Solve 1. Two Sum");
+    await user.click(within(dialog).getByRole("button", { name: "Start the block" }));
+    expect(useFocusTimerStore.getState()).toMatchObject({ running: true, planItemId: "p1" });
+    expect(useNowStore.getState().clock).toMatchObject({ itemId: "p1" });
+    expect(useNowStore.getState().clock!.lastAt).not.toBeNull();
+
+    const card = await nowCard();
+    expect(
+      within(card).getByText("Your focus block is on this stop, so its clock runs with the block."),
+    ).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Start a focus block" })).toBeNull();
+    pass(60_000);
+    await user.click(within(card).getByRole("button", { name: "Pause" }));
+    expect(useFocusTimerStore.getState().running).toBe(false);
+    expect(useNowStore.getState().clock!.lastAt).toBeNull();
+    await user.click(within(card).getByRole("button", { name: "Continue" }));
+    expect(useFocusTimerStore.getState().running).toBe(true);
+    expect(useNowStore.getState().clock!.lastAt).not.toBeNull();
+    act(() => useFocusTimerStore.getState().reset());
+  });
+
+  it("keeps room at the page's bottom while a floating note is up, so nothing stays under it", async () => {
+    // jsdom has no layout: report the notes' height through a stand-in ResizeObserver.
+    let report: () => void = () => undefined;
+    let height = 0;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: () => void) {
+          report = cb;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.dataset.testid === "adhd-notes" ? height : 0;
+    });
+    const root = document.documentElement.style;
+    await start();
+    const p = plan();
+    await go("#/today");
+    expect(document.querySelector("main")!.className).toContain(
+      "pb-[var(--floating-notes-room,0px)]",
+    );
+    act(() => report());
+    expect(root.getPropertyValue("--floating-notes-room")).toBe("0px");
+
+    act(() => startNow(p.date, p.items[0]!, { trial: true }));
+    workFor(TRIAL_MS);
+    await screen.findByRole("region", { name: "Two minutes done" });
+    height = 118;
+    act(() => report());
+    expect(root.getPropertyValue("--floating-notes-room")).toBe("142px");
+    expect(root.getPropertyValue("--floating-notes-h")).toBe("126px");
+  });
+
   it("opens the hints for a problem, and Ask Claude beside the lesson when stuck on one", async () => {
     const user = userEvent.setup();
     await start();
@@ -430,7 +488,7 @@ describe("the Now card", () => {
     await go("#/today");
     await user.click(within(await nowCard()).getByRole("button", { name: "I'm stuck" }));
     await waitFor(() => expect(window.location.hash).toBe("#/problems/lc-1?panel=hints"));
-    expect(await screen.findByRole("region", { name: "Hints" }, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: "Hints" })).toBeTruthy();
 
     act(() => setPlanItemSkipped(localDate(), "p1", true));
     await go("#/today");
@@ -456,13 +514,9 @@ describe("time you can see", () => {
     ).toBeGreaterThan(0);
 
     await go("#/problems/lc-1");
-    await user.click(await screen.findByRole("tab", { name: "Code" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("tab", { name: "Code" }));
     expect(
-      await screen.findByRole(
-        "timer",
-        { name: /^Time planned for this problem, 15 minutes: / },
-        { timeout: 4000 },
-      ),
+      await screen.findByRole("timer", { name: /^Time planned for this problem, 15 minutes: / }),
     ).toBeInTheDocument();
 
     await go("#/drill");
@@ -474,19 +528,15 @@ describe("time you can see", () => {
     const cards = await screen.findByRole("dialog", { name: "Flashcards: Variable-size window" });
     // One concept's deck starts at once.
     expect(
-      await within(cards).findByRole(
-        "timer",
-        { name: /^Time for this round, about \d+ minutes: / },
-        { timeout: 4000 },
-      ),
+      await within(cards).findByRole("timer", {
+        name: /^Time for this round, about \d+ minutes: /,
+      }),
     ).toBeInTheDocument();
     act(() => closeConceptDialogs());
 
     await waitFor(() => expect(useDesignStore.getState().loaded).toBe(true));
     await go("#/designs/hld-url-shortener");
-    await user.click(
-      await screen.findByRole("button", { name: "Start the design" }, { timeout: 4000 }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Start the design" }));
     expect(await screen.findByRole("timer", { name: /^Time for the design: / })).toBeTruthy();
 
     // With the part off there's no disc; the round keeps its own clock.
@@ -494,7 +544,7 @@ describe("time you can see", () => {
     await waitFor(() => expect(screen.queryAllByTestId("disc-timer")).toHaveLength(0));
     expect(screen.getByRole("timer", { name: "Time left" })).toBeInTheDocument();
     await go("#/problems/lc-1");
-    await user.click(await screen.findByRole("tab", { name: "Code" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("tab", { name: "Code" }));
     expect(await screen.findByRole("group", { name: "Attempt timer" })).toBeInTheDocument();
     expect(screen.queryAllByTestId("disc-timer")).toHaveLength(0);
   });
@@ -587,9 +637,7 @@ describe("rewards right away", () => {
     act(() => {
       for (const id of ["p1", "l1", "d1"]) setPlanItemDone(localDate(), id, true);
     });
-    expect(
-      await screen.findByRole("img", { name: "13 steps done today" }, { timeout: 3000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "13 steps done today" })).toBeInTheDocument();
     expect(screen.getByText(/\(today\): plan finished, a flag/)).toBeInTheDocument();
     expect(screen.getByText(/^1 finished day this week\./)).toBeInTheDocument();
     // Undoing a stop takes nothing away.
@@ -614,7 +662,7 @@ describe("breaks that work", () => {
     await user.keyboard("{Enter}");
     expect(await screen.findByText(/^Break in 15 minutes:/)).toBeInTheDocument();
     pass(15 * 60_000);
-    const view = await screen.findByRole("dialog", { name: "Break" }, { timeout: 3000 });
+    const view = await screen.findByRole("dialog", { name: "Break" });
     const text = view.textContent!.toLowerCase();
     expect(MOVEMENT_PROMPTS.some((m) => text.includes(m.slice(1).toLowerCase()))).toBe(true);
   });
@@ -687,7 +735,7 @@ describe("reading support", () => {
     const user = userEvent.setup();
     await start({ lineFocus: true });
     await go(`#/concept/${CONCEPT}`);
-    await user.click(await screen.findByRole("radio", { name: "Interview" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("radio", { name: "Interview" }));
     expect(await screen.findByText("Part 1 of 2")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Part 2 of 2" })).toBeNull();
     // Without the browser's voice, Read aloud stays hidden.
@@ -730,7 +778,7 @@ describe("reading support", () => {
     const user = userEvent.setup();
     await start();
     await go(`#/concept/${CONCEPT}`);
-    await user.click(await screen.findByRole("radio", { name: "Simple" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("radio", { name: "Simple" }));
     await user.click(await screen.findByRole("button", { name: "Read aloud: part 1" }));
     expect(spoken.length).toBeGreaterThan(0);
     expect(spoken[0]).not.toMatch(/[*#`]/);
@@ -799,7 +847,7 @@ describe("Study with Claude", () => {
       }
 
       pass(15 * 60_000);
-      const view = await screen.findByRole("dialog", { name: "Break" }, { timeout: 3000 });
+      const view = await screen.findByRole("dialog", { name: "Break" });
       await user.type(within(view).getByLabelText(/A note for Claude/), "Got stuck on page tables");
       await user.click(within(view).getByRole("button", { name: /^Partly/ }));
       await waitFor(() =>
@@ -827,7 +875,7 @@ describe("Study with Claude", () => {
     expect(screen.queryByRole("region", { name: "A word from Claude" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Claude's reply" })).toBeNull();
     pass(15 * 60_000);
-    const view = await screen.findByRole("dialog", { name: "Break" }, { timeout: 3000 });
+    const view = await screen.findByRole("dialog", { name: "Break" });
     expect(within(view).queryByLabelText(/A note for Claude/)).toBeNull();
     await user.click(within(view).getByRole("button", { name: /^Done/ }));
     expect(screen.queryByRole("textbox", { name: "Claude's reply" })).toBeNull();
@@ -880,7 +928,7 @@ describe("gentle language", () => {
     await start(null);
     act(() => recordActivity(addDaysToDate(localDate(), -5), { checks: 2 }));
     await go("#/today");
-    await screen.findByRole("list", { name: "Plan items" }, { timeout: 4000 });
+    await screen.findByRole("list", { name: "Plan items" });
     expect(screen.queryByText("Welcome back")).toBeNull();
     adhdOn();
     const hello = (await calloutOf("Welcome back")) as HTMLElement;

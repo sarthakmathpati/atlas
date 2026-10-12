@@ -80,7 +80,7 @@ describe("the 1-day sheet", () => {
 
   it("gives interview bullets for fading and weak must-know concepts, fading first", () => {
     const section = day.sections.find((s) => s.id === "weak")!.markdown;
-    const heads = [...section.matchAll(/^#### (.+) \((fading|learning)\)$/gm)];
+    const heads = [...section.matchAll(/^### (.+) \((fading|learning)\)$/gm)];
     expect(heads.length).toBeGreaterThan(0);
     expect(heads.length).toBeLessThanOrEqual(DAY_LIMITS.concepts);
     const statuses = heads.map((h) => h[2]);
@@ -91,7 +91,7 @@ describe("the 1-day sheet", () => {
       expect(concept?.importance).toBe("must");
     }
     // Bullets come from the written interview points (at most 3 per concept).
-    const blocks = section.split(/^#### /m).slice(1);
+    const blocks = section.split(/^### /m).slice(1);
     for (const b of blocks) {
       const bullets = b.split("\n").filter((l) => l.startsWith("- "));
       expect(bullets.length).toBeGreaterThan(0);
@@ -195,6 +195,30 @@ describe("custom sheets", () => {
     expect(md).toContain("## Operating systems");
     expect(md).not.toContain("## Object-oriented");
     expect(md).toContain("## Your mistake checklist");
+  });
+
+  it("never skips a heading level, so screen readers get the sheet's outline (F30)", () => {
+    const sheets = [
+      day,
+      week,
+      buildSheet(
+        { scope: "custom", subjects: ["os"], patterns: ["dsa.arrays.kadanes-algorithm"] },
+        mid,
+      ),
+      buildSheet({ scope: "day" }, sources("new")),
+    ];
+    for (const sheet of sheets) {
+      // Code blocks (pattern templates) may hold lines starting with "#" (C++ includes).
+      const prose = sheetMarkdown(sheet).replace(/^```[\s\S]*?^```/gm, "");
+      let previous = 1; // the page title
+      for (const [, hashes, title] of prose.matchAll(/^(#{1,6}) (.+)$/gm)) {
+        const level = hashes!.length;
+        expect(level, `"${title}" after a level ${previous} heading`).toBeLessThanOrEqual(
+          previous + 1,
+        );
+        previous = level;
+      }
+    }
   });
 
   it("loads only the subjects it needs", () => {

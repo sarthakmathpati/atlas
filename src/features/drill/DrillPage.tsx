@@ -272,7 +272,10 @@ function PromptCard({
               {item.answerConceptIds.map((id, i) => (
                 <span key={id}>
                   {i > 0 && " or "}
-                  <a href={conceptHref(id)} className="font-semibold text-accent hover:underline">
+                  <a
+                    href={conceptHref(id)}
+                    className="font-semibold text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+                  >
                     {name(id)}
                   </a>
                 </span>
@@ -486,9 +489,12 @@ function Stats({ checks }: { checks: Check[] }) {
         <>
           <ul className="space-y-2 px-4 py-3">
             {shown.map((a) => (
-              <li key={a.conceptId} className="space-y-1">
+              <li key={a.conceptId} className="relative space-y-1">
                 <div className="flex items-baseline justify-between gap-2 text-sm">
-                  <a href={conceptHref(a.conceptId)} className="truncate text-text hover:underline">
+                  <a
+                    href={conceptHref(a.conceptId)}
+                    className="truncate text-text hover:underline after:absolute after:inset-0 after:content-['']"
+                  >
                     {name(a.conceptId)}
                   </a>
                   <span className="shrink-0 text-muted tabular-nums">
@@ -507,7 +513,7 @@ function Stats({ checks }: { checks: Check[] }) {
             <button
               type="button"
               onClick={() => setAll((v) => !v)}
-              className="mx-4 mb-3 text-sm text-accent hover:underline"
+              className="mx-4 mb-3 text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
             >
               {all ? "Show fewer" : `Show all ${accuracy.length}`}
             </button>
@@ -732,7 +738,10 @@ export default function DrillPage() {
               {focusPattern && (
                 <p className="flex flex-wrap items-center gap-2 text-base text-text">
                   Only prompts for <span className="font-medium">{name(focusPattern)}</span>.
-                  <a href="#/drill" className="text-sm text-accent hover:underline">
+                  <a
+                    href="#/drill"
+                    className="text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+                  >
                     Drill every pattern
                   </a>
                 </p>
@@ -757,12 +766,17 @@ export default function DrillPage() {
                 </p>
               </div>
               <div className="space-y-1.5">
-                <span className="text-sm font-medium text-text">Length</span>
+                <span className="text-sm font-medium text-text">Number of prompts</span>
                 <SegmentedControl<string>
                   label="Number of prompts"
                   value={String(length)}
                   onChange={(v) => setLength(Number(v) as (typeof LENGTHS)[number])}
-                  options={LENGTHS.map((n) => ({ value: String(n), label: `${n} prompts` }))}
+                  options={LENGTHS.map((n) => ({
+                    value: String(n),
+                    label: n,
+                    ariaLabel: `${n} prompts`,
+                  }))}
+                  className="[&>button]:min-w-12"
                 />
               </div>
               <Switch

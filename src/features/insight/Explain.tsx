@@ -57,6 +57,8 @@ export function ExplainNumber({
           data-point={dataPoint}
           className={cx(
             "cursor-help rounded-[3px] text-left underline decoration-rule-strong decoration-dotted underline-offset-4 hover:decoration-accent focus-visible:decoration-accent",
+            // On phones a number is a small tap target: widen it invisibly to 44 px.
+            "tap-target",
             className,
           )}
         >
@@ -95,7 +97,7 @@ export function ExplainButton({
           ref={props.ref}
           type="button"
           aria-label={label}
-          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-10"
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-control px-2 text-sm text-accent hover:bg-accent-soft max-md:h-11"
         >
           <Info size={15} aria-hidden="true" />
           How it's worked out

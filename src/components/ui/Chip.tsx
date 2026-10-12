@@ -106,7 +106,12 @@ interface PatternChipProps {
 }
 
 export function PatternChip({ label, href, className }: PatternChipProps) {
-  const classes = cx(BASE, "bg-accent-soft text-accent", href && "hover:underline", className);
+  const classes = cx(
+    BASE,
+    "tint-accent text-accent",
+    href && "tap-target hover:underline",
+    className,
+  );
   return href ? (
     <a href={href} className={classes}>
       {label}
@@ -131,7 +136,7 @@ export function TagChip({ label, onRemove, className }: TagChipProps) {
           type="button"
           onClick={onRemove}
           aria-label={`Remove ${label}`}
-          className="relative grid size-5 place-items-center rounded-full text-muted hover:bg-rule hover:text-text before:absolute before:-inset-2 before:content-['']"
+          className="relative grid size-5 place-items-center rounded-full text-muted hover:bg-rule hover:text-text before:absolute before:-inset-3 before:content-['']"
         >
           <X size={12} aria-hidden="true" />
         </button>

@@ -31,20 +31,14 @@ describe.each(["sample", "api", "copy"] as AIMode[])(
       const user = userEvent.setup();
       await setupMode(mode);
       await go("#/problems/q-dice-market");
-      const box = await screen.findByRole(
-        "textbox",
-        { name: "Your answer and reasoning" },
-        { timeout: 4000 },
-      );
+      const box = await screen.findByRole("textbox", { name: "Your answer and reasoning" });
       await user.type(
         box,
         "The sum is 7 on average, so quote 6.5 bid and 7.5 offer. If someone lifts my offer I raise both sides a little and widen, because they may know more.",
       );
       await user.click(screen.getByRole("button", { name: "Grade with Claude" }));
       await answerCopy(mode, user);
-      expect(
-        await screen.findByText("Claude marked it right.", {}, { timeout: 4000 }),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Claude marked it right.")).toBeInTheDocument();
       expect(screen.getByText(/Right answer, and you said why it works/)).toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Save attempt" }));
       const dialog = await screen.findByRole("dialog", { name: "Save attempt" });
@@ -77,13 +71,11 @@ describe.each(["sample", "api", "copy"] as AIMode[])(
         });
       });
       await go(`#/stories?tab=practice&question=bq-your-most-challenging-project&story=${id}`);
-      await user.click(await screen.findByRole("button", { name: "I'm done" }, { timeout: 4000 }));
+      await user.click(await screen.findByRole("button", { name: "I'm done" }));
       await user.click(screen.getByRole("button", { name: "Critique it with Claude" }));
       await answerCopy(mode, user);
       const round = screen.getByRole("region", { name: "Practice question" });
-      expect(
-        await within(round).findByText(/A tighter version/, {}, { timeout: 4000 }),
-      ).toBeInTheDocument();
+      expect(await within(round).findByText(/A tighter version/)).toBeInTheDocument();
       expect(
         screen.getByText("Counts as 70% (Claude's four scores).", { exact: false }),
       ).toBeInTheDocument();
@@ -114,15 +106,11 @@ describe.each(["sample", "api", "copy"] as AIMode[])(
         updateSection(id, "entities", "ParkingLot, Floor, Spot, Ticket, Payment.");
       });
       await go("#/designs/lld-parking-lot");
-      await user.click(
-        await screen.findByRole("button", { name: "Finish and review" }, { timeout: 4000 }),
-      );
+      await user.click(await screen.findByRole("button", { name: "Finish and review" }));
       await user.click(screen.getByRole("button", { name: "Review with Claude" }));
       await answerCopy(mode, user);
       const panel = screen.getByRole("region", { name: "Review" });
-      expect(
-        await within(panel).findByText(/Overall \d\/5/, {}, { timeout: 4000 }),
-      ).toBeInTheDocument();
+      expect(await within(panel).findByText(/Overall \d\/5/)).toBeInTheDocument();
       expect(
         within(panel).getAllByText(/Not discussed|Covered with a concrete choice/).length,
       ).toBe(5);

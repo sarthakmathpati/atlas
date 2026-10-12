@@ -145,10 +145,25 @@ interface ConceptTabsProps {
   /** Wide layouts show the notes editor and preview side by side. */
   wide: boolean;
   className?: string;
+  /** The tab to open with (a search result for a note opens on Notes). */
+  initialTab?: PanelTab;
 }
 
-export function ConceptTabs({ concept, onOpenConcept, wide, className }: ConceptTabsProps) {
-  const [tab, setTab] = useState<PanelTab>("learn");
+const TAB_HEADINGS: Record<PanelTab, string> = {
+  learn: "Learn",
+  practice: "Practice",
+  notes: "Notes",
+  ask: "Ask Claude",
+};
+
+export function ConceptTabs({
+  concept,
+  onOpenConcept,
+  wide,
+  className,
+  initialTab = "learn",
+}: ConceptTabsProps) {
+  const [tab, setTab] = useState<PanelTab>(initialTab);
   const problems = useProblemStore((s) => problemsForConcept(concept.id, s.states).length);
   return (
     <Tabs<PanelTab>
@@ -165,6 +180,9 @@ export function ConceptTabs({ concept, onOpenConcept, wide, className }: Concept
     >
       {(value) => (
         <div className="pt-4">
+          {/* The tab's name as a heading for screen readers, so the sections below (h3) sit
+              under it in order on the page (h1) and in the map's panel (h2). */}
+          <h2 className="sr-only">{TAB_HEADINGS[value]}</h2>
           {value === "learn" && (
             <LearnTab
               concept={concept}

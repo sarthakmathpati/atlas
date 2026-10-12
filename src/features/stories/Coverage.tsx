@@ -108,7 +108,7 @@ export function Coverage({ stories }: { stories: Story[] }) {
                         <button
                           type="button"
                           onClick={() => writeFor(row.question.id, row.question.text)}
-                          className="text-xs text-accent hover:underline"
+                          className="text-xs text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
                         >
                           Write one
                         </button>

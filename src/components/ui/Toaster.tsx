@@ -46,7 +46,7 @@ function ToastView({ toast }: { toast: ToastItem }) {
             toast.action?.onClick();
             dismiss(toast.id);
           }}
-          className="h-8 shrink-0 rounded-full px-3 text-base font-semibold text-accent hover:bg-accent-soft max-md:h-10"
+          className="h-8 shrink-0 rounded-full px-3 text-base font-semibold text-accent hover:bg-accent-soft max-md:h-11"
         >
           {toast.action.label}
         </button>
@@ -55,7 +55,7 @@ function ToastView({ toast }: { toast: ToastItem }) {
         type="button"
         onClick={() => dismiss(toast.id)}
         aria-label="Dismiss"
-        className="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-sunken hover:text-text max-md:size-10"
+        className="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-sunken hover:text-text max-md:size-11"
       >
         <X size={16} aria-hidden="true" />
       </button>

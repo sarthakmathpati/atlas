@@ -86,7 +86,7 @@ describe("mock interviews", () => {
     });
     await go(`#/mock/${id}`);
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Coding interview" }, { timeout: 4000 }),
+      await screen.findByRole("heading", { level: 1, name: "Coding interview" }),
     ).toBeInTheDocument();
     // The problem's name stays hidden until the end; the interviewer states it in their words.
     expect(screen.queryByText(/Daily Temperatures/)).toBeNull();
@@ -97,7 +97,7 @@ describe("mock interviews", () => {
     await user.click(screen.getByRole("button", { name: "Start the interview" }));
     // The opening streams in with a Stop button.
     expect(await screen.findByRole("button", { name: "Stop" })).toBeInTheDocument();
-    expect(await screen.findByText(/in my words/, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText(/in my words/)).toBeInTheDocument();
     await waitFor(() => expect(getMock(id)?.turns).toHaveLength(2));
     expect(screen.queryByRole("button", { name: "Stop" })).toBeNull();
 
@@ -107,7 +107,7 @@ describe("mock interviews", () => {
     expect(getMock(id)?.turns[2]?.content).toMatch(
       /^\[Phase: Clarify \| 4\d min left\] Can the list be empty\?$/,
     );
-    await screen.findByText(/Good question/, {}, { timeout: 4000 });
+    await screen.findByText(/Good question/);
     await user.click(screen.getByRole("button", { name: "Stop" }));
     await waitFor(() =>
       expect(getMock(id)?.turns.at(-1)).toMatchObject({
@@ -122,7 +122,7 @@ describe("mock interviews", () => {
     await user.click(screen.getByRole("button", { name: /Approach/ }));
     expect(getMock(id)?.phase).toBe("Approach");
     await user.type(box, "Keep a stack of days still waiting for a warmer one.{Enter}");
-    expect(await screen.findByText(/can you do better/, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText(/can you do better/)).toBeInTheDocument();
     await waitFor(() => expect(getMock(id)?.turns).toHaveLength(6));
     act(() => setMockCode(id, CODE));
     const saved = getMock(id)!;
@@ -134,7 +134,7 @@ describe("mock interviews", () => {
     render(<App />);
     await loaded();
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Coding interview" }, { timeout: 4000 }),
+      await screen.findByRole("heading", { level: 1, name: "Coding interview" }),
     ).toBeInTheDocument();
     expect(getMock(id)).toMatchObject({ turns: saved.turns, code: CODE, phase: "Approach" });
     expect(screen.getByText(/can you do better/)).toBeInTheDocument();
@@ -148,7 +148,7 @@ describe("mock interviews", () => {
     // End the interview and get the feedback.
     await user.click(screen.getByRole("button", { name: "End interview" }));
     await user.click(screen.getByRole("button", { name: "End and get feedback" }));
-    expect(await screen.findByText(/A solid interview/, {}, { timeout: 6000 })).toBeInTheDocument();
+    expect(await screen.findByText(/A solid interview/)).toBeInTheDocument();
     const done = getMock(id)!;
     expect(done.feedback).toMatchObject({
       hireSignal: "yes",
@@ -165,7 +165,7 @@ describe("mock interviews", () => {
 
     // The history lists it with its score.
     await go("#/mock?tab=history");
-    const list = await screen.findByRole("list", { name: "Past interviews" }, { timeout: 4000 });
+    const list = await screen.findByRole("list", { name: "Past interviews" });
     expect(within(list).getByText(/Daily Temperatures/)).toBeInTheDocument();
     expect(within(list).getByText("3.6/5")).toBeInTheDocument();
   }, 30_000);
@@ -179,69 +179,45 @@ describe("mock interviews", () => {
 
     // Theory from the setup screen: Atlas picks two subjects.
     await go("#/mock?type=theory");
-    const setup = await screen.findByRole(
-      "region",
-      { name: "Start a mock interview" },
-      {
-        timeout: 4000,
-      },
-    );
+    const setup = await screen.findByRole("region", { name: "Start a mock interview" });
     expect(within(setup).getByRole("radio", { name: /Theory rapid-fire/ })).toHaveAttribute(
       "aria-checked",
       "true",
     );
     await user.click(within(setup).getByRole("button", { name: "Start the interview" }));
     expect(
-      await screen.findByRole(
-        "heading",
-        { level: 1, name: "Theory rapid-fire" },
-        { timeout: 4000 },
-      ),
+      await screen.findByRole("heading", { level: 1, name: "Theory rapid-fire" }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Start the interview" }));
-    expect(await screen.findByText(/calls fork\(\)/, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText(/calls fork\(\)/)).toBeInTheDocument();
     await user.type(
       screen.getByRole("textbox", { name: "Your answer" }),
       "The child gets a copy of the address space, copy-on-write.{Enter}",
     );
-    expect(
-      await screen.findByText(/process and a thread/, {}, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/process and a thread/)).toBeInTheDocument();
     const last = apiRequests.at(-1)!;
     expect(last.system).toContain("for a theory interview");
     expect(last.messages.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
     expect(last.messages[2]!.content).toMatch(/^\[Phase: Warm-up \| 20 min left\] The child/);
     await user.click(screen.getByRole("button", { name: "End interview" }));
     await user.click(screen.getByRole("button", { name: "End and get feedback" }));
-    expect(await screen.findByText(/A solid interview/, {}, { timeout: 6000 })).toBeInTheDocument();
+    expect(await screen.findByText(/A solid interview/)).toBeInTheDocument();
 
     // Behavioral: four questions from the bank, starting with Tell me about yourself.
     await go("#/mock?type=behavioral");
-    const setup2 = await screen.findByRole(
-      "region",
-      { name: "Start a mock interview" },
-      {
-        timeout: 4000,
-      },
-    );
+    const setup2 = await screen.findByRole("region", { name: "Start a mock interview" });
     expect(within(setup2).getAllByRole("listitem")[0]).toHaveTextContent(/Tell me about yourself/);
     await user.click(within(setup2).getByRole("button", { name: "Start the interview" }));
-    await user.click(
-      await screen.findByRole("button", { name: "Start the interview" }, { timeout: 4000 }),
-    );
-    expect(
-      await screen.findByText(/tell me about yourself/, {}, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Start the interview" }));
+    expect(await screen.findByText(/tell me about yourself/)).toBeInTheDocument();
     await user.type(
       screen.getByRole("textbox", { name: "Your answer" }),
       "I'm a final-year student who likes making slow things fast.{Enter}",
     );
-    expect(
-      await screen.findByText(/under time pressure/, {}, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/under time pressure/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "End interview" }));
     await user.click(screen.getByRole("button", { name: "End and get feedback" }));
-    expect(await screen.findByText(/A solid interview/, {}, { timeout: 6000 })).toBeInTheDocument();
+    expect(await screen.findByText(/A solid interview/)).toBeInTheDocument();
     // A behavioral round is a check on telling STAR stories.
     const checks = useConceptStateStore.getState().checks["career.behavioral.the-star-method"];
     expect(checks).toHaveLength(checksBefore + 1);
@@ -249,7 +225,7 @@ describe("mock interviews", () => {
 
     // Both show in the history, with a trend per kind.
     await go("#/mock?tab=history");
-    const list = await screen.findByRole("list", { name: "Past interviews" }, { timeout: 4000 });
+    const list = await screen.findByRole("list", { name: "Past interviews" });
     expect(within(list).getByText(/Theory rapid-fire/)).toBeInTheDocument();
     expect(within(list).getByText(/Behavioral interview/)).toBeInTheDocument();
   }, 30_000);
@@ -269,29 +245,25 @@ describe("mock interviews", () => {
     });
     await go(`#/mock/${id}`);
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Design interview" }, { timeout: 4000 }),
+      await screen.findByRole("heading", { level: 1, name: "Design interview" }),
     ).toBeInTheDocument();
     // The workspace sits beside the chat (or behind a Design tab on narrow screens).
     const tab = screen.queryByRole("tab", { name: "Design" });
     if (tab) await user.click(tab);
-    expect(
-      await screen.findByRole("textbox", { name: /Requirements/ }, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("textbox", { name: /Requirements/ })).toBeInTheDocument();
     const chatTab = screen.queryByRole("tab", { name: "Chat" });
     if (chatTab) await user.click(chatTab);
     await user.click(screen.getByRole("button", { name: "Start the interview" }));
-    expect(
-      await screen.findByText(/requirements would you like to pin down/, {}, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/requirements would you like to pin down/)).toBeInTheDocument();
     act(() => updateSection(designId, "requirements", "Cars, bikes and trucks; hourly pricing."));
     await user.type(
       screen.getByRole("textbox", { name: "Your answer" }),
       "Which vehicle types, and how is pricing done?{Enter}",
     );
-    expect(await screen.findByText(/rough numbers/, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText(/rough numbers/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "End interview" }));
     await user.click(screen.getByRole("button", { name: "End and get feedback" }));
-    expect(await screen.findByText(/A solid interview/, {}, { timeout: 6000 })).toBeInTheDocument();
+    expect(await screen.findByText(/A solid interview/)).toBeInTheDocument();
     const design = useDesignStore.getState().attempts[designId]!;
     expect(design.finishedAt).toBeDefined();
     // The design attempt counts as practice on the classic, scored by the mock's average.
@@ -315,11 +287,7 @@ describe("mock interviews", () => {
       }).id;
     });
     await go(`#/mock/${id}`);
-    const region = await screen.findByRole(
-      "region",
-      { name: "Mock interview in a Claude chat" },
-      { timeout: 4000 },
-    );
+    const region = await screen.findByRole("region", { name: "Mock interview in a Claude chat" });
     const script = (
       within(region).getByRole("textbox", {
         name: "The interview script for Claude",
@@ -365,9 +333,7 @@ describe("mock interviews", () => {
     await user.click(code);
     await user.paste(CODE);
     await user.click(within(region).getByRole("button", { name: "Save the feedback" }));
-    expect(
-      await screen.findByText(/needed a hint to reach the stack/, {}, { timeout: 4000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/needed a hint to reach the stack/)).toBeInTheDocument();
     expect(getMock(id)?.feedback?.hireSignal).toBe("lean no");
     const attempt = useProblemStore.getState().states["lc-739"]?.attempts.at(-1);
     expect(attempt).toMatchObject({ mode: "mock", result: "solved_with_hints", code: CODE });

@@ -1,9 +1,10 @@
 // Fuzzy search for the command palette (F23): one MiniSearch index over concepts, topics,
-// subjects, problems, puzzles, design prompts and mistake tags. Built once, updated in place.
+// subjects, problems, puzzles, design prompts, mistake tags, the owner's notes and stories.
+// Built once, updated in place.
 import MiniSearch, { type SearchResult } from "minisearch";
 
 export type SearchKind =
-  "concept" | "topic" | "subject" | "problem" | "puzzle" | "design" | "mistake";
+  "concept" | "topic" | "subject" | "problem" | "puzzle" | "design" | "mistake" | "note" | "story";
 
 export interface SearchDoc {
   id: string;
@@ -46,6 +47,8 @@ export const GROUP_LIMITS: Record<SearchKind, number> = {
   puzzle: 4,
   design: 4,
   mistake: 4,
+  note: 4,
+  story: 4,
 };
 
 export class SearchIndex {

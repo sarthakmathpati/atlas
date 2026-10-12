@@ -46,7 +46,7 @@ describe("problem tracker screens", () => {
     const user = userEvent.setup();
     await ready();
     await go("#/problems?difficulty=hard&topic=dsa.arrays");
-    const table = await screen.findByRole("table", { name: "Problems" }, { timeout: 4000 });
+    const table = await screen.findByRole("table", { name: "Problems" });
     expect(
       within(table).getByRole("link", { name: "41. First Missing Positive" }),
     ).toBeInTheDocument();
@@ -83,11 +83,7 @@ describe("problem tracker screens", () => {
     await user.click(within(dialog).getByRole("button", { name: "Add problem" }));
     await waitFor(() => expect(window.location.hash).toMatch(/^#\/problems\/custom-/));
     expect(
-      await screen.findByRole(
-        "heading",
-        { level: 1, name: "Count Lucky Triplets" },
-        { timeout: 4000 },
-      ),
+      await screen.findByRole("heading", { level: 1, name: "Count Lucky Triplets" }),
     ).toBeInTheDocument();
   });
 
@@ -109,11 +105,9 @@ describe("problem tracker screens", () => {
     });
     await go("#/problems/lc-1?mode=resolve");
     // Narrow layout (jsdom has no media queries): a re-solve opens on the Code tab.
-    await user.click(await screen.findByRole("tab", { name: "Problem" }, { timeout: 4000 }));
+    await user.click(await screen.findByRole("tab", { name: "Problem" }));
     expect(
-      await screen.findByText("Your insight is hidden during the re-solve.", undefined, {
-        timeout: 4000,
-      }),
+      await screen.findByText("Your insight is hidden during the re-solve."),
     ).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Store complements in a map")).toBeNull();
     expect(
@@ -123,12 +117,36 @@ describe("problem tracker screens", () => {
     const confirm = await screen.findByRole("dialog", { name: "Reveal your earlier work?" });
     await user.click(within(confirm).getByRole("button", { name: "Reveal" }));
     expect(await screen.findByDisplayValue("Store complements in a map")).toBeInTheDocument();
-    await waitFor(
-      () => expect(useProblemStore.getState().states["lc-1"]?.draft?.sawSolution).toBe(true),
-      {
-        timeout: 4000,
-      },
+    await waitFor(() =>
+      expect(useProblemStore.getState().states["lc-1"]?.draft?.sawSolution).toBe(true),
     );
+  });
+
+  it("takes n to start writing and Ctrl or Cmd + S to save, never the browser's save (F30)", async () => {
+    const user = userEvent.setup();
+    await ready();
+    await go("#/problems/lc-1");
+    // Earlier tests in this file may leave a draft, which opens on the Code tab.
+    await user.click(await screen.findByRole("tab", { name: "Problem" }));
+    expect(screen.getByRole("tab", { name: "Problem" })).toHaveAttribute("aria-selected", "true");
+    (document.activeElement as HTMLElement | null)?.blur();
+    await user.keyboard("n");
+    expect(screen.getByRole("tab", { name: "Code" })).toHaveAttribute("aria-selected", "true");
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute("aria-label")).toMatch(/^Code for /),
+    );
+    // Inside the editor too: the browser's own save is prevented and the dialog opens.
+    const save = new KeyboardEvent("keydown", {
+      key: "s",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    act(() => {
+      document.activeElement!.dispatchEvent(save);
+    });
+    expect(save.defaultPrevented).toBe(true);
+    expect(await screen.findByRole("dialog", { name: "Save attempt" })).toBeInTheDocument();
   });
 
   it("lists due problems in Review with a badge, most overdue first", async () => {
@@ -139,11 +157,7 @@ describe("problem tracker screens", () => {
       applyCsvPlan(planCsvImport(text, useProblemStore.getState().states, csvOptions), csvOptions);
     });
     await go("#/review");
-    const panel = await screen.findByRole(
-      "region",
-      { name: /Problems to re-solve/ },
-      { timeout: 4000 },
-    );
+    const panel = await screen.findByRole("region", { name: /Problems to re-solve/ });
     const links = within(panel)
       .getAllByRole("link")
       .filter((a) => a.textContent && /^\d+\./.test(a.textContent));
@@ -173,7 +187,7 @@ describe("problem tracker screens", () => {
       }
     });
     await go("#/mistakes");
-    const top = await screen.findByRole("region", { name: "Top mistakes" }, { timeout: 4000 });
+    const top = await screen.findByRole("region", { name: "Top mistakes" });
     expect(within(top).getByRole("button", { name: /Off-by-one/ })).toHaveTextContent("2");
     const checklist = screen.getByRole("region", { name: "My pre-interview checklist" });
     expect(within(checklist).getByText("Off-by-one")).toBeInTheDocument();

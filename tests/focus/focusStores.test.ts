@@ -290,6 +290,9 @@ describe("Park it", () => {
     finishBlock();
     const now = new Date(2026, 8, 27, 12, 10).toISOString();
     expect(useParkStore.getState().thoughts[early.id]!.dueAt <= now).toBe(true);
+    // The change is stamped, so screens count those thoughts as back at once (not at the
+    // next 30-second tick).
+    expect(useParkStore.getState().changedAt).toBe(new Date(2026, 8, 27, 12, 10).getTime());
   });
 
   it("marks done, dismisses with undo, and adds to today's plan as the owner's item", async () => {
