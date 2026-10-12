@@ -146,12 +146,13 @@ export function TodayHead({
                 : headLine(profile, plan)}
             </p>
           )}
-          {profile?.interviewDate && !quiet && (
-            <ScaleBar interviewDate={profile.interviewDate} today={today} />
-          )}
         </div>
         {plan && !calm && <MinutesRing done={plan.done} budget={plan.budget} />}
       </div>
+      {/* Below the row, so on a phone the label has the card's width beside the bar. */}
+      {profile?.interviewDate && !quiet && (
+        <ScaleBar interviewDate={profile.interviewDate} today={today} />
+      )}
     </header>
   );
 }

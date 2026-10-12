@@ -14,7 +14,7 @@ import {
   PencilLine,
   Sparkles,
 } from "lucide-react";
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import { lazy, Suspense, useDeferredValue, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { CardLabel } from "@/components/ui/Card";
 import { Callout, CodeSpans, EmptyState, Skeleton } from "@/components/ui/Misc";
@@ -144,14 +144,17 @@ function Levels({
     setLevel(next);
     setLastLevel(concept.id, next);
   };
+  // The Depth control answers the click at once; a long Deep article then renders in a
+  // background pass React can interrupt (the click took 112 ms to paint, F30 wants 100).
+  const shown = useDeferredValue(level);
   const text =
-    level === "simple"
+    shown === "simple"
       ? content.simple
-      : level === "interview"
+      : shown === "interview"
         ? content.interview.map((b) => `- ${b}`).join("\n")
         : (content.deep ?? "");
   const reading = useAdhdPart("reading");
-  const studiedNudge = level === "interview" && !state?.studied && (
+  const studiedNudge = shown === "interview" && !state?.studied && (
     <Callout
       icon={BookmarkCheck}
       actions={
@@ -178,23 +181,23 @@ function Levels({
       {reading ? (
         // ADHD mode's reading support (F32): one part at a time, a quick check after each.
         <ReadingParts
-          key={`${concept.id}:${level}`}
+          key={`${concept.id}:${shown}`}
           concept={concept}
-          level={level}
+          level={shown}
           content={content}
           questions={questions}
           onOpenConcept={onOpenConcept}
           after={
             <>
               {studiedNudge}
-              <CheckYourself concept={concept} level={level} questions={questions} />
+              <CheckYourself concept={concept} level={shown} questions={questions} />
             </>
           }
         />
       ) : (
         <>
           <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-            {level === "interview" ? (
+            {shown === "interview" ? (
               // The interview points in their own card (12.10.8).
               <section
                 aria-labelledby={`${concept.id}-points`}
@@ -210,7 +213,7 @@ function Levels({
             )}
           </Suspense>
           {studiedNudge}
-          <CheckYourself concept={concept} level={level} questions={questions} />
+          <CheckYourself concept={concept} level={shown} questions={questions} />
         </>
       )}
     </div>

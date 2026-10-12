@@ -145,6 +145,8 @@ interface ConceptTabsProps {
   /** Wide layouts show the notes editor and preview side by side. */
   wide: boolean;
   className?: string;
+  /** The tab to open with (a search result for a note opens on Notes). */
+  initialTab?: PanelTab;
 }
 
 const TAB_HEADINGS: Record<PanelTab, string> = {
@@ -154,8 +156,14 @@ const TAB_HEADINGS: Record<PanelTab, string> = {
   ask: "Ask Claude",
 };
 
-export function ConceptTabs({ concept, onOpenConcept, wide, className }: ConceptTabsProps) {
-  const [tab, setTab] = useState<PanelTab>("learn");
+export function ConceptTabs({
+  concept,
+  onOpenConcept,
+  wide,
+  className,
+  initialTab = "learn",
+}: ConceptTabsProps) {
+  const [tab, setTab] = useState<PanelTab>(initialTab);
   const problems = useProblemStore((s) => problemsForConcept(concept.id, s.states).length);
   return (
     <Tabs<PanelTab>

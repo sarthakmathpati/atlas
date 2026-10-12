@@ -16,14 +16,19 @@ import type { Concept } from "@/lib/types";
 import { useConcept, useCustomConceptStore } from "@/stores/customConceptStore";
 import { NotFoundPage } from "../placeholder/pages";
 import { conceptMenuItems } from "./conceptActions";
-import { Breadcrumb, ConceptChips, ConceptTabs } from "./ConceptPanel";
+import { Breadcrumb, ConceptChips, ConceptTabs, type PanelTab } from "./ConceptPanel";
 import { usePageFocusLine } from "@/features/focus/hooks";
+
+const PANEL_TABS: readonly PanelTab[] = ["learn", "practice", "notes", "ask"];
 
 export default function ConceptPage() {
   const route = useRoute();
   const concept = useConcept(route.id);
   const customLoaded = useCustomConceptStore((s) => s.loaded);
   const wide = useMediaQuery("(min-width: 1024px)");
+  // `?tab=notes` opens a tab directly (a note found in search).
+  const tabParam = route.query.get("tab") as PanelTab | null;
+  const tab: PanelTab = tabParam && PANEL_TABS.includes(tabParam) ? tabParam : "learn";
   usePageFocusLine(concept ? `Learn ${concept.name}` : "", concept?.id ?? null);
   if (!concept) {
     // The owner's own concepts load with the rest of their data.
@@ -38,7 +43,7 @@ export default function ConceptPage() {
   return (
     <PageFrame className="max-w-5xl">
       <ConceptHead concept={concept} />
-      <ConceptTabs key={concept.id} concept={concept} wide={wide} />
+      <ConceptTabs key={`${concept.id}:${tab}`} concept={concept} wide={wide} initialTab={tab} />
     </PageFrame>
   );
 }

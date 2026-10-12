@@ -1117,3 +1117,41 @@ If it doesn't, tell the owner the previous pull request probably wasn't merged y
     dialog, even inside the editor, and never the browser's own save. Tab indents inside the
     editor and Esc then Tab leaves it (CodeMirror's tab focus mode); the shortcuts dialog lists
     all three under "In a problem".
+154. **Performance (9.5)**, measured on a quiet machine with the 9.4 build and this one served
+    statically and alternated in the same harness (8 runs each, cache off, no installed clock):
+    the dashboard's cold load with a year of data until the last card is in the page took 0.58
+    to 0.76 s (median 0.61; 9.4: 0.59 to 0.80, median 0.62); its lazily loaded chart is drawn
+    at about 1.0 s in both. Loading the chart's code with the page instead made both slower
+    (parsing Recharts competes with the first render), so it still loads with its card. On a
+    390 px phone with the CPU slowed 4×, the shell renders in 0.80 to 1.13 s (median 1.07;
+    budget 1.5 s). Every interaction in a scripted session (palette, navigation, typing in the
+    editor, the dashboard's popovers, the ADHD switch, a focus block) paints within 100 ms by
+    the Event Timing API: switching a concept to Deep took 112 ms, so the level's text now
+    renders from `useDeferredValue` (the Depth control answers at once). Panning the map runs
+    at 60 fps at far and near zoom (no frame over 25 ms). Runs on a loaded machine read about
+    0.4 s slower for both builds alike, so timings are taken with nothing else running.
+155. **How F30 was checked** (the scripts live outside the repository): axe-core 4.10 with
+    WCAG 2.0, 2.1 and 2.2 A and AA plus best practices on 28 screens, in Day, Dusk and Night,
+    ADHD mode off and on, at 1440 and 390 px; horizontal overflow and tap areas under 44 px at
+    390 px; a Tab walk of every page (every stop visible and visibly focused, no trap: Tab in
+    the editor indents and Esc then Tab leaves); reduced motion (no animation or transition
+    over 50 ms in Dusk and in Night with ADHD mode on). Findings left on purpose: axe's
+    "scrollable region must be focusable" on CodeMirror's scroller (its editable content is
+    focusable), "content outside landmarks" for a tooltip left open by the pointer over the map,
+    and "partly obscured" on the map's Filters button (a click-through layer; clicks land on
+    the button at both edges). The screen tests run reliably under five busy loops on four
+    cores (two full runs, 1,011 tests each).
+156. **Notes and stories in search** (F23, finished in 9.5): the palette also finds the owner's
+    notes (a concept note's Markdown and saved answers, opening `#/concept/<id>?tab=notes`; a
+    problem's summary, insight and notes, opening the problem) under "Your notes", and stories
+    (title, STAR text and tags; "Tell me about yourself" opens the intro tab; the hidden
+    unsorted practice story never shows) under "Your stories". Both are rebuilt from the stores
+    each time the palette opens (`replaceKind`), like mistake tags. The concept page takes
+    `?tab=` to open on a tab.
+157. **Visual review (9.5)**: every route in Day, Dusk and Night at 390, 768 and 1440 px for the
+    mid-way owner (252 screenshots), the empty states of a new owner, ADHD mode on, and the
+    dialogs and layers (palette, shortcuts, Ask Claude, Park it, focus start and running, the
+    break view, flashcards, save attempt, the More sheet), with no page wider than the screen and
+    no console errors anywhere. Fixed: Today's scale bar now sits below the head row, so its label
+    fits on one line beside the bar on a phone; a tab row that runs past the edge fades out at
+    that end (a mask, updated on scroll and resize) so the cut-off tab reads as "scroll for more".

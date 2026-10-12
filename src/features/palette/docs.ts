@@ -4,7 +4,9 @@ import { conceptContentNow } from "@/data/content";
 import { SEED_PROBLEMS } from "@/data/seed";
 import { conceptById, concepts, subjectById, subjects, topicById, topics } from "@/data/syllabus";
 import { SearchIndex, type SearchDoc } from "@/lib/search/searchIndex";
-import type { Concept, MistakeTag, ProblemState } from "@/lib/types";
+import { problemInfo, problemLabel } from "@/lib/problems/catalog";
+import { isIntro, UNSORTED_STORY_ID } from "@/lib/stories/stories";
+import type { Concept, ConceptNote, MistakeTag, ProblemState, Story } from "@/lib/types";
 
 const DIFFICULTY = { easy: "Easy", medium: "Medium", hard: "Hard" } as const;
 const IMPORTANCE_BOOST = { must: 1.3, important: 1.1, advanced: 1 } as const;
@@ -152,6 +154,80 @@ export function customConceptDocs(list: readonly Concept[]): SearchDoc[] {
     href: routeHref("/map", undefined, { focus: c.id }),
     boost: IMPORTANCE_BOOST[c.importance],
   }));
+}
+
+/** Plain words of a note: Markdown marks and code fences don't help a search. */
+const plain = (text: string) =>
+  text
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[#*_`>[\]()|-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/** The first words of a note, for the second line of a result. */
+const gist = (text: string) => {
+  const p = plain(text);
+  return p.length > 70 ? `${p.slice(0, 69)}…` : p;
+};
+
+/**
+ * The owner's notes (F23): concept notes with their saved answers, and a problem's summary,
+ * insight and notes. A concept note opens on the concept's Notes tab; a problem's on its page.
+ */
+export function noteDocs(
+  notes: Readonly<Record<string, ConceptNote>>,
+  states: Readonly<Record<string, ProblemState>>,
+  findConcept: (id: string) => Pick<Concept, "name"> | undefined,
+): SearchDoc[] {
+  const docs: SearchDoc[] = [];
+  for (const n of Object.values(notes)) {
+    const answers = n.savedAnswers.map((a) => `${a.question} ${a.answer}`).join(" ");
+    const text = plain(`${n.markdown} ${answers}`);
+    if (!text) continue;
+    const name = findConcept(n.conceptId)?.name ?? n.conceptId;
+    docs.push({
+      id: `note:concept:${n.conceptId}`,
+      kind: "note",
+      title: `Notes on ${name}`,
+      subtitle: gist(n.markdown) || "Saved answers",
+      text,
+      keywords: "note notes mine",
+      href: routeHref("/concept", n.conceptId, { tab: "notes" }),
+    });
+  }
+  for (const s of Object.values(states)) {
+    const text = plain([s.summary, s.insight, s.myNotes].filter(Boolean).join(" "));
+    if (!text) continue;
+    const info = problemInfo(s.problemId, s);
+    if (!info) continue;
+    docs.push({
+      id: `note:problem:${s.problemId}`,
+      kind: "note",
+      title: `Notes on ${problemLabel(info)}`,
+      subtitle: gist(s.insight ?? s.summary ?? s.myNotes ?? ""),
+      text,
+      keywords: "note notes insight summary mine",
+      href: problemHref(s.problemId),
+    });
+  }
+  return docs;
+}
+
+/** The owner's stories (F23, F27): title and STAR text; "Tell me about yourself" too. */
+export function storyDocs(stories: Readonly<Record<string, Story>>): SearchDoc[] {
+  return Object.values(stories)
+    .filter((s) => s.id !== UNSORTED_STORY_ID)
+    .map((s) => ({
+      id: `story:${s.id}`,
+      kind: "story" as const,
+      title: s.title || (isIntro(s) ? "Tell me about yourself" : "Untitled story"),
+      subtitle: isIntro(s) ? "Your intro" : s.tags.length ? s.tags.join(", ") : "Story",
+      text: [s.situation, s.task, s.action, s.result].join(" "),
+      keywords: `story behavioral star ${s.tags.join(" ")}`,
+      href: isIntro(s)
+        ? routeHref("/stories", undefined, { tab: "intro" })
+        : routeHref("/stories", undefined, { story: s.id }),
+    }));
 }
 
 let index: SearchIndex | null = null;
